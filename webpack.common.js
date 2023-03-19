@@ -2,8 +2,19 @@ import HtmlWebpackPlugin from "html-webpack-plugin";
 
 export default {
 	entry: {
+		index: "./client/src/index.jsx"
 	},
 	plugins: [
+		new HtmlWebpackPlugin({ 
+			filename: "index.html",
+			title: "Fort Mill Wrestling",
+			favicon: "./client/media/favicon.ico",
+			meta: {
+				viewport: "width=device-width, initial-scale=1"
+			},
+			chunks: [ "index" ],
+			templateContent: "<html><body><div id='root'></div></body></html>"
+		}),
 		new HtmlWebpackPlugin({ 
 			filename: "working.html",
 			title: "Working",
