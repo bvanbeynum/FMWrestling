@@ -7,6 +7,7 @@ import express from "express";
 import bodyParser from "body-parser";
 import cookieParser from "cookie-parser";
 import busboy from "connect-busboy";
+import router from "./server/router.js";
 
 // Declarations =======================================================================
 
@@ -27,7 +28,7 @@ app.use(busboy());
 
 // Routes =======================================================================
 
-// app.use(beynumRouter);
+app.use(router);
 
 app.use("/media", express.static(path.join(currentDirectory, "/client/media")));
 
