@@ -46,6 +46,9 @@ export default {
 		abbreviation: String,
 		points: Number,
 		description: String,
+		isLostPoints: Boolean,
+		isTeamPoint: Boolean,
+		isComplete: Boolean,
 		created: Date,
 		modified: Date
 	})

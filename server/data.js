@@ -24,7 +24,7 @@ export default {
 	},
 
 	scoreCallSave: (request, response) => {
-		if (!request.body.job) {
+		if (!request.body.scorecall) {
 			response.status(550).json({ error: "Missing object to save" });
 			return;
 		}
@@ -106,7 +106,7 @@ export default {
 	},
 
 	wrestlerSave: (request, response) => {
-		if (!request.body.job) {
+		if (!request.body.wrestler) {
 			response.status(550).json({ error: "Missing object to save" });
 			return;
 		}
@@ -188,7 +188,7 @@ export default {
 	},
 
 	dualSave: (request, response) => {
-		if (!request.body.job) {
+		if (!request.body.dual) {
 			response.status(550).json({ error: "Missing object to save" });
 			return;
 		}
