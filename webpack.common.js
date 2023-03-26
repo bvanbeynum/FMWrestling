@@ -2,7 +2,8 @@ import HtmlWebpackPlugin from "html-webpack-plugin";
 
 export default {
 	entry: {
-		index: "./client/src/index.jsx"
+		index: "./client/src/index.jsx",
+		dual: "./client/portal/dual/dual.jsx"
 	},
 	plugins: [
 		new HtmlWebpackPlugin({ 
@@ -13,6 +14,16 @@ export default {
 				viewport: "width=device-width, initial-scale=1"
 			},
 			chunks: [ "index" ],
+			templateContent: "<html><body><div id='root'></div></body></html>"
+		}),
+		new HtmlWebpackPlugin({ 
+			filename: "./portal/dual.html",
+			title: "Fort Mill Wrestling - Dual",
+			favicon: "./client/media/favicon.ico",
+			meta: {
+				viewport: "width=device-width, initial-scale=1"
+			},
+			chunks: [ "dual" ],
 			templateContent: "<html><body><div id='root'></div></body></html>"
 		}),
 		new HtmlWebpackPlugin({ 
