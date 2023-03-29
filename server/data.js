@@ -92,8 +92,8 @@ export default {
 	deviceRequestGet: (request, response) => {
 		const filter = {};
 
-		if (request.query.id && mongoose.Types.ObjectId.isValid(request.query.id)) {
-			filter["_id"] = request.query.id
+		if (request.query.id) {
+			filter["_id"] = mongoose.Types.ObjectId.isValid(request.query.id) ? request.query.id : null
 		}
 
 		data.deviceRequest.find(filter)
@@ -156,7 +156,7 @@ export default {
 	},
 
 	deviceRequestDelete: (request, response) => {
-		if (!request.query.id || ~mongoose.Types.ObjectId.isValid(request.query.id)) {
+		if (!request.query.id || !mongoose.Types.ObjectId.isValid(request.query.id)) {
 			response.status(550).json({ error: "Missing ID to delete" });
 			return;
 		}
@@ -174,8 +174,8 @@ export default {
 	scoreCallGet: (request, response) => {
 		const filter = {};
 
-		if (request.query.id && mongoose.Types.ObjectId.isValid(request.query.id)) {
-			filter["_id"] = request.query.id;
+		if (request.query.id) {
+			filter["_id"] = mongoose.Types.ObjectId.isValid(request.query.id) ? request.query.id : null;
 		}
 
 		data.scoreCall.find(filter)
@@ -256,8 +256,8 @@ export default {
 	wrestlerGet: (request, response) => {
 		const filter = {};
 
-		if (request.query.id && mongoose.Types.ObjectId.isValid(request.query.id)) {
-			filter["_id"] = request.query.id;
+		if (request.query.id) {
+			filter["_id"] = mongoose.Types.ObjectId.isValid(request.query.id) ? request.query.id : null;
 		}
 
 		data.wrestler.find(filter)
@@ -338,8 +338,8 @@ export default {
 	dualGet: (request, response) => {
 		const filter = {};
 
-		if (request.query.id && mongoose.Types.ObjectId.isValid(request.query.id)) {
-			filter["_id"] = request.query.id;
+		if (request.query.id) {
+			filter["_id"] = mongoose.Types.ObjectId.isValid(request.query.id) ? request.query.id : null;
 		}
 
 		data.dual.find(filter)

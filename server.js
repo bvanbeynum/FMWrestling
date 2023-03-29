@@ -1,5 +1,5 @@
 import path from "path";
-import app from "./app.js";
+import app from "./server/app.js";
 import mongoose from "mongoose";
 import config from "./server/config.js";
 

@@ -5,7 +5,7 @@ import express from "express";
 import bodyParser from "body-parser";
 import cookieParser from "cookie-parser";
 import busboy from "connect-busboy";
-import router from "./server/router.js";
+import router from "./router.js";
 
 // Declarations =======================================================================
 
