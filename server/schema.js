@@ -1,11 +1,35 @@
 import mongoose from "mongoose";
-import config from "./config.js";
-
-const cn = mongoose.createConnection(`mongodb://${config.db.user}:${config.db.pass}@${config.db.servers.join(",")}/${config.db.db}?authSource=${config.db.authDB}`, {useNewUrlParser: true, useUnifiedTopology: true });
 
 export default {
 
-	wrestler: cn.model("wrestler", {
+	user: mongoose.model("user", {
+		firstName: String,
+		lastName: String,
+		email: String,
+		tokens: [String],
+		devices: [{
+			token: String,
+			ip: String,
+			browser: Object,
+			created: Date,
+			lastAccess: Date
+		}],
+		created: Date,
+		modified: Date
+	}),
+
+	deviceRequest: mongoose.model("devicerequest", {
+		name: String,
+		email: String,
+		device: {
+			token: String,
+			ip: String,
+			browser: Object
+		},
+		created: Date
+	}),
+
+	wrestler: mongoose.model("wrestler", {
 		firstName: String,
 		lastName: String,
 		team: String,
@@ -15,7 +39,7 @@ export default {
 		modified: Date
 	}),
 
-	dual: cn.model("dual", {
+	dual: mongoose.model("dual", {
 		name: String,
 		location: { name: String, city: String, state: String },
 		dateTime: Date,
@@ -42,7 +66,7 @@ export default {
 		modified: Date
 	}),
 
-	scoreCall: cn.model("scorecall", {
+	scoreCall: mongoose.model("scorecall", {
 		abbreviation: String,
 		points: Number,
 		description: String,

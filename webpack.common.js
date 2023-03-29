@@ -3,7 +3,8 @@ import HtmlWebpackPlugin from "html-webpack-plugin";
 export default {
 	entry: {
 		index: "./client/src/index.jsx",
-		dual: "./client/portal/dual/dual.jsx"
+		dual: "./client/portal/dual/dual.jsx",
+		noaccess: "./client/portal/noaccess.jsx"
 	},
 	plugins: [
 		new HtmlWebpackPlugin({ 
@@ -24,6 +25,16 @@ export default {
 				viewport: "width=device-width, initial-scale=1"
 			},
 			chunks: [ "dual" ],
+			templateContent: "<html><body><div id='root'></div></body></html>"
+		}),
+		new HtmlWebpackPlugin({ 
+			filename: "noaccess.html",
+			title: "Fort Mill Wrestling - Restricted Access",
+			favicon: "./client/media/favicon.ico",
+			meta: {
+				viewport: "width=device-width, initial-scale=1"
+			},
+			chunks: [ "noaccess" ],
 			templateContent: "<html><body><div id='root'></div></body></html>"
 		}),
 		new HtmlWebpackPlugin({ 
