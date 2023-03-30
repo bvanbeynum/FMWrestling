@@ -1,5 +1,5 @@
 import React, { Component } from "react";
-import ReactDOM from "react-dom";
+import ReactDOM from "react-dom/client";
 import Schedule from "./schedule";
 import Roster from "./roster";
 import "./include/index.css";
@@ -86,4 +86,4 @@ class Index extends Component {
 	) };
 }
 
-ReactDOM.render(<Index />, document.getElementById("root"));
+ReactDOM.createRoot(document.getElementById("root")).render(<Index />);

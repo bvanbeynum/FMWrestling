@@ -1,5 +1,5 @@
 import React, { Component } from "react";
-import ReactDOM from "react-dom";
+import ReactDOM from "react-dom/client";
 
 class Portal extends Component {
 	
@@ -17,4 +17,4 @@ class Portal extends Component {
 	)};
 }
 
-ReactDOM.render(<Portal />, document.getElementById("root"));
+ReactDOM.createRoot(document.getElementById("root")).render(<Index />);

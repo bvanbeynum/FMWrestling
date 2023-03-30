@@ -1,5 +1,5 @@
 import React, {useState} from "react";
-import ReactDOM from "react-dom";
+import ReactDOM from "react-dom/client";
 
 const css = {
 	loginPage: {
@@ -157,4 +157,4 @@ const NoAccess = () => {
 	);
 }
 
-ReactDOM.render(<NoAccess />, document.getElementById("root"));
+ReactDOM.createRoot(document.getElementById("root")).render(<NoAccess />);

@@ -1,5 +1,5 @@
 import React, { Component } from "react";
-import ReactDOM from "react-dom";
+import ReactDOM from "react-dom/client";
 import Navigation from "./navigation.jsx";
 import Edit from "./edit.jsx";
 import Stats from "./stats.jsx";
@@ -40,4 +40,4 @@ class Dual extends Component {
 	)};
 }
 
-ReactDOM.render(<Dual />, document.getElementById("root"));
+ReactDOM.createRoot(document.getElementById("root")).render(<Dual />);
