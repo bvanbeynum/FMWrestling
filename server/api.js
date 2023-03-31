@@ -149,6 +149,6 @@ export default {
 			return;
 		}
 		
-	}
+	},
 
 };

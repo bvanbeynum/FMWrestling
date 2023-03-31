@@ -17,4 +17,5 @@ class Portal extends Component {
 	)};
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<Index />);
+ReactDOM.createRoot(document.getElementById("root") || document.createElement("div")).render(<Portal />);
+export default Portal;

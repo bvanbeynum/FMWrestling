@@ -81,7 +81,7 @@ const NoAccess = () => {
 			fetch(`/api/requestaccess`, { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name, email: email }) })
 				.then(response => {
 					if (response.ok) {
-						return;
+						return response.json();
 					}
 					else {
 						throw Error(response.statusText);
@@ -119,7 +119,7 @@ const NoAccess = () => {
 		isSubmitted ?
 
 		<div style={ css.updateContainer }>
-			Your request has been forwareded to an administrator
+			Your request has been forwarded to an administrator
 		</div>
 
 		: isError ?
@@ -157,4 +157,5 @@ const NoAccess = () => {
 	);
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<NoAccess />);
+ReactDOM.createRoot(document.getElementById("root") || document.createElement("div")).render(<NoAccess />);
+export default NoAccess;
