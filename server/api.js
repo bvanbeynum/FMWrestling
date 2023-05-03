@@ -87,8 +87,7 @@ export default {
 			request.connection.socket.remoteAddress;
 		ipAddress = ipAddress.match(/[^:][\d.]+$/g).join("");
 
-		const agent = request.headers["user-agent"],
-			domain = request.headers.host,
+		const domain = request.headers.host,
 			token = (Math.random() + 1).toString(36).substring(2,12),
 			encryptedToken = jwt.sign({ token: token }, config.jwt),
 			userRequest = {
