@@ -2,158 +2,157 @@
 
 html, body, #root {
 	font-family: Roboto, Helvetica, Arial, sans-serif;
-	font-size: 16px;
+	font-size: 14px;
 	color: rgb(32, 32, 32);
 	padding: 0;
 	margin: 0;
-	box-sizing: border-box;
-	background-color: rgb(21 86 168);
-	display: flex;
-	flex-direction: column;
-}
-
-::placeholder {
-	color: rgb(250 202 44);
-}
-
-.topBar {
-	display: none;
-}
-
-.row {
-	display: flex;
-}
-
-.row>div {
-	flex: 1;
-}
-
-.mainPic {
-	display: none;
-	background-color: rgb(46 45 43);
-	justify-content: center;
-	max-width: 600px;
-}
-
-.topContent {
-	background-color: rgb(210 207 206);
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	max-width: 600px;
 }
 
 h1 {
 	text-align: center;
 	font-family: 'Russo One';
-	font-size: 40px;
-	font-weight: 400;
+	font-size: 1.8rem;
+	margin: 0px;
 	color: rgb(21 86 168);
-	margin-bottom: 0px;
-	text-shadow: 0px 0px 1px rgb(42 42 42);
 }
 
 h2 {
 	font-family: 'Russo One';
 	font-weight: 400;
 	text-align: center;
-	white-space: nowrap;
-	margin-top: 0px;
-	color: rgb(251 205 44);
-	text-shadow: 0px 0px 1px rgb(42 42 42);
+	margin: 0px;
+	color: rgb(21 86 168);
 }
 
-.listItem {
-	background-color: rgb(250 202 44);
-	color: rgb(42 42 42);
-	padding: 5px 10px;
-	border-radius: 7px;
+p {
+	font-size: .8rem;
 }
 
-.announcements {
-	background-color: rgb(250 202 44);
-	padding: 8px 0px;
-	text-align: center;
-	max-width: 1200px;
+.row {
+	display: flex;
+	align-items: start;
 }
 
-.announcements span {
-	margin: 0px 15px;
-}
-
-.sponsorForm {
-	min-height: 200px;
-	background-color: rgb(46 45 43);
-	padding: 15px 0px;
+.column {
 	display: flex;
 	flex-direction: column;
-	align-items: center;
+	width: 50%;
+	box-sizing: border-box;
 }
 
-.formInput {
-	margin: 10px 0px;
-}
-
-.formInput input {
-	background: none;
-	border: none;
-	border-bottom: 1px solid rgb(255 255 255);
-	width: 190px;
-	outline: none;
-	color: rgb(255 255 255);
-}
-
-.sectionImage {
-	max-height: 100%;
-	max-width: 100%;
-	object-fit: contain;
-}
-
-.secondaryPic {
-	background-color: rgb(250 202 44);
-}
-
-.secondaryPic img {
-	width: 300px;
-	height: 200px;
-}
-
-.sponsor {
-	background-color: rgb(255,255,255);
-	display: flex;
-	justify-content: center;
-	align-items: center;
-}
-
-.subsection {
-	padding: 10px 0px;
-	max-width: 438px;
-	min-width: 200px;
-}
-
-.schedule {
-	color: rgb(255 255 255);
-	display: flex;
-	flex-direction: column;
-}
-
-.scheduleHeader {
-	display: flex;
-	align-items: center;
-	font-size: larger;
-	margin: 15px 0px;
-	justify-content: center;
-	color: rgb(250 202 44);
-}
-
-.monthAction {
+.button {
 	cursor: pointer;
 	user-select: none;
+	outline: none;
+}
+
+.box {
+	padding: 10px;
+	display: flex;
+	flex-direction: column;
+}
+
+.box.blue {
+	background-color: rgb(8 61 111);
+	color:rgb(217 217 217);
+	border-color: rgb(217 217 217);
+}
+
+.box.blue h2 {
+	color: rgb(251 205 44);
+}
+
+.box.blue .actions .button {
+	background-color: rgb(223 170 3);
+	color: rgb(24 24 24);
+}
+
+.box.yellow {
+	background: rgb(223 170 3);
+	color: rgb(24 24 24);
+}
+
+.box.yellow .actions .button {
+	background-color: rgb(8 61 111);
+	color:rgb(255 255 255);
+}
+
+.box .actions .button {
+	padding: 5px 0px;
+	width: 80px;
+	text-align: center;
+	border-radius: 6px;
+	margin: 5px;
+	font-size: .8rem;
+}
+
+.box img {
+	object-fit: cover;
+	width: 100%;
+}
+
+.logo {
+	align-items: center;
+	padding: 20px 10px;
+}
+
+.logo img {
+	width: 80%;
+}
+
+.topcontent p {
+	border-top: 1px solid rgb(8 61 111);
+	padding: 9px 5px;
+	border-bottom: 1px solid rgb(8 61 111);
+	color: rgb(96 96 96);
+}
+
+.instagram {
+	background-color: rgb(46 30 6);
+	padding: 0;
+	flex: 1;
+	justify-content: center;
+}
+
+.actions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-around;
+}
+
+.rosterContainer {
+	margin-top: 10px;
+	max-height: 300px;
+	overflow-y: auto;
+}
+
+.weightContainer {
+	margin: 5px 0px;
+}
+
+.weight {
+	border-bottom: 2px solid rgb(62 62 62);
+	font-family: 'Russo One';
+	color: rgb(104 101 101);
+}
+
+.wrestlers {
+	text-align: right;
+	margin-top: 3px;
+	font-size: .9rem;
+	color: rgb(104 101 101);
+}
+
+.calendarHeader {
+	display: flex;
+	align-items: center;
+	margin: 5px 0px;
+	justify-content: center;
 }
 
 .monthName {
-	margin: 0px 20px;
 	text-align: center;
+	width: 100px;
 }
 
 .calendar {
@@ -162,149 +161,62 @@ h2 {
 	list-style: none;
 	text-align: center;
 	padding: 0px;
-	margin: 0px auto 20px auto;
+	margin: 0px;
+	font-size: .8rem;
 }
 
 .calendar li {
-	margin: 2px 5px;
-}
-
-.calendar .day {
-	color: rgb(250 202 44);
+	padding: 1px 4px;
+	margin: 2px 4px;
+	box-sizing: border-box;
 }
 
 .dayEvent {
-	background-color: rgb(250 202 44);
-	border-radius: 20px;
-	color: rgb(42 42 42);
+	background-color: rgb(8 61 111);
+	border-radius: 7px;
+	color: rgb(243 243 243);
+}
+
+.eventContainer {
+	background-color: rgb(8 61 111);
+}
+
+.eventList {
+	display: flex;
+	flex-direction: column;
+	overflow-y: auto;
+	max-height: 300px;
+}
+
+.separator {
+	background: rgb(217 217 217);
+	height: 2px;
+	width: 50%;
+	margin: 10px auto;
+}
+
+.noevent {
+	margin: 20px auto;
+	color: rgb(255 255 255);
 }
 
 .eventItem {
-	margin: 20px 10px;
+	margin: 10px 0px;
+	display: flex;
+	flex-direction: column;
+	border-left: 3px solid rgb(8 61 111);
+	padding-left: 10px;
 }
 
-.eventItem:first-child {
-	margin: 0px 10px 20px 10px;
+.eventContent {
+	flex: 1;
+}
+
+.eventName {
+	color: rgb(255 255 255);
 }
 
 .eventSubItem {
-	display: flex;
-	justify-content: space-between;
-	font-size: 12px;
-}
-
-.schedule table {
-	color: rgb(255 255 255);
-	border-collapse: collapse;
-	margin: 10px 20px 20px 20px;
-	font-size: .85em;
-}
-
-.schedule tr:last-child {
-	border-bottom: 1px solid rgb(255 255 255);
-}
-
-.schedule th {
-	text-align: left;
-	color: rgb(250 202 44);
-	font-weight: normal;
-}
-
-.noEvents {
-	padding: 30px 0px;
-	text-align: center;
-	font-size: 20px;
-	color: rgb(250 202 44);
-}
-
-.actions {
-	display: flex;
-	flex-wrap: wrap;
-	justify-content: space-around;
-	margin: 15px 0px;
-}
-
-.button {
-	background: linear-gradient(0deg, rgba(253,207,79,1) 74%, rgba(255,236,185,1) 88%, rgba(255,215,100,1) 100%);
-	padding: 5px 0px;
-	width: 80px;
-	text-align: center;
-	border-radius: 12px;
-	cursor: pointer;
-	user-select: none;
-	outline: none;
-	color: rgb(42 42 42);
-	margin: 0px 5px 10px 0px;
-}
-
-.roster {
-	background-color: rgb(46 45 43);
-	padding: 10px 13px;
-}
-
-.weightContainer {
-	display: flex;
-	color: rgb(255 255 255);
-	border-bottom: 1px solid rgb(255 255 255);
-	padding: 10px 0px;
-}
-
-.weightContainer:nth-child(2) {
-	border-top: 1px solid rgb(255 255 255);
-}
-
-.weight {
-	padding: 0px 5px;
-}
-
-.wrestlers {
-	display: flex;
-	flex-wrap: wrap;
-	flex: 1;
-	justify-content: center;
-}
-
-.wrestlerItem {
-	font-size: .8em;
-	margin: 3px 6px;
-	text-align: center;
-	width: 130px;
-}
-
-@media (min-width: 600px) {
-
-body {
-	padding-left: 32px;
-}
-	
-.topBar {
-	display: block;
-	background-color: rgb(250 202 44);
-	height: 28px;
-	margin-left: -32px;
-	width: 1232px;
-}
-
-.mainPic {
-	display: flex;
-}
-
-.row.top {
-	max-height: 500px;
-}
-
-.sideBar {
-	float: left;
-	flex-direction: column;
-	width: 300px;
-}
-
-.eventItem {
-	margin: 20px 30px;
-}
-
-.eventItem:first-child {
-	margin: 0px 30px 20px 30px;
-}
-
+	font-size: .8rem;
+	color: rgb(104 104 104);
 }

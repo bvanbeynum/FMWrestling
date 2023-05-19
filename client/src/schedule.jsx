@@ -36,84 +36,65 @@ const Schedule = (props) => {
 	};
 
 	return (
-		<div className="subsection schedule">
-			<h2>Team Schedule</h2>
+<div className="box schedule blue">
+	<h2>Schedule</h2>
 
-			<div className="scheduleHeader">
-				<div className="monthAction" onClick={ () => { changeMonth(-1) }}>◀</div>
-				<div className="monthName">{ months[monthSelected] }</div>
-				<div className="monthAction" onClick={ () => { changeMonth(1) }}>▶</div>
+	<div className="actions">
+		<div className="button">Varsity</div>
+		<div className="button">JV</div>
+		<div className="button">Middle</div>
+		<div className="button">Rec</div>
+	</div>
+
+	<div className="calendarHeader">
+		<div className="button" onClick={ () => { changeMonth(-1) }}>◀</div>
+		<div className="monthName">{ months[monthSelected] }</div>
+		<div className="button" onClick={ () => { changeMonth(1) }}>▶</div>
+	</div>
+
+	<ol className="calendar">
+		<li className="day">S</li>
+		<li className="day">M</li>
+		<li className="day">T</li>
+		<li className="day">W</li>
+		<li className="day">T</li>
+		<li className="day">F</li>
+		<li className="day">S</li>
+
+		{
+		monthDays.map(date => 
+		<li key={date} className={ events.some(event => event.date.getMonth() === monthSelected && event.date.getDate() === date) ? "dayEvent" : "" } style={ date === 0 ? { gridColumnStart: monthStart } : {} }>{ date + 1 }</li>
+		)
+		}
+	</ol>
+
+	<div className="separator"></div>
+
+	<div className="eventList">
+	{
+	events
+	.filter(event => event.date.getMonth() === monthSelected)
+	.length === 0 ?
+		<div className="noevent">Nothing Scheduled</div>
+	:
+	events
+	.filter(event => event.date.getMonth() === monthSelected)
+	.map((event, eventIndex) =>
+		
+		<div className="eventItem" key={ eventIndex }>
+			<div className="eventName">{ event.event }</div>
+			<div className="eventSubItem">{ event.location }</div>
+			<div className="eventSubItem">
+				{ event.date.toLocaleDateString("en-us", { month: "short", day: "numeric" }) } • { event.date.toLocaleTimeString("en-us", { hour: "numeric" }) }
 			</div>
-
-			<ol className="calendar">
-				<li className="day">S</li>
-				<li className="day">M</li>
-				<li className="day">T</li>
-				<li className="day">W</li>
-				<li className="day">T</li>
-				<li className="day">F</li>
-				<li className="day">S</li>
-
-				{
-				monthDays.map(date => 
-				<li key={date} className={ events.some(event => event.date.getMonth() === monthSelected && event.date.getDate() === date) ? "dayEvent" : "" } style={ date === 0 ? { gridColumnStart: monthStart } : {} }>{ date + 1 }</li>
-				)
-				}
-			</ol>
-
-			<div className="scheduleHeader">
-				<div >Events</div>
-			</div>
-
-			<div className="eventContainer">
-			{
-			events
-			.filter(event => event.date.getMonth() === monthSelected)
-			.map((event, eventIndex) =>
-				
-				<div className="listItem eventItem" key={ eventIndex }>
-					<div className="eventSubItem">
-						<div>{ event.date.toLocaleDateString("en-us", { month: "numeric", day: "numeric" }) }</div>
-						<div>{ event.date.toLocaleTimeString("en-us", { hour: "numeric" }) }</div>
-					</div>
-
-					<div className="eventName">{ event.event }</div>
-
-					<div className="eventSubItem">{ event.location }</div>
-				</div>
-
-			)}
-			</div>
-
-{/* 
-			<table>
-			<thead>
-				<tr>
-				<th>Time</th>
-				<th>Event</th>
-				<th>Location</th>
-				</tr>
-			</thead>
-			<tbody>
-			{
-			events.filter(event => event.date.getMonth() === monthSelected).length === 0 ?
-			<tr>
-			<td colSpan="3" className="noEvents">No Events Scheduled</td>
-			</tr>
-			:
-			events
-			.filter(event => event.date.getMonth() === monthSelected)
-			.map((event, eventIndex) =>
-				<tr key={ eventIndex }>
-				<td>{ event.date.toLocaleDateString("en-us", { month: "numeric", day: "numeric", hour: "numeric" }) }</td>
-				<td>{ event.event }</td>
-				<td>{ event.location }</td>
-				</tr>
-			)
-			}
-			</tbody>
-			</table> */}
 		</div>
+
+	)}
+	</div>
+
+	<div className="separator"></div>
+</div>
+
 	)
 };
 

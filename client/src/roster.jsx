@@ -19,31 +19,35 @@ const weightClasses = [
 
 const Roster = (props) => {
 	return (
-		<div className="subsection roster">
-			<h2>Meet the Team</h2>
 
-			<div className="actions">
-				<div className="button">Varsity</div>
-				<div className="button">JV</div>
-				<div className="button">Middle</div>
-				<div className="button">Rec</div>
-			</div>
+<div className="box roster yellow">
+	<h2>Roster</h2>
 
+	<div className="actions">
+		<div className="button">Varsity</div>
+		<div className="button">JV</div>
+		<div className="button">Middle</div>
+		<div className="button">Rec</div>
+	</div>
+
+	<div className="rosterContainer">
+	{
+	weightClasses.map((weight) =>
+		<div key={ weight.name } className="weightContainer">
+			<div className="weight">{ weight.name }</div>
+			<div className="wrestlers">
 			{
-			weightClasses.map((weight) =>
-				<div key={ weight.name } className="weightContainer">
-					<div className="weight">{ weight.name }</div>
-					<div className="wrestlers">
-					{
-					weight.wrestlers.map((wrestler, wrestlerIndex) =>
-						<div key={ wrestlerIndex } className="listItem wrestlerItem">{ wrestler.name } ({ wrestler.grade })</div>
-					)
-					}
-					</div>
-				</div>
+			weight.wrestlers.map((wrestler, wrestlerIndex) =>
+				<div key={ wrestlerIndex } className="listItem wrestlerItem">{ wrestler.name } ({ wrestler.grade })</div>
 			)
 			}
+			</div>
 		</div>
+	)
+	}
+	</div>
+</div>
+
 	)
 };
 
