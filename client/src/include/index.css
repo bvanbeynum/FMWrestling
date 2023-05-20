@@ -6,6 +6,7 @@ html, body, #root {
 	color: rgb(32, 32, 32);
 	padding: 0;
 	margin: 0;
+	background-color: #385978;
 }
 
 h1 {
@@ -28,16 +29,14 @@ p {
 	font-size: .8rem;
 }
 
-.row {
-	display: flex;
-	align-items: start;
+.page {
+	display: grid;
+	grid-template-columns: 1fr repeat(2, fit-content(512px)) 1fr;
 }
 
 .column {
-	display: flex;
-	flex-direction: column;
-	width: 50%;
 	box-sizing: border-box;
+	background-color: rgb(255 255 255);
 }
 
 .button {
@@ -74,7 +73,7 @@ p {
 
 .box.yellow .actions .button {
 	background-color: rgb(8 61 111);
-	color:rgb(255 255 255);
+	color:rgb(243 243 243);
 }
 
 .box .actions .button {
@@ -87,8 +86,9 @@ p {
 }
 
 .box img {
-	object-fit: cover;
+	object-fit: contain;
 	width: 100%;
+	margin: auto;
 }
 
 .logo {
@@ -97,14 +97,28 @@ p {
 }
 
 .logo img {
-	width: 80%;
+	width: 40vw;
+	max-width: 350px;
+}
+
+.topContent {
+	min-height: 30vw;
+}
+
+.topcontent h2 {
+	color: rgb(251 205 44);
 }
 
 .topcontent p {
-	border-top: 1px solid rgb(8 61 111);
-	padding: 9px 5px;
-	border-bottom: 1px solid rgb(8 61 111);
-	color: rgb(96 96 96);
+	border-top: 2px solid rgb(8 61 111);
+	padding: 2vh 1vw;
+	border-bottom: 2px solid rgb(21 86 168);
+	margin-top: 3vh;
+}
+
+.sponsor img {
+	width: 45vw;
+	max-width: 300px;
 }
 
 .instagram {
@@ -112,6 +126,11 @@ p {
 	padding: 0;
 	flex: 1;
 	justify-content: center;
+}
+
+.instagram img {
+	max-width: 400px;
+	max-height: 350px;
 }
 
 .actions {
@@ -127,20 +146,22 @@ p {
 }
 
 .weightContainer {
-	margin: 5px 0px;
+	margin: 5px auto;
+	max-width: 250px;
+	padding-right: 10px;
 }
 
 .weight {
 	border-bottom: 2px solid rgb(62 62 62);
 	font-family: 'Russo One';
-	color: rgb(104 101 101);
+	color: rgb(243 243 243);
 }
 
 .wrestlers {
 	text-align: right;
 	margin-top: 3px;
 	font-size: .9rem;
-	color: rgb(104 101 101);
+	color: rgb(243 243 243);
 }
 
 .calendarHeader {
@@ -157,12 +178,12 @@ p {
 
 .calendar {
 	display: grid;
-	grid-template-columns: repeat(7, 1fr);
+	grid-template-columns: repeat(7, minmax(10px, 1fr));
 	list-style: none;
 	text-align: center;
 	padding: 0px;
-	margin: 0px;
 	font-size: .8rem;
+	max-width: 200px;
 }
 
 .calendar li {
@@ -172,7 +193,7 @@ p {
 }
 
 .dayEvent {
-	background-color: rgb(8 61 111);
+	background-color:  rgb(223 170 3);
 	border-radius: 7px;
 	color: rgb(243 243 243);
 }
@@ -182,30 +203,33 @@ p {
 }
 
 .eventList {
-	display: flex;
-	flex-direction: column;
 	overflow-y: auto;
 	max-height: 300px;
+	margin: 0px;
 }
 
 .separator {
 	background: rgb(217 217 217);
 	height: 2px;
 	width: 50%;
-	margin: 10px auto;
+	margin: 15px auto 0px auto;
+}
+
+.separator:last-child {
+	margin-top: 0px;
 }
 
 .noevent {
-	margin: 20px auto;
-	color: rgb(255 255 255);
+	margin: 4vh auto;
+	color: rgb(243 243 243);
+	width: 120px;
 }
 
 .eventItem {
-	margin: 10px 0px;
-	display: flex;
-	flex-direction: column;
+	margin: 10px auto;
 	border-left: 3px solid rgb(8 61 111);
 	padding-left: 10px;
+	max-width: 200px;
 }
 
 .eventContent {
@@ -213,10 +237,37 @@ p {
 }
 
 .eventName {
-	color: rgb(255 255 255);
+	color: rgb(243 243 243);
 }
 
 .eventSubItem {
 	font-size: .8rem;
-	color: rgb(104 104 104);
+	color: rgb(167 167 167);
+}
+
+.footer {
+	grid-row: 2;
+	grid-column: 2 / 4;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 20px 10px;
+}
+
+.footer img {
+	margin-right: 10px;
+}
+
+@media (min-width: 425px) {
+	.calendar {
+		margin: 0px auto;
+	}
+}
+
+@media (min-width: 768px) {
+	.topContent {
+		height: 30vw;
+		max-height: 300px;
+		min-height: initial;
+	}
 }
