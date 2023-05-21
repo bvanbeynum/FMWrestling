@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom/client";
-import "./include/index.css";
 import Roster from "./roster";
 import Schedule from "./schedule";
+import "./include/index.css";
 
 const Index = () => {
 

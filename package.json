@@ -8,7 +8,12 @@
 		"dev": "nodemon server.js",
 		"build": "webpack --config webpack.prod.js",
 		"start": "node server.js",
-		"test": "jest"
+		"test": "jest --watch"
+	},
+	"jest": {
+		"moduleNameMapper": {
+			"\\.(css|less|scss|sass)$": "<rootDir>/client/src/include/styleMock.js"
+		}
 	},
 	"dependencies": {
 		"connect-busboy": "1.0.0",
