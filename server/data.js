@@ -4,417 +4,542 @@ import mongoose from "mongoose";
 
 export default {
 
-	userGet: (request, response) => {
-		const filter = {};
+	userGet: async (id, deviceToken) => {
+		const filter = {},
+			output = {};
 
-		if (request.query.id) {
-			filter["_id"] = mongoose.Types.ObjectId.isValid(request.query.id) ? request.query.id : null;
+		if (id) {
+			filter["_id"] = mongoose.Types.ObjectId.isValid(id) ? id : null;
 		}
-		if (request.query.devicetoken) {
-			filter["devices.token"] = request.query.devicetoken;
+		if (deviceToken) {
+			filter["devices.token"] = deviceToken;
 		}
 
-		data.user.find(filter)
-			.lean()
-			.exec()
-			.then(records => {
-				const output = { users: records.map(({ _id, __v, ...data }) => ({ id: _id, ...data })) };
-				response.status(200).json(output);
-			})
-			.catch(error => {
-				client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64223ce638baa8f160a2dc45", message: `560: ${error.message}` }}).then();
-				response.status(560).json({ error: error.message });
-			});
+		try {
+			const records = await data.user.find(filter).lean().exec();
+			output.status = 200;
+			output.data = { users: records.map(({ _id, __v, ...data }) => ({ id: _id, ...data })) };
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+		}
+
+		return output;
 	},
 
-	userSave: (request, response) => {
-		if (!request.body.user) {
-			response.status(550).json({ error: "Missing object to save" });
-			return;
+	userSave: async (saveObject) => {
+		if (!saveObject) {
+			output.status = 550;
+			output.error = "Missing object to save";
+			return output;
 		}
-		
-		const save = request.body.user;
 
-		if (save.id) {
-			data.user.findById(save.id)
-				.exec()
-				.then(data => {
-					if (!data) {
-						throw new Error("Record not found");
+		const output = {};
+
+		if (saveObject.id) {
+			let record = null;
+			try {
+				record = await data.user.findById(saveObject.id).exec();
+			}
+			catch (error) {
+				output.status = 560;
+				output.error = error.message;
+				return output;
+			}
+
+			if (!record) {
+				output.status = 561;
+				output.error = "Record not found";
+				return output;
+			}
+
+			try {
+				Object.keys(saveObject).forEach(field => {
+					if (field != "id") {
+						record[field] = saveObject[field];
 					}
-
-					Object.keys(save).forEach(field => {
-						if (field != "id") {
-							data[field] = save[field];
-						}
-					});
-					data.modified = new Date();
-
-					return data.save();
-				})
-				.then(data => {
-					response.status(200).json({ id: data._id });
-				})
-				.catch(error => {
-					client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64223d1d38baa8f160a2dc48", message: `570: ${error.message}` }}).then();
-					response.status(570).json({ error: error.message });
 				});
+				record.modified = new Date();
+
+				record = await record.save();
+			}
+			catch (error) {
+				output.status = 562;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			output.data = { id: record._id };
 		}
 		else {
-			new data.user({ ...save, created: new Date(), modified: new Date() })
-				.save()
-				.then(data => {
-					response.status(200).json({ id: data._id });
-				})
-				.catch(error => {
-					client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64223d1d38baa8f160a2dc48", message: `571: ${error.message}` }}).then();
-					response.status(571).json({ error: error.message });
-				});
+			let record = null;
+			try {
+				record = await (new data.user({ ...saveObject, created: new Date(), modified: new Date() })).save();
+			}
+			catch (error) {
+				output.status = 563;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			output.data = { id: record._id };
 		}
+
+		return output;
 	},
 
-	userDelete: (request, response) => {
-		if (!request.query.id || !mongoose.Types.ObjectId.isValid(request.query.id)) {
-			response.status(550).json({ error: "Missing ID to delete" });
-			return;
+	userDelete: async (id) => {
+		if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+			output.status = 550;
+			output.error = "Missing ID to delete";
+			return output;
 		}
 
-		data.user.deleteOne({ _id: request.query.id })
-			.then(() => {
-				response.status(200).json({ status: "ok" });
-			})
-			.catch(error => {
-				client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64223d3f38baa8f160a2dc4a", message: `560: ${error.message}` }}).then();
-				response.status(560).json({ error: error.message });
-			});
+		const output = {};
+
+		try {
+			await data.user.deleteOne({ _id: id });
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		output.data = { status: "ok" };
+		return output;
 	},
 
-	deviceRequestGet: (request, response) => {
-		const filter = {};
+	deviceRequestGet: async (id) => {
+		const filter = {},
+			output = {};
 
-		if (request.query.id) {
-			filter["_id"] = mongoose.Types.ObjectId.isValid(request.query.id) ? request.query.id : null
+		if (id) {
+			filter["_id"] = mongoose.Types.ObjectId.isValid(id) ? id : null;
 		}
 
-		data.deviceRequest.find(filter)
-			.lean()
-			.exec()
-			.then(records => {
-				const output = { deviceRequests: records.map(({ _id, __v, ...data }) => ({ id: _id, ...data })) };
-				response.status(200).json(output);
-			})
-			.catch(error => {
-				client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64223e5d38baa8f160a2dcd4", message: `560: ${error.message}` }}).then();
-				response.status(560).json({ error: error.message });
-			});
+		try {
+			const records = await data.deviceRequest.find(filter).lean().exec();
+			output.status = 200;
+			output.data = { deviceRequests: records.map(({ _id, __v, ...data }) => ({ id: _id, ...data })) };
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+		}
+
+		return output;
 	},
 
-	deviceRequestSave: (request, response) => {
-		if (!request.body.devicerequest) {
-			response.status(550).json({ error: "Missing object to save" });
-			return;
+	deviceRequestSave: async (saveObject) => {
+		if (!saveObject) {
+			output.status = 550;
+			output.error = "Missing object to save";
+			return output;
 		}
-		
-		const save = request.body.devicerequest;
 
-		if (save.id) {
-			data.deviceRequest.findById(save.id)
-				.exec()
-				.then(data => {
-					if (!data) {
-						throw new Error("Record not found");
+		const output = {};
+
+		if (saveObject.id) {
+			let record = null;
+			try {
+				record = await data.deviceRequest.findById(saveObject.id).exec();
+			}
+			catch (error) {
+				output.status = 560;
+				output.error = error.message;
+				return output;
+			}
+
+			if (!record) {
+				output.status = 561;
+				output.error = "Record not found";
+				return output;
+			}
+
+			try {
+				Object.keys(saveObject).forEach(field => {
+					if (field != "id") {
+						record[field] = saveObject[field];
 					}
-
-					Object.keys(save).forEach(field => {
-						if (field != "id") {
-							data[field] = save[field];
-						}
-					});
-					data.modified = new Date();
-
-					return data.save();
-				})
-				.then(data => {
-					response.status(200).json({ id: data._id });
-				})
-				.catch(error => {
-					client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64223e7238baa8f160a2dcd7", message: `570: ${error.message}` }}).then();
-					response.status(570).json({ error: error.message });
 				});
+				record.modified = new Date();
+
+				record = await record.save();
+			}
+			catch (error) {
+				output.status = 562;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			output.data = { id: record._id };
 		}
 		else {
-			new data.deviceRequest({ ...save, created: new Date(), modified: new Date() })
-				.save()
-				.then(data => {
-					response.status(200).json({ id: data._id });
-				})
-				.catch(error => {
-					client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64223e7238baa8f160a2dcd7", message: `571: ${error.message}` }}).then();
-					response.status(571).json({ error: error.message });
-				});
+			let record = null;
+			try {
+				record = await (new data.deviceRequest({ ...saveObject, created: new Date(), modified: new Date() })).save();
+			}
+			catch (error) {
+				output.status = 563;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			output.data = { id: record._id };
 		}
+
+		return output;
 	},
 
-	deviceRequestDelete: (request, response) => {
-		if (!request.query.id || !mongoose.Types.ObjectId.isValid(request.query.id)) {
-			response.status(550).json({ error: "Missing ID to delete" });
-			return;
+	deviceRequestDelete: async (id) => {
+		if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+			output.status = 550;
+			output.error = "Missing ID to delete";
+			return output;
 		}
 
-		data.deviceRequest.deleteOne({ _id: request.query.id })
-			.then(() => {
-				response.status(200).json({ status: "ok" });
-			})
-			.catch(error => {
-				client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64223e8838baa8f160a2dcd9", message: `560: ${error.message}` }}).then();
-				response.status(560).json({ error: error.message });
-			});
+		const output = {};
+
+		try {
+			await data.deviceRequest.deleteOne({ _id: id });
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		output.data = { status: "ok" };
+		return output;
 	},
 
-	scoreCallGet: (request, response) => {
-		const filter = {};
+	scoreCallGet: async (id) => {
+		const filter = {},
+			output = {};
 
-		if (request.query.id) {
-			filter["_id"] = mongoose.Types.ObjectId.isValid(request.query.id) ? request.query.id : null;
+		if (id) {
+			filter["_id"] = mongoose.Types.ObjectId.isValid(id) ? id : null;
 		}
 
-		data.scoreCall.find(filter)
-			.lean()
-			.exec()
-			.then(records => {
-				const output = { scoreCalls: records.map(({ _id, __v, ...data }) => ({ id: _id, ...data })) };
-				response.status(200).json(output);
-			})
-			.catch(error => {
-				client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "641effd497f3b068a56265d9", message: `560: ${error.message}` }}).then();
-				response.status(560).json({ error: error.message });
-			});
+		try {
+			const records = await data.scoreCall.find(filter).lean().exec();
+			output.status = 200;
+			output.data = { scoreCalls: records.map(({ _id, __v, ...data }) => ({ id: _id, ...data })) };
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+		}
+
+		return output;
 	},
 
-	scoreCallSave: (request, response) => {
-		if (!request.body.scorecall) {
-			response.status(550).json({ error: "Missing object to save" });
-			return;
+	scoreCallSave: async (saveObject) => {
+		if (!saveObject) {
+			output.status = 550;
+			output.error = "Missing object to save";
+			return output;
 		}
-		
-		const save = request.body.scorecall;
 
-		if (save.id) {
-			data.scoreCall.findById(save.id)
-				.exec()
-				.then(data => {
-					if (!data) {
-						throw new Error("Record not found");
+		const output = {};
+
+		if (saveObject.id) {
+			let record = null;
+			try {
+				record = await data.scoreCall.findById(saveObject.id).exec();
+			}
+			catch (error) {
+				output.status = 560;
+				output.error = error.message;
+				return output;
+			}
+
+			if (!record) {
+				output.status = 561;
+				output.error = "Record not found";
+				return output;
+			}
+
+			try {
+				Object.keys(saveObject).forEach(field => {
+					if (field != "id") {
+						record[field] = saveObject[field];
 					}
-
-					Object.keys(save).forEach(field => {
-						if (field != "id") {
-							data[field] = save[field];
-						}
-					});
-					data.modified = new Date();
-
-					return data.save();
-				})
-				.then(data => {
-					response.status(200).json({ id: data._id });
-				})
-				.catch(error => {
-					client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "641f007897f3b068a5626649", message: `570: ${error.message}` }}).then();
-					response.status(570).json({ error: error.message });
 				});
+				record.modified = new Date();
+
+				record = await record.save();
+			}
+			catch (error) {
+				output.status = 562;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			output.data = { id: record._id };
 		}
 		else {
-			new data.scoreCall({ ...save, created: new Date(), modified: new Date() })
-				.save()
-				.then(data => {
-					response.status(200).json({ id: data._id });
-				})
-				.catch(error => {
-					client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "641f007897f3b068a5626649", message: `571: ${error.message}` }}).then();
-					response.status(571).json({ error: error.message });
-				});
+			let record = null;
+			try {
+				record = await (new data.scoreCall({ ...saveObject, created: new Date(), modified: new Date() })).save();
+			}
+			catch (error) {
+				output.status = 563;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			output.data = { id: record._id };
 		}
+
+		return output;
 	},
 
-	scoreCallDelete: (request, response) => {
-		if (!request.query.id || !mongoose.Types.ObjectId.isValid(request.query.id)) {
-			response.status(550).json({ error: "Missing ID to delete" });
-			return;
+	scoreCallDelete: async (id) => {
+		if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+			output.status = 550;
+			output.error = "Missing ID to delete";
+			return output;
 		}
 
-		data.scoreCall.deleteOne({ _id: request.query.id })
-			.then(() => {
-				response.status(200).json({ status: "ok" });
-			})
-			.catch(error => {
-				client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "641f008897f3b068a562664b", message: `560: ${error.message}` }}).then();
-				response.status(560).json({ error: error.message });
-			});
+		const output = {};
+
+		try {
+			await data.scoreCall.deleteOne({ _id: id });
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		output.data = { status: "ok" };
+		return output;
 	},
 
-	wrestlerGet: (request, response) => {
-		const filter = {};
+	wrestlerGet: async (id) => {
+		const filter = {},
+			output = {};
 
-		if (request.query.id) {
-			filter["_id"] = mongoose.Types.ObjectId.isValid(request.query.id) ? request.query.id : null;
+		if (id) {
+			filter["_id"] = mongoose.Types.ObjectId.isValid(id) ? id : null;
 		}
 
-		data.wrestler.find(filter)
-			.lean()
-			.exec()
-			.then(records => {
-				const output = { wrestlers: records.map(({ _id, __v, ...data }) => ({ id: _id, ...data })) };
-				response.status(200).json(output);
-			})
-			.catch(error => {
-				client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "641f00fb97f3b068a5626653", message: `560: ${error.message}` }}).then();
-				response.status(560).json({ error: error.message });
-			});
+		try {
+			const records = await data.wrestler.find(filter).lean().exec();
+			output.status = 200;
+			output.data = { wrestlers: records.map(({ _id, __v, ...data }) => ({ id: _id, ...data })) };
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+		}
+
+		return output;
 	},
 
-	wrestlerSave: (request, response) => {
-		if (!request.body.wrestler) {
-			response.status(550).json({ error: "Missing object to save" });
-			return;
+	wrestlerSave: async (saveObject) => {
+		if (!saveObject) {
+			output.status = 550;
+			output.error = "Missing object to save";
+			return output;
 		}
-		
-		const save = request.body.wrestler;
 
-		if (save.id) {
-			data.wrestler.findById(save.id)
-				.exec()
-				.then(data => {
-					if (!data) {
-						throw new Error("Record not found");
+		const output = {};
+
+		if (saveObject.id) {
+			let record = null;
+			try {
+				record = await data.wrestler.findById(saveObject.id).exec();
+			}
+			catch (error) {
+				output.status = 560;
+				output.error = error.message;
+				return output;
+			}
+
+			if (!record) {
+				output.status = 561;
+				output.error = "Record not found";
+				return output;
+			}
+
+			try {
+				Object.keys(saveObject).forEach(field => {
+					if (field != "id") {
+						record[field] = saveObject[field];
 					}
-
-					Object.keys(save).forEach(field => {
-						if (field != "id") {
-							data[field] = save[field];
-						}
-					});
-					data.modified = new Date();
-
-					return data.save();
-				})
-				.then(data => {
-					response.status(200).json({ id: data._id });
-				})
-				.catch(error => {
-					client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "641f00ec97f3b068a5626651", message: `570: ${error.message}` }}).then();
-					response.status(570).json({ error: error.message });
 				});
+				record.modified = new Date();
+
+				record = await record.save();
+			}
+			catch (error) {
+				output.status = 562;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			output.data = { id: record._id };
 		}
 		else {
-			new data.wrestler({ ...save, created: new Date(), modified: new Date() })
-				.save()
-				.then(data => {
-					response.status(200).json({ id: data._id });
-				})
-				.catch(error => {
-					client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "641f00ec97f3b068a5626651", message: `571: ${error.message}` }}).then();
-					response.status(571).json({ error: error.message });
-				});
+			let record = null;
+			try {
+				record = await (new data.wrestler({ ...saveObject, created: new Date(), modified: new Date() })).save();
+			}
+			catch (error) {
+				output.status = 563;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			output.data = { id: record._id };
 		}
+
+		return output;
 	},
 
-	wrestlerDelete: (request, response) => {
-		if (!request.query.id || !mongoose.Types.ObjectId.isValid(request.query.id)) {
-			response.status(550).json({ error: "Missing ID to delete" });
-			return;
+	wrestlerDelete: async (id) => {
+		if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+			output.status = 550;
+			output.error = "Missing ID to delete";
+			return output;
 		}
 
-		data.wrestler.deleteOne({ _id: request.query.id })
-			.then(() => {
-				response.status(200).json({ status: "ok" });
-			})
-			.catch(error => {
-				client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "641f00df97f3b068a562664e", message: `560: ${error.message}` }}).then();
-				response.status(560).json({ error: error.message });
-			});
+		const output = {};
+
+		try {
+			await data.wrestler.deleteOne({ _id: id });
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		output.data = { status: "ok" };
+		return output;
 	},
 
-	dualGet: (request, response) => {
-		const filter = {};
+	dualGet: async (id) => {
+		const filter = {},
+			output = {};
 
-		if (request.query.id) {
-			filter["_id"] = mongoose.Types.ObjectId.isValid(request.query.id) ? request.query.id : null;
+		if (id) {
+			filter["_id"] = mongoose.Types.ObjectId.isValid(id) ? id : null;
 		}
 
-		data.dual.find(filter)
-			.lean()
-			.exec()
-			.then(records => {
-				const output = { duals: records.map(({ _id, __v, ...data }) => ({ id: _id, ...data })) };
-				response.status(200).json(output);
-			})
-			.catch(error => {
-				client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "641f016097f3b068a56266c6", message: `560: ${error.message}` }}).then();
-				response.status(560).json({ error: error.message });
-			});
+		try {
+			const records = await data.dual.find(filter).lean().exec();
+			output.status = 200;
+			output.data = { duals: records.map(({ _id, __v, ...data }) => ({ id: _id, ...data })) };
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+		}
+
+		return output;
 	},
 
-	dualSave: (request, response) => {
-		if (!request.body.dual) {
-			response.status(550).json({ error: "Missing object to save" });
-			return;
+	dualSave: async (saveObject) => {
+		if (!saveObject) {
+			output.status = 550;
+			output.error = "Missing object to save";
+			return output;
 		}
-		
-		const save = request.body.dual;
 
-		if (save.id) {
-			data.dual.findById(save.id)
-				.exec()
-				.then(data => {
-					if (!data) {
-						throw new Error("Record not found");
+		const output = {};
+
+		if (saveObject.id) {
+			let record = null;
+			try {
+				record = await data.dual.findById(saveObject.id).exec();
+			}
+			catch (error) {
+				output.status = 560;
+				output.error = error.message;
+				return output;
+			}
+
+			if (!record) {
+				output.status = 561;
+				output.error = "Record not found";
+				return output;
+			}
+
+			try {
+				Object.keys(saveObject).forEach(field => {
+					if (field != "id") {
+						record[field] = saveObject[field];
 					}
-
-					Object.keys(save).forEach(field => {
-						if (field != "id") {
-							data[field] = save[field];
-						}
-					});
-					data.modified = new Date();
-
-					return data.save();
-				})
-				.then(data => {
-					response.status(200).json({ id: data._id });
-				})
-				.catch(error => {
-					client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "641f014f97f3b068a5626658", message: `570: ${error.message}` }}).then();
-					response.status(570).json({ error: error.message });
 				});
+				record.modified = new Date();
+
+				record = await record.save();
+			}
+			catch (error) {
+				output.status = 562;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			output.data = { id: record._id };
 		}
 		else {
-			new data.dual({ ...save, created: new Date(), modified: new Date() })
-				.save()
-				.then(data => {
-					response.status(200).json({ id: data._id });
-				})
-				.catch(error => {
-					client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "641f014f97f3b068a5626658", message: `571: ${error.message}` }}).then();
-					response.status(571).json({ error: error.message });
-				});
+			let record = null;
+			try {
+				record = await (new data.dual({ ...saveObject, created: new Date(), modified: new Date() })).save();
+			}
+			catch (error) {
+				output.status = 563;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			output.data = { id: record._id };
 		}
+
+		return output;
 	},
 
-	dualDelete: (request, response) => {
-		if (!request.query.id || !mongoose.Types.ObjectId.isValid(request.query.id)) {
-			response.status(550).json({ error: "Missing ID to delete" });
-			return;
+	dualDelete: async (id) => {
+		if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+			output.status = 550;
+			output.error = "Missing ID to delete";
+			return output;
 		}
 
-		data.dual.deleteOne({ _id: request.query.id })
-			.then(() => {
-				response.status(200).json({ status: "ok" });
-			})
-			.catch(error => {
-				client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "641f014097f3b068a5626656", message: `560: ${error.message}` }}).then();
-				response.status(560).json({ error: error.message });
-			});
+		const output = {};
+
+		try {
+			await data.dual.deleteOne({ _id: id });
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		output.data = { status: "ok" };
+		return output;
 	}
 
 };
