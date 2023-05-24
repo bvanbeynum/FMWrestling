@@ -6,64 +6,66 @@ import nodemailer from "nodemailer";
 
 export default {
 
-	serverInitialize: (request, response, next) => {
-		request.serverPath = `${ request.protocol }://${ request.headers.host }`;
-		request.logUrl = `${ request.protocol }://beynum.com/sys/api/addlog`;
-		next();
-	},
-
-	authInternal: (request, response, next) => {
-		if (request.headers["x-forwarded-for"] && !/10\.21\.0/g.test(request.headers["x-forwarded-for"])) {
-			response.status(401).send("Unauthorized");
+	apiTest: async (serverUrl) => {
+		try {
+			const clientResponse = await client.get(`${ serverUrl }/data/scorecall`);
+			return clientResponse.body.scoreCalls[0];
 		}
-		else {
-			next();
+		catch (error) {
+			return { error: error.message };
 		}
 	},
 
-	authAPI: (request, response, next) => {
-		const re = new RegExp(request.serverPath);
-
-		if (re.test(request.headers["referer"])) {
-			next();
-		}
-		else {
-			response.redirect("/noaccess.html");
-		}
+	setRequestVars: (protocol, host) => {
+		return {
+			serverPath: `${ protocol }://${ host }`,
+			logUrl: `${ protocol }://beynum.com/sys/api/addlog`
+		};
 	},
 
-	authPortal: async (request, response, next) => {
-		if (/^\/portal/.test(request.path)) {
-			if (!request.cookies.wm) {
-				response.redirect("/noaccess.html");
-				return;
+	authInternal: (forwardedIP) => {
+		return !forwardedIP || /10\.21\.0/g.test(forwardedIP); // Is the request being forwared through a proxy, or is the proxy IP internal
+	},
+
+	authAPI: (serverPath, referer) => {
+		const re = new RegExp(serverPath); // Build the regex based on the shorter path to the server
+		return re.test(referer); // The referer is the full URL, so it should include the server path
+	},
+
+	authPortal: async (cookie, urlPath, serverPath) => {
+		const output = {};
+
+		if (/^\/portal/.test(urlPath)) {
+			if (!cookie) {
+				output.status = 560;
+				return output;
 			}
 
-			const tokenData = jwt.verify(request.cookies.wm, config.jwt);
+			const tokenData = jwt.verify(cookie, config.jwt);
 
 			if (!tokenData.token) {
-				client.post(request.logURL).send({ log: { logTime: new Date(), logTypeId: "6422440638baa8f160a2df09", message: `560: Invalid token` }}).then();
-				response.redirect("/noaccess.html");
-				return;
+				output.status = 561;
+				output.error = "Invalid token";
+				return output;
 			}
-
+			
 			let clientResponse = null;
 			try {
-				clientResponse = await client.get(`${ request.serverPath }/data/user?devicetoken=${ tokenData.token }`);
+				clientResponse = await client.get(`${ serverPath }/data/user?devicetoken=${ tokenData.token }`);
 			}
 			catch (error) {
-				client.post(request.logURL).send({ log: { logTime: new Date(), logTypeId: "6422440638baa8f160a2df09", message: `561: ${error.message}` }}).then();
-				response.redirect("/noaccess.html");
-				return;
+				output.status = 562;
+				output.error = error.message;
+				return output;
 			}
 
 			if (!clientResponse.body.users || clientResponse.body.users.length !== 1) {
-				client.post(request.logURL).send({ log: { logTime: new Date(), logTypeId: "6422440638baa8f160a2df09", message: `562: User not found: ${ tokenData.token }` }}).then();
-				response.redirect("/noaccess.html");
-				return;
+				output.status = 563;
+				output.error = `User not found with token ${ tokenData.token }`;
+				return output;
 			}
 
-			request.user = {
+			output.user = {
 				...clientResponse.body.users[0],
 				devices: clientResponse.body.users[0].devices.map(device => ({
 					...device,
@@ -71,13 +73,11 @@ export default {
 				}))
 			};
 
-			client.post(`${ request.serverPath }/data/user`).send({ user: request.user }).then();
-
-			next();
+			client.post(`${ serverPath }/data/user`).send({ user: output.user }).then();
 		}
-		else {
-			next();
-		}
+		
+		output.status = 200;
+		return output;
 	},
 
 	requestAccess: async (request, response) => {
