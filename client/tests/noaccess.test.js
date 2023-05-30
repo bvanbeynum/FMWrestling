@@ -10,7 +10,7 @@ import NoAccess from "../portal/noaccess.jsx";
 beforeEach(() => {
 	global.fetch = jest.fn(() => Promise.resolve({
 		ok: true,
-		json: () => Promise.resolve({ data: { status: "ok" }})
+		text: () => Promise.resolve()
 	}));
 	
 	render(<NoAccess />);

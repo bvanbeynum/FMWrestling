@@ -81,7 +81,7 @@ const NoAccess = () => {
 			fetch(`/api/requestaccess`, { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name, email: email }) })
 				.then(response => {
 					if (response.ok) {
-						return;
+						return response.text();
 					}
 					else {
 						throw Error(response.statusText);
