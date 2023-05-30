@@ -2,8 +2,6 @@
  * @jest-environment node
  */
 
-import request from "supertest";
-import app from "../app.js";
 import mongoose from "mongoose";
 import config from "../config.js";
 import data from "../data.js";

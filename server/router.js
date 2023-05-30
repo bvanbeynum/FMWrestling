@@ -50,8 +50,24 @@ const authAPI = (request, response, next) => {
 
 // ************************* API
 
-router.get("/api/test", authAPI, (request, response) => response.status(200).json({ status: "ok" }));
-router.post("/api/requestaccess", [authAPI, browser.express()], api.requestAccess);
+router.post("/api/requestaccess", [authAPI, browser.express()], async (request, response) => {
+	let ipAddress = (request.headers["x-forwarded-for"] || "").split(",").pop().trim() || 
+		request.connection.remoteAddress || 
+		request.socket.remoteAddress || 
+		request.connection.socket.remoteAddress;
+	ipAddress = ipAddress.match(/[^:][\d.]+$/g).join("");
+
+	const domain = request.headers.host;
+
+	const results = await api.requestAccess(ipAddress, domain, request.body.name, request.body.email, request.useragent, request.serverPath);
+
+	if (results.error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "642202d038baa8f160a2c6bb", message: `${ results.status }: ${results.error}` }}).then();
+	}
+
+	response.status(results.status).json(results.error ? { error: results.error } : results.data);
+	response.end();
+})
 
 // ************************* Data
 
@@ -65,6 +81,7 @@ router.get("/data/user", authInternal, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 	response.end();
 });
+
 router.post("/data/user", authInternal, async (request, response) => {
 	const results = await data.userSave(request.body.user);
 
@@ -75,6 +92,7 @@ router.post("/data/user", authInternal, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 	response.end();
 });
+
 router.delete("/data/user", authInternal, async (request, response) => {
 	const results = await data.userDelete(request.query.id);
 
@@ -96,6 +114,7 @@ router.get("/data/devicerequest", authInternal, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 	response.end();
 });
+
 router.post("/data/devicerequest", authInternal, async (request, response) => {
 	const results = await data.deviceRequestSave(request.body.devicerequest);
 
@@ -106,6 +125,7 @@ router.post("/data/devicerequest", authInternal, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 	response.end();
 });
+
 router.delete("/data/devicerequest", authInternal, async (request, response) => {
 	const results = await data.deviceRequestDelete(request.query.id);
 
@@ -127,6 +147,7 @@ router.get("/data/scorecall", authInternal, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 	response.end();
 });
+
 router.post("/data/scorecall", authInternal, async (request, response) => {
 	const results = await data.scoreCallSave(request.body.scorecall);
 
@@ -137,6 +158,7 @@ router.post("/data/scorecall", authInternal, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 	response.end();
 });
+
 router.delete("/data/scorecall", authInternal, async (request, response) => {
 	const results = await data.scoreCallDelete(request.query.id);
 
@@ -158,6 +180,7 @@ router.get("/data/wrestler", authInternal, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 	response.end();
 });
+
 router.post("/data/wrestler", authInternal, async (request, response) => {
 	const results = await data.wrestlerSave(request.body.wrestler);
 
@@ -168,6 +191,7 @@ router.post("/data/wrestler", authInternal, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 	response.end();
 });
+
 router.delete("/data/wrestler", authInternal, async (request, response) => {
 	const results = await data.userDelete(request.query.id);
 
@@ -189,6 +213,7 @@ router.get("/data/dual", authInternal, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 	response.end();
 });
+
 router.post("/data/dual", authInternal, async (request, response) => {
 	const results = await data.dualSave(request.body.dual);
 
@@ -199,6 +224,7 @@ router.post("/data/dual", authInternal, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 	response.end();
 });
+
 router.delete("/data/dual", authInternal, async (request, response) => {
 	const results = await data.dualDelete(request.query.id);
 

@@ -2,11 +2,15 @@
  * @jest-environment node
  */
 
-jest.mock("jsonwebtoken")
-
 import api from "../api.js";
 import client from "superagent";
 import jwt from "jsonwebtoken";
+import { google } from "googleapis";
+import nodemailer from "nodemailer";
+
+beforeEach(() => {
+	jest.resetAllMocks();
+})
 
 describe("Middleware", () => {
 
@@ -68,9 +72,9 @@ describe("Middleware", () => {
 
 		expect(result).toHaveProperty("status", 200);
 
-		expect(jwt.verify).toHaveBeenCalledTimes(0);
-		expect(client.get).toHaveBeenCalledTimes(0);
-		expect(client.post).toHaveBeenCalledTimes(0);
+		expect(jwt.verify).not.toHaveBeenCalled();
+		expect(client.get).not.toHaveBeenCalled();
+		expect(client.post).not.toHaveBeenCalled();
 	});
 
 	it("successfully passes portal authentication", async () => {
@@ -106,35 +110,116 @@ describe("Middleware", () => {
 
 		expect(result).toHaveProperty("status", 200);
 		
-		expect(jwt.verify).toHaveBeenCalledTimes(1);
+		expect(jwt.verify).toHaveBeenCalled();
 
-		expect(client.get).toHaveBeenCalledTimes(1);
+		expect(client.get).toHaveBeenCalled();
 		expect(client.get).toHaveBeenLastCalledWith(`${ serverPath }/data/user?devicetoken=${ token }`);
 
-		expect(client.post).toHaveBeenCalledTimes(1);
+		expect(client.post).toHaveBeenCalled();
 		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/user`);
 	});
 
-	it("test the client mock", async () => {
-		client.get = jest.fn().mockResolvedValue({
-			body: {
-				scoreCalls: [{
-					id: '641f0b2f2566f64ce0241b00',
-					abbreviation: 'ZZ',
-					points: 2,
-					description: 'Takedown',
-					created: '2023-03-25T14:54:39.186Z',
-					modified: '2023-03-25T15:34:29.571Z',
-					isLostPoints: false,
-					isTeamPoint: false,
-					isComplete: false
-				}]
-			}
+	it("fails the portal authentication with invalid token", async () => {
+		const cookie = "fakecookie",
+			token = null,
+			serverPath = "http://dev.beynum.com",
+			urlPath = "/portal/index.html";
+
+		jwt.verify = jest.fn().mockReturnValue({
+			token: token
 		});
 
-		const result = await api.apiTest("http://dev.beynum.com");
-		
-		expect(result).toHaveProperty("abbreviation", "ZZ");
+		const result = await api.authPortal(cookie, urlPath, serverPath);
+
+		expect(result).toHaveProperty("status", 561);
+		expect(result).toHaveProperty("error", "Invalid token");
+		expect(jwt.verify).toHaveBeenCalled();
+	});
+
+	it("fails the portal authentication when token not found", async () => {
+		const cookie = "fakecookie",
+			token = "badtoken",
+			serverPath = "http://dev.beynum.com",
+			urlPath = "/portal/index.html";
+
+		jwt.verify = jest.fn().mockReturnValue({
+			token: token
+		});
+
+		client.get = jest.fn().mockResolvedValue({ body: {
+			users: []
+		}});
+
+		const result = await api.authPortal(cookie, urlPath, serverPath);
+
+		expect(result).toHaveProperty("status", 563);
+		expect(result).toMatchObject({
+			error: expect.stringMatching(/^user not found/i)
+		  });
+		expect(jwt.verify).toHaveBeenCalled();
+	});
+
+	it("requests access to portal", async () => {
+		// ********** Given
+
+		const ipAddress = "10.21.0.144",
+			domain = "thewrestlingmill.com",
+			userName = "Test App",
+			userEmail = "test@nomail.com",
+			userAgent = "Jest",
+			serverPath = "http://dev.beynum.com";
+
+		// Mocks
+
+		jwt.sign = jest.fn().mockReturnValue("can'treadmetoken");
+
+		const setCredentials = jest.fn();
+		const getAccessToken = jest.fn().mockReturnValue("gmailtoken");
+		const oauth = jest.fn().mockImplementation(() => ({
+			setCredentials: setCredentials,
+			getAccessToken: getAccessToken
+		}));
+		google.auth = { OAuth2: oauth }; 
+
+		const send = jest.fn(() => ({
+			then: () => {}
+		}));
+		client.post = jest.fn(() => ({
+			send: send
+		}));
+
+		const sendMail = jest.fn((email, callback) => callback(null));
+		const close = jest.fn();
+		nodemailer.createTransport = jest.fn().mockImplementation(() => ({
+			sendMail: sendMail,
+			close: close
+		}));
+
+		// ********** When
+	
+		const result = await api.requestAccess(ipAddress, domain, userName, userEmail, userAgent, serverPath);
+
+		console.log(result);
+		// ********** Then
+
+		expect(result).toHaveProperty("status", 200);
+		expect(result).toHaveProperty("cookie");
+
+		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/devicerequest`);
+		expect(send).toHaveBeenCalledWith(
+			expect.objectContaining({
+				devicerequest: expect.objectContaining({ name: userName })
+			})
+		);
+
+		expect(google.auth.OAuth2).toHaveBeenCalled();
+		expect(setCredentials).toHaveBeenCalled();
+		expect(getAccessToken).toHaveBeenCalled();
+		expect(getAccessToken).toHaveReturnedWith("gmailtoken");
+
+		expect(nodemailer.createTransport).toHaveBeenCalled();
+		expect(sendMail).toHaveBeenCalled();
+		expect(close).toHaveBeenCalled();
 	});
 
 });

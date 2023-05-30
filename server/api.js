@@ -80,7 +80,68 @@ export default {
 		return output;
 	},
 
-	requestAccess: async (request, response) => {
+	requestAccess: async (ipAddress, domain, userName, userEmail, userAgent, serverPath) => {
+		const output = {},
+			token = (Math.random() + 1).toString(36).substring(2,12),
+			encryptedToken = jwt.sign({ token: token }, config.jwt),
+			userRequest = {
+				name: userName,
+				email: userEmail,
+				device: {
+						token: token,
+						ip: ipAddress,
+						browser: userAgent
+					}
+				},
+			email = {
+					from: "\"The Wrestling Mill\" <thebeynumco@gmail.com>",
+					to: config.email.user,
+					subject: "Wrestling Mill Access Requested",
+					html: `Access requested from:<br>${userName} (${userEmail})<br><br>Details<br>Domain: ${ domain }<br>IP: ${ ipAddress }<br>Browser:<br>${ JSON.stringify(userAgent).replace(/,/g, "<br>") }<br><br><a href="http://${ domain }">http://${ domain }</a>`
+				};
+			
+		try {
+			await client.post(`${ serverPath }/data/devicerequest`).send({ devicerequest: userRequest }).then();
+
+			const oauth = new google.auth.OAuth2(config.email.clientId, config.email.clientSecret, config.email.redirectURL);
+			oauth.setCredentials({ refresh_token: config.email.refreshToken });
+			const gmailToken = oauth.getAccessToken();
+			
+			const service = nodemailer.createTransport({
+				service: "gmail",
+				auth: {
+					type: "OAuth2",
+					user: config.email.user,
+					clientId: config.email.clientId,
+					clientSecret: config.email.clientSecret,
+					refreshToken: config.email.refreshToken,
+					accessToken: gmailToken
+				}
+			});
+
+			const sendMailAsync = (email) => new Promise(resolve => service.sendMail(email, (error) => resolve(error)));
+			const error = await sendMailAsync(email);
+
+			if (error) {
+				output.status = 561;
+				output.error = error.message;
+				return output;
+			}
+	
+			service.close();
+
+			output.status = 200;
+			output.cookie = encryptedToken;
+			return output;
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+			return output;
+		}
+	},
+
+	temp: async (request, response) => {
 		let ipAddress = (request.headers["x-forwarded-for"] || "").split(",").pop().trim() || 
 			request.connection.remoteAddress || 
 			request.socket.remoteAddress || 
