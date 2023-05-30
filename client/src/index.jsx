@@ -6,11 +6,35 @@ import "./include/index.css";
 
 const Index = () => {
 
-	const posts = [
-		{ date: new Date(2021,2,8), post: "Reminder... Varsity and JV yearbook  pictures will be done Wednesday morning, March 10th at 8:15. Wrestlers should bring ALL gear to be turned in." },
-		{ date: new Date(2021,0,19), post: "Clover update fir JV for Saturday: JV wrestlers will meet at 7:00am on Saturday morning to go to the Area Tournament at Clover High School.  Spectators are not allowed to this event.  Not all wrestlers will be competing.  They are currently only allowing 1 wrestler per weight class per school.  Wrestlers will be informed at practice if they are expected to attend.  They will need to make weight for the weight class that they are competing in. Thank you." },
-		{ date: new Date(2020,8,30), post: "Coach Doran sent out an email today - WRESTLING….. Pre-Season workouts will begin on Tuesday, October 6th. Practices will be on Tuesdays and Thursdays and will run from 4:00-5:00. Anyone interested in or planning on JV or varsity wrestling this year should plan to attend. If you did not get the email, please text me - 803-984-3457 - Stacey McLean Kelley" }
-	];
+	const [ posts, setPosts ] = useState();
+	const [ images, setImages ] = useState(["/media/instagram/2023-02-07_23-42-13_UTC.jpg", "/media/instagram/2023-02-23_23-29-48_UTC.jpg"]);
+	const [ imageInterval, setImageInterval ] = useState();
+	const [ imageIndex, setImageIndex ] = useState(0);
+
+	useEffect(() => {
+		if (!posts) {
+			fetch(`/api/indexload`)
+				.then(response => {
+					if (response.ok) {
+						return response.json();
+					}
+					else {
+						throw Error(response.statusText);
+					}
+				})
+				.then(data => {
+					setPosts(data.posts);
+					setImages(data.images);
+
+					setImageInterval(setInterval(() => setImageIndex(imageIndex => imageIndex + 1 === images.length ? 0 : imageIndex + 1), 3000));
+				})
+				.catch(error => {
+					console.warn(error);
+				});
+		}
+
+		return () => clearInterval(imageInterval);
+	}, []);
 
 	return (
 
@@ -27,7 +51,7 @@ const Index = () => {
 			<h2>Building Champions for Life</h2>
 
 			<p>
-				Reminder... Varsity and JV yearbook  pictures will be done Wednesday morning, March 10th at 8:15. Wrestlers should bring ALL gear to be turned in.
+				{ posts && posts.length > 0 ? posts[0].post : "" }
 			</p>
 		</div>
 	
@@ -71,7 +95,9 @@ const Index = () => {
 		</div>
 
 		<div className="instagram box">
-			<img src="/media/instagram/2023-02-07_23-42-13_UTC.jpg" />
+			{
+			images && images.length > 0 && <img src={ images[imageIndex] } />
+			}
 		</div>
 
 		<Schedule />
