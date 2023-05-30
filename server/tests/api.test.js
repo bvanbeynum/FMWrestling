@@ -199,7 +199,6 @@ describe("Middleware", () => {
 	
 		const result = await api.requestAccess(ipAddress, domain, userName, userEmail, userAgent, serverPath);
 
-		console.log(result);
 		// ********** Then
 
 		expect(result).toHaveProperty("status", 200);
