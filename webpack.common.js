@@ -2,7 +2,7 @@ import HtmlWebpackPlugin from "html-webpack-plugin";
 
 export default {
 	entry: {
-		index: "./client/src/index.jsx",
+		index: "./client/public/index.jsx",
 		dual: "./client/portal/dual/dual.jsx",
 		noaccess: "./client/portal/noaccess.jsx"
 	},
@@ -42,7 +42,7 @@ export default {
 			title: "Working",
 			favicon: "./client/media/favicon.ico",
 			chunks: [ ],
-			template: "./client/src/working.html"
+			template: "./client/public/working.html"
 		})
 	],
 	module: {
