@@ -13,7 +13,7 @@
 	"jest": {
 		"rootDir": ".",
 		"moduleNameMapper": {
-			"\\.(css|less|scss|sass)$": "<rootDir>/client/src/include/styleMock.js"
+			"\\.(css|less|scss|sass)$": "<rootDir>/client/styleMock.js"
 		}
 	},
 	"dependencies": {
