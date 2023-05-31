@@ -348,3 +348,89 @@ describe("Dual data test", () => {
 	});
 
 });
+
+describe("Announcement data", () => {
+	const expireDate = new Date();
+	expireDate.setDate(expireDate.getDate() + 5);
+
+	let createdId,
+		newData = {
+			content: "Test announcement",
+			scope: "internal",
+			expires: expireDate
+		};
+
+	it("should return return an array of items", async () => {
+		// ********** Given
+
+		// ********** When
+		const response = await data.announcementGet();
+
+		// ********** Then
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("announcements");
+	});
+
+	it("should create a new object", async () => {
+		// ********** Given
+
+		// ********** When
+		const response = await data.announcementSave(newData);
+
+		// ********** Then
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("id");
+
+		createdId = response.data.id;
+	});
+
+	it("should get the new object by id", async () => {
+		// ********** Given
+
+		// ********** When
+		const response = await data.announcementGet(createdId);
+
+		// ********** Then
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("announcements");
+		expect(response.data.announcements).toHaveLength(1);
+
+		expect(response.data.announcements).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					id: createdId,
+					content: newData.content,
+					scope: newData.scope,
+					expires: newData.expires
+				})
+			])
+		);
+	});
+
+	it("should return an empty array for non-existant object", async () => {
+		// ********** Given
+
+		// ********** When
+		const response = await data.announcementGet("abcd");
+
+		// ********** Then
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("announcements");
+		expect(response.data.announcements).toHaveLength(0);
+	});
+
+	it("should delete the new object", async () => {
+		const response = await data.announcementDelete(createdId);
+		
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("status", "ok");
+	});
+
+	it("should return an empty array after deleting the new object", async () => {
+		const response = await data.announcementGet(createdId);
+		
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("announcements");
+		expect(response.data.announcements).toHaveLength(0);
+	});
+});

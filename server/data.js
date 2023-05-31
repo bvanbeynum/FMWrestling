@@ -540,6 +540,114 @@ export default {
 		output.status = 200;
 		output.data = { status: "ok" };
 		return output;
+	},
+
+	announcementGet: async (id) => {
+		const filter = {},
+			output = {};
+
+		if (id) {
+			filter["_id"] = mongoose.Types.ObjectId.isValid(id) ? id : null;
+		}
+
+		try {
+			const records = await data.announcement.find(filter).lean().exec();
+			output.status = 200;
+			output.data = { announcements: records.map(({ _id, __v, ...data }) => ({ id: _id, ...data })) };
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+		}
+
+		return output;
+	},
+
+	announcementSave: async (saveObject) => {
+		if (!saveObject) {
+			output.status = 550;
+			output.error = "Missing object to save";
+			return output;
+		}
+
+		const output = {};
+
+		if (saveObject.id) {
+			let record = null;
+			try {
+				record = await data.announcement.findById(saveObject.id).exec();
+			}
+			catch (error) {
+				output.status = 560;
+				output.error = error.message;
+				return output;
+			}
+
+			if (!record) {
+				output.status = 561;
+				output.error = "Record not found";
+				return output;
+			}
+
+			try {
+				Object.keys(saveObject).forEach(field => {
+					if (field != "id") {
+						record[field] = saveObject[field];
+					}
+				});
+				record.modified = new Date();
+
+				record = await record.save();
+			}
+			catch (error) {
+				output.status = 562;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			output.data = { id: record._id };
+		}
+		else {
+			let record = null;
+			try {
+				record = await (new data.announcement({ ...saveObject, created: new Date(), modified: new Date() })).save();
+			}
+			catch (error) {
+				output.status = 563;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			output.data = { id: record._id };
+		}
+
+		return output;
+	},
+
+	announcementDelete: async (id) => {
+		if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+			output.status = 550;
+			output.error = "Missing ID to delete";
+			return output;
+		}
+
+		const output = {};
+
+		try {
+			await data.announcement.deleteOne({ _id: id });
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		output.data = { status: "ok" };
+		return output;
 	}
+
 
 };

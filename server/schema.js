@@ -75,6 +75,14 @@ export default {
 		isComplete: Boolean,
 		created: Date,
 		modified: Date
+	}),
+
+	announcement: mongoose.model("announcement", {
+		content: String,
+		scope: String,
+		created: Date,
+		modified: Date,
+		expires: Date
 	})
 
 };
