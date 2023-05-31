@@ -1,0 +1,59 @@
+@import url("https://fonts.googleapis.com/css?family=Roboto|Russo+One");
+@import url('https://fonts.googleapis.com/css2?family=Russo+One&display=swap');
+
+html, body, #root {
+	font-family: Roboto, Helvetica, Arial, sans-serif;
+	font-size: 14px;
+	color: rgb(32, 32, 32);
+	padding: 0;
+	margin: 0;
+}
+
+h1 {
+	text-align: center;
+	font-family: 'Russo One';
+	margin: 0px;
+}
+
+svg {
+	width: 24px;
+	height: 24px;
+}
+
+
+.page {
+	display: flex;
+	height: 100vh;
+}
+
+header {
+	display: flex;
+	padding: 10px;
+}
+
+header h1 {
+	flex: 1;
+	color: rgb(10 66 115);
+}
+
+.button {
+	cursor: pointer;
+	user-select: none;
+	outline: none;
+}
+
+.content .menuIconToggle {
+	position: fixed;
+}
+
+.content {
+	flex: 1;
+	background-color: rgb(245 245 245);
+}
+
+@media (min-width: 1024px) {
+
+	.sidebarIconToggle {
+		display: none;
+	}
+}

@@ -3,6 +3,7 @@ import HtmlWebpackPlugin from "html-webpack-plugin";
 export default {
 	entry: {
 		index: "./client/public/index.jsx",
+		portal: "./client/portal/index.jsx",
 		dual: "./client/portal/dual/dual.jsx",
 		noaccess: "./client/portal/noaccess.jsx"
 	},
@@ -15,6 +16,16 @@ export default {
 				viewport: "width=device-width, initial-scale=1"
 			},
 			chunks: [ "index" ],
+			templateContent: "<html><body><div id='root'></div></body></html>"
+		}),
+		new HtmlWebpackPlugin({ 
+			filename: "./portal/index.html",
+			title: "Fort Mill Wrestling - Portal",
+			favicon: "./client/media/favicon.ico",
+			meta: {
+				viewport: "width=device-width, initial-scale=1"
+			},
+			chunks: [ "portal" ],
 			templateContent: "<html><body><div id='root'></div></body></html>"
 		}),
 		new HtmlWebpackPlugin({ 

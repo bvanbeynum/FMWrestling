@@ -1,0 +1,50 @@
+nav {
+	height: 100vh;
+	position: fixed;
+	z-index: 10;
+	left: 0;
+	width: 350px;
+	transform: translateX(-350px);
+	transition: transform 250ms ease-in-out;
+	background-color: rgb(255 255 255);
+	box-shadow: rgba(0, 0, 0, 0.15) 2px 0px 8px 0px;
+}
+nav.active {
+	transform: translateX(0);
+}
+
+nav header {
+	justify-content: flex-end;
+}
+
+nav svg {
+	margin-right: 10px;
+}
+
+nav ul {
+	margin: 0;
+	padding: 0;
+}
+
+nav li {
+	list-style: none;
+	padding: 10px 20px;
+	cursor: pointer;
+	user-select: none;
+	outline: none;
+	display: flex;
+	align-items: end;
+	font-size: 1.3em;
+	font-weight: bold;
+}
+
+@media (min-width: 1024px) {
+	nav {
+		transform: none;
+		transition: none;
+		position: initial;
+	}
+	nav.active {
+		transform: none;
+	}
+}
