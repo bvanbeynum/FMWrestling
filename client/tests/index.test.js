@@ -5,7 +5,7 @@
 import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import Index from "../src/index.jsx";
+import Index from "../public/index.jsx";
 
 describe("Index component", () => {
 	
