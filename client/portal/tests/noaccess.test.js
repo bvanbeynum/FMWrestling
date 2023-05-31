@@ -5,7 +5,7 @@
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import NoAccess from "../portal/noaccess.jsx";
+import NoAccess from "../noaccess.jsx";
 
 beforeEach(() => {
 	global.fetch = jest.fn(() => Promise.resolve({
