@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import ReactDOM from "react-dom/client";
 import Nav from "./nav.jsx";
+import Announcements from "./announcements.jsx";
 import "./include/index.css";
 
 const Index = () => {
@@ -27,8 +28,14 @@ const Index = () => {
 				</svg>
 			</div>
 			
-			<h1>{ page === "home" ? "Welcome" : page }</h1>
+			<h1>{ page === "home" ? "Welcome" : page.substring(0,1).toUpperCase() + page.substring(1) }</h1>
 		</header>
+
+		{
+		page === "announcements" ?
+		<Announcements />
+		: ""
+		}
 	</div>
 </div>
 
