@@ -222,3 +222,42 @@ describe("Middleware", () => {
 	});
 
 });
+
+describe("API functions", () => {
+
+	it("saves announcement", async () => {
+		// ********** Given
+
+		const expireDate = new Date();
+		expireDate.setDate(expireDate.getDate() + 5);
+
+		const save = { announcement: { content: "Test post", expires: expireDate } },
+			serverPath = "http://dev.beynum.com",
+			returnId = "testid";
+
+		const send = jest.fn().mockResolvedValue({
+			body: { id: returnId }
+		});
+		client.post = jest.fn(() => ({
+			send: send
+		}));
+
+		// ********** When
+
+		const result = await api.announcementSave(save, serverPath);
+
+		// ********** Then
+
+		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/announcement`);
+		expect(send).toHaveBeenCalledWith(
+			expect.objectContaining({
+				announcement: expect.objectContaining({ content: save.announcement.content })
+			})
+		);
+
+		expect(result).toHaveProperty("status", 200);
+		expect(result).toHaveProperty("data");
+		expect(result.data).toHaveProperty("id", returnId);
+	});
+
+});

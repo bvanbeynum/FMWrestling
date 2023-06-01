@@ -129,6 +129,23 @@ export default {
 			output.error = error.message;
 			return output;
 		}
+	},
+
+	announcementSave: async (announcement, serverPath) => {
+		const output = {};
+
+		try {
+			const clientResponse = await client.post(`${ serverPath }/data/announcement`).send(announcement);
+			output.data = { id: clientResponse.body.id };
+			
+			output.status = 200;
+			return output;
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
 	}
 
 };

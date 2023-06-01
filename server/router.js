@@ -67,7 +67,17 @@ router.post("/api/requestaccess", [authAPI, browser.express()], async (request, 
 
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 	response.end();
-})
+});
+
+router.post("/api/announcementsave", authAPI, async (request, response) => {
+	const result = await api.announcementSave(request.body.annoucement, request.serverPath);
+
+	if (result.error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6477f531f18254fde707c125", message: `${ results.status }: ${results.error}` }}).then();
+	}
+
+	response.status(result.status).json(result.error ? { error: result.error } : result.data);
+});
 
 // ************************* Data
 
