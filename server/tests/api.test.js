@@ -18,44 +18,44 @@ describe("Middleware", () => {
 		const protocol = "https",
 			host = "thewrestlingmill.com";
 
-		const result = api.setRequestVars(protocol, host);
+		const results = api.setRequestVars(protocol, host);
 
-		expect(result).toHaveProperty("serverPath", `${ protocol }://${ host }`);
-		expect(result).toHaveProperty("logUrl", `${ protocol }://beynum.com/sys/api/addlog`);
+		expect(results).toHaveProperty("serverPath", `${ protocol }://${ host }`);
+		expect(results).toHaveProperty("logUrl", `${ protocol }://beynum.com/sys/api/addlog`);
 	});
 
 	it("successfully passes internal authentication", () => {
 		const clientIP = "10.21.0.123";
 
-		const result = api.authInternal(clientIP);
+		const results = api.authInternal(clientIP);
 
-		expect(result).toBe(true);
+		expect(results).toBe(true);
 	});
 
 	it("failes internal authentication", () => {
 		const clientIP = "185.244.2.52";
 
-		const result = api.authInternal(clientIP);
+		const results = api.authInternal(clientIP);
 
-		expect(result).toBe(false);
+		expect(results).toBe(false);
 	});
 
 	it("successfully passes API authentication", () => {
 		const serverPath = "https://thewrestlingmill.com",
 			referer = "https://thewrestlingmill.com/index.html";
 		
-		const result = api.authAPI(serverPath, referer);
+		const results = api.authAPI(serverPath, referer);
 
-		expect(result).toBe(true);
+		expect(results).toBe(true);
 	});
 
 	it("fails API authentication", () => {
 		const serverPath = "https://thewrestlingmill.com",
 			referer = "https://badurl.com/index.html";
 		
-		const result = api.authAPI(serverPath, referer);
+		const results = api.authAPI(serverPath, referer);
 
-		expect(result).toBe(false);
+		expect(results).toBe(false);
 	});
 
 	it("skips portal authentication", async () => {
@@ -68,9 +68,9 @@ describe("Middleware", () => {
 		client.get = jest.fn();
 		client.post = jest.fn();
 
-		const result = await api.authPortal(cookie, urlPath, serverPath);
+		const results = await api.authPortal(cookie, urlPath, serverPath);
 
-		expect(result).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("status", 200);
 
 		expect(jwt.verify).not.toHaveBeenCalled();
 		expect(client.get).not.toHaveBeenCalled();
@@ -106,9 +106,9 @@ describe("Middleware", () => {
 			})
 		}));
 
-		const result = await api.authPortal(cookie, urlPath, serverPath);
+		const results = await api.authPortal(cookie, urlPath, serverPath);
 
-		expect(result).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("status", 200);
 		
 		expect(jwt.verify).toHaveBeenCalled();
 
@@ -129,10 +129,10 @@ describe("Middleware", () => {
 			token: token
 		});
 
-		const result = await api.authPortal(cookie, urlPath, serverPath);
+		const results = await api.authPortal(cookie, urlPath, serverPath);
 
-		expect(result).toHaveProperty("status", 561);
-		expect(result).toHaveProperty("error", "Invalid token");
+		expect(results).toHaveProperty("status", 561);
+		expect(results).toHaveProperty("error", "Invalid token");
 		expect(jwt.verify).toHaveBeenCalled();
 	});
 
@@ -150,10 +150,10 @@ describe("Middleware", () => {
 			users: []
 		}});
 
-		const result = await api.authPortal(cookie, urlPath, serverPath);
+		const results = await api.authPortal(cookie, urlPath, serverPath);
 
-		expect(result).toHaveProperty("status", 563);
-		expect(result).toMatchObject({
+		expect(results).toHaveProperty("status", 563);
+		expect(results).toMatchObject({
 			error: expect.stringMatching(/^user not found/i)
 		  });
 		expect(jwt.verify).toHaveBeenCalled();
@@ -197,12 +197,12 @@ describe("Middleware", () => {
 
 		// ********** When
 	
-		const result = await api.requestAccess(ipAddress, domain, userName, userEmail, userAgent, serverPath);
+		const results = await api.requestAccess(ipAddress, domain, userName, userEmail, userAgent, serverPath);
 
 		// ********** Then
 
-		expect(result).toHaveProperty("status", 200);
-		expect(result).toHaveProperty("cookie");
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("cookie");
 
 		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/devicerequest`);
 		expect(send).toHaveBeenCalledWith(
@@ -225,13 +225,45 @@ describe("Middleware", () => {
 
 describe("API functions", () => {
 
-	it("saves announcement", async () => {
+	it("loads the post data", async () => {
+		// ********** Given
+
+		const serverPath = "http://dev.beynum.com",
+			output = [
+				{ content: "Test2", expires: null },
+				{ content: "unexpired content", expires: new Date(new Date(Date.now()).setDate(new Date().getDate() + 5)) },
+				{ content: "expired content", expires: new Date(new Date(Date.now()).setDate(new Date().getDate() - 5)) }
+			];
+		
+		client.get = jest.fn().mockResolvedValue({ body: {
+			posts: output
+		}});
+
+		// ********** When
+
+		const results = await api.postLoad(serverPath);
+
+		// ********** Then
+
+		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/post`);
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("posts");
+
+		// No expired posts
+		expect(results.posts).toHaveLength(output.filter(post => !post.expires || post.expires < new Date()).length);
+
+		// First post matches mock
+		expect(results.posts[0]).toHaveProperty("content", output[0].content);
+	});
+
+	it("saves post", async () => {
 		// ********** Given
 
 		const expireDate = new Date();
 		expireDate.setDate(expireDate.getDate() + 5);
 
-		const save = { announcement: { content: "Test post", expires: expireDate } },
+		const save = { content: "Test post", expires: expireDate },
 			serverPath = "http://dev.beynum.com",
 			returnId = "testid";
 
@@ -244,20 +276,20 @@ describe("API functions", () => {
 
 		// ********** When
 
-		const result = await api.announcementSave(save, serverPath);
+		const results = await api.postSave(save, serverPath);
 
 		// ********** Then
 
-		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/announcement`);
+		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/post`);
 		expect(send).toHaveBeenCalledWith(
 			expect.objectContaining({
-				announcement: expect.objectContaining({ content: save.announcement.content })
+				post: expect.objectContaining({ content: save.content })
 			})
 		);
 
-		expect(result).toHaveProperty("status", 200);
-		expect(result).toHaveProperty("data");
-		expect(result.data).toHaveProperty("id", returnId);
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("id", returnId);
 	});
 
 });

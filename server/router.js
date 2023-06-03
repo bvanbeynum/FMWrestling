@@ -65,18 +65,29 @@ router.post("/api/requestaccess", [authAPI, browser.express()], async (request, 
 		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "642202d038baa8f160a2c6bb", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
+	response.cookie("wm", results.cookie, { maxAge: 999999999999 });
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 	response.end();
 });
 
-router.post("/api/announcementsave", authAPI, async (request, response) => {
-	const result = await api.announcementSave(request.body.annoucement, request.serverPath);
+router.get("/api/postload", authAPI, async (request, response) => {
+	const results = await api.postLoad(request.serverPath);
 
-	if (result.error) {
+	if (results.error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "647b4c2ef18254fde708ec96", message: `${ results.status }: ${results.error}` }}).then();
+	}
+
+	response.status(results.status).json(results.error ? { error: results.error } : results.data);
+});
+
+router.post("/api/postsave", authAPI, async (request, response) => {
+	const results = await api.postSave(request.body.post, request.serverPath);
+
+	if (results.error) {
 		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6477f531f18254fde707c125", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
-	response.status(result.status).json(result.error ? { error: result.error } : result.data);
+	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 });
 
 // ************************* Data
@@ -240,6 +251,45 @@ router.delete("/data/dual", authInternal, async (request, response) => {
 
 	if (results.error) {
 		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "641f014097f3b068a5626656", message: `${ results.status }: ${results.error}` }}).then();
+	}
+
+	response.status(results.status).json(results.error ? { error: results.error } : results.data);
+	response.end();
+});
+
+router.get("/data/announcement", authInternal, async (request, response) => {
+	const results = await data.announcementGet(request.query.id);
+
+	if (results.error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "647b3795f18254fde708e57e", message: `${ results.status }: ${results.error}` }}).then();
+	}
+
+	response.status(results.status).json(results.error ? { error: results.error } : results.data);
+	response.end();
+});
+
+router.post("/data/announcement", authInternal, async (request, response) => {
+	try {
+		const results = await data.announcementSave(request.body.announcement);
+
+		if (results.error) {
+			client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "647b37b8f18254fde708e581", message: `${ results.status }: ${results.error}` }}).then();
+		}
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "647b37b8f18254fde708e581", message: `570: ${error.message}` }}).then();
+		response.status(570).json({ error: error.message });
+	}
+});
+
+router.delete("/data/announcement", authInternal, async (request, response) => {
+	const results = await data.announcementDelete(request.query.id);
+
+	if (results.error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "647b37c7f18254fde708e583", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);

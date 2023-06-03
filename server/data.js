@@ -29,13 +29,13 @@ export default {
 	},
 
 	userSave: async (saveObject) => {
+		const output = {};
+
 		if (!saveObject) {
 			output.status = 550;
 			output.error = "Missing object to save";
 			return output;
 		}
-
-		const output = {};
 
 		if (saveObject.id) {
 			let record = null;
@@ -92,13 +92,13 @@ export default {
 	},
 
 	userDelete: async (id) => {
+		const output = {};
+
 		if (!id || !mongoose.Types.ObjectId.isValid(id)) {
 			output.status = 550;
 			output.error = "Missing ID to delete";
 			return output;
 		}
-
-		const output = {};
 
 		try {
 			await data.user.deleteOne({ _id: id });
@@ -136,13 +136,13 @@ export default {
 	},
 
 	deviceRequestSave: async (saveObject) => {
+		const output = {};
+
 		if (!saveObject) {
 			output.status = 550;
 			output.error = "Missing object to save";
 			return output;
 		}
-
-		const output = {};
 
 		if (saveObject.id) {
 			let record = null;
@@ -199,13 +199,13 @@ export default {
 	},
 
 	deviceRequestDelete: async (id) => {
+		const output = {};
+
 		if (!id || !mongoose.Types.ObjectId.isValid(id)) {
 			output.status = 550;
 			output.error = "Missing ID to delete";
 			return output;
 		}
-
-		const output = {};
 
 		try {
 			await data.deviceRequest.deleteOne({ _id: id });
@@ -243,13 +243,13 @@ export default {
 	},
 
 	scoreCallSave: async (saveObject) => {
+		const output = {};
+
 		if (!saveObject) {
 			output.status = 550;
 			output.error = "Missing object to save";
 			return output;
 		}
-
-		const output = {};
 
 		if (saveObject.id) {
 			let record = null;
@@ -306,13 +306,13 @@ export default {
 	},
 
 	scoreCallDelete: async (id) => {
+		const output = {};
+
 		if (!id || !mongoose.Types.ObjectId.isValid(id)) {
 			output.status = 550;
 			output.error = "Missing ID to delete";
 			return output;
 		}
-
-		const output = {};
 
 		try {
 			await data.scoreCall.deleteOne({ _id: id });
@@ -350,13 +350,13 @@ export default {
 	},
 
 	wrestlerSave: async (saveObject) => {
+		const output = {};
+
 		if (!saveObject) {
 			output.status = 550;
 			output.error = "Missing object to save";
 			return output;
 		}
-
-		const output = {};
 
 		if (saveObject.id) {
 			let record = null;
@@ -413,13 +413,13 @@ export default {
 	},
 
 	wrestlerDelete: async (id) => {
+		const output = {};
+
 		if (!id || !mongoose.Types.ObjectId.isValid(id)) {
 			output.status = 550;
 			output.error = "Missing ID to delete";
 			return output;
 		}
-
-		const output = {};
 
 		try {
 			await data.wrestler.deleteOne({ _id: id });
@@ -457,13 +457,13 @@ export default {
 	},
 
 	dualSave: async (saveObject) => {
+		const output = {};
+
 		if (!saveObject) {
 			output.status = 550;
 			output.error = "Missing object to save";
 			return output;
 		}
-
-		const output = {};
 
 		if (saveObject.id) {
 			let record = null;
@@ -520,13 +520,13 @@ export default {
 	},
 
 	dualDelete: async (id) => {
+		const output = {};
+
 		if (!id || !mongoose.Types.ObjectId.isValid(id)) {
 			output.status = 550;
 			output.error = "Missing ID to delete";
 			return output;
 		}
-
-		const output = {};
 
 		try {
 			await data.dual.deleteOne({ _id: id });
@@ -542,18 +542,21 @@ export default {
 		return output;
 	},
 
-	announcementGet: async (id) => {
+	postGet: async (id, includeExpired) => {
 		const filter = {},
 			output = {};
 
 		if (id) {
 			filter["_id"] = mongoose.Types.ObjectId.isValid(id) ? id : null;
 		}
+		if (!includeExpired) {
+			filter.expires = { $gt: new Date() };
+		}
 
 		try {
-			const records = await data.announcement.find(filter).lean().exec();
+			const records = await data.post.find(filter).lean().exec();
 			output.status = 200;
-			output.data = { announcements: records.map(({ _id, __v, ...data }) => ({ id: _id, ...data })) };
+			output.data = { posts: records.map(({ _id, __v, ...data }) => ({ id: _id, ...data })) };
 		}
 		catch (error) {
 			output.status = 560;
@@ -563,19 +566,19 @@ export default {
 		return output;
 	},
 
-	announcementSave: async (saveObject) => {
+	postSave: async (saveObject) => {
+		const output = {};
+
 		if (!saveObject) {
 			output.status = 550;
 			output.error = "Missing object to save";
 			return output;
 		}
 
-		const output = {};
-
 		if (saveObject.id) {
 			let record = null;
 			try {
-				record = await data.announcement.findById(saveObject.id).exec();
+				record = await data.post.findById(saveObject.id).exec();
 			}
 			catch (error) {
 				output.status = 560;
@@ -611,7 +614,7 @@ export default {
 		else {
 			let record = null;
 			try {
-				record = await (new data.announcement({ ...saveObject, created: new Date(), modified: new Date() })).save();
+				record = await (new data.post({ ...saveObject, created: new Date(), modified: new Date() })).save();
 			}
 			catch (error) {
 				output.status = 563;
@@ -626,17 +629,17 @@ export default {
 		return output;
 	},
 
-	announcementDelete: async (id) => {
+	postDelete: async (id) => {
+		const output = {};
+
 		if (!id || !mongoose.Types.ObjectId.isValid(id)) {
 			output.status = 550;
 			output.error = "Missing ID to delete";
 			return output;
 		}
 
-		const output = {};
-
 		try {
-			await data.announcement.deleteOne({ _id: id });
+			await data.post.deleteOne({ _id: id });
 		}
 		catch (error) {
 			output.status = 560;

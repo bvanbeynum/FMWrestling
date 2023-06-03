@@ -349,33 +349,35 @@ describe("Dual data test", () => {
 
 });
 
-describe("Announcement data", () => {
-	const expireDate = new Date();
-	expireDate.setDate(expireDate.getDate() + 5);
-
+describe("Post data", () => {
 	let createdId,
 		newData = {
-			content: "Test announcement",
+			content: "Test post",
 			scope: "internal",
-			expires: expireDate
+			expires: new Date(new Date(Date.now()).setDate(new Date().getDate() + 5))
+		},
+		expiredData = {
+			content: "Test post",
+			scope: "internal",
+			expires: new Date(new Date(Date.now()).setDate(new Date().getDate() - 5))
 		};
 
 	it("should return return an array of items", async () => {
 		// ********** Given
 
 		// ********** When
-		const response = await data.announcementGet();
+		const response = await data.postGet(null);
 
 		// ********** Then
 		expect(response.status).toEqual(200);
-		expect(response.data).toHaveProperty("announcements");
+		expect(response.data).toHaveProperty("posts");
 	});
 
 	it("should create a new object", async () => {
 		// ********** Given
 
 		// ********** When
-		const response = await data.announcementSave(newData);
+		const response = await data.postSave(newData);
 
 		// ********** Then
 		expect(response.status).toEqual(200);
@@ -388,14 +390,14 @@ describe("Announcement data", () => {
 		// ********** Given
 
 		// ********** When
-		const response = await data.announcementGet(createdId);
+		const response = await data.postGet(createdId);
 
 		// ********** Then
 		expect(response.status).toEqual(200);
-		expect(response.data).toHaveProperty("announcements");
-		expect(response.data.announcements).toHaveLength(1);
+		expect(response.data).toHaveProperty("posts");
+		expect(response.data.posts).toHaveLength(1);
 
-		expect(response.data.announcements).toEqual(
+		expect(response.data.posts).toEqual(
 			expect.arrayContaining([
 				expect.objectContaining({
 					id: createdId,
@@ -411,26 +413,80 @@ describe("Announcement data", () => {
 		// ********** Given
 
 		// ********** When
-		const response = await data.announcementGet("abcd");
+		const response = await data.postGet("abcd");
 
 		// ********** Then
 		expect(response.status).toEqual(200);
-		expect(response.data).toHaveProperty("announcements");
-		expect(response.data.announcements).toHaveLength(0);
+		expect(response.data).toHaveProperty("posts");
+		expect(response.data.posts).toHaveLength(0);
 	});
 
 	it("should delete the new object", async () => {
-		const response = await data.announcementDelete(createdId);
+		// ********** Given
+
+		// ********** When
+		const response = await data.postDelete(createdId);
 		
+		// ********** Then
 		expect(response.status).toEqual(200);
 		expect(response.data).toHaveProperty("status", "ok");
 	});
 
 	it("should return an empty array after deleting the new object", async () => {
-		const response = await data.announcementGet(createdId);
+		const response = await data.postGet(createdId);
 		
 		expect(response.status).toEqual(200);
-		expect(response.data).toHaveProperty("announcements");
-		expect(response.data.announcements).toHaveLength(0);
+		expect(response.data).toHaveProperty("posts");
+		expect(response.data.posts).toHaveLength(0);
+	});
+
+	it("should not return expired results", async () => {
+		// ********** Given
+		let response = await data.postSave(expiredData);
+
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("id");
+
+		createdId = response.data.id;
+
+		// ********** When
+		response = await data.postGet();
+
+		// ********** Then
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("posts");
+		expect(response.data.posts.filter(post => post.expires < new Date())).toHaveLength(0);
+
+		response = await data.postDelete(createdId);
+
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("status", "ok");
+	});
+	
+	it("should return expired results", async () => {
+		// ********** Given
+		let response = await data.postSave(expiredData);
+
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("id");
+
+		createdId = response.data.id;
+
+		// ********** When
+		response = await data.postGet(null, true);
+
+		// ********** Then
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("posts");
+		expect(response.data.posts.filter(post => post.expires < new Date())).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ id: createdId })
+			])
+		);
+
+		response = await data.postDelete(createdId);
+
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("status", "ok");
 	});
 });

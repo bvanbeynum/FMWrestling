@@ -131,11 +131,28 @@ export default {
 		}
 	},
 
-	announcementSave: async (announcement, serverPath) => {
+	postLoad: async (serverPath) => {
 		const output = {};
 
 		try {
-			const clientResponse = await client.post(`${ serverPath }/data/announcement`).send(announcement);
+			const clientResponse = await client.get(`${ serverPath }/data/post`);
+
+			output.status = 200;
+			output.posts = clientResponse.body.posts.filter(post => !post.expires || post.expires > new Date());
+			return output;
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+	},
+
+	postSave: async (post, serverPath) => {
+		const output = {};
+
+		try {
+			const clientResponse = await client.post(`${ serverPath }/data/post`).send({ post: post }).then();
 			output.data = { id: clientResponse.body.id };
 			
 			output.status = 200;

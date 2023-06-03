@@ -77,7 +77,7 @@ export default {
 		modified: Date
 	}),
 
-	announcement: mongoose.model("announcement", {
+	post: mongoose.model("post", {
 		content: String,
 		scope: String,
 		created: Date,
