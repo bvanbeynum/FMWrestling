@@ -248,13 +248,14 @@ describe("API functions", () => {
 		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/post`);
 
 		expect(results).toHaveProperty("status", 200);
-		expect(results).toHaveProperty("posts");
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("posts");
 
 		// No expired posts
-		expect(results.posts).toHaveLength(output.filter(post => !post.expires || post.expires < new Date()).length);
+		expect(results.data.posts).toHaveLength(output.filter(post => !post.expires || post.expires < new Date()).length);
 
 		// First post matches mock
-		expect(results.posts[0]).toHaveProperty("content", output[0].content);
+		expect(results.data.posts[0]).toHaveProperty("content", output[0].content);
 	});
 
 	it("saves post", async () => {
@@ -263,7 +264,7 @@ describe("API functions", () => {
 		const expireDate = new Date();
 		expireDate.setDate(expireDate.getDate() + 5);
 
-		const save = { content: "Test post", expires: expireDate },
+		const body = { save: { content: "Test post", expires: expireDate }},
 			serverPath = "http://dev.beynum.com",
 			returnId = "testid";
 
@@ -274,22 +275,52 @@ describe("API functions", () => {
 			send: send
 		}));
 
+		client.get = jest.fn().mockResolvedValue({ body: {
+			posts: [{ ...body.save, id: returnId, created: new Date() }]
+		}});
+
 		// ********** When
 
-		const results = await api.postSave(save, serverPath);
+		const results = await api.postSave(body, serverPath);
 
 		// ********** Then
 
 		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/post`);
 		expect(send).toHaveBeenCalledWith(
 			expect.objectContaining({
-				post: expect.objectContaining({ content: save.content })
+				post: expect.objectContaining({ content: body.save.content })
 			})
 		);
+		
+		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/post?id=${ returnId }`);
 
 		expect(results).toHaveProperty("status", 200);
 		expect(results).toHaveProperty("data");
-		expect(results.data).toHaveProperty("id", returnId);
+		expect(results.data).toHaveProperty("post", expect.objectContaining({ id: returnId }));
+	});
+
+	it("deletes post", async () => {
+		// ********** Given
+
+		const deleteId = "testid",
+			body = { delete: deleteId },
+			serverPath = "http://dev.beynum.com";
+
+		client.delete = jest.fn(() => ({
+			status: "ok"
+		}));
+
+		// ********** When
+
+		const results = await api.postSave(body, serverPath);
+
+		// ********** Then
+
+		expect(client.delete).toHaveBeenCalledWith(`${ serverPath }/data/post?id=${ deleteId }`);
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("status", "ok");
 	});
 
 });

@@ -543,14 +543,14 @@ export default {
 	},
 
 	postGet: async (id, includeExpired) => {
-		const filter = {},
+		let filter = {},
 			output = {};
 
 		if (id) {
 			filter["_id"] = mongoose.Types.ObjectId.isValid(id) ? id : null;
 		}
-		if (!includeExpired) {
-			filter.expires = { $gt: new Date() };
+		else if (!includeExpired) {
+			filter = { $or: [ { expires: null }, { expires: { $gt: new Date() }} ] };
 		}
 
 		try {

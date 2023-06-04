@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import ReactDOM from "react-dom/client";
 import Nav from "./nav.jsx";
-import Announcements from "./announcements.jsx";
+import Posts from "./posts.jsx";
 import "./include/index.css";
 
 const Index = () => {
@@ -32,8 +32,8 @@ const Index = () => {
 		</header>
 
 		{
-		page === "announcements" ?
-		<Announcements />
+		page === "posts" ?
+		<Posts />
 		: ""
 		}
 	</div>

@@ -138,7 +138,7 @@ export default {
 			const clientResponse = await client.get(`${ serverPath }/data/post`);
 
 			output.status = 200;
-			output.posts = clientResponse.body.posts.filter(post => !post.expires || post.expires > new Date());
+			output.data = { posts: clientResponse.body.posts.filter(post => !post.expires || new Date(post.expires) > new Date()) };
 			return output;
 		}
 		catch (error) {
@@ -148,20 +148,54 @@ export default {
 		}
 	},
 
-	postSave: async (post, serverPath) => {
+	postSave: async (body, serverPath) => {
 		const output = {};
 
-		try {
-			const clientResponse = await client.post(`${ serverPath }/data/post`).send({ post: post }).then();
-			output.data = { id: clientResponse.body.id };
-			
-			output.status = 200;
+		if (!body) {
+			output.status = 562;
+			output.error = "Missing action";
 			return output;
 		}
-		catch (error) {
-			output.status = 561;
-			output.error = error.message;
-			return output;
+		else if (body.save) {
+			let saveId = null;
+
+			try {
+				const clientResponse = await client.post(`${ serverPath }/data/post`).send({ post: body.save }).then();
+				saveId = clientResponse.body.id;
+			}
+			catch (error) {
+				output.status = 561;
+				output.error = error.message;
+				return output;
+			}
+
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/post?id=${ saveId }`).then();
+				
+				output.status = 200;
+				output.data = { post: clientResponse.body.posts[0] };
+				return output;
+			}
+			catch (error) {
+				output.status = 562;
+				output.error = error.message;
+				return output;
+			}
+		}
+		else if (body.delete) {
+			try {
+				await client.delete(`${ serverPath }/data/post?id=${ body.delete }`);
+
+				output.status = 200;
+				output.data = { status: "ok" };
+				return output;
+			}
+			catch (error) {
+				console.log(error);
+				output.status = 561;
+				output.error = error.message;
+				return output;
+			}
 		}
 	}
 

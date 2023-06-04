@@ -81,7 +81,7 @@ router.get("/api/postload", authAPI, async (request, response) => {
 });
 
 router.post("/api/postsave", authAPI, async (request, response) => {
-	const results = await api.postSave(request.body.post, request.serverPath);
+	const results = await api.postSave(request.body, request.serverPath);
 
 	if (results.error) {
 		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6477f531f18254fde707c125", message: `${ results.status }: ${results.error}` }}).then();
@@ -257,8 +257,8 @@ router.delete("/data/dual", authInternal, async (request, response) => {
 	response.end();
 });
 
-router.get("/data/announcement", authInternal, async (request, response) => {
-	const results = await data.announcementGet(request.query.id);
+router.get("/data/post", authInternal, async (request, response) => {
+	const results = await data.postGet(request.query.id, /^true$/i.test(request.query.all));
 
 	if (results.error) {
 		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "647b3795f18254fde708e57e", message: `${ results.status }: ${results.error}` }}).then();
@@ -268,9 +268,9 @@ router.get("/data/announcement", authInternal, async (request, response) => {
 	response.end();
 });
 
-router.post("/data/announcement", authInternal, async (request, response) => {
+router.post("/data/post", authInternal, async (request, response) => {
 	try {
-		const results = await data.announcementSave(request.body.announcement);
+		const results = await data.postSave(request.body.post);
 
 		if (results.error) {
 			client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "647b37b8f18254fde708e581", message: `${ results.status }: ${results.error}` }}).then();
@@ -285,8 +285,8 @@ router.post("/data/announcement", authInternal, async (request, response) => {
 	}
 });
 
-router.delete("/data/announcement", authInternal, async (request, response) => {
-	const results = await data.announcementDelete(request.query.id);
+router.delete("/data/post", authInternal, async (request, response) => {
+	const results = await data.postDelete(request.query.id);
 
 	if (results.error) {
 		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "647b37c7f18254fde708e583", message: `${ results.status }: ${results.error}` }}).then();

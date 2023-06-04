@@ -437,7 +437,13 @@ describe("Post data", () => {
 		
 		expect(response.status).toEqual(200);
 		expect(response.data).toHaveProperty("posts");
-		expect(response.data.posts).toHaveLength(0);
+		expect(response.data.posts).not.toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					id: createdId
+				})
+			])
+		);
 	});
 
 	it("should not return expired results", async () => {
@@ -455,7 +461,7 @@ describe("Post data", () => {
 		// ********** Then
 		expect(response.status).toEqual(200);
 		expect(response.data).toHaveProperty("posts");
-		expect(response.data.posts.filter(post => post.expires < new Date())).toHaveLength(0);
+		expect(response.data.posts.filter(post => post.expires && post.expires < new Date())).toHaveLength(0);
 
 		response = await data.postDelete(createdId);
 

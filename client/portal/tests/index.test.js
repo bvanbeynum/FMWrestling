@@ -10,6 +10,11 @@ import Index from "../index.jsx";
 describe("Index component", () => {
 	
 	beforeEach(() => {
+		global.fetch = jest.fn().mockResolvedValue({
+			ok: true,
+			status: 200,
+			json: jest.fn().mockResolvedValue({ })
+		});
 	});
 
 	afterEach(() => {
@@ -30,21 +35,21 @@ describe("Index component", () => {
 		expect(await screen.findByText(/home/i)).toBeInTheDocument();
 	});
 
-	it("navigates to announcements", async () => {
+	it("navigates to posts", async () => {
 
 		// ******** Given ***************
 
 		render(<Index />);
 
-		const announceButton = await screen.findByText(/announcements/i);
+		const postsButton = await screen.findByText(/posts/i);
 
 		// ******** When ****************
 		
-		fireEvent.click(announceButton);
+		fireEvent.click(postsButton);
 
 		// ******** Then ****************
 
-		expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent(/announcements/i);
+		expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent(/posts/i);
 	});
 
 });
