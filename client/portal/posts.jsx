@@ -37,11 +37,13 @@ const Posts = (props) => {
 				})
 				.then(data => {
 					setPosts(
-						data.posts.map(post => ({
-							...post, 
-							created: new Date(post.created), 
-							expires: post.expires ? new Date(post.expires) : ""
-						}))
+						data.posts ?
+							data.posts.map(post => ({
+								...post, 
+								created: new Date(post.created), 
+								expires: post.expires ? new Date(post.expires) : ""
+							}))
+						: []
 					);
 
 					setScopes(["Internal", "Public", "All"]);
