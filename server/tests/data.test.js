@@ -495,4 +495,181 @@ describe("Post data", () => {
 		expect(response.status).toEqual(200);
 		expect(response.data).toHaveProperty("status", "ok");
 	});
+
+});
+
+describe("Role data", () => {
+	let createdId,
+		newData = {
+			name: "Test role",
+			isActive: false
+		};
+
+	it("should return return an array of items", async () => {
+		// ********** Given
+
+		// ********** When
+		const response = await data.roleGet(null);
+
+		// ********** Then
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("roles");
+	});
+
+	it("should create a new object", async () => {
+		// ********** Given
+
+		// ********** When
+		const response = await data.roleSave(newData);
+
+		// ********** Then
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("id");
+
+		createdId = response.data.id;
+	});
+
+	it("should get the new object by id", async () => {
+		// ********** Given
+
+		// ********** When
+		const response = await data.roleGet(createdId);
+
+		// ********** Then
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("roles");
+		expect(response.data.roles).toHaveLength(1);
+
+		expect(response.data.roles).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining(newData)
+			])
+		);
+	});
+
+	it("should return an empty array for non-existant object", async () => {
+		// ********** Given
+
+		// ********** When
+		const response = await data.roleGet("abcd");
+
+		// ********** Then
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("roles");
+		expect(response.data.roles).toHaveLength(0);
+	});
+
+	it("should delete the new object", async () => {
+		// ********** Given
+
+		// ********** When
+		const response = await data.roleDelete(createdId);
+		
+		// ********** Then
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("status", "ok");
+	});
+
+	it("should return an empty array after deleting the new object", async () => {
+		const response = await data.roleGet(createdId);
+		
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("roles");
+		expect(response.data.roles).not.toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					id: createdId
+				})
+			])
+		);
+	});
+
+});
+
+describe("Privilege data", () => {
+	let createdId,
+		newData = {
+			name: "Test privilege",
+			token: "test"
+		};
+
+	it("should return return an array of items", async () => {
+		// ********** Given
+
+		// ********** When
+		const response = await data.privilegeGet(null);
+
+		// ********** Then
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("privileges");
+	});
+
+	it("should create a new object", async () => {
+		// ********** Given
+
+		// ********** When
+		const response = await data.privilegeSave(newData);
+
+		// ********** Then
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("id");
+
+		createdId = response.data.id;
+	});
+
+	it("should get the new object by id", async () => {
+		// ********** Given
+
+		// ********** When
+		const response = await data.privilegeGet(createdId);
+
+		// ********** Then
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("privileges");
+		expect(response.data.privileges).toHaveLength(1);
+
+		expect(response.data.privileges).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining(newData)
+			])
+		);
+	});
+
+	it("should return an empty array for non-existant object", async () => {
+		// ********** Given
+
+		// ********** When
+		const response = await data.privilegeGet("abcd");
+
+		// ********** Then
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("privileges");
+		expect(response.data.privileges).toHaveLength(0);
+	});
+
+	it("should delete the new object", async () => {
+		// ********** Given
+
+		// ********** When
+		const response = await data.privilegeDelete(createdId);
+		
+		// ********** Then
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("status", "ok");
+	});
+
+	it("should return an empty array after deleting the new object", async () => {
+		const response = await data.privilegeGet(createdId);
+		
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("privileges");
+		expect(response.data.privileges).not.toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					id: createdId
+				})
+			])
+		);
+	});
+
 });

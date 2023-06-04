@@ -14,8 +14,29 @@ export default {
 			created: Date,
 			lastAccess: Date
 		}],
+		roles: [{
+			id: String,
+			name: String
+		}],
 		created: Date,
 		modified: Date
+	}),
+
+	role: mongoose.model("role", {
+		name: String,
+		isActive: Boolean,
+		privileges: [{
+			id: String,
+			name: String,
+			code: String
+		}],
+		created: Date,
+		modified: Date
+	}),
+
+	privilege: mongoose.model("privilege", {
+		name: String,
+		token: String
 	}),
 
 	deviceRequest: mongoose.model("devicerequest", {
