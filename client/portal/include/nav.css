@@ -38,6 +38,17 @@ nav li {
 	font-weight: bold;
 }
 
+nav li.sub {
+	font-weight: normal;
+	font-size: 1em;
+	margin-left: 40px;
+	padding: 5px 20px;
+	display: none;
+}
+nav li.sub.active {
+	display: block;
+}
+
 @media (min-width: 1024px) {
 	nav {
 		transform: none;
