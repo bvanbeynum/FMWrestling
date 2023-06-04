@@ -140,6 +140,14 @@ label span {
 	margin: 0px 3px;
 }
 
+.panel select {
+	border: 0;
+	border-bottom: 2px solid rgb(143 143 143);
+	font-size: 1em;
+	font-family: Roboto, Helvetica, Arial, sans-serif;
+	outline: none;
+}
+
 @media (min-width: 1024px) {
 	.container {
 		grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));

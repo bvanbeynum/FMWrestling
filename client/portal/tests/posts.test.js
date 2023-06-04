@@ -48,6 +48,11 @@ describe("Posts component", () => {
 		expect(await screen.findByText(/add/i)).toBeInTheDocument();
 
 		expect(await screen.findByText(posts[0].content)).toBeInTheDocument();
+
+		const post = await screen.findByTestId(posts[0].id);
+		const options = await within(post).findAllByRole("option");
+
+		expect(options.length).toBe(3);
 	});
 
 	it("creates a post", async () => {
@@ -95,9 +100,20 @@ describe("Posts component", () => {
 
 		render(<Posts />);
 
+		global.fetch = jest.fn().mockResolvedValue({
+			ok: true,
+			status: 200,
+			json: jest.fn().mockResolvedValue({
+				post: {
+					...posts[0],
+					contents: postUpdate
+				}
+			})
+		});
+
 		const post = await screen.findByTestId(posts[0].id);
 		const postInput = post.querySelector("textarea");
-		const submitButton = within(post).getByText(/save/i)
+		const submitButton = within(post).getByText(/save/i);
 
 		// ******** When ****************
 		
