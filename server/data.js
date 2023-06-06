@@ -867,6 +867,116 @@ export default {
 		output.status = 200;
 		output.data = { status: "ok" };
 		return output;
-	}
+	},
+
+	eventGet: async (id, includeExpired) => {
+		let filter = {},
+			output = {};
+
+		if (id) {
+			filter["_id"] = mongoose.Types.ObjectId.isValid(id) ? id : null;
+		}
+		else if (!includeExpired) {
+			filter = { $or: [ { expires: null }, { expires: { $gt: new Date() }} ] };
+		}
+
+		try {
+			const records = await data.event.find(filter).lean().exec();
+			output.status = 200;
+			output.data = { events: records.map(({ _id, __v, ...data }) => ({ id: _id, ...data })) };
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+		}
+
+		return output;
+	},
+
+	eventSave: async (saveObject) => {
+		const output = {};
+
+		if (!saveObject) {
+			output.status = 550;
+			output.error = "Missing object to save";
+			return output;
+		}
+
+		if (saveObject.id) {
+			let record = null;
+			try {
+				record = await data.event.findById(saveObject.id).exec();
+			}
+			catch (error) {
+				output.status = 560;
+				output.error = error.message;
+				return output;
+			}
+
+			if (!record) {
+				output.status = 561;
+				output.error = "Record not found";
+				return output;
+			}
+
+			try {
+				Object.keys(saveObject).forEach(field => {
+					if (field != "id") {
+						record[field] = saveObject[field];
+					}
+				});
+				record.modified = new Date();
+
+				record = await record.save();
+			}
+			catch (error) {
+				output.status = 562;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			output.data = { id: record._id };
+		}
+		else {
+			let record = null;
+			try {
+				record = await (new data.event({ ...saveObject, created: new Date(), modified: new Date() })).save();
+			}
+			catch (error) {
+				output.status = 563;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			output.data = { id: record._id };
+		}
+
+		return output;
+	},
+
+	eventDelete: async (id) => {
+		const output = {};
+
+		if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+			output.status = 550;
+			output.error = "Missing ID to delete";
+			return output;
+		}
+
+		try {
+			await data.event.deleteOne({ _id: id });
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		output.data = { status: "ok" };
+		return output;
+	},
 
 };

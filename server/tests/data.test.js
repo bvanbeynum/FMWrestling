@@ -673,3 +673,92 @@ describe("Privilege data", () => {
 	});
 
 });
+
+describe("Event data", () => {
+	let createdId,
+		newData = {
+			date: new Date(new Date().setHours(0,0,0,0)),
+			name: "Test Event",
+			location: "Test location"
+		};
+
+	it("should return return an array of items", async () => {
+		// ********** Given
+
+		// ********** When
+		const response = await data.eventGet(null);
+
+		// ********** Then
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("events");
+	});
+
+	it("should create a new object", async () => {
+		// ********** Given
+
+		// ********** When
+		const response = await data.eventSave(newData);
+
+		// ********** Then
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("id");
+
+		createdId = response.data.id;
+	});
+
+	it("should get the new object by id", async () => {
+		// ********** Given
+
+		// ********** When
+		const response = await data.eventGet(createdId);
+
+		// ********** Then
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("events");
+		expect(response.data.events).toHaveLength(1);
+
+		expect(response.data.events).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining(newData)
+			])
+		);
+	});
+
+	it("should return an empty array for non-existant object", async () => {
+		// ********** Given
+
+		// ********** When
+		const response = await data.eventGet("abcd");
+
+		// ********** Then
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("events");
+		expect(response.data.events).toHaveLength(0);
+	});
+
+	it("should delete the new object", async () => {
+		// ********** Given
+
+		// ********** When
+		const response = await data.eventDelete(createdId);
+		
+		// ********** Then
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("status", "ok");
+	});
+
+	it("should return an empty array after deleting the new object", async () => {
+		const response = await data.eventGet(createdId);
+		
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("events");
+		expect(response.data.events).not.toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					id: createdId
+				})
+			])
+		);
+	});
+
+});

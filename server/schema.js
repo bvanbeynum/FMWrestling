@@ -104,6 +104,14 @@ export default {
 		created: Date,
 		modified: Date,
 		expires: Date
-	})
+	}),
 
+	event: mongoose.model("event", {
+		date: Date,
+		name: String,
+		location: String,
+		created: Date,
+		modified: Date
+	})
+	
 };
