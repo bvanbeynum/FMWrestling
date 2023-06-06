@@ -223,7 +223,7 @@ describe("Middleware", () => {
 
 });
 
-describe("API functions", () => {
+describe("API Post functions", () => {
 
 	it("loads the post data", async () => {
 		// ********** Given
@@ -317,6 +317,106 @@ describe("API functions", () => {
 		// ********** Then
 
 		expect(client.delete).toHaveBeenCalledWith(`${ serverPath }/data/post?id=${ deleteId }`);
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("status", "ok");
+	});
+
+});
+
+describe("API Schedule", () => {
+
+	it("loads the schedule data", async () => {
+		// ********** Given
+
+		const serverPath = "http://dev.beynum.com",
+			output = [{ 
+				id: "testid", 
+				name: "test event", 
+				location: "test location",
+				created: new Date() 
+			}];
+		
+		client.get = jest.fn().mockResolvedValue({ body: {
+			events: output
+		}});
+
+		// ********** When
+
+		const results = await api.scheduleLoad(serverPath);
+
+		// ********** Then
+
+		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/event`);
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("events");
+
+		// No expired posts
+		expect(results.data.events).toHaveLength(output.length);
+
+		// First post matches mock
+		expect(results.data.events[0]).toHaveProperty("id", output[0].id);
+	});
+
+	it("saves event", async () => {
+		// ********** Given
+
+		const body = { save: { name: "Test event", location: "Test location", date: new Date(new Date().setHours(0,0,0,0)) }},
+			serverPath = "http://dev.beynum.com",
+			returnId = "testid";
+
+		const send = jest.fn().mockResolvedValue({
+			body: { id: returnId }
+		});
+		client.post = jest.fn(() => ({
+			send: send
+		}));
+
+		client.get = jest.fn().mockResolvedValue({ body: {
+			events: [{ ...body.save, id: returnId, created: new Date() }]
+		}});
+
+		// ********** When
+
+		const results = await api.scheduleSave(body, serverPath);
+
+		// ********** Then
+
+		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/event`);
+		expect(send).toHaveBeenCalledWith(
+			expect.objectContaining({
+				event: expect.objectContaining({ name: body.save.name })
+			})
+		);
+		
+		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/event?id=${ returnId }`);
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("event", expect.objectContaining({ id: returnId }));
+	});
+
+	it("deletes event", async () => {
+		// ********** Given
+
+		const deleteId = "testid",
+			body = { delete: deleteId },
+			serverPath = "http://dev.beynum.com";
+
+		client.delete = jest.fn(() => ({
+			status: "ok"
+		}));
+
+		// ********** When
+
+		const results = await api.scheduleSave(body, serverPath);
+
+		// ********** Then
+
+		expect(client.delete).toHaveBeenCalledWith(`${ serverPath }/data/event?id=${ deleteId }`);
 
 		expect(results).toHaveProperty("status", 200);
 		expect(results).toHaveProperty("data");
