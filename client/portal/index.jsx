@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import ReactDOM from "react-dom/client";
 import Nav from "./nav.jsx";
 import Posts from "./posts.jsx";
+import Schedule from "./schedule.jsx";
 import Roles from "./roles.jsx";
 import "./include/index.css";
 
@@ -38,6 +39,10 @@ const Index = () => {
 
 		: page === "roles" ?
 		<Roles />
+
+		: page === "schedule" ?
+		<Schedule />
+
 		: ""
 		}
 	</div>

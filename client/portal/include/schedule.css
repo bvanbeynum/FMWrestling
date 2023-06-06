@@ -1,0 +1,36 @@
+.calendarHeader {
+	display: grid;
+	align-items: center;
+	grid-template-columns: auto 70px auto;
+	margin: auto;
+}
+
+.calendarHeader button {
+	background: none;
+	border: none;
+}
+
+.monthName {
+	text-align: center;
+}
+
+.calendar {
+	display: grid;
+	grid-template-columns: repeat(7, minmax(10px, 1fr));
+	list-style: none;
+	text-align: center;
+	padding: 0px;
+	margin: 0px auto;
+}
+
+.calendar li {
+	padding: 1px 4px;
+	margin: 2px 4px;
+	box-sizing: border-box;
+}
+
+.dayEvent {
+	background-color:  rgb(223 170 3);
+	border-radius: 7px;
+	color: rgb(243 243 243);
+}
