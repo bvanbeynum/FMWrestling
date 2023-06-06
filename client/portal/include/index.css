@@ -55,6 +55,7 @@ button:disabled, .button:disabled {
 .row {
 	display: flex;
 	align-items: center;
+	column-gap: 1vw;
 }
 
 .error {
@@ -87,12 +88,23 @@ button:disabled, .button:disabled {
 	background-color: rgb(255 255 255);
 	box-shadow: rgba(50, 50, 93, 0.25) 0px 2px 5px -1px, rgba(0, 0, 0, 0.3) 0px 1px 3px -1px;
 	border-radius: 5px;
-	padding: 2vh 4vw;
+	padding: 1vh 4vw;
 	width: 90vw;
 	max-width: 450px;
 	margin: 0 auto;
 	box-sizing: border-box;
-	display: grid;
+	display: flex;
+	flex-direction: column;
+}
+
+label {
+	display: block;
+	margin: 1vh 0;
+}
+
+label span {
+	margin-right: 10px;
+	font-weight: bold;
 }
 
 .panel textarea {
@@ -106,27 +118,14 @@ button:disabled, .button:disabled {
 	outline: none;
 }
 
-.panel button svg, .panel .button svg {
-	width: 15px;
-	height: 15px;
-}
-
-label {
-	display: block;
-	margin: 1vh 0;
-}
-
-label span {
-	margin-right: 10px;
-	font-weight: bold;
-}
-
-.panel input[type="date"] {
+.panel input,
+.panel select {
 	border: 0;
 	border-bottom: 2px solid rgb(143 143 143);
 	font-size: 1em;
 	font-family: Roboto, Helvetica, Arial, sans-serif;
 	outline: none;
+	width: 100%;
 }
 
 .panel button {
@@ -137,15 +136,11 @@ label span {
 	border-radius: 7px;
 	font-size: 1em;
 	justify-self: flex-end;
-	margin: 0px 3px;
 }
 
-.panel select {
-	border: 0;
-	border-bottom: 2px solid rgb(143 143 143);
-	font-size: 1em;
-	font-family: Roboto, Helvetica, Arial, sans-serif;
-	outline: none;
+.panel button svg, .panel .button svg {
+	width: 15px;
+	height: 15px;
 }
 
 @media (min-width: 1024px) {

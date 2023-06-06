@@ -3,7 +3,7 @@
  */
 
 import React from "react";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import Schedule from "../schedule.jsx";
 
@@ -44,6 +44,8 @@ describe("Schedule component", () => {
 		
 		expect(await screen.findByText(new RegExp(new Date().toLocaleDateString("en-us", { month: "long" }), "i"))).toBeInTheDocument();
 		expect(await screen.findByText(new Date(events[0].date).getDate(), { selector: "li" })).toHaveClass("dayEvent");
+
+		expect(await screen.findByTestId(events[0].id)).toBeInTheDocument();
 	});
 
 	it("changes the month", async () => {
@@ -62,6 +64,88 @@ describe("Schedule component", () => {
 		// ******** Then ****************
 
 		expect(await screen.findByText(new RegExp(nextMonth.toLocaleDateString("en-us", { month: "long" }), "i"))).toBeInTheDocument();
+	});
+
+	it("sets edit mode", async () => {
+
+		// ******** Given ***************
+
+		const newDate = new Date(new Date().setDate(new Date().getDate() + 5)),
+			newName = "Name Test",
+			newLocation = "Location Test";
+
+		render(<Schedule />);
+
+		const addButton = await screen.findByRole("button", { name: /add/i });
+		fireEvent.click(addButton);
+		
+		expect(await screen.findByLabelText("name")).toBeInTheDocument();
+
+		const dateInput = await screen.findByLabelText("date"),
+			nameInput = await screen.findByLabelText("name"),
+			locationInput = await screen.findByLabelText("location");
+
+		// ******** When ****************
+
+		fireEvent.change(dateInput, { target: { value: newDate.toLocaleDateString("fr-ca") }});
+		fireEvent.change(nameInput, { target: { value: newName }});
+		fireEvent.change(locationInput, { target: { value: newLocation}})
+
+		// ******** Then ****************
+
+		expect(dateInput.value).toBe(newDate.toLocaleDateString("fr-ca"));
+		expect(nameInput.value).toBe(newName);
+		expect(locationInput.value).toBe(newLocation);
+	});
+
+	it("adds new item", async () => {
+
+		// ******** Given ***************
+
+		const testId = "testeventid",
+			newDate = new Date(new Date().setDate(new Date().getDate() + 5)),
+			newName = "Name Test",
+			newLocation = "Location Test";
+
+		render(<Schedule />);
+
+		global.fetch = jest.fn().mockResolvedValue({
+			ok: true,
+			status: 200,
+			json: jest.fn().mockResolvedValue({
+				event: { 
+					id: testId,
+					name: newName,
+					date: newDate,
+					location: newLocation,
+					created: new Date()
+				}
+			})
+		});
+
+		const addButton = await screen.findByRole("button", { name: /add/i });
+		fireEvent.click(addButton);
+
+		const dateInput = await screen.findByLabelText("date"),
+			nameInput = await screen.findByLabelText("name"),
+			locationInput = await screen.findByLabelText("location"),
+			saveButton = await screen.findByRole("button", { name: /save/i });
+
+		// ******** When ****************
+
+		fireEvent.change(dateInput, { target: { value: newDate.toLocaleDateString("fr-ca") }});
+		fireEvent.change(nameInput, { target: { value: newName }});
+		fireEvent.change(locationInput, { target: { value: newLocation}})
+
+		fireEvent.click(saveButton);
+
+		// ******** Then ****************
+
+		await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/schedulesave", expect.objectContaining({ 
+			body: expect.stringMatching(newName)
+		})));
+
+		expect(await screen.findByTestId(testId)).toBeInTheDocument();
 	});
 
 });
