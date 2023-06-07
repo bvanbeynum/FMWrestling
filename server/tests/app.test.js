@@ -40,6 +40,72 @@ describe("Data service", () => {
 		expect(response.body.users).toHaveLength(1);
 	});
 
+	it("gets event", async () => {
+		// ********** Given
+
+		const output = { events: [{ id: "testid" }]};
+
+		data.eventGet = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+		
+		const response = await request(app)
+			.get("/data/event")
+			.expect(200);
+		
+		// ********** Then
+
+		expect(response.body).toHaveProperty("events");
+		expect(response.body.events).toHaveLength(1);
+	});
+
+	it("saves event", async () => {
+		// ********** Given
+
+		const save = { event: { name: "test event" }},
+			output = { id: "testid" };
+
+		data.eventSave = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+		
+		const response = await request(app)
+			.post("/data/event")
+			.send({ event: save })
+			.expect(200);
+		
+		// ********** Then
+
+		expect(response.body).toHaveProperty("id", output.id);
+	});
+
+	it("deletes event", async () => {
+		// ********** Given
+
+		const eventId = "testid";
+
+		data.eventDelete = jest.fn().mockResolvedValue({
+			status: 200,
+			data: { status: "ok" }
+		});
+
+		// ********** When
+		
+		const response = await request(app)
+			.delete(`/data/event?id=${ eventId }`)
+			.expect(200);
+		
+		// ********** Then
+
+		expect(response.body).toHaveProperty("status", "ok");
+	});
+
 });
 
 describe("API service", () => {
