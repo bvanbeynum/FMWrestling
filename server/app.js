@@ -5,7 +5,9 @@ import express from "express";
 import bodyParser from "body-parser";
 import cookieParser from "cookie-parser";
 import busboy from "connect-busboy";
-import router from "./router.js";
+import middleware from "./middleware.js";
+import routerData from "./datarouter.js";
+import routerAPI from "./apirouter.js";
 
 // Declarations =======================================================================
 
@@ -24,7 +26,9 @@ app.use(busboy());
 
 // Routes =======================================================================
 
-app.use(router);
+app.use(middleware);
+app.use(routerData);
+app.use(routerAPI);
 
 app.use("/media", express.static(path.join(currentDirectory, "/client/media")));
 

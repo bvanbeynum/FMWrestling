@@ -29,17 +29,86 @@ describe("Data service", () => {
 		
 		const response = await request(app)
 			.get("/data/user")
-			.set("Cookie", ['wm=12345667'])
+			// .set("Cookie", ['wm=12345667'])
 			.set({ "x-forwarded-for": "185.27.158.231" })
 			.set({ "host": "dev.beynum.com" })
 			.expect(200);
 		
 		// ********** Then
 
-		console.log(response.body);
-
 		expect(response.body).toHaveProperty("users");
 		expect(response.body.users).toHaveLength(1);
+	});
+
+});
+
+describe("API service", () => {
+
+	beforeEach(() => {
+		api.authInternal = jest.fn().mockReturnValue(true);
+		api.authPortal = jest.fn().mockResolvedValue({ status: 200, user: {} });
+		api.authAPI = jest.fn().mockReturnValue(true);
+	});
+
+	afterEach(() => {
+		jest.restoreAllMocks();
+	});
+
+	it("pulls schedule events", async () => {
+		// ********** Given
+
+		const output = { events: [{ id: "1234", name: "Test event", location: "test location", date: new Date(new Date().setHours(0,0,0,0)) }]};
+
+		api.scheduleLoad = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+
+		const response = await request(app)
+			.get("/api/scheduleload")
+			// .set({ "x-forwarded-for": "185.27.158.231" })
+			.expect(200);
+
+		// ********** Then
+
+		expect(response.body).toHaveProperty("events");
+		expect(response.body.events).toHaveLength(output.events.length);
+		expect(response.body.events).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ id: output.events[0].id })
+			])
+		);
+
+	});
+
+	it("saves schedule event", async () => {
+		// ********** Given
+
+		const event = { name: "Test event", location: "test location", date: new Date(new Date().setHours(0,0,0,0)) },
+			output = { event: { ...event, id: "1234" }};
+
+		api.scheduleSave = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+
+		const response = await request(app)
+			.post("/api/schedulesave")
+			.send({ save: event })
+			// .set({ "x-forwarded-for": "185.27.158.231" })
+			.expect(200);
+
+		// ********** Then
+
+		expect(response.body).toHaveProperty("event");
+		expect(response.body.event).toEqual(
+			expect.objectContaining({ id: output.event.id })
+		);
+
 	});
 
 });
