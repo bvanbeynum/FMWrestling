@@ -43,7 +43,10 @@ describe("Roles component", () => {
 
 		// ******** Then ****************
 
+		await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/rolesload"));
+		
 		expect(await screen.findByText(/new role/i)).toBeInTheDocument();
+		expect(await screen.findByTestId(roles[0].id)).toBeInTheDocument();
 	});
 
 });
