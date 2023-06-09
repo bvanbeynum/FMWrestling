@@ -109,7 +109,7 @@ button:disabled, .button:disabled {
 }
 
 .panel h3 {
-	margin: 0;
+	margin: 10px 0;
 }
 
 label {
@@ -153,14 +153,15 @@ label span {
 	justify-self: flex-end;
 }
 
-.panel button svg, .panel .button svg {
-	width: 15px;
-	height: 15px;
-}
-
 .panel .rowContent {
 	flex: 1;
 	margin: 0px 10px;
+}
+
+.panel .action {
+	border: none;
+	background: none;
+	fill: rgb(10 66 115);
 }
 
 @media (min-width: 1024px) {
