@@ -108,6 +108,7 @@ export default {
 
 	event: mongoose.model("event", {
 		date: Date,
+		endDate: Date,
 		name: String,
 		location: String,
 		created: Date,

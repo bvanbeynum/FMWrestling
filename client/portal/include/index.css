@@ -39,6 +39,11 @@ header h1 {
 	color: rgb(10 66 115);
 }
 
+.subHeading {
+	font-size: .9em;
+	color: rgb(121 121 121);
+}
+
 button, .button {
 	cursor: pointer;
 	user-select: none;
@@ -58,6 +63,10 @@ button:disabled, .button:disabled {
 	column-gap: 1vw;
 }
 
+.row.spread {
+	justify-content: space-between;
+}
+
 .error {
 	flex: 1;
 	color: rgb(217 53 53);
@@ -75,10 +84,11 @@ button:disabled, .button:disabled {
 .container {
 	transform: translateY(100vh);
 	transition: transform 0.3s ease-in-out;
+	max-width: 800px;
 	display: grid;
 	grid-column-gap: 2vw;
 	grid-row-gap: 4vh;
-	margin-bottom: 4vh;
+	margin: 0 auto 4vh auto;
 }
 .container.active {
 	transform: translateY(0);
@@ -88,13 +98,18 @@ button:disabled, .button:disabled {
 	background-color: rgb(255 255 255);
 	box-shadow: rgba(50, 50, 93, 0.25) 0px 2px 5px -1px, rgba(0, 0, 0, 0.3) 0px 1px 3px -1px;
 	border-radius: 5px;
-	padding: 1vh 4vw;
+	padding: 1vh 2vw;
 	width: 90vw;
 	max-width: 450px;
 	margin: 0 auto;
 	box-sizing: border-box;
 	display: flex;
 	flex-direction: column;
+	height: fit-content;
+}
+
+.panel h3 {
+	margin: 0;
 }
 
 label {
@@ -130,8 +145,8 @@ label span {
 
 .panel button {
 	font-family: Roboto, Helvetica, Arial, sans-serif;
-	background-color: rgb(255 196 15);
-	border: 2px solid rgb(153 121 26);
+	background-color: rgb(242 192 41);
+	border: 3px solid rgb(191 126 4);
 	padding: 6px 12px;
 	border-radius: 7px;
 	font-size: 1em;
@@ -141,6 +156,11 @@ label span {
 .panel button svg, .panel .button svg {
 	width: 15px;
 	height: 15px;
+}
+
+.panel .rowContent {
+	flex: 1;
+	margin: 0px 10px;
 }
 
 @media (min-width: 1024px) {

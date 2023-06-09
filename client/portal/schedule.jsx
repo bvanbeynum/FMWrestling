@@ -4,7 +4,7 @@ import "./include/schedule.css";
 
 const Schedule = (props) => {
 
-	const emptyEvent = { name: "", date: new Date(new Date().setHours(0,0,0,0)), location: "" },
+	const emptyEvent = { name: "", date: new Date(new Date().setHours(0,0,0,0)), endDate: "", location: "" },
 		months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
 		minDate = new Date(new Date().setHours(0,0,0,0)),
 		loading = [
@@ -17,20 +17,22 @@ const Schedule = (props) => {
 	const [ pageActive, setPageActive ] = useState(false);
 	const [ newEvent, setNewEvent ] = useState(emptyEvent);
 
-	const [ savingId, setSavingId ] = useState([]);
+	const [ savingId, setSavingId ] = useState(null);
 	const [ loadingIndex, setLoadingIndex ] = useState(0);
 	const [ errorMessage, setErrorMessage ] = useState([]);
 
 	const [ events, setEvents ] = useState([]);
 	const [ editItem, setEditItem ] = useState(null);
+	const [ eventDates, setEventDates ] = useState([]);
 
 	const [ monthSelected, setMonthSelect ] = useState(new Date().getMonth());
-	const [ monthDays, setMonthDays ] = useState(Array.from(Array(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()).keys())); // Get array of dates, get last day of the month to know array length
-	const [ monthStart, setMonthStart ] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1).getDay() + 1); // get the first day of the week for the current month
+	const [ monthDays, setMonthDays ] = useState([]);
+	const [ monthStart, setMonthStart ] = useState([]); // get the first day of the week for the current month
 
 	useEffect(() => {
 		if (!pageActive) {
 			setPageActive(true);
+			changeMonth(new Date().getMonth());
 			
 			fetch(`/api/scheduleload`)
 				.then(response => {
@@ -46,7 +48,8 @@ const Schedule = (props) => {
 						data.events ?
 							data.events.map(event => ({
 								...event, 
-								date: new Date(event.date)
+								date: new Date(event.date),
+								endDate: event.endDate ? new Date(event.endDate) : null
 							}))
 						: []
 					);
@@ -57,10 +60,31 @@ const Schedule = (props) => {
 		}
 	}, []);
 
+	useEffect(() => {
+		changeMonth(monthSelected);
+	}, [events]);
+
 	const changeMonth = monthNew => {
 		setMonthSelect(monthNew);
-		setMonthDays(Array.from(Array(new Date(new Date().getFullYear(), monthNew + 1, 0).getDate()).keys()));
-		setMonthStart(new Date(new Date().getFullYear(), monthNew, 1).getDay() + 1);
+		setMonthStart(new Date(new Date().getFullYear(), monthNew, 1).getDay() + 1); // get the first day of the week for the current month
+
+		const days = Array.from(Array(new Date(new Date().getFullYear(), monthNew + 1, 0).getDate()).keys()) // Get array of dates, get last day of the month to know array length
+			.map(day => {
+				const date = new Date(new Date().getFullYear(), monthNew, day + 1),
+					event = events.find(event => event.date <= date && date <= event.endDate || (+date == +event.date && !event.endDate));
+
+				return {
+					day: day + 1,
+					eventId: event ? event.id : null,
+					className: !event ? ""
+						: +date == +event.date && !event.endDate ? "single" // Convert dates to int to compare
+						: +date == +event.date && event.endDate ? "start"
+						: +date == +event.endDate ? "end"
+						: "middle"
+				};
+			})
+
+		setMonthDays(days);
 	};
 
 	const saveEvent = event => {
@@ -81,11 +105,13 @@ const Schedule = (props) => {
 				if (!event.id) {
 					setEvents(events => events.concat({
 						...data.event, 
-						date: new Date(data.event.date)
+						date: new Date(data.event.date), 
+						endDate: data.event.endDate ? new Date(data.event.endDate) : null
 					}));
 					setNewEvent(emptyEvent);
 				}
 
+				setEditItem(null);
 				setSavingId(null);
 				clearInterval(loadingInterval);
 			})
@@ -97,147 +123,212 @@ const Schedule = (props) => {
 			});
 	};
 
+	const deleteEvent = eventId => {
+		const loadingInterval = setInterval(() => setLoadingIndex(loadingIndex => loadingIndex + 1 === loading.length ? 0 : loadingIndex + 1), 1000);
+
+		setSavingId(eventId);
+
+		fetch("/api/schedulesave", { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ delete: eventId }) })
+			.then(response => {
+				if (response.ok) {
+					return response.json();
+				}
+				else {
+					throw Error(response.statusText);
+				}
+			})
+			.then(() => {
+				setEvents(events => events.filter(event => event.id !== eventId));
+				setEditItem(null);
+				setSavingId(null);
+				clearInterval(loadingInterval);
+			})
+			.catch(error => {
+				console.warn(error);
+				setErrorMessage("There was an error deleting the event");
+				setSavingId(null);
+				clearInterval(loadingInterval);
+			});
+	};
+
+	const editEvent = (eventId, property, value) => {
+		setEvents(events => events.map(event => {
+			return event.id === eventId ? {
+				...event,
+				[property]: property === "date" ? new Date(new Date(value).getTime() + (new Date().getTimezoneOffset() * 60000)) 
+					: property === "endDate" ? new Date(new Date(value).getTime() + (new Date().getTimezoneOffset() * 60000)) 
+					: value
+			}: event
+		}))
+	};
+	
 	return (
+<div className="schedule">
 
-<div className={`container ${ pageActive ? "active" : "" } schedule`}>
+	<div className={`container ${ pageActive ? "active" : "" }`}>
 
-	<div className="panel">
-		<div className="calendarHeader">
-			<button onClick={ () => changeMonth(monthSelected == 0 ? 11 : monthSelected - 1) }>◀</button>
-			<div className="monthName">{ months[monthSelected] }</div>
-			<button onClick={ () => changeMonth((monthSelected + 1) % 12) }>▶</button>
+		<div className="panel">
+			<div className="calendarHeader">
+				<button onClick={ () => changeMonth(monthSelected == 0 ? 11 : monthSelected - 1) }>◀</button>
+				<h3 className="monthName">{ months[monthSelected] }</h3>
+				<button onClick={ () => changeMonth((monthSelected + 1) % 12) }>▶</button>
+			</div>
+
+			<ol className="calendar">
+				<li className="day">S</li>
+				<li className="day">M</li>
+				<li className="day">T</li>
+				<li className="day">W</li>
+				<li className="day">T</li>
+				<li className="day">F</li>
+				<li className="day">S</li>
+
+				{
+				monthDays.map(date => 
+				<li key={date.day} className={ date.className } style={ date.day === 1 ? { gridColumnStart: monthStart } : {} }>{ date.day }</li>
+				)
+				}
+			</ol>
+
 		</div>
-
-		<ol className="calendar">
-			<li className="day">S</li>
-			<li className="day">M</li>
-			<li className="day">T</li>
-			<li className="day">W</li>
-			<li className="day">T</li>
-			<li className="day">F</li>
-			<li className="day">S</li>
-
-			{
-			monthDays.map(date => 
-			<li key={date} className={ events.some(event => event.date.getMonth() === monthSelected && event.date.getDate() === date + 1) ? "dayEvent" : "" } style={ date === 0 ? { gridColumnStart: monthStart } : {} }>{ date + 1 }</li>
-			)
-			}
-		</ol>
-
 	</div>
 
-	<div key={ "newEvent" } className="panel">
-		{
-		editItem === "newEvent" ?
-		<>
-		
-		<h3>New Event</h3>
+	<div className={`container ${ pageActive ? "active" : "" }`}>
 
-		<label>
-			<span>Date</span>
-			<input type="date" min={ minDate.toLocaleDateString("fr-ca") } value={ newEvent.date } onChange={ event => setNewEvent(newEvent => ({ ...newEvent, date: event.target.value })) } aria-label="date" />
-		</label>
-
-		<label>
-			<span>Name</span>
-			<input type="text" value={ newEvent.name } onChange={ event => setNewEvent(newEvent => ({...newEvent, name: event.target.value })) } aria-label="name" />
-		</label>
-
-		<label>
-			<span>Location</span>
-			<input type="text" value={ newEvent.location } onChange={ event => setNewEvent(newEvent => ({...newEvent, location: event.target.value })) } aria-label="location" />
-		</label>
-
-		<div className="row">
-			<div className="error">{ errorMessage }</div>
-			<button disabled={ savingId === "newEvent" } onClick={ () => saveEvent(newEvent) } aria-label="Save">
-				{
-				savingId === "newEvent" ?
-					loading[loadingIndex]
-				: 
-					"Add"
-				}
-			</button>
-
-			<button disabled={ savingId === "newEvent" } onClick={ () => setEditItem(null) } aria-label="Cancel">Cancel</button>
-		</div>
-
-		</>
-
-		:
-		
-		<div className="row">
-			<button aria-label="Add" className="icon" onClick={ () => setEditItem("newEvent") }>
-				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
-					<path d="M440-200v-240H200v-80h240v-240h80v240h240v80H520v240h-80Z"/>
-				</svg>
-			</button>
-
+		<div key={ "newEvent" } className="panel">
+			{
+			editItem === "newEvent" ?
+			<>
+			
 			<h3>New Event</h3>
-		</div>
 
-		}
+			<label>
+				<span>Date</span>
+				<input type="date" min={ minDate.toLocaleDateString("fr-ca") } value={ newEvent.date ? newEvent.date.toLocaleDateString("fr-ca") : "" } onChange={ event => setNewEvent(newEvent => ({ ...newEvent, date: new Date(new Date(event.target.value).getTime() + (new Date().getTimezoneOffset() * 60000)) })) } aria-label="date" />
+			</label>
+
+			<label>
+				<span>End Date (leave blank if only one day)</span>
+				<input type="date" min={ minDate.toLocaleDateString("fr-ca") } value={ newEvent.endDate ? newEvent.endDate.toLocaleDateString("fr-ca") : "" } onChange={ event => setNewEvent(newEvent => ({ ...newEvent, endDate: new Date(new Date(event.target.value).getTime() + (new Date().getTimezoneOffset() * 60000)) })) } aria-label="End Date" />
+			</label>
+
+			<label>
+				<span>Name</span>
+				<input type="text" value={ newEvent.name } onChange={ event => setNewEvent(newEvent => ({...newEvent, name: event.target.value })) } aria-label="name" />
+			</label>
+
+			<label>
+				<span>Location</span>
+				<input type="text" value={ newEvent.location } onChange={ event => setNewEvent(newEvent => ({...newEvent, location: event.target.value })) } aria-label="location" />
+			</label>
+
+			<div className="row">
+				<div className="error">{ errorMessage }</div>
+				<button disabled={ savingId === "newEvent" } onClick={ () => saveEvent(newEvent) } aria-label="Save">
+					{
+					savingId === "newEvent" ?
+						loading[loadingIndex]
+					: 
+						"Add"
+					}
+				</button>
+
+				<button disabled={ savingId === "newEvent" } onClick={ () => setEditItem(null) } aria-label="Cancel">Cancel</button>
+			</div>
+
+			</>
+
+			:
+			
+			<div className="row">
+				<button aria-label="Add" className="icon" onClick={ () => setEditItem("newEvent") }>
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+						<path d="M440-200v-240H200v-80h240v-240h80v240h240v80H520v240h-80Z"/>
+					</svg>
+				</button>
+
+				<div className="rowContent">
+					<h3>New Event</h3>
+				</div>
+			</div>
+
+			}
+		</div>
 
 		{
 		events
 		.filter(event => event.date.getMonth() === monthSelected)
 		.sort((eventA, eventB) => eventA.date - eventB.date)
 		.map(event =>
+			
+		<div key={ event.id } className="panel">
+			{
+			editItem === event.id ?
+			<>
+			
+			<label>
+				<span>Date</span>
+				<input type="date" min={ minDate.toLocaleDateString("fr-ca") } value={ event.date.toLocaleDateString("fr-ca") } onChange={ e => editEvent(event.id, "date", e.target.value) } aria-label="Date" />
+			</label>
 
-		
-		editItem === event.id ?
-		<>
-		
-		<h3>New Event</h3>
+			<label>
+				<span>End Date (leave blank if only one day)</span>
+				<input type="date" min={ minDate.toLocaleDateString("fr-ca") } value={ event.endDate ? event.endDate.toLocaleDateString("fr-ca") : "" } onChange={ e => editEvent(event.id, "endDate", e.target.value) } aria-label="End Date" />
+			</label>
 
-		<label>
-			<span>Date</span>
-			<input type="date" min={ minDate.toLocaleDateString("fr-ca") } value={ event.date } onChange={ event => setNewEvent(newEvent => ({ ...newEvent, date: event.target.value })) } aria-label="date" />
-		</label>
+			<label>
+				<span>Name</span>
+				<input type="text" value={ event.name } onChange={ e => editEvent(event.id, "name", e.target.value) } aria-label="name" />
+			</label>
 
-		<label>
-			<span>Name</span>
-			<input type="text" value={ newEvent.name } onChange={ event => setNewEvent(newEvent => ({...newEvent, name: event.target.value })) } aria-label="name" />
-		</label>
+			<label>
+				<span>Location</span>
+				<input type="text" value={ event.location } onChange={ e => editEvent(event.id, "location", e.target.value) } aria-label="location" />
+			</label>
 
-		<label>
-			<span>Location</span>
-			<input type="text" value={ newEvent.location } onChange={ event => setNewEvent(newEvent => ({...newEvent, location: event.target.value })) } aria-label="location" />
-		</label>
+			<div className="row">
+				<div className="error">{ errorMessage }</div>
 
-		<div className="row">
-			<div className="error">{ errorMessage }</div>
-			<button disabled={ savingId === "newEvent" } onClick={ () => saveEvent(newEvent) } aria-label="Save">
-				{
-				savingId === "newEvent" ?
-					loading[loadingIndex]
-				: 
-					"Add"
-				}
-			</button>
+				<button disabled={ savingId === event.id } onClick={ () => saveEvent(event) } aria-label="Save">
+					{
+					savingId === event.id ?
+						loading[loadingIndex]
+					: 
+						"Save"
+					}
+				</button>
 
-			<button disabled={ savingId === "newEvent" } onClick={ () => setEditItem(null) } aria-label="Cancel">Cancel</button>
+				<button disabled={ savingId === event.id } onClick={ () => deleteEvent(event.id) } aria-label="Delete">Delete</button>
+				<button disabled={ savingId === event.id } onClick={ () => setEditItem(null) } aria-label="Cancel">Cancel</button>
+			</div>
+
+			</>
+
+			:
+			
+			<div key={ event.id } data-testid={ event.id } className="row">
+				<button aria-label="Edit" className="icon" onClick={ () => setEditItem(event.id) }>
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+						<path d="M200-200h56l345-345-56-56-345 345v56Zm572-403L602-771l56-56q23-23 56.5-23t56.5 23l56 56q23 23 24 55.5T829-660l-57 57Zm-58 59L290-120H120v-170l424-424 170 170Zm-141-29-28-28 56 56-28-28Z"/>
+					</svg>
+				</button>
+
+				<div className="rowContent">
+					<h3>{ event.name }</h3>
+
+					<div className="row spread subHeading">
+						<div>{ event.location }</div>
+						<div>{ event.date.toLocaleDateString() }</div>
+					</div>
+				</div>
+			</div>
+			}
 		</div>
-
-		</>
-
-		:
-		
-		<div key={ event.id } data-testid={ event.id } className="row">
-			<button aria-label="Edit" className="icon" onClick={ () => setEditItem(event.id) }>
-				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
-					<path d="M200-200h56l345-345-56-56-345 345v56Zm572-403L602-771l56-56q23-23 56.5-23t56.5 23l56 56q23 23 24 55.5T829-660l-57 57Zm-58 59L290-120H120v-170l424-424 170 170Zm-141-29-28-28 56 56-28-28Z"/>
-				</svg>
-			</button>
-
-			<h3>{ event.name }</h3>
-		</div>
-
 		)}
+
 	</div>
 
 </div>
-
 	)
 };
 

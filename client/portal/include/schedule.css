@@ -24,17 +24,28 @@
 }
 
 .schedule .calendar li {
-	padding: 1px 4px;
-	margin: 2px 4px;
+	padding: 1px 8px;
+	margin: 4px 0px;
 	box-sizing: border-box;
 }
 
-.schedule .dayEvent {
-	background-color:  rgb(223 170 3);
+.schedule .calendar .single {
+	background-color: rgb(242 192 41);
 	border-radius: 7px;
-	color: rgb(243 243 243);
 }
 
-.schedule .panel:nth-child(2) {
-	grid-column-start: 1;
+.schedule .calendar .start {
+	background-color: rgb(242 192 41);
+	border-top-left-radius: 7px;
+	border-bottom-left-radius: 7px;
+}
+
+.schedule .calendar .middle {
+	background-color: rgb(255 222 124);
+}
+
+.schedule .calendar .end {
+	background-color: rgb(242 192 41);
+	border-top-right-radius: 7px;
+	border-bottom-right-radius: 7px;
 }

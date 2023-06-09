@@ -43,7 +43,7 @@ describe("Schedule component", () => {
 		await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/scheduleload"));
 		
 		expect(await screen.findByText(new RegExp(new Date().toLocaleDateString("en-us", { month: "long" }), "i"))).toBeInTheDocument();
-		expect(await screen.findByText(new Date(events[0].date).getDate(), { selector: "li" })).toHaveClass("dayEvent");
+		expect(await screen.findByText(new Date(events[0].date).getDate(), { selector: "li" })).toHaveClass("single");
 
 		expect(await screen.findByTestId(events[0].id)).toBeInTheDocument();
 	});
@@ -146,6 +146,76 @@ describe("Schedule component", () => {
 		})));
 
 		expect(await screen.findByTestId(testId)).toBeInTheDocument();
+	});
+
+	it("edits existing item", async () => {
+
+		// ******** Given ***************
+
+		const changedName = "Changed event name";
+
+		render(<Schedule />);
+
+		global.fetch = jest.fn().mockResolvedValue({
+			ok: true,
+			status: 200,
+			json: jest.fn().mockResolvedValue({
+				event: { ...events[0], name: changedName }
+			})
+		});
+
+		const editButton = await screen.findByRole("button", { name: /edit/i });
+		fireEvent.click(editButton);
+
+		const nameInput = await screen.findByLabelText("name"),
+			saveButton = await screen.findByRole("button", { name: /save/i });
+
+		// ******** When ****************
+
+		fireEvent.change(nameInput, { target: { value: changedName }});
+		fireEvent.click(saveButton);
+
+		// ******** Then ****************
+
+		await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/schedulesave", expect.objectContaining({ 
+			body: expect.stringMatching(changedName)
+		})));
+
+		expect(await screen.findByText(changedName)).toBeInTheDocument();
+	});
+
+	it("deletes event", async () => {
+
+		// ******** Given ***************
+
+		render(<Schedule />);
+
+		global.fetch = jest.fn().mockResolvedValue({
+			ok: true,
+			status: 200,
+			json: jest.fn().mockResolvedValue({
+				status: "ok"
+			})
+		});
+
+		const eventPanel = await screen.findByTestId(events[0].id),
+			editButton = await screen.findByRole("button", { name: /edit/i });
+			
+		fireEvent.click(editButton);
+
+		const deleteButton = await screen.findByRole("button", { name: /delete/i });
+
+		// ******** When ****************
+
+		fireEvent.click(deleteButton);
+
+		// ******** Then ****************
+
+		await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/schedulesave", expect.objectContaining({ 
+			body: expect.stringContaining(events[0].id)
+		})));
+
+		expect(eventPanel).not.toBeInTheDocument();
 	});
 
 });
