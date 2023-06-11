@@ -98,7 +98,7 @@ button:disabled, .button:disabled {
 	background-color: rgb(255 255 255);
 	box-shadow: rgba(50, 50, 93, 0.25) 0px 2px 5px -1px, rgba(0, 0, 0, 0.3) 0px 1px 3px -1px;
 	border-radius: 5px;
-	padding: 1vh 2vw;
+	padding: 10px 20px;
 	width: 90vw;
 	max-width: 450px;
 	margin: 0 auto;
@@ -122,7 +122,7 @@ button:disabled, .button:disabled {
 
 label {
 	display: block;
-	margin: 1vh 0;
+	margin: 20px 0;
 }
 
 label span {
@@ -145,6 +145,7 @@ label span {
 .panel select {
 	border: 0;
 	border-bottom: 2px solid rgb(143 143 143);
+	background: none;
 	font-size: 1em;
 	font-family: Roboto, Helvetica, Arial, sans-serif;
 	outline: none;
@@ -163,13 +164,17 @@ label span {
 
 .panel .rowContent {
 	flex: 1;
-	margin: 0px 10px;
 }
 
 .panel .action {
 	border: none;
 	background: none;
 	fill: rgb(10 66 115);
+}
+
+.panel .seperator {
+	border-top: 3px solid rgb(10 66 115);
+	margin: 13px 20px;
 }
 
 @media (min-width: 1024px) {

@@ -31,7 +31,15 @@ export default {
 				return output;
 			}
 
-			const tokenData = jwt.verify(cookie, config.jwt);
+			let tokenData;
+			try {
+				tokenData = jwt.verify(cookie, config.jwt);
+			}
+			catch (error) {
+				output.status = 564;
+				output.error = `Error decoding token: ${ cookie }`;
+				return output;
+			}
 
 			if (!tokenData.token) {
 				output.status = 561;
@@ -261,6 +269,139 @@ export default {
 			catch (error) {
 				console.log(error);
 				output.status = 563;
+				output.error = error.message;
+				return output;
+			}
+		}
+	},
+
+	requestsLoad: async (serverPath) => {
+		const output = {
+			data: {}
+		};
+
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/devicerequest`);
+			output.data.deviceRequests = clientResponse.body.deviceRequests;
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/user`);
+			output.data.users = clientResponse.body.users;
+		}
+		catch (error) {
+			output.status = 562;
+			output.error = error.message;
+		}
+		
+		output.status = 200;
+		return output;
+	},
+
+	requestsSave: async (body, serverPath) => {
+		const output = {};
+
+		if (!body) {
+			output.status = 561;
+			output.error = "Missing action";
+			return output;
+		}
+		else if (body.save) {
+			if (!body.save.request || !body.save.request.created || !body.save.request.device || !body.save.request.device.ip || !body.save.request.device.token) { 
+				output.status = 562;
+				output.error = "Invalid save request";
+				return output;
+			}
+			if (!body.save.userId && !body.save.user) {
+				output.status = 562;
+				output.error = "Invalid user to save";
+				return output;
+			}
+			if (body.save.user && (!body.save.user.firstName || !body.save.user.lastName || !body.save.user.email)) {
+				output.status = 562;
+				output.error = "Invalid user information for new user";
+				return output;
+			}
+
+			let user;
+
+			if (body.save.userId) {
+				// Get user from DB
+				try {
+					const clientResponse = await client.get(`${ serverPath }/data/user?id=${ body.save.userId }`).then();
+					
+					if (!clientResponse.body.users.length === 1) {
+						output.status = 563;
+						output.error = "Invalid user ID";
+						return output;
+					}
+
+					user = clientResponse.body.users[0];
+				}
+				catch (error) {
+					output.status = 564;
+					output.error = error.message;
+					return output;
+				}
+			}
+			else {
+				// Build new user
+				user = {
+					firstName: body.save.user.firstName,
+					lastName: body.save.user.lastName,
+					email: body.save.user.email,
+					devices: [],
+					roles: []
+				}
+			}
+
+			// Add the request to the devices
+			user.devices.push({
+				...body.save.request.device,
+				created: body.save.request.created,
+				lastAccess: null
+			});
+
+			let userId;
+			try {
+				const clientResponse = await client.post(`${ serverPath }/data/user`).send({ user: user }).then();
+				userId = clientResponse.body.id;
+			}
+			catch (error) {
+				output.status = 565;
+				output.error = error.message;
+				return output;
+			}
+
+			try {
+				await client.delete(`${ serverPath }/data/devicerequest?id=${ body.save.request.id }`);
+			}
+			catch (error) {
+				output.status = 566;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			output.data = { userId: userId };
+			return output;
+		}
+		else if (body.delete) {
+			try {
+				await client.delete(`${ serverPath }/data/devicerequest?id=${ body.delete }`);
+
+				output.status = 200;
+				output.data = { status: "ok" };
+				return output;
+			}
+			catch (error) {
+				console.log(error);
+				output.status = 567;
 				output.error = error.message;
 				return output;
 			}

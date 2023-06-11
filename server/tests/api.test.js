@@ -424,3 +424,178 @@ describe("API Schedule", () => {
 	});
 
 });
+
+describe("API Requests", () => {
+
+	it("loads the requests data", async () => {
+		// ********** Given
+
+		const serverPath = "http://dev.beynum.com",
+			output = {
+				deviceRequests: [{
+					id: "testid",
+					name: "Test User",
+					email: "test@nomail.com",
+					device: {
+						ip: "134.252.22.65",
+						browser: {
+							platform: "Microsoft Windows",
+							browser: "Chrome",
+							isDesktop: true,
+							isMobile: false,
+							isAndroid: false,
+							isiPhone: false
+						}
+					},
+					created: new Date(new Date(Date.now()).setDate(new Date().getDate() - 10))
+				}],
+				users: [{
+					id: "testuserid",
+					firstName: "Test",
+					lastName: "User"
+				}]
+			};
+		
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { deviceRequests: output.deviceRequests }})
+			.mockResolvedValueOnce({ body: { users: output.users } });
+
+		// ********** When
+
+		const results = await api.requestsLoad(serverPath);
+
+		// ********** Then
+
+		expect(client.get).toHaveBeenCalledTimes(2);
+		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/devicerequest`);
+		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/user`);
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+
+		expect(results.data).toHaveProperty("deviceRequests");
+		expect(results.data.deviceRequests).toHaveLength(output.deviceRequests.length);
+		expect(results.data.deviceRequests[0]).toHaveProperty("id", output.deviceRequests[0].id);
+
+		expect(results.data).toHaveProperty("users");
+		expect(results.data.users).toHaveLength(output.users.length);
+		expect(results.data.users[0]).toHaveProperty("id", output.users[0].id)
+	});
+
+	it("saves request to a new user", async () => {
+		// ********** Given
+
+		const body = { save: {
+				request: { id: "reqeustid", created: new Date(), device: { browser: {}, ip: "testip", token: "testtoken" } },
+				user: { firstName: "Test", lastName: "User", email: "test@nomail.com" }
+			}},
+			serverPath = "http://dev.beynum.com",
+			returnId = "testuserid";
+
+		const send = jest.fn().mockResolvedValue({
+			body: { id: returnId }
+		});
+		client.post = jest.fn(() => ({
+			send: send
+		}));
+
+		client.delete = jest.fn(() => ({
+			status: "ok"
+		}));
+
+		// ********** When
+
+		const results = await api.requestsSave(body, serverPath);
+
+		// ********** Then
+
+		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/user`);
+		expect(send).toHaveBeenCalledWith(
+			expect.objectContaining({
+				user: expect.objectContaining({ email: body.save.user.email })
+			})
+		);
+		
+		expect(client.delete).toHaveBeenCalledWith(`${ serverPath }/data/devicerequest?id=${ body.save.request.id }`);
+		
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("userId", returnId);
+	});
+
+	it("saves request to an existing user", async () => {
+		// ********** Given
+
+		const body = { save: {
+				request: { id: "reqeustid", created: new Date(), device: { browser: {}, ip: "testip", token: "testtoken" } },
+				userId: "testuserid"
+			}},
+			serverPath = "http://dev.beynum.com",
+			returnId = "testuserid";
+
+		client.get = jest.fn().mockResolvedValue({ body: {
+			users: [{ id: body.save.userId, devices: [] }]
+		}});
+	
+		const send = jest.fn().mockResolvedValue({
+			body: { id: returnId }
+		});
+		client.post = jest.fn(() => ({
+			send: send
+		}));
+
+		client.delete = jest.fn(() => ({
+			status: "ok"
+		}));
+
+		// ********** When
+
+		const results = await api.requestsSave(body, serverPath);
+
+		// ********** Then
+		
+		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/user?id=${ body.save.userId }`);
+
+		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/user`);
+		expect(send).toHaveBeenCalledWith(
+			expect.objectContaining({
+				user: expect.objectContaining({
+					devices: expect.arrayContaining([
+						expect.objectContaining({ token: body.save.request.device.token })
+					])
+				})
+			})
+		);
+		
+		expect(client.delete).toHaveBeenCalledWith(`${ serverPath }/data/devicerequest?id=${ body.save.request.id }`);
+		
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("userId", returnId);
+	});
+
+	it("deletes request", async () => {
+		// ********** Given
+
+		const deleteId = "testid",
+			body = { delete: deleteId },
+			serverPath = "http://dev.beynum.com";
+
+		client.delete = jest.fn(() => ({
+			status: "ok"
+		}));
+
+		// ********** When
+
+		const results = await api.requestsSave(body, serverPath);
+
+		// ********** Then
+
+		expect(client.delete).toHaveBeenCalledWith(`${ serverPath }/data/devicerequest?id=${ deleteId }`);
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("status", "ok");
+	});
+
+});

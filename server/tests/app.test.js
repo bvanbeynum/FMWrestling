@@ -177,4 +177,108 @@ describe("API service", () => {
 
 	});
 
+	it("pulls requests", async () => {
+		// ********** Given
+
+		const output = { 
+			deviceRequests: [{
+				id: "testid",
+				name: "Test User",
+				email: "test@nomail.com",
+				device: {
+					ip: "134.252.22.65",
+					browser: {
+						platform: "Microsoft Windows",
+						browser: "Chrome",
+						isDesktop: true,
+						isMobile: false,
+						isAndroid: false,
+						isiPhone: false
+					}
+				},
+				created: new Date(new Date(Date.now()).setDate(new Date().getDate() - 10))
+			}],
+			users: [{
+				id: "testuserid"
+			}]
+		};
+
+		api.requestsLoad = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+
+		const response = await request(app)
+			.get("/api/requestsload")
+			.expect(200);
+
+		// ********** Then
+
+		expect(response.body).toHaveProperty("deviceRequests");
+		expect(response.body.deviceRequests).toHaveLength(output.deviceRequests.length);
+		expect(response.body.deviceRequests).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ id: output.deviceRequests[0].id })
+			])
+		);
+
+		expect(response.body).toHaveProperty("users");
+		expect(response.body.users).toHaveLength(output.users.length);
+		expect(response.body.users).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ id: output.users[0].id })
+			])
+		);
+
+	});
+
+	it("saves request", async () => {
+		// ********** Given
+
+		const userId = "testuserid",
+			data = { request: {}, userid: userId },
+			output = { userId: userId };
+
+		api.requestsSave = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+
+		const response = await request(app)
+			.post("/api/requestssave")
+			.send({ save: data })
+			.expect(200);
+
+		// ********** Then
+
+		expect(response.body).toHaveProperty("userId", userId);
+	});
+
+	it("deletes request", async () => {
+		// ********** Given
+
+		const data = "testdeleteid",
+			output = { status: "ok" };
+
+		api.requestsSave = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+
+		const response = await request(app)
+			.post("/api/requestssave")
+			.send({ delete: data })
+			.expect(200);
+
+		// ********** Then
+
+		expect(response.body).toHaveProperty("status", "ok");
+	});
+
 });

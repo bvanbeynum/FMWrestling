@@ -63,7 +63,7 @@ const Nav = (props) => {
 		<span>Roles</span>
 	</li>
 
-	<li className={`sub ${ subExpanded === "user" ? "active" : "" }`}>
+	<li onClick={ () => props.navigate("requests") } className={`sub ${ subExpanded === "user" ? "active" : "" }`}>
 		<span>Requests</span>
 	</li>
 

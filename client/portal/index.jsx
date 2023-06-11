@@ -4,6 +4,7 @@ import Nav from "./nav.jsx";
 import Posts from "./posts.jsx";
 import Schedule from "./schedule.jsx";
 import RolesComponent from "./roles.jsx";
+import RequestsComponent from "./requests.jsx";
 import "./include/index.css";
 
 const Index = () => {
@@ -42,6 +43,9 @@ const Index = () => {
 
 		: page === "roles" ?
 		<RolesComponent />
+
+		: page === "requests" ?
+		<RequestsComponent />
 
 		: ""
 		}

@@ -12,18 +12,17 @@ const Schedule = (props) => {
 			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M324-168h312v-120q0-65-45.5-110.5T480-444q-65 0-110.5 45.5T324-288v120ZM192-96v-72h60v-120q0-59 28-109.5t78-82.5q-49-32-77.5-82.5T252-672v-120h-60v-72h576v72h-60v120q0 59-28.5 109.5T602-480q50 32 78 82.5T708-288v120h60v72H192Z"/></svg>, // Top
 			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M192-96v-72h60v-120q0-59 28-109.5t78-82.5q-49-32-77.5-82.5T252-672v-120h-60v-72h576v72h-60v120q0 59-28.5 109.5T602-480q50 32 78 82.5T708-288v120h60v72H192Z"/></svg>, // Full
 			<svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" width="20"><path d="M480-516q65 0 110.5-45.5T636-672v-120H324v120q0 65 45.5 110.5T480-516ZM192-96v-72h60v-120q0-59 28-109.5t78-82.5q-49-32-77.5-82.5T252-672v-120h-60v-72h576v72h-60v120q0 59-28.5 109.5T602-480q50 32 78 82.5T708-288v120h60v72H192Z"/></svg> // Bottom
-		];;
+		];
 
 	const [ pageActive, setPageActive ] = useState(false);
 	const [ newEvent, setNewEvent ] = useState(emptyEvent);
 
 	const [ savingId, setSavingId ] = useState(null);
 	const [ loadingIndex, setLoadingIndex ] = useState(0);
-	const [ errorMessage, setErrorMessage ] = useState([]);
+	const [ errorMessage, setErrorMessage ] = useState("");
 
 	const [ events, setEvents ] = useState([]);
 	const [ editItem, setEditItem ] = useState(null);
-	const [ eventDates, setEventDates ] = useState([]);
 
 	const [ monthSelected, setMonthSelect ] = useState(new Date().getMonth());
 	const [ monthDays, setMonthDays ] = useState([]);
