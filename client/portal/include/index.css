@@ -26,7 +26,9 @@ svg {
 
 .page {
 	display: flex;
+	flex-direction: column;
 	min-height: 100vh;
+	background-color: rgb(245 245 245);
 }
 
 header {
@@ -72,13 +74,9 @@ button:disabled, .button:disabled {
 	color: rgb(217 53 53);
 }
 
-.content .menuIconToggle {
+.menuIconToggle {
 	position: fixed;
-}
-
-.content {
-	flex: 1;
-	background-color: rgb(245 245 245);
+	margin: 10px;
 }
 
 .container {
