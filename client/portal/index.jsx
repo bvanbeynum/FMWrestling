@@ -20,6 +20,8 @@ const Index = () => {
 <div className="page">
 
 	<Nav navigate={ navigate } />
+
+	<div>
 		<header>
 			<h1>{ page === "home" ? "Welcome" : page.substring(0,1).toUpperCase() + page.substring(1) }</h1>
 		</header>
@@ -39,6 +41,7 @@ const Index = () => {
 
 		: ""
 		}
+	</div>
 </div>
 
 	);
