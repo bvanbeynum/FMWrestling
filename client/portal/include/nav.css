@@ -4,7 +4,7 @@ nav {
 	z-index: 10;
 	left: 0;
 	width: 25vw;
-	min-width: 250px;
+	min-width: 300px;
 	transform: translateX(-350px);
 	transition: transform 250ms ease-in-out;
 	background-color: rgb(255 255 255);
@@ -14,8 +14,10 @@ nav.active {
 	transform: translateX(0);
 }
 
-nav header {
+nav .actions {
+	display: flex;
 	justify-content: flex-end;
+	height: 30px;
 }
 
 nav svg {
