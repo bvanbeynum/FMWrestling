@@ -3,7 +3,7 @@
  */
 
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import NoAccess from "../noaccess.jsx";
 
@@ -16,9 +16,10 @@ beforeEach(() => {
 	render(<NoAccess />);
 });
 
-afterEach(() => 
-	jest.restoreAllMocks()
-);
+afterEach(() => {
+	jest.restoreAllMocks();
+	cleanup();
+});
 
 describe("No access component", () => {
 

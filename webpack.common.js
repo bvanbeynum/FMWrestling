@@ -4,6 +4,10 @@ export default {
 	entry: {
 		index: "./client/public/index.jsx",
 		portal: "./client/portal/index.jsx",
+		posts: "./client/portal/posts.jsx",
+		schedule: "./client/portal/schedule.jsx",
+		roles: "./client/portal/roles.jsx",
+		requests: "./client/portal/requests.jsx",
 		dual: "./client/portal/dual/dual.jsx",
 		noaccess: "./client/portal/noaccess.jsx"
 	},
@@ -26,6 +30,46 @@ export default {
 				viewport: "width=device-width, initial-scale=1"
 			},
 			chunks: [ "portal" ],
+			templateContent: "<html><body><div id='root'></div></body></html>"
+		}),
+		new HtmlWebpackPlugin({ 
+			filename: "./portal/posts.html",
+			title: "Fort Mill Wrestling - Portal",
+			favicon: "./client/media/favicon.ico",
+			meta: {
+				viewport: "width=device-width, initial-scale=1"
+			},
+			chunks: [ "posts" ],
+			templateContent: "<html><body><div id='root'></div></body></html>"
+		}),
+		new HtmlWebpackPlugin({ 
+			filename: "./portal/roles.html",
+			title: "Fort Mill Wrestling - Portal",
+			favicon: "./client/media/favicon.ico",
+			meta: {
+				viewport: "width=device-width, initial-scale=1"
+			},
+			chunks: [ "roles" ],
+			templateContent: "<html><body><div id='root'></div></body></html>"
+		}),
+		new HtmlWebpackPlugin({ 
+			filename: "./portal/requests.html",
+			title: "Fort Mill Wrestling - Portal",
+			favicon: "./client/media/favicon.ico",
+			meta: {
+				viewport: "width=device-width, initial-scale=1"
+			},
+			chunks: [ "requests" ],
+			templateContent: "<html><body><div id='root'></div></body></html>"
+		}),
+		new HtmlWebpackPlugin({ 
+			filename: "./portal/schedule.html",
+			title: "Fort Mill Wrestling - Portal",
+			favicon: "./client/media/favicon.ico",
+			meta: {
+				viewport: "width=device-width, initial-scale=1"
+			},
+			chunks: [ "schedule" ],
 			templateContent: "<html><body><div id='root'></div></body></html>"
 		}),
 		new HtmlWebpackPlugin({ 

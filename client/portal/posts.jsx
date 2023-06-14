@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
+import ReactDOM from "react-dom/client";
+import Nav from "./nav.jsx";
 import "./include/index.css";
 
-const Posts = (props) => {
+const Posts = props => {
 
 	const emptyPost = { content: "", expires: "", scope: "Internal" },
 		minExpire = new Date(),
@@ -127,88 +129,100 @@ const Posts = (props) => {
 	
 	return (
 
-<div className={`container ${ pageActive ? "active" : "" }`}>
-	
-	<div key={ "newPost" } className="panel">
-		<h3>New Post</h3>
+<div className="page">
+	<Nav />
 
-		<label>
-			<textarea placeholder="Enter content" value={ newPost.content } onChange={ event => setNewPost(newPost => ({ ...newPost, content: event.target.value })) } />
-		</label>
+	<div>
+		<header>
+			<h1>Posts</h1>
+		</header>
 
-		<label>
-			<span>Scope</span>
-			<select name="scope" value={ newPost.scope || "Internal" } onChange={ event => setNewPost(newPost => ({...newPost, scope: event.target.value })) }>
-				{
-				scopes.map(scope => <option key={ scope } value={ scope }>{ scope }</option>)
-				}
-			</select>
-		</label>
-
-		<label>
-			<span>Expires</span>
-			<input type="date" min={ minExpire.toLocaleDateString("fr-ca") } value={ newPost.expires } onChange={ event => setNewPost(newPost => ({ ...newPost, expires: event.target.value })) } />
-		</label>
-
-		<div className="row">
-			<div className="error">{ errorMessage }</div>
-			<button onClick={ () => savePost({...newPost, expires: newPost.expires ? newPost.expires : null }) } disabled={ savingId == "new" }>
-				{
-				savingId === "new" ?
-					loading[loadingIndex]
-				: 
-					"Add"
-				}
-			</button>
-		</div>
-	</div>
-
-	{
-	posts
-	.sort((postA, postB) => postB.created - postA.created)
-	.map(post => (
-		
-	<div key={ post.id } data-testid={ post.id } className="panel">
-		<h3>Posted { post.created.toLocaleDateString() + " " + post.created.toLocaleTimeString() }</h3>
-
-		<label>
-			<textarea placeholder="Enter content" value={ post.content || "" } onChange={ event => editPost(post.id, "content", event.target.value) } />
-		</label>
-
-		<label>
-			<span>Scope</span>
-			<select name="scope" value={ post.scope } onChange={ event => editPost(post.id, "scope", event.target.value) }>
-				{
-				scopes.map(scope => <option key={ scope } value={ scope }>{ scope }</option>)
-				}
-			</select>
-		</label>
-
-		<label>
-			<span>Expires</span>
-			<input type="date" min={ minExpire.toLocaleDateString("fr-ca") } value={ post.expires ? post.expires.toLocaleDateString("fr-ca") : "" } onChange={ event => editPost(post.id, "expires", event.target.value) } />
-		</label>
-
-		<div className="row">
-			<div className="error">{ errorMessage }</div>
-			<button onClick={ () => savePost(post) } disabled={ savingId === post.id }>
-				{
-				savingId === post.id ?
-					loading[loadingIndex]
-				: 
-					"Save"
-				}
-			</button>
+		<div className={`container ${ pageActive ? "active" : "" }`}>
 			
-			<button onClick={ () => deletePost(post.id) } disabled={ savingId === post.id }>Delete</button>
+			<div key={ "newPost" } className="panel">
+				<h3>New Post</h3>
+
+				<label>
+					<textarea placeholder="Enter content" value={ newPost.content } onChange={ event => setNewPost(newPost => ({ ...newPost, content: event.target.value })) } />
+				</label>
+
+				<label>
+					<span>Scope</span>
+					<select name="scope" value={ newPost.scope || "Internal" } onChange={ event => setNewPost(newPost => ({...newPost, scope: event.target.value })) }>
+						{
+						scopes.map(scope => <option key={ scope } value={ scope }>{ scope }</option>)
+						}
+					</select>
+				</label>
+
+				<label>
+					<span>Expires</span>
+					<input type="date" min={ minExpire.toLocaleDateString("fr-ca") } value={ newPost.expires } onChange={ event => setNewPost(newPost => ({ ...newPost, expires: event.target.value })) } />
+				</label>
+
+				<div className="row">
+					<div className="error">{ errorMessage }</div>
+					<button onClick={ () => savePost({...newPost, expires: newPost.expires ? newPost.expires : null }) } disabled={ savingId == "new" }>
+						{
+						savingId === "new" ?
+							loading[loadingIndex]
+						: 
+							"Add"
+						}
+					</button>
+				</div>
+			</div>
+
+			{
+			posts
+			.sort((postA, postB) => postB.created - postA.created)
+			.map(post => (
+				
+			<div key={ post.id } data-testid={ post.id } className="panel">
+				<h3>Posted { post.created.toLocaleDateString() + " " + post.created.toLocaleTimeString() }</h3>
+
+				<label>
+					<textarea placeholder="Enter content" value={ post.content || "" } onChange={ event => editPost(post.id, "content", event.target.value) } />
+				</label>
+
+				<label>
+					<span>Scope</span>
+					<select name="scope" value={ post.scope } onChange={ event => editPost(post.id, "scope", event.target.value) }>
+						{
+						scopes.map(scope => <option key={ scope } value={ scope }>{ scope }</option>)
+						}
+					</select>
+				</label>
+
+				<label>
+					<span>Expires</span>
+					<input type="date" min={ minExpire.toLocaleDateString("fr-ca") } value={ post.expires ? post.expires.toLocaleDateString("fr-ca") : "" } onChange={ event => editPost(post.id, "expires", event.target.value) } />
+				</label>
+
+				<div className="row">
+					<div className="error">{ errorMessage }</div>
+					<button onClick={ () => savePost(post) } disabled={ savingId === post.id }>
+						{
+						savingId === post.id ?
+							loading[loadingIndex]
+						: 
+							"Save"
+						}
+					</button>
+					
+					<button onClick={ () => deletePost(post.id) } disabled={ savingId === post.id }>Delete</button>
+				</div>
+			</div>
+			))
+			}
+			
 		</div>
+
 	</div>
-	))
-	}
-	
 </div>
 
-		)
-	};
-	
+	)
+};
+
+ReactDOM.createRoot(document.getElementById("root") || document.createElement("div")).render(<Posts />);
 export default Posts;

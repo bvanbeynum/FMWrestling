@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import ReactDOM from "react-dom/client";
+import Nav from "./nav.jsx";
 import "./include/index.css";
 
 const RequestsComponent = (props) => {
@@ -141,108 +143,119 @@ const RequestsComponent = (props) => {
 
 	return (
 
-<div className={`container ${ pageActive ? "active" : "" }`}>
+<div className="page">
+	<Nav />
 
-	{
-	requests
-	.sort((requestA,requestB) => requestA.created - requestB.created )
-	.map(request => 
+	<div>
+		<header>
+			<h1>Requests</h1>
+		</header>
 
-	<div key={ request.id } data-testid={ request.id } className="panel">
-		<div className="row">
+		<div className={`container ${ pageActive ? "active" : "" }`}>
 
-			<div className="rowContent">
-				<h3>{ request.name }</h3>
-
-				<div className="subHeading">Date: { request.created.toLocaleDateString() } { request.created.toLocaleTimeString() }</div>
-				<div className="subHeading">Email: { request.email }</div>
-				<div className="subHeading">Device: { request.deviceName }</div>
-			</div>
-			
 			{
-			editItem !== request.id ?
-			<button aria-label="Edit" className="action" onClick={ () => editRequest(request) }>
-				{/* Edit */}
-				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
-					<path d="M200-200h56l345-345-56-56-345 345v56Zm572-403L602-771l56-56q23-23 56.5-23t56.5 23l56 56q23 23 24 55.5T829-660l-57 57Zm-58 59L290-120H120v-170l424-424 170 170Zm-141-29-28-28 56 56-28-28Z"/>
-				</svg>
-			</button>
-			: ""
-			}
+			requests
+			.sort((requestA,requestB) => requestA.created - requestB.created )
+			.map(request => 
 
-		</div>
+			<div key={ request.id } data-testid={ request.id } className="panel">
+				<div className="row">
 
-		{
-		editItem === request.id ?
+					<div className="rowContent">
+						<h3>{ request.name }</h3>
 
-		<>
-		<div className="seperator"></div>
+						<div className="subHeading">Date: { request.created.toLocaleDateString() } { request.created.toLocaleTimeString() }</div>
+						<div className="subHeading">Email: { request.email }</div>
+						<div className="subHeading">Device: { request.deviceName }</div>
+					</div>
+					
+					{
+					editItem !== request.id ?
+					<button aria-label="Edit" className="action" onClick={ () => editRequest(request) }>
+						{/* Edit */}
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+							<path d="M200-200h56l345-345-56-56-345 345v56Zm572-403L602-771l56-56q23-23 56.5-23t56.5 23l56 56q23 23 24 55.5T829-660l-57 57Zm-58 59L290-120H120v-170l424-424 170 170Zm-141-29-28-28 56 56-28-28Z"/>
+						</svg>
+					</button>
+					: ""
+					}
 
-		<label>
-			<span>User</span>
-			<select name="scope" aria-label="User" value={ requestUser } onChange={ event => setRequestUser(event.target.value) }>
-				<option value="">-- Select User --</option>
-				<option value="new">New User</option>
+				</div>
 
 				{
-				users.map(user =>
-				<option key={user.id} value={user.id}>{ `${ user.firstName } ${ user.lastName }` }</option>
-				)}
+				editItem === request.id ?
 
-			</select>
-		</label>
+				<>
+				<div className="seperator"></div>
 
-		{
-		requestUser === "new" ?
+				<label>
+					<span>User</span>
+					<select name="scope" aria-label="User" value={ requestUser } onChange={ event => setRequestUser(event.target.value) }>
+						<option value="">-- Select User --</option>
+						<option value="new">New User</option>
 
-		<>
-		<label>
-			<span>First Name</span>
-			<input type="text" value={ newUser.firstName } onChange={ event => setNewUser(newUser => ({...newUser, firstName: event.target.value })) } aria-label="First Name" />
-		</label>
-		
-		<label>
-			<span>Last Name</span>
-			<input type="text" value={ newUser.lastName } onChange={ event => setNewUser(newUser => ({...newUser, lastName: event.target.value })) } aria-label="Last Name" />
-		</label>
-		
-		<label>
-			<span>Email</span>
-			<input type="email" value={ newUser.email } onChange={ event => setNewUser(newUser => ({...newUser, email: event.target.value })) } aria-label="Email" />
-		</label>
+						{
+						users.map(user =>
+						<option key={user.id} value={user.id}>{ `${ user.firstName } ${ user.lastName }` }</option>
+						)}
 
-		</>
+					</select>
+				</label>
 
-		: ""
-		}
-		
-		<div className="row">
-			<div className="error">{ errorMessage }</div>
-
-			<button disabled={ saveItem === request.id } onClick={ () => saveRequest(request) } aria-label="Save">
 				{
-				saveItem === request.id ?
-					loading[loadingIndex]
-				: 
-					"Save"
+				requestUser === "new" ?
+
+				<>
+				<label>
+					<span>First Name</span>
+					<input type="text" value={ newUser.firstName } onChange={ event => setNewUser(newUser => ({...newUser, firstName: event.target.value })) } aria-label="First Name" />
+				</label>
+				
+				<label>
+					<span>Last Name</span>
+					<input type="text" value={ newUser.lastName } onChange={ event => setNewUser(newUser => ({...newUser, lastName: event.target.value })) } aria-label="Last Name" />
+				</label>
+				
+				<label>
+					<span>Email</span>
+					<input type="email" value={ newUser.email } onChange={ event => setNewUser(newUser => ({...newUser, email: event.target.value })) } aria-label="Email" />
+				</label>
+
+				</>
+
+				: ""
 				}
-			</button>
+				
+				<div className="row">
+					<div className="error">{ errorMessage }</div>
 
-			<button disabled={ saveItem === request.id } onClick={ () => deleteRequest(request.id) } aria-label="Delete">Delete</button>
-			<button disabled={ saveItem === request.id } onClick={ () => setEditItem(null) } aria-label="Cancel">Cancel</button>
+					<button disabled={ saveItem === request.id } onClick={ () => saveRequest(request) } aria-label="Save">
+						{
+						saveItem === request.id ?
+							loading[loadingIndex]
+						: 
+							"Save"
+						}
+					</button>
+
+					<button disabled={ saveItem === request.id } onClick={ () => deleteRequest(request.id) } aria-label="Delete">Delete</button>
+					<button disabled={ saveItem === request.id } onClick={ () => setEditItem(null) } aria-label="Cancel">Cancel</button>
+				</div>
+
+				</>
+
+				: ""
+				}
+			</div>
+
+			)}
+
 		</div>
 
-		</>
-
-		: ""
-		}
 	</div>
-
-	)}
-
 </div>
-
 	)
 };
 
+ReactDOM.createRoot(document.getElementById("root") || document.createElement("div")).render(<RequestsComponent />);
 export default RequestsComponent;

@@ -3,7 +3,7 @@
  */
 
 import React from "react";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, cleanup } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import RequestsComponent from "../requests.jsx";
 
@@ -47,6 +47,7 @@ describe("Requests component", () => {
 
 	afterEach(() => {
 		jest.restoreAllMocks();
+		cleanup();
 	});
 
 	it("initializes the components", async () => {

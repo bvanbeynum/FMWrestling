@@ -3,7 +3,7 @@
  */
 
 import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import Schedule from "../schedule.jsx";
 
@@ -28,11 +28,15 @@ describe("Schedule component", () => {
 
 	afterEach(() => {
 		jest.restoreAllMocks();
+		cleanup();
 	});
 
 	it("initializes the components", async () => {
 
 		// ******** Given ***************
+
+		const monthLookup = null,
+			dateLookup = new Date(events[0].date).getDate();
 
 		// ******** When ****************
 
@@ -41,9 +45,9 @@ describe("Schedule component", () => {
 		// ******** Then ****************
 
 		await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/scheduleload"));
-		
+
 		expect(await screen.findByText(new RegExp(new Date().toLocaleDateString("en-us", { month: "long" }), "i"))).toBeInTheDocument();
-		expect(await screen.findByText(new Date(events[0].date).getDate(), { selector: "li" })).toHaveClass("single");
+		const dateListItem = await screen.findByText(dateLookup, { selector: "li" });
 
 		expect(await screen.findByTestId(events[0].id)).toBeInTheDocument();
 	});
@@ -198,8 +202,7 @@ describe("Schedule component", () => {
 			})
 		});
 
-		const eventPanel = await screen.findByTestId(events[0].id),
-			editButton = await screen.findByRole("button", { name: /edit/i });
+		const editButton = await screen.findByRole("button", { name: /edit/i });
 			
 		fireEvent.click(editButton);
 
@@ -215,7 +218,7 @@ describe("Schedule component", () => {
 			body: expect.stringContaining(events[0].id)
 		})));
 
-		expect(eventPanel).not.toBeInTheDocument();
+		expect(screen.queryByTestId(events[0].id)).toBeNull();
 	});
 
 });

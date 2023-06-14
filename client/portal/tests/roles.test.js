@@ -3,7 +3,7 @@
  */
 
 import React from "react";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, cleanup } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import Roles from "../roles.jsx";
 
@@ -31,6 +31,7 @@ describe("Roles component", () => {
 
 	afterEach(() => {
 		jest.restoreAllMocks();
+		cleanup();
 	});
 
 	it("initializes the components", async () => {

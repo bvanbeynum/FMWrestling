@@ -3,7 +3,7 @@
  */
 
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, cleanup } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import Nav from "../nav.jsx";
 
@@ -14,6 +14,7 @@ describe("Index component", () => {
 
 	afterEach(() => {
 		jest.restoreAllMocks();
+		cleanup();
 	});
 
 	it("initializes the components", async () => {

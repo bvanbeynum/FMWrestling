@@ -3,7 +3,7 @@
  */
 
 import React from "react";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within, cleanup } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import Posts from "../posts.jsx";
 
@@ -30,6 +30,7 @@ describe("Posts component", () => {
 
 	afterEach(() => {
 		jest.restoreAllMocks();
+		cleanup();
 	});
 
 	it("initializes the components", async () => {

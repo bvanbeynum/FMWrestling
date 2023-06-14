@@ -3,7 +3,7 @@
  */
 
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import Index from "../index.jsx";
 
@@ -19,6 +19,7 @@ describe("Index component", () => {
 
 	afterEach(() => {
 		jest.restoreAllMocks();
+		cleanup();
 	});
 
 	it("initializes the components", async () => {
@@ -33,23 +34,6 @@ describe("Index component", () => {
 
 		expect(await screen.findByText(/welcome/i)).toBeInTheDocument();
 		expect(await screen.findByText(/home/i)).toBeInTheDocument();
-	});
-
-	it("navigates to posts", async () => {
-
-		// ******** Given ***************
-
-		render(<Index />);
-
-		const postsButton = await screen.findByText(/posts/i);
-
-		// ******** When ****************
-		
-		fireEvent.click(postsButton);
-
-		// ******** Then ****************
-
-		expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent(/posts/i);
 	});
 
 });
