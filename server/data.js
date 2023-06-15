@@ -652,12 +652,15 @@ export default {
 		return output;
 	},
 
-	roleGet: async (id) => {
+	roleGet: async (id, all) => {
 		let filter = {},
 			output = {};
 
 		if (id) {
 			filter["_id"] = mongoose.Types.ObjectId.isValid(id) ? id : null;
+		}
+		if (!all) {
+			filter.isActive = true;
 		}
 
 		try {

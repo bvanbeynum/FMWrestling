@@ -599,3 +599,115 @@ describe("API Requests", () => {
 	});
 
 });
+
+describe("Roles", () => {
+
+	it("loads the role data", async () => {
+		// ********** Given
+
+		const serverPath = "http://dev.beynum.com",
+			output = {
+				roles: [{
+					id: "testid",
+					name: "Test Role",
+					isActive: true,
+					privileges: [],
+					created: new Date(new Date(Date.now()).setDate(new Date().getDate() - 10))
+				}],
+				users: [{
+					id: "testuserid",
+					firstName: "Test",
+					lastName: "User",
+					roles: [{ id: "testid" }]
+				}]
+			};
+		
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { roles: output.roles }})
+			.mockResolvedValueOnce({ body: { users: output.users } });
+
+		// ********** When
+
+		const results = await api.roleLoad(serverPath);
+
+		// ********** Then
+
+		expect(client.get).toHaveBeenCalledTimes(2);
+		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/role`);
+		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/user`);
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+
+		expect(results.data).toHaveProperty("roles");
+		expect(results.data.roles).toHaveLength(output.roles.length);
+		expect(results.data.roles[0]).toHaveProperty("id", output.roles[0].id);
+
+		expect(results.data.roles[0]).toHaveProperty("users");
+		expect(results.data.roles[0].users).toHaveLength(output.users.length);
+		expect(results.data.roles[0].users[0]).toHaveProperty("id", output.users[0].id)
+	});
+
+	it("saves a new role", async () => {
+		// ********** Given
+
+		const body = { save: {
+				name: "Test role"
+			}},
+			serverPath = "http://dev.beynum.com",
+			returnId = "testuserid";
+
+		const send = jest.fn().mockResolvedValue({
+			body: { id: returnId }
+		});
+		client.post = jest.fn(() => ({
+			send: send
+		}));
+
+		client.get = jest.fn().mockResolvedValue({ body: {
+			roles: [{ ...body.save, id: returnId, created: new Date() }]
+		}});
+
+		// ********** When
+
+		const results = await api.roleSave(body, serverPath);
+
+		// ********** Then
+
+		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/role`);
+		expect(send).toHaveBeenCalledWith(
+			expect.objectContaining({
+				role: expect.objectContaining({ name: body.save.name })
+			})
+		);
+		
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("role", expect.objectContaining({ id: returnId }));
+	});
+
+	it("deletes role", async () => {
+		// ********** Given
+
+		const deleteId = "testid",
+			body = { delete: deleteId },
+			serverPath = "http://dev.beynum.com";
+
+		client.delete = jest.fn(() => ({
+			status: "ok"
+		}));
+
+		// ********** When
+
+		const results = await api.roleSave(body, serverPath);
+
+		// ********** Then
+
+		expect(client.delete).toHaveBeenCalledWith(`${ serverPath }/data/role?id=${ deleteId }`);
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("status", "ok");
+	});
+
+});

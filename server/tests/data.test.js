@@ -502,7 +502,7 @@ describe("Role data", () => {
 	let createdId,
 		newData = {
 			name: "Test role",
-			isActive: false
+			isActive: true
 		};
 
 	it("should return return an array of items", async () => {

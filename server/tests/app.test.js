@@ -281,4 +281,66 @@ describe("API service", () => {
 		expect(response.body).toHaveProperty("status", "ok");
 	});
 
+	it("pulls roles", async () => {
+		// ********** Given
+
+		const output = { roles: [{ 
+			id: "testroleid", 
+			name: "Test Role", 
+			created: new Date() 
+		}]};
+
+		api.roleLoad = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+
+		const response = await request(app)
+			.get("/api/roleload")
+			.expect(200);
+
+		// ********** Then
+
+		expect(response.body).toHaveProperty("roles");
+		expect(response.body.roles).toHaveLength(output.roles.length);
+		expect(response.body.roles).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ id: output.roles[0].id })
+			])
+		);
+
+	});
+
+	it("saves role", async () => {
+		// ********** Given
+
+		const role = { 
+				name: "Test event",
+				privileges: [{ id: "testid", name: "testprivilege"}]
+			},
+			output = { role: { ...role, id: "1234" }};
+
+		api.roleSave = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+
+		const response = await request(app)
+			.post("/api/rolesave")
+			.send({ save: role })
+			.expect(200);
+
+		// ********** Then
+
+		expect(response.body).toHaveProperty("role");
+		expect(response.body.role).toEqual(
+			expect.objectContaining({ id: output.role.id })
+		);
+
+	});
+
 });

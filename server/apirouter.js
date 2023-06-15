@@ -96,4 +96,26 @@ router.post("/api/requestssave", authAPI, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 });
 
+// ***************** Roles ********************
+
+router.get("/api/roleload", authAPI, async (request, response) => {
+	const results = await api.roleLoad(request.serverPath);
+
+	if (results.error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "648aa4534d7f52ba05eb7d64", message: `${ results.status }: ${results.error}` }}).then();
+	}
+
+	response.status(results.status).json(results.error ? { error: results.error } : results.data);
+});
+
+router.post("/api/rolesave", authAPI, async (request, response) => {
+	const results = await api.roleSave(request.body, request.serverPath);
+
+	if (results.error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "648aa47a4d7f52ba05eb7d67", message: `${ results.status }: ${results.error}` }}).then();
+	}
+
+	response.status(results.status).json(results.error ? { error: results.error } : results.data);
+});
+
 export default router;

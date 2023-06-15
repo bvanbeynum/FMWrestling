@@ -406,6 +406,106 @@ export default {
 				return output;
 			}
 		}
+	},
+
+	roleLoad: async (serverPath) => {
+		const output = {
+			data: {}
+		};
+
+		let roles = null;
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/role`);
+			roles = clientResponse.body.roles;
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+
+		let users = null;
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/user`);
+			users = clientResponse.body.users;
+		}
+		catch (error) {
+			output.status = 562;
+			output.error = error.message;
+			return output;
+		}
+
+		try {
+			output.data.roles = roles.map(role => ({
+				...role,
+				users: users
+					.filter(user => user.roles && user.roles.some(userRole => userRole.id === role.id))
+					.map(user => ({
+						id: user.id,
+						firstName: user.firstName,
+						lastName: user.lastName
+					}))
+			}));
+		}
+		catch (error) {
+			output.status = 563;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		return output;
+	},
+
+	roleSave: async (body, serverPath) => {
+		const output = {};
+
+		if (!body) {
+			output.status = 562;
+			output.error = "Missing action";
+			return output;
+		}
+		else if (body.save) {
+			let saveId = null;
+
+			try {
+				const clientResponse = await client.post(`${ serverPath }/data/role`).send({ role: body.save }).then();
+				saveId = clientResponse.body.id;
+			}
+			catch (error) {
+				output.status = 561;
+				output.error = error.message;
+				return output;
+			}
+
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/role?id=${ saveId }`).then();
+				
+				output.status = 200;
+				output.data = { role: clientResponse.body.roles[0] };
+				return output;
+			}
+			catch (error) {
+				output.status = 563;
+				output.error = error.message;
+				return output;
+			}
+		}
+		else if (body.delete) {
+			try {
+				await client.delete(`${ serverPath }/data/role?id=${ body.delete }`);
+
+				output.status = 200;
+				output.data = { status: "ok" };
+				return output;
+			}
+			catch (error) {
+				console.log(error);
+				output.status = 563;
+				output.error = error.message;
+				return output;
+			}
+		}
 	}
 
 };
