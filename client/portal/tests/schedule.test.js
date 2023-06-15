@@ -59,7 +59,8 @@ describe("Schedule component", () => {
 		render(<Schedule />);
 
 		const nextMonthButton = await screen.findByRole("button", { name: "▶" }),
-			nextMonth = new Date(new Date().setMonth((new Date().getMonth() + 1) % 12));
+			nextMonth = new Date(new Date().setMonth((new Date().getMonth() + 1) % 12)),
+			nextMonthLookup = new RegExp(nextMonth.toLocaleDateString("en-us", { month: "long" }), "i");
 
 		// ******** When ****************
 
@@ -67,7 +68,7 @@ describe("Schedule component", () => {
 
 		// ******** Then ****************
 
-		expect(await screen.findByText(new RegExp(nextMonth.toLocaleDateString("en-us", { month: "long" }), "i"))).toBeInTheDocument();
+		expect(await screen.findByText(nextMonthLookup)).toBeInTheDocument();
 	});
 
 	it("sets edit mode", async () => {
