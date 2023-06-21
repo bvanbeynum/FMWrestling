@@ -106,6 +106,73 @@ describe("Data service", () => {
 		expect(response.body).toHaveProperty("status", "ok");
 	});
 
+	it("gets role", async () => {
+
+		// ********** Given
+
+		const output = { roles: [{ id: "testid" }]};
+
+		data.roleGet = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+		
+		const response = await request(app)
+			.get("/data/role")
+			.expect(200);
+		
+		// ********** Then
+
+		expect(response.body).toHaveProperty("roles");
+		expect(response.body.roles).toHaveLength(1);
+	});
+
+	it("saves event", async () => {
+		// ********** Given
+
+		const save = { event: { name: "test role" }},
+			output = { id: "testid" };
+
+		data.roleSave = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+		
+		const response = await request(app)
+			.post("/data/role")
+			.send({ role: save })
+			.expect(200);
+		
+		// ********** Then
+
+		expect(response.body).toHaveProperty("id", output.id);
+	});
+
+	it("deletes role", async () => {
+		// ********** Given
+
+		const roleId = "testid";
+
+		data.roleDelete = jest.fn().mockResolvedValue({
+			status: 200,
+			data: { status: "ok" }
+		});
+
+		// ********** When
+		
+		const response = await request(app)
+			.delete(`/data/role?id=${ roleId }`)
+			.expect(200);
+		
+		// ********** Then
+
+		expect(response.body).toHaveProperty("status", "ok");
+	});
+
 });
 
 describe("API service", () => {

@@ -1,7 +1,7 @@
 nav {
 	height: 100vh;
 	position: fixed;
-	z-index: 10;
+	z-index: 20;
 	left: 0;
 	width: 25vw;
 	min-width: 300px;

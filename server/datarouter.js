@@ -271,4 +271,55 @@ router.delete("/data/event", authInternal, async (request, response) => {
 	}
 });
 
+router.get("/data/role", authInternal, async (request, response) => {
+	try {
+		const results = await data.roleGet(request.query.id);
+
+		if (results.error) {
+			client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "648c09f24d7f52ba05ebf97a", message: `${ results.status }: ${results.error}` }}).then();
+		}
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "648c09f24d7f52ba05ebf97a", message: `570: ${error.message}` }}).then();
+		response.status(570).json({ error: error.message });
+	}
+});
+
+router.post("/data/role", authInternal, async (request, response) => {
+	try {
+		const results = await data.roleSave(request.body.role);
+
+		if (results.error) {
+			client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "648c0a0f4d7f52ba05ebf97d", message: `${ results.status }: ${results.error}` }}).then();
+		}
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "648c0a0f4d7f52ba05ebf97d", message: `570: ${error.message}` }}).then();
+		response.status(570).json({ error: error.message });
+	}
+});
+
+router.delete("/data/role", authInternal, async (request, response) => {
+	try {
+		const results = await data.roleDelete(request.query.id);
+
+		if (results.error) {
+			client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "648c0a3c4d7f52ba05ebf97f", message: `${ results.status }: ${results.error}` }}).then();
+		}
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "648c0a3c4d7f52ba05ebf97f", message: `570: ${error.message}` }}).then();
+		response.status(570).json({ error: error.message });
+	}
+});
+
 export default router;
