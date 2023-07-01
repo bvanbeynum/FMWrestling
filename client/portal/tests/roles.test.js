@@ -10,21 +10,23 @@ import Roles from "../roles.jsx";
 describe("Roles component", () => {
 
 	const roles = [{
-		id: "testid",
-		name: "Test Role",
-		users: [{ id: "testuserid", firstName: "Test", lastName: "User" }],
-		privileges: [{ id: "testprivilegeid", name: "Test Privilege" }],
-		created: new Date(new Date(Date.now()).setDate(new Date().getDate() - 10)),
-		modified: new Date(new Date(Date.now()).setDate(new Date().getDate() - 5)),
-	}],
-	testId = "addedtestid";
+			id: "testid",
+			name: "Test Role",
+			users: [{ id: "testuserid", firstName: "Test", lastName: "User" }],
+			privileges: [{ id: "testprivilegeid", name: "Test Privilege" }],
+			created: new Date(new Date(Date.now()).setDate(new Date().getDate() - 10)),
+			modified: new Date(new Date(Date.now()).setDate(new Date().getDate() - 5)),
+		}],
+		users = [{ id: "testuser1", firstName: "Test", lastName: "User 1" }],
+		testId = "addedtestid";
 
 	beforeEach(() => {
 		global.fetch = jest.fn().mockResolvedValue({
 			ok: true,
 			status: 200,
 			json: jest.fn().mockResolvedValue({
-				roles: roles
+				roles: roles,
+				users: users
 			})
 		});
 	});
@@ -103,6 +105,31 @@ describe("Roles component", () => {
 
 		await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/rolesave", expect.objectContaining({
 			body: expect.stringContaining(roleName)
+		})));
+	});
+
+	it("adds a member to a role", async () => {
+
+		render(<Roles />);
+
+		// Click the edit on the role
+		const expandButton = await screen.findByRole("button", { name: /edit/i });
+		fireEvent.click(expandButton);
+
+		// Click to add a new member to the role
+		const addMemberButton = await screen.findByRole("button", { name: /add member/i });
+		fireEvent.click(addMemberButton);
+
+		// Select the member to add (add button will show up after member is selected)
+		const memberSelect = await screen.findByLabelText(/member/i);
+		fireEvent.change(memberSelect, { target: { value: users[0].id }});
+
+		// Add member
+		const memberSaveButton = await screen.findByRole("button", { name: /save member/i });
+		fireEvent.click(memberSaveButton);
+
+		await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/rolesave", expect.objectContaining({
+			body: expect.stringContaining(users[0].id)
 		})));
 	});
 

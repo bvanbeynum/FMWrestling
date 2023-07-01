@@ -24,6 +24,24 @@ describe("User data test", () => {
 		expect(results.data).toHaveProperty("users");
 	});
 
+	it("should return users filtered by role", async () => {
+		const roles = await data.roleGet();
+
+		if (roles.data.length > 0) {
+			const results = await data.userGet({ roleId: roles.data[0].id });
+
+			expect(results.status).toEqual(200);
+			expect(results.data).toHaveProperty("users");
+
+			if (results.data.users.length > 0) {
+				const userRoles = [...new Set(results.data.users.flatMap(user => user.roles.flatMap(role => role.id))) ];
+
+				expect(userRoles).toHaveLength(1);
+				expect(userRoles[0]).toBe(roles[0].id);
+			}
+		}
+	});
+
 	it("should create a new object", async () => {
 		const response = await data.userSave({
 			firstName: "test",
@@ -38,7 +56,7 @@ describe("User data test", () => {
 	});
 
 	it("should get the new object by id", async () => {
-		const response = await data.userGet(createdId);
+		const response = await data.userGet({ id: createdId });
 
 		expect(response.status).toEqual(200);
 		expect(response.data).toHaveProperty("users");
@@ -57,7 +75,7 @@ describe("User data test", () => {
 	});
 
 	it("should return an empty array for non-existant object", async () => {
-		const response = await data.userGet("abcd");
+		const response = await data.userGet({ id: "abcd" });
 
 		expect(response.status).toEqual(200);
 		expect(response.data).toHaveProperty("users");

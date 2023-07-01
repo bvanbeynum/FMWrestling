@@ -20,7 +20,11 @@ const RolesComponent = props => {
 	const [ errorMessage, setErrorMessage ] = useState("");
 
 	const [ roles, setRoles ] = useState([]);
+	const [ users, setUsers ] = useState([]);
 	const [ newRole, setNewRole ] = useState(emptyRole);
+
+	const [ sectionEdit, setSectionEdit ] = useState(null);
+	const [ addMemberId, setAddMemberId ] = useState("");
 
 	useEffect(() => {
 		if (!pageActive) {
@@ -37,6 +41,7 @@ const RolesComponent = props => {
 				})
 				.then(data => {
 					setRoles(data.roles);
+					setUsers(data.users);
 				})
 				.catch(error => {
 					console.warn(error);
@@ -44,11 +49,21 @@ const RolesComponent = props => {
 		}
 	}, []);
 
+	// Edit role properties (e.g. name)
+	const editRole = (roleId, property, value) => {
+		setRoles(roles => roles.map(role => {
+			return role.id === roleId ? {
+				...role,
+				[property]: value
+			} : role
+		}));
+	};
+
 	const saveRole = save => {
 		const loadingInterval = setInterval(() => setLoadingIndex(loadingIndex => loadingIndex + 1 === loading.length ? 0 : loadingIndex + 1), 1000);
 		setSaveItem(save.id || "new");
 
-		fetch("/api/rolesave", { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ save: save }) })
+		fetch("/api/rolesave", { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ saveRole: save }) })
 			.then(response => {
 				if (response.ok) {
 					return response.json();
@@ -75,13 +90,37 @@ const RolesComponent = props => {
 			});
 	};
 
-	const editRole = (roleId, property, value) => {
-		setRoles(roles => roles.map(role => {
-			return role.id === roleId ? {
-				...role,
-				[property]: value
-			} : role
-		}));
+	const addMemberToRole = roleId => {
+		if (!addMemberId) {
+			setErrorMessage("There was an error saving the event");
+			return;
+		}
+
+		const loadingInterval = setInterval(() => setLoadingIndex(loadingIndex => loadingIndex + 1 === loading.length ? 0 : loadingIndex + 1), 1000);
+		setSaveItem(roleId);
+
+		fetch("/api/rolesave", { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ saveMember: { roleId: roleId, memberId: addMemberId } }) })
+			.then(response => {
+				if (response.ok) {
+					return response.json();
+				}
+				else {
+					throw Error(response.statusText);
+				}
+			})
+			.then(data => {
+				setRoles(roles => roles.map(role => role.id === data.role.id ? data.role : role));
+				setEditItem(null);
+				setSaveItem(null);
+				setAddMemberId(null);
+				clearInterval(loadingInterval);
+			})
+			.catch(error => {
+				console.warn(error);
+				setErrorMessage("There was an error saving the event");
+				setSaveItem(null);
+				clearInterval(loadingInterval);
+			});
 	};
 
 	return (
@@ -98,7 +137,15 @@ const RolesComponent = props => {
 
 			<div key={ "newPost" } className="panel">
 				{
-				editItem === "new" ?
+				saveItem === "new" ?
+				
+				<div className="loading">
+					{
+					loading[loadingIndex]
+					}
+				</div>
+
+				: editItem === "new" ?
 
 				<>
 				<h3>New Role</h3>
@@ -143,65 +190,122 @@ const RolesComponent = props => {
 
 			{
 			roles
-			.sort((roleA,roleB) => roleA.name > roleB.name ? 1 : -1 )
+			.sort((roleA,roleB) => roleA.name.toLowerCase() > roleB.name.toLowerCase() ? 1 : -1 )
 			.map(role => 
 
 			<div key={ role.id } data-testid={ role.id } className="panel">
-				<div className="row">
-					
-					<div className="icon">
-						{ (role.members || []).length }
-					</div>
+				{
+				saveItem === role.id ?
+				
+				<div className="loading">
+					{
+					loading[loadingIndex]
+					}
+				</div>
 
-					<div className="rowContent">
+				: editItem === role.id ?
+				<>
+				
+				<label>
+					<span>Name</span>
+					<input type="text" value={ role.name } onChange={ event => editRole(role.id, "name", event.target.value) } aria-label="name" />
+				</label>
+
+				<div className="row">
+					<div className="error">{ errorMessage }</div>
+
+					<button disabled={ saveItem === role.id || !role.name } onClick={ () => saveRole(role) } aria-label="Save">
+						{/* Check */}
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+							<path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/>
+						</svg>
+					</button>
+
+					<button disabled={ saveItem === role.id } onClick={ () => setEditItem(null) } aria-label="Cancel">
+						{/* Cancel */}
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+							<path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/>
+						</svg>
+					</button>
+
+					<button disabled={ saveItem === role.id } onClick={ () => {} } aria-label="Delete">
+						{/* Delete */}
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+							<path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/>
+						</svg>
+					</button>
+				</div>
+
+				<h3>Members</h3>
+
+				<div className="sectionList">
+					{
+					role.users.map(user =>
+						<div key={ user.id } className="pill">
+							{ user.firstName + " " + user.lastName }
+							<button>
+								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"></path></svg>
+							</button>
+						</div>
+					)}
+
+					<div className="pill">
 						{
-						editItem === role.id ?
-						<label>
-							<span>Name</span>
-							<input type="text" value={ role.name } onChange={ event => editRole(role.id, "name", event.target.value) } aria-label="name" />
-						</label>
-						:
+						sectionEdit === "member" ?
 						<>
+						<select value={ addMemberId } onChange={ event => setAddMemberId(event.target.value) } aria-label="Member">
+							<option value="">-- Select User --</option>
+						{
+						users.map(user =>
+							<option key={ user.id } value={ user.id }>{ user.firstName + " " + user.lastName }</option>
+						)
+						}
+						</select>
+						
+						{
+						addMemberId.length > 0 ?
+						<button onClick={ () => addMemberToRole(role.id) } aria-label="Save Member">
+							{/* Check */}
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+								<path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/>
+							</svg>
+						</button>
+						: ""
+						}
+						</>
+						:
+						<button onClick={ () => setSectionEdit("member") } aria-label="Add Member">
+							{/* Plus */}
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M440-200v-240H200v-80h240v-240h80v240h240v80H520v240h-80Z"></path></svg>
+						</button>
+						}
+					</div>
+				</div>
+
+				<h3>Privileges</h3>
+
+				</>
+
+				:
+
+				// Not edit
+				<div className="row">
+					<div className="rowContent">
 						<h3>{ role.name }</h3>
 
 						<div className="subHeading">
+							<div>{ (role.users || []).length } members</div>
 							<div>{ (role.privileges || []).length } privileges</div>
 						</div>
-						</>
-						}
 					</div>
 					
-					{
-					editItem !== role.id ?
 					<button aria-label="Edit" className="action" onClick={ () => setEditItem(role.id) }>
 						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
 							<path d="M200-200h56l345-345-56-56-345 345v56Zm572-403L602-771l56-56q23-23 56.5-23t56.5 23l56 56q23 23 24 55.5T829-660l-57 57Zm-58 59L290-120H120v-170l424-424 170 170Zm-141-29-28-28 56 56-28-28Z"/>
 						</svg>
 					</button>
-					: ""
-					}
-
 				</div>
 
-				{
-				editItem === role.id ?
-
-				<div className="row">
-					<div className="error">{ errorMessage }</div>
-					<button disabled={ saveItem === role.id || !role.name } onClick={ () => saveRole(role) } aria-label="Save">
-						{
-						saveItem === role.id ?
-							loading[loadingIndex]
-						: 
-							"Save"
-						}
-					</button>
-
-					<button disabled={ saveItem === role.id } onClick={ () => {} } aria-label="Delete">Delete</button>
-					<button disabled={ saveItem === role.id } onClick={ () => setEditItem(null) } aria-label="Cancel">Cancel</button>
-				</div>
-
-				: ""
 				}
 			</div>
 

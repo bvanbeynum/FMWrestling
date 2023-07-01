@@ -351,11 +351,18 @@ describe("API service", () => {
 	it("pulls roles", async () => {
 		// ********** Given
 
-		const output = { roles: [{ 
-			id: "testroleid", 
-			name: "Test Role", 
-			created: new Date() 
-		}]};
+		const output = {
+				roles: [{ 
+					id: "testroleid", 
+					name: "Test Role", 
+					created: new Date() 
+				}],
+				users: [{
+					id: "testuserid",
+					firstName: "Test",
+					lastName: "User"
+				}]
+			};
 
 		api.roleLoad = jest.fn().mockResolvedValue({
 			status: 200,
@@ -375,6 +382,14 @@ describe("API service", () => {
 		expect(response.body.roles).toEqual(
 			expect.arrayContaining([
 				expect.objectContaining({ id: output.roles[0].id })
+			])
+		);
+
+		expect(response.body).toHaveProperty("users");
+		expect(response.body.users).toHaveLength(output.users.length);
+		expect(response.body.users).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ id: output.users[0].id })
 			])
 		);
 

@@ -17,7 +17,7 @@ const authInternal = (request, response, next) => {
 // ************************* Data
 
 router.get("/data/user", authInternal, async (request, response) => {
-	const results = await data.userGet(request.query.id, request.query.devicetoken);
+	const results = await data.userGet({ id: request.query.id, deviceToken: request.query.devicetoken, roleId: request.query.roleid });
 
 	if (results.error) {
 		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64223ce638baa8f160a2dc45", message: `${ results.status }: ${results.error}` }}).then();

@@ -8,9 +8,11 @@ import jwt from "jsonwebtoken";
 import { google } from "googleapis";
 import nodemailer from "nodemailer";
 
+const serverPath = "http://dev.beynum.com";
+
 beforeEach(() => {
 	jest.resetAllMocks();
-})
+});
 
 describe("Middleware", () => {
 
@@ -41,8 +43,7 @@ describe("Middleware", () => {
 	});
 
 	it("successfully passes API authentication", () => {
-		const serverPath = "https://thewrestlingmill.com",
-			referer = "https://thewrestlingmill.com/index.html";
+		const referer = serverPath + "/index.html";
 		
 		const results = api.authAPI(serverPath, referer);
 
@@ -50,8 +51,7 @@ describe("Middleware", () => {
 	});
 
 	it("fails API authentication", () => {
-		const serverPath = "https://thewrestlingmill.com",
-			referer = "https://badurl.com/index.html";
+		const referer = "https://badurl.com/index.html";
 		
 		const results = api.authAPI(serverPath, referer);
 
@@ -61,7 +61,6 @@ describe("Middleware", () => {
 	it("skips portal authentication", async () => {
 		const cookie = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbiI6ImhmM3dpbDJmejAiLCJpYXQiOjE2ODQ5NTk4NDR9.HmOWSzP2XRN7R00gH7a2eQFX-sMa0qRnbsJxSeWhq-o",
 			token = "hf3wil2fz0",
-			serverPath = "http://dev.beynum.com",
 			urlPath = "/index.html";
 
 		jwt.verify = jest.fn();
@@ -80,7 +79,6 @@ describe("Middleware", () => {
 	it("successfully passes portal authentication", async () => {
 		const cookie = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbiI6ImhmM3dpbDJmejAiLCJpYXQiOjE2ODQ5NTk4NDR9.HmOWSzP2XRN7R00gH7a2eQFX-sMa0qRnbsJxSeWhq-o",
 			token = "hf3wil2fz0",
-			serverPath = "http://dev.beynum.com",
 			urlPath = "/portal/index.html";
 
 		jwt.verify = jest.fn().mockReturnValue({
@@ -122,7 +120,6 @@ describe("Middleware", () => {
 	it("fails the portal authentication with invalid token", async () => {
 		const cookie = "fakecookie",
 			token = null,
-			serverPath = "http://dev.beynum.com",
 			urlPath = "/portal/index.html";
 
 		jwt.verify = jest.fn().mockReturnValue({
@@ -139,7 +136,6 @@ describe("Middleware", () => {
 	it("fails the portal authentication when token not found", async () => {
 		const cookie = "fakecookie",
 			token = "badtoken",
-			serverPath = "http://dev.beynum.com",
 			urlPath = "/portal/index.html";
 
 		jwt.verify = jest.fn().mockReturnValue({
@@ -166,8 +162,7 @@ describe("Middleware", () => {
 			domain = "thewrestlingmill.com",
 			userName = "Test App",
 			userEmail = "test@nomail.com",
-			userAgent = "Jest",
-			serverPath = "http://dev.beynum.com";
+			userAgent = "Jest";
 
 		// Mocks
 
@@ -228,8 +223,7 @@ describe("API Post functions", () => {
 	it("loads the post data", async () => {
 		// ********** Given
 
-		const serverPath = "http://dev.beynum.com",
-			output = [
+		const output = [
 				{ content: "Test2", expires: null },
 				{ content: "unexpired content", expires: new Date(new Date(Date.now()).setDate(new Date().getDate() + 5)) },
 				{ content: "expired content", expires: new Date(new Date(Date.now()).setDate(new Date().getDate() - 5)) }
@@ -265,7 +259,6 @@ describe("API Post functions", () => {
 		expireDate.setDate(expireDate.getDate() + 5);
 
 		const body = { save: { content: "Test post", expires: expireDate }},
-			serverPath = "http://dev.beynum.com",
 			returnId = "testid";
 
 		const send = jest.fn().mockResolvedValue({
@@ -303,8 +296,7 @@ describe("API Post functions", () => {
 		// ********** Given
 
 		const deleteId = "testid",
-			body = { delete: deleteId },
-			serverPath = "http://dev.beynum.com";
+			body = { delete: deleteId };
 
 		client.delete = jest.fn(() => ({
 			status: "ok"
@@ -330,8 +322,7 @@ describe("API Schedule", () => {
 	it("loads the schedule data", async () => {
 		// ********** Given
 
-		const serverPath = "http://dev.beynum.com",
-			output = [{ 
+		const output = [{ 
 				id: "testid", 
 				name: "test event", 
 				location: "test location",
@@ -365,7 +356,6 @@ describe("API Schedule", () => {
 		// ********** Given
 
 		const body = { save: { name: "Test event", location: "Test location", date: new Date(new Date().setHours(0,0,0,0)) }},
-			serverPath = "http://dev.beynum.com",
 			returnId = "testid";
 
 		const send = jest.fn().mockResolvedValue({
@@ -403,8 +393,7 @@ describe("API Schedule", () => {
 		// ********** Given
 
 		const deleteId = "testid",
-			body = { delete: deleteId },
-			serverPath = "http://dev.beynum.com";
+			body = { delete: deleteId };
 
 		client.delete = jest.fn(() => ({
 			status: "ok"
@@ -430,8 +419,7 @@ describe("API Requests", () => {
 	it("loads the requests data", async () => {
 		// ********** Given
 
-		const serverPath = "http://dev.beynum.com",
-			output = {
+		const output = {
 				deviceRequests: [{
 					id: "testid",
 					name: "Test User",
@@ -489,7 +477,6 @@ describe("API Requests", () => {
 				request: { id: "reqeustid", created: new Date(), device: { browser: {}, ip: "testip", token: "testtoken" } },
 				user: { firstName: "Test", lastName: "User", email: "test@nomail.com" }
 			}},
-			serverPath = "http://dev.beynum.com",
 			returnId = "testuserid";
 
 		const send = jest.fn().mockResolvedValue({
@@ -530,7 +517,6 @@ describe("API Requests", () => {
 				request: { id: "reqeustid", created: new Date(), device: { browser: {}, ip: "testip", token: "testtoken" } },
 				userId: "testuserid"
 			}},
-			serverPath = "http://dev.beynum.com",
 			returnId = "testuserid";
 
 		client.get = jest.fn().mockResolvedValue({ body: {
@@ -578,8 +564,7 @@ describe("API Requests", () => {
 		// ********** Given
 
 		const deleteId = "testid",
-			body = { delete: deleteId },
-			serverPath = "http://dev.beynum.com";
+			body = { delete: deleteId };
 
 		client.delete = jest.fn(() => ({
 			status: "ok"
@@ -605,8 +590,7 @@ describe("Roles", () => {
 	it("loads the role data", async () => {
 		// ********** Given
 
-		const serverPath = "http://dev.beynum.com",
-			output = {
+		const output = {
 				roles: [{
 					id: "testid",
 					name: "Test Role",
@@ -619,6 +603,11 @@ describe("Roles", () => {
 					firstName: "Test",
 					lastName: "User",
 					roles: [{ id: "testid" }]
+				}, {
+					id: "unassigneduserid",
+					firstName: "Unassigned",
+					lastName: "User",
+					roles: []
 				}]
 			};
 		
@@ -644,17 +633,19 @@ describe("Roles", () => {
 		expect(results.data.roles[0]).toHaveProperty("id", output.roles[0].id);
 
 		expect(results.data.roles[0]).toHaveProperty("users");
-		expect(results.data.roles[0].users).toHaveLength(output.users.length);
-		expect(results.data.roles[0].users[0]).toHaveProperty("id", output.users[0].id)
+		expect(results.data.roles[0].users).toHaveLength(output.users.filter(user => user.roles.length == 0).length);
+		expect(results.data.roles[0].users[0]).toHaveProperty("id", output.users[0].id);
+		
+		expect(results.data).toHaveProperty("users");
+		expect(results.data.users).toHaveLength(output.users.length);
 	});
 
 	it("saves a new role", async () => {
 		// ********** Given
 
-		const body = { save: {
-				name: "Test role"
-			}},
-			serverPath = "http://dev.beynum.com",
+		const body = { 
+				saveRole: { name: "Test role" }
+			},
 			returnId = "testuserid";
 
 		const send = jest.fn().mockResolvedValue({
@@ -677,7 +668,7 @@ describe("Roles", () => {
 		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/role`);
 		expect(send).toHaveBeenCalledWith(
 			expect.objectContaining({
-				role: expect.objectContaining({ name: body.save.name })
+				role: expect.objectContaining({ name: body.saveRole.name })
 			})
 		);
 		
@@ -686,12 +677,62 @@ describe("Roles", () => {
 		expect(results.data).toHaveProperty("role", expect.objectContaining({ id: returnId }));
 	});
 
+	it("adds member to a given role", async () => {
+
+		// ********** Given
+
+		const saveRoleId = "saveroleid",
+			saveMemberId = "membertosaveid",
+			body = {
+				saveMember: { roleId: saveRoleId, memberId: saveMemberId }
+			},
+			user = { id: saveMemberId, firstName: "Test", lastName: "User" },
+			role = { id: saveRoleId, name: "Save Role", members: [user] };
+
+			const send = jest.fn().mockResolvedValue({ body: { role: role } });
+			client.post = jest.fn(() => ({ send: send }));
+
+			client.get = jest.fn()
+				.mockResolvedValueOnce({ body: { roles: [role] } }) // Get the role informaiton
+				.mockResolvedValueOnce({ body: { users: [user] }}) // Get the user to save the role to
+				.mockResolvedValueOnce({ body: { users: [user] }}); // Get all users with the role
+
+		// ********** When
+
+		const results = await api.roleSave(body, serverPath);
+
+		// ********** Then
+
+		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/role?id=${ saveRoleId }`);
+		expect(client.get).toHaveBeenNthCalledWith(2, `${ serverPath }/data/user?id=${ saveMemberId }`);
+		expect(client.get).toHaveBeenNthCalledWith(3, `${ serverPath }/data/user?roleid=${ saveRoleId }`);
+
+		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/user`);
+		expect(send).toHaveBeenCalledWith(
+			expect.objectContaining({
+				user: expect.objectContaining({
+					roles: expect.arrayContaining([
+						expect.objectContaining({ id: saveRoleId })
+					])
+				})
+			})
+		);
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("role", expect.objectContaining({
+			users: expect.arrayContaining([
+				expect.objectContaining({ id: saveMemberId })
+			])
+		}));
+
+	});
+
 	it("deletes role", async () => {
 		// ********** Given
 
 		const deleteId = "testid",
-			body = { delete: deleteId },
-			serverPath = "http://dev.beynum.com";
+			body = { delete: deleteId };
 
 		client.delete = jest.fn(() => ({
 			status: "ok"

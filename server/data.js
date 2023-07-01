@@ -1,18 +1,20 @@
 import data from "./schema.js";
-import client from "superagent";
 import mongoose from "mongoose";
 
 export default {
 
-	userGet: async (id, deviceToken) => {
+	userGet: async (userFilter = {}) => {
 		const filter = {},
 			output = {};
 
-		if (id) {
-			filter["_id"] = mongoose.Types.ObjectId.isValid(id) ? id : null;
+		if (userFilter.id) {
+			filter["_id"] = mongoose.Types.ObjectId.isValid(userFilter.id) ? userFilter.id : null;
 		}
-		if (deviceToken) {
-			filter["devices.token"] = deviceToken;
+		if (userFilter.deviceToken) {
+			filter["devices.token"] = userFilter.deviceToken;
+		}
+		if (userFilter.roleId) {
+			filter["roles.id"] = userFilter.roleId;
 		}
 
 		try {

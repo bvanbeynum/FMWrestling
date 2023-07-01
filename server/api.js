@@ -424,10 +424,14 @@ export default {
 			return output;
 		}
 
-		let users = null;
 		try {
 			const clientResponse = await client.get(`${ serverPath }/data/user`);
-			users = clientResponse.body.users;
+			output.data.users = clientResponse.body.users.map(user => ({
+				id: user.id,
+				firstName: user.firstName,
+				lastName: user.lastName,
+				roles: user.roles
+			}));
 		}
 		catch (error) {
 			output.status = 562;
@@ -438,7 +442,7 @@ export default {
 		try {
 			output.data.roles = roles.map(role => ({
 				...role,
-				users: users
+				users: output.data.users
 					.filter(user => user.roles && user.roles.some(userRole => userRole.id === role.id))
 					.map(user => ({
 						id: user.id,
@@ -465,11 +469,11 @@ export default {
 			output.error = "Missing action";
 			return output;
 		}
-		else if (body.save) {
+		else if (body.saveRole) {
 			let saveId = null;
 
 			try {
-				const clientResponse = await client.post(`${ serverPath }/data/role`).send({ role: body.save }).then();
+				const clientResponse = await client.post(`${ serverPath }/data/role`).send({ role: body.saveRole }).then();
 				saveId = clientResponse.body.id;
 			}
 			catch (error) {
@@ -491,6 +495,64 @@ export default {
 				return output;
 			}
 		}
+		else if (body.saveMember) {
+			if (!body.saveMember.roleId || !body.saveMember.memberId) {
+				output.status = 565;
+				output.error = "Missing required parameters to save";
+				return output;
+			}
+
+			let role = null,
+				user = null;
+
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/role?id=${ body.saveMember.roleId }`).then();
+				role = clientResponse.body.roles[0];
+			}
+			catch (error) {
+				output.status = 566;
+				output.error = error.message;
+				return output;
+			}
+
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/user?id=${ body.saveMember.memberId }`).then();
+				user = clientResponse.body.users[0];
+			}
+			catch (error) {
+				output.status = 567;
+				output.error = error.message;
+				return output;
+			}
+
+			user.roles = user.roles ? user.roles.concat(
+					user.roles.find(userRole => userRole.id === role.id) || ({ id: role.id, name: role.name })
+				)
+				: [{ id: role.id, name: role.name }];
+		
+			try {
+				await client.post(`${ serverPath }/data/user`).send({ user: user }).then();
+			}
+			catch (error) {
+				output.status = 568;
+				output.error = error.message;
+				return output;
+			}
+
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/user?roleid=${ role.id }`).then();
+				role.users = clientResponse.body.users.map(user => ({ id: user.id, firstName: user.firstName, lastName: user.lastName }));
+			}
+			catch (error) {
+				output.status = 569;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			output.data = { role: role };
+			return output;
+		}
 		else if (body.delete) {
 			try {
 				await client.delete(`${ serverPath }/data/role?id=${ body.delete }`);
@@ -501,7 +563,7 @@ export default {
 			}
 			catch (error) {
 				console.log(error);
-				output.status = 563;
+				output.status = 564;
 				output.error = error.message;
 				return output;
 			}

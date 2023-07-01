@@ -157,14 +157,18 @@ label span {
 	width: 100%;
 }
 
-.panel button {
+.panel button, .panel .button {
 	font-family: Roboto, Helvetica, Arial, sans-serif;
 	background-color: rgb(242 192 41);
 	border: 3px solid rgb(191 126 4);
-	padding: 6px 12px;
 	border-radius: 7px;
 	font-size: 1em;
 	justify-self: flex-end;
+}
+
+button svg, .button svg {
+	width: 20px;
+	height: 20px;
 }
 
 .panel .rowContent {
@@ -180,6 +184,36 @@ label span {
 .panel .seperator {
 	border-top: 3px solid rgb(10 66 115);
 	margin: 13px 20px;
+}
+
+.sectionList {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	border: solid 3px rgb(10 66 115);
+	border-radius: 3px;
+	padding: 5px;
+	background-color: rgb(121 145 166);
+}
+
+.pill {
+	font-size: .85rem;
+	background-color: rgb(242 192 41);
+	border: 2px solid rgb(191 126 4);
+	border-radius: 5px;
+	padding: 1px 6px;
+	display: flex;
+	align-items: center;
+}
+
+.pill button {
+	border: none;
+	background: transparent;
+}
+
+.pill button svg {
+	width: 14px;
+	height: 14px;
 }
 
 @media (min-width: 1024px) {
