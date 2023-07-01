@@ -764,15 +764,15 @@ export default {
 		return output;
 	},
 
-	privilegeGet: async (id, token) => {
+	privilegeGet: async (userFilter = {}) => {
 		let filter = {},
 			output = {};
 
-		if (id) {
-			filter["_id"] = mongoose.Types.ObjectId.isValid(id) ? id : null;
+		if (userFilter.id) {
+			filter["_id"] = mongoose.Types.ObjectId.isValid(userFilter.id) ? userFilter.id : null;
 		}
-		if (token) {
-			filter.token = token;
+		if (userFilter.token) {
+			filter.token = userFilter.token;
 		}
 
 		try {

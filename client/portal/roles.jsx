@@ -21,10 +21,10 @@ const RolesComponent = props => {
 
 	const [ roles, setRoles ] = useState([]);
 	const [ users, setUsers ] = useState([]);
+	const [ privileges, setPrivileges ] = useState([]);
 	const [ newRole, setNewRole ] = useState(emptyRole);
 
 	const [ sectionEdit, setSectionEdit ] = useState(null);
-	const [ addMemberId, setAddMemberId ] = useState("");
 
 	useEffect(() => {
 		if (!pageActive) {
@@ -42,6 +42,7 @@ const RolesComponent = props => {
 				.then(data => {
 					setRoles(data.roles);
 					setUsers(data.users);
+					setPrivileges(data.privileges);
 				})
 				.catch(error => {
 					console.warn(error);
@@ -90,16 +91,11 @@ const RolesComponent = props => {
 			});
 	};
 
-	const addMemberToRole = roleId => {
-		if (!addMemberId) {
-			setErrorMessage("There was an error saving the event");
-			return;
-		}
-
+	const addMemberToRole = (roleId, userId) => {
 		const loadingInterval = setInterval(() => setLoadingIndex(loadingIndex => loadingIndex + 1 === loading.length ? 0 : loadingIndex + 1), 1000);
 		setSaveItem(roleId);
 
-		fetch("/api/rolesave", { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ saveMember: { roleId: roleId, memberId: addMemberId } }) })
+		fetch("/api/rolesave", { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ saveMember: { roleId: roleId, memberId: userId } }) })
 			.then(response => {
 				if (response.ok) {
 					return response.json();
@@ -112,7 +108,34 @@ const RolesComponent = props => {
 				setRoles(roles => roles.map(role => role.id === data.role.id ? data.role : role));
 				setEditItem(null);
 				setSaveItem(null);
-				setAddMemberId(null);
+				setSectionEdit(null);
+				clearInterval(loadingInterval);
+			})
+			.catch(error => {
+				console.warn(error);
+				setErrorMessage("There was an error saving the event");
+				setSaveItem(null);
+				clearInterval(loadingInterval);
+			});
+	};
+
+	const removeMemberFromRole = (roleId, userId) => {
+		const loadingInterval = setInterval(() => setLoadingIndex(loadingIndex => loadingIndex + 1 === loading.length ? 0 : loadingIndex + 1), 1000);
+		setSaveItem(roleId);
+
+		fetch("/api/rolesave", { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ deleteMember: { roleId: roleId, memberId: userId } }) })
+			.then(response => {
+				if (response.ok) {
+					return response.json();
+				}
+				else {
+					throw Error(response.statusText);
+				}
+			})
+			.then(data => {
+				setRoles(roles => roles.map(role => role.id === data.role.id ? data.role : role));
+				setEditItem(null);
+				setSaveItem(null);
 				clearInterval(loadingInterval);
 			})
 			.catch(error => {
@@ -229,7 +252,7 @@ const RolesComponent = props => {
 					</button>
 
 					<button disabled={ saveItem === role.id } onClick={ () => {} } aria-label="Delete">
-						{/* Delete */}
+						{/* Trash */}
 						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
 							<path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/>
 						</svg>
@@ -243,8 +266,11 @@ const RolesComponent = props => {
 					role.users.map(user =>
 						<div key={ user.id } className="pill">
 							{ user.firstName + " " + user.lastName }
-							<button>
-								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"></path></svg>
+							<button onClick={ () => removeMemberFromRole(role.id, user.id) } aria-label="Remove Member">
+								{/* Trash */}
+								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+									<path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/>
+								</svg>
 							</button>
 						</div>
 					)}
@@ -252,8 +278,9 @@ const RolesComponent = props => {
 					<div className="pill">
 						{
 						sectionEdit === "member" ?
+						
 						<>
-						<select value={ addMemberId } onChange={ event => setAddMemberId(event.target.value) } aria-label="Member">
+						<select value="" onChange={ event => addMemberToRole(role.id, event.target.value) } aria-label="Member">
 							<option value="">-- Select User --</option>
 						{
 						users.map(user =>
@@ -261,18 +288,8 @@ const RolesComponent = props => {
 						)
 						}
 						</select>
-						
-						{
-						addMemberId.length > 0 ?
-						<button onClick={ () => addMemberToRole(role.id) } aria-label="Save Member">
-							{/* Check */}
-							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
-								<path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/>
-							</svg>
-						</button>
-						: ""
-						}
 						</>
+
 						:
 						<button onClick={ () => setSectionEdit("member") } aria-label="Add Member">
 							{/* Plus */}
@@ -283,6 +300,44 @@ const RolesComponent = props => {
 				</div>
 
 				<h3>Privileges</h3>
+
+				<div className="sectionList">
+					{
+					role.privileges.map(privilege =>
+						<div key={ privilege.id } className="pill">
+							{ privilege.name }
+							<button onClick={ () => {} } aria-label="Remove Privilege">
+								{/* Trash */}
+								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+									<path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/>
+								</svg>
+							</button>
+						</div>
+					)}
+
+					<div className="pill">
+						{
+						sectionEdit === "privilege" ?
+						
+						<>
+						<select value="" onChange={ event => {} } aria-label="Privilege">
+							<option value="">-- Select Privilege --</option>
+						{
+						privileges.map(privilege =>
+							<option key={ privilege.id } value={ privilege.id }>{ privilege.name }</option>
+						)
+						}
+						</select>
+						</>
+
+						:
+						<button onClick={ () => setSectionEdit("privilege") } aria-label="Add Privilege">
+							{/* Plus */}
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M440-200v-240H200v-80h240v-240h80v240h240v80H520v240h-80Z"></path></svg>
+						</button>
+						}
+					</div>
+				</div>
 
 				</>
 

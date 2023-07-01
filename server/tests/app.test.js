@@ -129,10 +129,10 @@ describe("Data service", () => {
 		expect(response.body.roles).toHaveLength(1);
 	});
 
-	it("saves event", async () => {
+	it("saves Role", async () => {
 		// ********** Given
 
-		const save = { event: { name: "test role" }},
+		const save = { role: { name: "test role" }},
 			output = { id: "testid" };
 
 		data.roleSave = jest.fn().mockResolvedValue({
@@ -166,6 +166,74 @@ describe("Data service", () => {
 		
 		const response = await request(app)
 			.delete(`/data/role?id=${ roleId }`)
+			.expect(200);
+		
+		// ********** Then
+
+		expect(response.body).toHaveProperty("status", "ok");
+	});
+
+	it("gets privilege", async () => {
+
+		// ********** Given
+
+		const output = { privileges: [{ id: "testid" }]};
+
+		data.privilegeGet = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+		
+		const response = await request(app)
+			.get("/data/privilege")
+			.expect(200);
+		
+		// ********** Then
+
+		expect(response.body).toHaveProperty("privileges");
+		expect(response.body.privileges).toHaveLength(1);
+	});
+
+	it("saves privilege", async () => {
+		// ********** Given
+
+		const save = { name: "test privilege" },
+			output = { id: "testid" };
+
+		data.privilegeSave = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+		
+		const response = await request(app)
+			.post("/data/privilege")
+			.send({ privilege: save })
+			.expect(200);
+		
+		// ********** Then
+
+		expect(data.privilegeSave).toHaveBeenCalledWith(save);
+		expect(response.body).toHaveProperty("id", output.id);
+	});
+
+	it("deletes privilege", async () => {
+		// ********** Given
+
+		const privilegeId = "testid";
+
+		data.privilegeDelete = jest.fn().mockResolvedValue({
+			status: 200,
+			data: { status: "ok" }
+		});
+
+		// ********** When
+		
+		const response = await request(app)
+			.delete(`/data/privilege?id=${ privilegeId }`)
 			.expect(200);
 		
 		// ********** Then

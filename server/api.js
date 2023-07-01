@@ -440,6 +440,16 @@ export default {
 		}
 
 		try {
+			const clientResponse = await client.get(`${ serverPath }/data/privilege`);
+			output.data.privileges = clientResponse.body.privileges;
+		}
+		catch (error) {
+			output.status = 564;
+			output.error = error.message;
+			return output;
+		}
+
+		try {
 			output.data.roles = roles.map(role => ({
 				...role,
 				users: output.data.users
@@ -545,6 +555,61 @@ export default {
 			}
 			catch (error) {
 				output.status = 569;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			output.data = { role: role };
+			return output;
+		}
+		else if (body.deleteMember) {
+			if (!body.deleteMember.roleId || !body.deleteMember.memberId) {
+				output.status = 570;
+				output.error = "Missing required parameters to save";
+				return output;
+			}
+
+			let user = null,
+				role = null;
+
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/user?id=${ body.deleteMember.memberId }`).then();
+				user = clientResponse.body.users[0];
+			}
+			catch (error) {
+				output.status = 571;
+				output.error = error.message;
+				return output;
+			}
+
+			user.roles = user.roles ? user.roles.filter(role => role.id !== body.deleteMember.roleId) : [];
+			
+			try {
+				await client.post(`${ serverPath }/data/user`).send({ user: user }).then();
+			}
+			catch (error) {
+				output.status = 572;
+				output.error = error.message;
+				return output;
+			}
+
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/role?id=${ body.deleteMember.roleId }`).then();
+				role = clientResponse.body.roles[0];
+			}
+			catch (error) {
+				output.status = 573;
+				output.error = error.message;
+				return output;
+			}
+
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/user?roleid=${ role.id }`).then();
+				role.users = clientResponse.body.users.map(user => ({ id: user.id, firstName: user.firstName, lastName: user.lastName }));
+			}
+			catch (error) {
+				output.status = 574;
 				output.error = error.message;
 				return output;
 			}

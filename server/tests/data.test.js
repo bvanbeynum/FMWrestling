@@ -615,7 +615,7 @@ describe("Privilege data", () => {
 		// ********** Given
 
 		// ********** When
-		const response = await data.privilegeGet(null);
+		const response = await data.privilegeGet();
 
 		// ********** Then
 		expect(response.status).toEqual(200);
@@ -639,7 +639,7 @@ describe("Privilege data", () => {
 		// ********** Given
 
 		// ********** When
-		const response = await data.privilegeGet(createdId);
+		const response = await data.privilegeGet({ id: createdId });
 
 		// ********** Then
 		expect(response.status).toEqual(200);
@@ -657,7 +657,7 @@ describe("Privilege data", () => {
 		// ********** Given
 
 		// ********** When
-		const response = await data.privilegeGet("abcd");
+		const response = await data.privilegeGet({ id: "abcd" });
 
 		// ********** Then
 		expect(response.status).toEqual(200);
@@ -677,7 +677,7 @@ describe("Privilege data", () => {
 	});
 
 	it("should return an empty array after deleting the new object", async () => {
-		const response = await data.privilegeGet(createdId);
+		const response = await data.privilegeGet({ id: createdId });
 		
 		expect(response.status).toEqual(200);
 		expect(response.data).toHaveProperty("privileges");

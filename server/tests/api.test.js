@@ -595,6 +595,7 @@ describe("Roles", () => {
 					id: "testid",
 					name: "Test Role",
 					isActive: true,
+					users: [],
 					privileges: [],
 					created: new Date(new Date(Date.now()).setDate(new Date().getDate() - 10))
 				}],
@@ -608,12 +609,16 @@ describe("Roles", () => {
 					firstName: "Unassigned",
 					lastName: "User",
 					roles: []
-				}]
+				}],
+				privileges: [
+					{ id: "privilege1", name: "Test Privilege", token: "test1" }
+				]
 			};
 		
 		client.get = jest.fn()
 			.mockResolvedValueOnce({ body: { roles: output.roles }})
-			.mockResolvedValueOnce({ body: { users: output.users } });
+			.mockResolvedValueOnce({ body: { users: output.users } })
+			.mockResolvedValueOnce({ body: { privileges: output.privileges } });
 
 		// ********** When
 
@@ -621,9 +626,10 @@ describe("Roles", () => {
 
 		// ********** Then
 
-		expect(client.get).toHaveBeenCalledTimes(2);
+		expect(client.get).toHaveBeenCalledTimes(3);
 		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/role`);
 		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/user`);
+		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/privilege`);
 
 		expect(results).toHaveProperty("status", 200);
 		expect(results).toHaveProperty("data");
@@ -638,6 +644,10 @@ describe("Roles", () => {
 		
 		expect(results.data).toHaveProperty("users");
 		expect(results.data.users).toHaveLength(output.users.length);
+		
+		expect(results.data).toHaveProperty("privileges");
+		expect(results.data.privileges).toHaveLength(output.privileges.length);
+
 	});
 
 	it("saves a new role", async () => {
@@ -686,10 +696,10 @@ describe("Roles", () => {
 			body = {
 				saveMember: { roleId: saveRoleId, memberId: saveMemberId }
 			},
-			user = { id: saveMemberId, firstName: "Test", lastName: "User" },
+			user = { id: saveMemberId, firstName: "Test", lastName: "User", roles: [{ id: saveRoleId }] },
 			role = { id: saveRoleId, name: "Save Role", members: [user] };
 
-			const send = jest.fn().mockResolvedValue({ body: { role: role } });
+			const send = jest.fn().mockResolvedValue({ body: { user: user } });
 			client.post = jest.fn(() => ({ send: send }));
 
 			client.get = jest.fn()
@@ -724,6 +734,55 @@ describe("Roles", () => {
 			users: expect.arrayContaining([
 				expect.objectContaining({ id: saveMemberId })
 			])
+		}));
+
+	});
+
+	it("removes member from a given role", async () => {
+
+		// ********** Given
+
+		const saveRoleId = "saveroleid",
+			deleteUserId = "deleteuserid",
+			body = {
+				deleteMember: { roleId: saveRoleId, memberId: deleteUserId }
+			},
+			initialUser = { id: deleteUserId, roles: [{ id: saveRoleId }] },
+			finalUser = { ...initialUser, roles: [] },
+			role = { id: saveRoleId, members: [] };
+
+		const send = jest.fn().mockResolvedValue({ body: { user: finalUser }});
+		client.post = jest.fn(() => ({ send: send }));
+
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { users: [initialUser] }}) // Get the user to remove the role from
+			.mockResolvedValueOnce({ body: { roles: [role] }}) // Get the role details
+			.mockResolvedValueOnce({ body: { users: [] }}); // Get the users with the role
+
+		// ********** When
+
+		const results = await api.roleSave(body, serverPath);
+
+		// ********** Then
+
+		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/user?id=${ initialUser.id }`);
+
+		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/user`);
+		expect(send).toHaveBeenCalledWith(
+			expect.objectContaining({
+				user: expect.objectContaining({
+					roles: []
+				})
+			})
+		);
+		
+		expect(client.get).toHaveBeenNthCalledWith(2, `${ serverPath }/data/role?id=${ saveRoleId }`);
+		expect(client.get).toHaveBeenNthCalledWith(3, `${ serverPath }/data/user?roleid=${ saveRoleId }`);
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("role", expect.objectContaining({
+			users: []
 		}));
 
 	});
