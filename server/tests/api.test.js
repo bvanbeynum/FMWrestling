@@ -687,6 +687,29 @@ describe("Roles", () => {
 		expect(results.data).toHaveProperty("role", expect.objectContaining({ id: returnId }));
 	});
 
+	it("deletes role", async () => {
+		// ********** Given
+
+		const deleteId = "testid",
+			body = { delete: deleteId };
+
+		client.delete = jest.fn(() => ({
+			status: "ok"
+		}));
+
+		// ********** When
+
+		const results = await api.roleSave(body, serverPath);
+
+		// ********** Then
+
+		expect(client.delete).toHaveBeenCalledWith(`${ serverPath }/data/role?id=${ deleteId }`);
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("status", "ok");
+	});
+
 	it("adds member to a given role", async () => {
 
 		// ********** Given
@@ -787,15 +810,26 @@ describe("Roles", () => {
 
 	});
 
-	it("deletes role", async () => {
+	it("adds privilege to a given role", async () => {
+
 		// ********** Given
 
-		const deleteId = "testid",
-			body = { delete: deleteId };
+		const saveRoleId = "saveroleid",
+			savePrivilegeId = "privilegetosaveid",
+			body = {
+				savePrivilege: { roleId: saveRoleId, privilegeId: savePrivilegeId }
+			},
+			privilege = { id: savePrivilegeId, name: "Test Privilege", token: "test" },
+			user = { id: "testuserid", firstName: "Test", lastName: "User" },
+			role = { id: saveRoleId, name: "Save Role", privileges: [privilege] };
 
-		client.delete = jest.fn(() => ({
-			status: "ok"
-		}));
+			const send = jest.fn().mockResolvedValue({ body: { role: role } });
+			client.post = jest.fn(() => ({ send: send }));
+
+			client.get = jest.fn()
+				.mockResolvedValueOnce({ body: { roles: [role] } }) // Get the role informaiton
+				.mockResolvedValueOnce({ body: { privileges: [privilege] }}) // Get the privilege information
+				.mockResolvedValueOnce({ body: { users: [user] }}); // Get the users for the role
 
 		// ********** When
 
@@ -803,11 +837,74 @@ describe("Roles", () => {
 
 		// ********** Then
 
-		expect(client.delete).toHaveBeenCalledWith(`${ serverPath }/data/role?id=${ deleteId }`);
+		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/role?id=${ saveRoleId }`);
+		expect(client.get).toHaveBeenNthCalledWith(2, `${ serverPath }/data/privilege?id=${ savePrivilegeId }`);
+		expect(client.get).toHaveBeenNthCalledWith(3, `${ serverPath }/data/user?roleid=${ saveRoleId }`);
+
+		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/role`);
+		expect(send).toHaveBeenCalledWith(
+			expect.objectContaining({
+				role: expect.objectContaining({
+					privileges: expect.arrayContaining([
+						expect.objectContaining({ id: savePrivilegeId })
+					])
+				})
+			})
+		);
 
 		expect(results).toHaveProperty("status", 200);
 		expect(results).toHaveProperty("data");
-		expect(results.data).toHaveProperty("status", "ok");
+		expect(results.data).toHaveProperty("role", expect.objectContaining({
+			privileges: expect.arrayContaining([
+				expect.objectContaining({ id: savePrivilegeId })
+			])
+		}));
+
+	});
+
+	it("removes privilege from a given role", async () => {
+
+		// ********** Given
+
+		const saveRoleId = "saveroleid",
+			deletePrivilegeId = "deleteprivilegeid",
+			body = {
+				deletePrivilege: { roleId: saveRoleId, privilegeId: deletePrivilegeId }
+			},
+			role = { id: saveRoleId, privileges: [{ id: deletePrivilegeId }] };
+
+		const send = jest.fn().mockResolvedValue({ body: { role: role }});
+		client.post = jest.fn(() => ({ send: send }));
+
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { roles: [role] }}) // Get the role
+			.mockResolvedValueOnce({ body: { users: [] }}); // Get the users with the role
+
+		// ********** When
+
+		const results = await api.roleSave(body, serverPath);
+
+		// ********** Then
+
+		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/role?id=${ role.id }`);
+
+		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/role`);
+		expect(send).toHaveBeenCalledWith(
+			expect.objectContaining({
+				role: expect.objectContaining({
+					privileges: []
+				})
+			})
+		);
+		
+		expect(client.get).toHaveBeenNthCalledWith(2, `${ serverPath }/data/user?roleid=${ saveRoleId }`);
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("role", expect.objectContaining({
+			privileges: []
+		}));
+
 	});
 
 });

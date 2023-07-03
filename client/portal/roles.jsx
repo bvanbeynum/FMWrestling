@@ -5,7 +5,7 @@ import "./include/index.css";
 
 const RolesComponent = props => {
 
-	const emptyRole = { name: "", isActive: true },
+	const emptyRole = { name: "", isActive: true, users: [], privileges: [] },
 		loading = [
 			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M324-168h312v-120q0-65-45.5-110.5T480-444q-65 0-110.5 45.5T324-288v120Zm156-348q65 0 110.5-45.5T636-672v-120H324v120q0 65 45.5 110.5T480-516ZM192-96v-72h60v-120q0-59 28-109.5t78-82.5q-49-32-77.5-82.5T252-672v-120h-60v-72h576v72h-60v120q0 59-28.5 109.5T602-480q50 32 78 82.5T708-288v120h60v72H192Z"/></svg>, // Empty
 			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M324-168h312v-120q0-65-45.5-110.5T480-444q-65 0-110.5 45.5T324-288v120ZM192-96v-72h60v-120q0-59 28-109.5t78-82.5q-49-32-77.5-82.5T252-672v-120h-60v-72h576v72h-60v120q0 59-28.5 109.5T602-480q50 32 78 82.5T708-288v120h60v72H192Z"/></svg>, // Top
@@ -91,6 +91,34 @@ const RolesComponent = props => {
 			});
 	};
 
+	const deleteRole = roleId => {
+		const loadingInterval = setInterval(() => setLoadingIndex(loadingIndex => loadingIndex + 1 === loading.length ? 0 : loadingIndex + 1), 1000);
+		setSaveItem(roleId);
+
+		fetch("/api/rolesave", { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ delete: roleId }) })
+			.then(response => {
+				if (response.ok) {
+					return response.json();
+				}
+				else {
+					throw Error(response.statusText);
+				}
+			})
+			.then(() => {
+				setRoles(roles => roles.filter(role => role.id !== roleId));
+
+				setEditItem(null);
+				setSaveItem(null);
+				clearInterval(loadingInterval);
+			})
+			.catch(error => {
+				console.warn(error);
+				setErrorMessage("There was an error saving the event");
+				setSaveItem(null);
+				clearInterval(loadingInterval);
+			});
+	};
+
 	const addMemberToRole = (roleId, userId) => {
 		const loadingInterval = setInterval(() => setLoadingIndex(loadingIndex => loadingIndex + 1 === loading.length ? 0 : loadingIndex + 1), 1000);
 		setSaveItem(roleId);
@@ -124,6 +152,61 @@ const RolesComponent = props => {
 		setSaveItem(roleId);
 
 		fetch("/api/rolesave", { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ deleteMember: { roleId: roleId, memberId: userId } }) })
+			.then(response => {
+				if (response.ok) {
+					return response.json();
+				}
+				else {
+					throw Error(response.statusText);
+				}
+			})
+			.then(data => {
+				setRoles(roles => roles.map(role => role.id === data.role.id ? data.role : role));
+				setEditItem(null);
+				setSaveItem(null);
+				clearInterval(loadingInterval);
+			})
+			.catch(error => {
+				console.warn(error);
+				setErrorMessage("There was an error saving the event");
+				setSaveItem(null);
+				clearInterval(loadingInterval);
+			});
+	};
+
+	const addPrivilegeToRole = (roleId, privilegeId) => {
+		const loadingInterval = setInterval(() => setLoadingIndex(loadingIndex => loadingIndex + 1 === loading.length ? 0 : loadingIndex + 1), 1000);
+		setSaveItem(roleId);
+
+		fetch("/api/rolesave", { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ savePrivilege: { roleId: roleId, privilegeId: privilegeId } }) })
+			.then(response => {
+				if (response.ok) {
+					return response.json();
+				}
+				else {
+					throw Error(response.statusText);
+				}
+			})
+			.then(data => {
+				setRoles(roles => roles.map(role => role.id === data.role.id ? data.role : role));
+				setEditItem(null);
+				setSaveItem(null);
+				setSectionEdit(null);
+				clearInterval(loadingInterval);
+			})
+			.catch(error => {
+				console.warn(error);
+				setErrorMessage("There was an error saving the event");
+				setSaveItem(null);
+				clearInterval(loadingInterval);
+			});
+	};
+
+	const removePrivilegeFromRole = (roleId, privilegeId) => {
+		const loadingInterval = setInterval(() => setLoadingIndex(loadingIndex => loadingIndex + 1 === loading.length ? 0 : loadingIndex + 1), 1000);
+		setSaveItem(roleId);
+
+		fetch("/api/rolesave", { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ deletePrivilege: { roleId: roleId, privilegeId: privilegeId } }) })
 			.then(response => {
 				if (response.ok) {
 					return response.json();
@@ -251,7 +334,7 @@ const RolesComponent = props => {
 						</svg>
 					</button>
 
-					<button disabled={ saveItem === role.id } onClick={ () => {} } aria-label="Delete">
+					<button disabled={ saveItem === role.id } onClick={ () => deleteRole(role.id) } aria-label="Delete Role">
 						{/* Trash */}
 						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
 							<path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/>
@@ -306,7 +389,7 @@ const RolesComponent = props => {
 					role.privileges.map(privilege =>
 						<div key={ privilege.id } className="pill">
 							{ privilege.name }
-							<button onClick={ () => {} } aria-label="Remove Privilege">
+							<button onClick={ () => removePrivilegeFromRole(role.id, privilege.id) } aria-label="Remove Privilege">
 								{/* Trash */}
 								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
 									<path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/>
@@ -320,7 +403,7 @@ const RolesComponent = props => {
 						sectionEdit === "privilege" ?
 						
 						<>
-						<select value="" onChange={ event => {} } aria-label="Privilege">
+						<select value="" onChange={ event => addPrivilegeToRole(role.id, event.target.value) } aria-label="Privilege">
 							<option value="">-- Select Privilege --</option>
 						{
 						privileges.map(privilege =>

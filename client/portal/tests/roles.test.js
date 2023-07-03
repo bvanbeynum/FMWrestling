@@ -10,11 +10,12 @@ import Roles from "../roles.jsx";
 describe("Roles component", () => {
 
 	const users = [{ id: "testuser1", firstName: "Test", lastName: "User 1" }],
+		privileges = [{ id: "testprivilege1", name: "Test Privilege", token: "test" }],
 		roles = [{
 			id: "testid",
 			name: "Test Role",
 			users: users,
-			privileges: [{ id: "testprivilegeid", name: "Test Privilege" }],
+			privileges: privileges,
 			created: new Date(new Date(Date.now()).setDate(new Date().getDate() - 10)),
 			modified: new Date(new Date(Date.now()).setDate(new Date().getDate() - 5)),
 		}];
@@ -25,7 +26,8 @@ describe("Roles component", () => {
 			status: 200,
 			json: jest.fn().mockResolvedValue({
 				roles: roles,
-				users: users
+				users: users,
+				privileges: privileges
 			})
 		});
 	});
@@ -107,6 +109,38 @@ describe("Roles component", () => {
 		})));
 	});
 
+	it("deletes a role", async () => {
+
+		render(<Roles />);
+		
+		global.fetch = jest.fn().mockResolvedValue({
+			ok: true,
+			status: 200,
+			json: jest.fn().mockResolvedValue({ status: "ok" })
+		});
+		
+		const rolePanel = await screen.findByTestId(roles[0].id);
+		expect(rolePanel).toBeInTheDocument();
+
+		// Click the edit button for the role
+		const expandButton = await screen.findByRole("button", { name: /edit/i });
+		fireEvent.click(expandButton);
+
+		// Click the delete button for the role
+		const deleteRoleButton = await screen.findByRole("button", { name: /delete role/i });
+		fireEvent.click(deleteRoleButton);
+
+		await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/rolesave", expect.objectContaining({
+			body: expect.stringContaining(roles[0].id)
+		})));
+
+		await waitFor(() => {
+			const rolePanel = screen.queryByTestId(roles[0].id);
+			expect(rolePanel).toBeNull();
+		});
+
+	});
+
 	it("adds a member to a role", async () => {
 
 		render(<Roles />);
@@ -170,6 +204,72 @@ describe("Roles component", () => {
 
 		await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/rolesave", expect.objectContaining({
 			body: expect.stringContaining(users[0].id)
+		})));
+	});
+
+	it("adds a privilege to a role", async () => {
+
+		render(<Roles />);
+
+		global.fetch = jest.fn().mockResolvedValue({
+			ok: true,
+			status: 200,
+			json: jest.fn().mockResolvedValue({
+				role: {
+					id: roles[0].id,
+					name: roles[0].name,
+					isActive: true,
+					created: new Date(),
+					privileges: privileges,
+				}
+			})
+		});
+
+		// Click the edit on the role
+		const expandButton = await screen.findByRole("button", { name: /edit/i });
+		fireEvent.click(expandButton);
+
+		// Click to add a new privilege to the role
+		const addPrivilegeButton = await screen.findByRole("button", { name: /add privilege/i });
+		fireEvent.click(addPrivilegeButton);
+
+		// Select the privilege to add
+		const privilegeSelect = await screen.findByLabelText(/^privilege$/i);
+		fireEvent.change(privilegeSelect, { target: { value: privileges[0].id }});
+
+		await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/rolesave", expect.objectContaining({
+			body: expect.stringContaining(privileges[0].id)
+		})));
+	});
+
+	it("removes a privilege from a role", async () => {
+
+		render(<Roles />);
+
+		global.fetch = jest.fn().mockResolvedValue({
+			ok: true,
+			status: 200,
+			json: jest.fn().mockResolvedValue({
+				role: {
+					id: roles[0].id,
+					name: roles[0].name,
+					isActive: true,
+					created: new Date(),
+					privileges: []
+				}
+			})
+		});
+
+		// Click the edit on the role
+		const expandButton = await screen.findByRole("button", { name: /edit/i });
+		fireEvent.click(expandButton);
+
+		// Remove privilege
+		const removePrivilegeButton = await screen.findByRole("button", { name: /remove privilege/i });
+		fireEvent.click(removePrivilegeButton);
+
+		await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/rolesave", expect.objectContaining({
+			body: expect.stringContaining(privileges[0].id)
 		})));
 	});
 

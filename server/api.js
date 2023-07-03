@@ -496,11 +496,26 @@ export default {
 				const clientResponse = await client.get(`${ serverPath }/data/role?id=${ saveId }`).then();
 				
 				output.status = 200;
-				output.data = { role: clientResponse.body.roles[0] };
+				output.data = { role: {...clientResponse.body.roles[0], users: [] } };
 				return output;
 			}
 			catch (error) {
 				output.status = 563;
+				output.error = error.message;
+				return output;
+			}
+		}
+		else if (body.delete) {
+			try {
+				await client.delete(`${ serverPath }/data/role?id=${ body.delete }`);
+
+				output.status = 200;
+				output.data = { status: "ok" };
+				return output;
+			}
+			catch (error) {
+				console.log(error);
+				output.status = 564;
 				output.error = error.message;
 				return output;
 			}
@@ -534,12 +549,10 @@ export default {
 				output.error = error.message;
 				return output;
 			}
+			
+			user.roles = user.roles && user.roles.some(userRole => userRole.id === role.id) ? user.roles
+				: (user.roles || []).concat({ id: role.id, name: role.name })
 
-			user.roles = user.roles ? user.roles.concat(
-					user.roles.find(userRole => userRole.id === role.id) || ({ id: role.id, name: role.name })
-				)
-				: [{ id: role.id, name: role.name }];
-		
 			try {
 				await client.post(`${ serverPath }/data/user`).send({ user: user }).then();
 			}
@@ -618,20 +631,105 @@ export default {
 			output.data = { role: role };
 			return output;
 		}
-		else if (body.delete) {
-			try {
-				await client.delete(`${ serverPath }/data/role?id=${ body.delete }`);
-
-				output.status = 200;
-				output.data = { status: "ok" };
+		else if (body.savePrivilege) {
+			if (!body.savePrivilege.roleId || !body.savePrivilege.privilegeId) {
+				output.status = 575;
+				output.error = "Missing required parameters to save";
 				return output;
 			}
+
+			let role = null,
+				privilege = null;
+
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/role?id=${ body.savePrivilege.roleId }`).then();
+				role = clientResponse.body.roles[0];
+			}
 			catch (error) {
-				console.log(error);
-				output.status = 564;
+				output.status = 576;
 				output.error = error.message;
 				return output;
 			}
+
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/privilege?id=${ body.savePrivilege.privilegeId }`).then();
+				privilege = clientResponse.body.privileges[0];
+			}
+			catch (error) {
+				output.status = 577;
+				output.error = error.message;
+				return output;
+			}
+
+			role.privileges = role.privileges && role.privileges.some(rolePrivilege => rolePrivilege.id === privilege.id) ? role.privileges
+				: (role.privileges || []).concat(privilege);
+			
+			try {
+				await client.post(`${ serverPath }/data/role`).send({ role: role }).then();
+			}
+			catch (error) {
+				output.status = 578;
+				output.error = error.message;
+				return output;
+			}
+	
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/user?roleid=${ role.id }`).then();
+				role.users = clientResponse.body.users.map(user => ({ id: user.id, firstName: user.firstName, lastName: user.lastName }));
+			}
+			catch (error) {
+				output.status = 579;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			output.data = { role: role };
+			return output;
+		}
+		else if (body.deletePrivilege) {
+			if (!body.deletePrivilege.roleId || !body.deletePrivilege.privilegeId) {
+				output.status = 580;
+				output.error = "Missing required parameters to save";
+				return output;
+			}
+
+			let role = null;
+
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/role?id=${ body.deletePrivilege.roleId }`).then();
+				role = clientResponse.body.roles[0];
+			}
+			catch (error) {
+				output.status = 581;
+				output.error = error.message;
+				return output;
+			}
+
+			role.privileges = role.privileges ? role.privileges.filter(privilege => privilege.id !== body.deletePrivilege.privilegeId) : [];
+			
+			try {
+				await client.post(`${ serverPath }/data/role`).send({ role: role }).then();
+			}
+			catch (error) {
+				output.status = 582;
+				output.error = error.message;
+				return output;
+			}
+
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/user?roleid=${ role.id }`).then();
+				role.users = clientResponse.body.users.map(user => ({ id: user.id, firstName: user.firstName, lastName: user.lastName }));
+			}
+			catch (error) {
+				output.status = 583;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			output.data = { role: role };
+			return output;
 		}
 	}
 
