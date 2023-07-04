@@ -6,6 +6,7 @@ export default {
 		firstName: String,
 		lastName: String,
 		email: String,
+		phone: String,
 		tokens: [String],
 		devices: [{
 			token: String,

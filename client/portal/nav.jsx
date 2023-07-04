@@ -8,7 +8,7 @@ const Nav = props => {
 	const [ isMenuOpen, setIsMenuOpen ] = useState(false);
 	
 	useEffect(() => {
-		if (/(roles|request)/i.test(window.location)) {
+		if (/(users|roles|request)/i.test(window.location)) {
 			setSubExpanded("user");
 		}
 	}, [])
@@ -70,7 +70,7 @@ const Nav = props => {
 			<span>User Management</span>
 		</li>
 
-		<li className={`sub ${ subExpanded === "user" ? "active" : "" }`}>
+		<li onClick={ () => window.location = "/portal/users.html" } className={`sub ${ subExpanded === "user" ? "active" : "" }`}>
 			<span>Users</span>
 		</li>
 

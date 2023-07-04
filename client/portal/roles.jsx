@@ -28,8 +28,6 @@ const RolesComponent = props => {
 
 	useEffect(() => {
 		if (!pageActive) {
-			setPageActive(true);
-			
 			fetch(`/api/roleload`)
 				.then(response => {
 					if (response.ok) {
@@ -43,6 +41,7 @@ const RolesComponent = props => {
 					setRoles(data.roles);
 					setUsers(data.users);
 					setPrivileges(data.privileges);
+					setPageActive(true);
 				})
 				.catch(error => {
 					console.warn(error);
@@ -113,7 +112,7 @@ const RolesComponent = props => {
 			})
 			.catch(error => {
 				console.warn(error);
-				setErrorMessage("There was an error saving the event");
+				setErrorMessage("There was an error saving the role");
 				setSaveItem(null);
 				clearInterval(loadingInterval);
 			});
@@ -141,7 +140,7 @@ const RolesComponent = props => {
 			})
 			.catch(error => {
 				console.warn(error);
-				setErrorMessage("There was an error saving the event");
+				setErrorMessage("There was an error adding the user");
 				setSaveItem(null);
 				clearInterval(loadingInterval);
 			});
@@ -168,7 +167,7 @@ const RolesComponent = props => {
 			})
 			.catch(error => {
 				console.warn(error);
-				setErrorMessage("There was an error saving the event");
+				setErrorMessage("There was an error removing the member");
 				setSaveItem(null);
 				clearInterval(loadingInterval);
 			});
@@ -196,7 +195,7 @@ const RolesComponent = props => {
 			})
 			.catch(error => {
 				console.warn(error);
-				setErrorMessage("There was an error saving the event");
+				setErrorMessage("There was an error adding the privilege");
 				setSaveItem(null);
 				clearInterval(loadingInterval);
 			});
@@ -223,7 +222,7 @@ const RolesComponent = props => {
 			})
 			.catch(error => {
 				console.warn(error);
-				setErrorMessage("There was an error saving the event");
+				setErrorMessage("There was an error removing the privilege");
 				setSaveItem(null);
 				clearInterval(loadingInterval);
 			});
@@ -402,7 +401,6 @@ const RolesComponent = props => {
 						{
 						sectionEdit === "privilege" ?
 						
-						<>
 						<select value="" onChange={ event => addPrivilegeToRole(role.id, event.target.value) } aria-label="Privilege">
 							<option value="">-- Select Privilege --</option>
 						{
@@ -411,7 +409,6 @@ const RolesComponent = props => {
 						)
 						}
 						</select>
-						</>
 
 						:
 						<button onClick={ () => setSectionEdit("privilege") } aria-label="Add Privilege">
@@ -438,6 +435,7 @@ const RolesComponent = props => {
 					</div>
 					
 					<button aria-label="Edit" className="action" onClick={ () => setEditItem(role.id) }>
+						{/* pencil */}
 						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
 							<path d="M200-200h56l345-345-56-56-345 345v56Zm572-403L602-771l56-56q23-23 56.5-23t56.5 23l56 56q23 23 24 55.5T829-660l-57 57Zm-58 59L290-120H120v-170l424-424 170 170Zm-141-29-28-28 56 56-28-28Z"/>
 						</svg>

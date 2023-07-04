@@ -908,3 +908,232 @@ describe("Roles", () => {
 	});
 
 });
+
+describe("Users", () => {
+
+	it("loads the data for users", async () => {
+
+		// ********** Given
+
+		const roles = [{ id: "role1", name: "Test Role 1" }, { id: "role2", name: "Test Role 2" }],
+			users = [{ id: "testuserid", firstName: "Test", lastName: "User", roles: [roles[1]], devices: [] }];
+		
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { users: users }}) // Get the users
+			.mockResolvedValueOnce({ body: { roles: roles } }); // Get all roles
+
+		// ********** When
+
+		const results = await api.usersLoad(serverPath);
+
+		// ********** Then
+
+		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/user`);
+		expect(client.get).toHaveBeenNthCalledWith(2, `${ serverPath }/data/role`);
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+
+		expect(results.data).toHaveProperty("users");
+		expect(results.data.users).toEqual(users);
+
+		expect(results.data).toHaveProperty("roles");
+		expect(results.data.roles).toEqual(roles);
+
+	});
+
+	it("saves a new user", async () => {
+
+		// ********** Given
+
+		const body = { 
+				saveUser: { firstName: "Test", lastName: "User", email: "test@nomail.com", phone: "111-111-1111" }
+			},
+			returnId = "saveuserid";
+
+		const send = jest.fn().mockResolvedValue({
+			body: { id: returnId }
+		});
+		client.post = jest.fn(() => ({
+			send: send
+		}));
+
+		client.get = jest.fn()
+			.mockResolvedValue({ body: { users: [{ ...body.saveUser, id: returnId, created: new Date() }] }});
+
+		// ********** When
+
+		const results = await api.usersSave(body, serverPath);
+
+		// ********** Then
+
+		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/user`);
+		expect(send).toHaveBeenCalledWith(
+			expect.objectContaining({
+				user: expect.objectContaining({ email: body.saveUser.email })
+			})
+		);
+		
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("user", expect.objectContaining({ id: returnId }));
+
+	});
+
+	it("deletes user", async () => {
+		// ********** Given
+
+		const deleteId = "deleteuserid",
+			body = { deleteUser: deleteId };
+
+		client.delete = jest.fn(() => ({
+			status: "ok"
+		}));
+
+		// ********** When
+
+		const results = await api.usersSave(body, serverPath);
+
+		// ********** Then
+
+		expect(client.delete).toHaveBeenCalledWith(`${ serverPath }/data/user?id=${ deleteId }`);
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("status", "ok");
+	});
+
+	it("removes device from a given user", async () => {
+
+		// ********** Given
+
+		const saveUserId = "user1",
+			deleteDeviceToken = "deletetoken",
+			body = {
+				deleteDevice: { userId: saveUserId, token: deleteDeviceToken }
+			},
+			user = { id: saveUserId, devices: [{ token: deleteDeviceToken }] };
+
+		const send = jest.fn().mockResolvedValue({ body: { id: saveUserId }});
+		client.post = jest.fn(() => ({ send: send }));
+
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { users: [user] }}) // Get the user
+
+		// ********** When
+
+		const results = await api.usersSave(body, serverPath);
+
+		// ********** Then
+
+		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/user?id=${ user.id }`);
+
+		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/user`);
+		expect(send).toHaveBeenCalledWith(
+			expect.objectContaining({
+				user: expect.objectContaining({
+					devices: []
+				})
+			})
+		);
+		
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("user", expect.objectContaining({
+			devices: []
+		}));
+
+	});
+
+	it("adds a role to a given user", async () => {
+
+		// ********** Given
+
+		const saveUserId = "user1",
+			saveRoleId = "role1",
+			body = {
+				saveRole: { userId: saveUserId, roleId: saveRoleId }
+			},
+			user = { id: saveUserId, firstName: "Test", lastName: "User", roles: [] },
+			role = { id: saveRoleId, name: "Save Role" };
+
+			const send = jest.fn().mockResolvedValue({ body: { id: saveUserId } });
+			client.post = jest.fn(() => ({ send: send }));
+
+			client.get = jest.fn()
+				.mockResolvedValueOnce({ body: { users: [user] }}) // Get the user to save the role to
+				.mockResolvedValueOnce({ body: { roles: [role] } }) // Get the role informaiton
+
+		// ********** When
+
+		const results = await api.usersSave(body, serverPath);
+
+		// ********** Then
+
+		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/user?id=${ saveUserId }`);
+		expect(client.get).toHaveBeenNthCalledWith(2, `${ serverPath }/data/role?id=${ saveRoleId }`);
+
+		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/user`);
+		expect(send).toHaveBeenCalledWith(
+			expect.objectContaining({
+				user: expect.objectContaining({
+					roles: expect.arrayContaining([
+						expect.objectContaining({ id: saveRoleId })
+					])
+				})
+			})
+		);
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("user", expect.objectContaining({
+			roles: expect.arrayContaining([
+				expect.objectContaining({ id: saveRoleId })
+			])
+		}));
+
+	});
+
+	it("removes role from a given user", async () => {
+
+		// ********** Given
+
+		const saveUserId = "user1",
+			deleteRoleId = "role1",
+			body = {
+				deleteRole: { userId: saveUserId, roleId: deleteRoleId }
+			},
+			user = { id: saveUserId, roles: [{ id: deleteRoleId }] };
+
+		const send = jest.fn().mockResolvedValue({ body: { id: saveUserId }});
+		client.post = jest.fn(() => ({ send: send }));
+
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { users: [user] }}) // Get the user
+
+		// ********** When
+
+		const results = await api.usersSave(body, serverPath);
+
+		// ********** Then
+
+		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/user?id=${ user.id }`);
+
+		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/user`);
+		expect(send).toHaveBeenCalledWith(
+			expect.objectContaining({
+				user: expect.objectContaining({
+					roles: []
+				})
+			})
+		);
+		
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("user", expect.objectContaining({
+			roles: []
+		}));
+
+	});
+
+});

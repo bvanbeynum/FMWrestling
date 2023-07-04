@@ -493,4 +493,61 @@ describe("API service", () => {
 
 	});
 
+	it("pulls users", async () => {
+
+		// ********** Given
+
+		const output = {
+				users: [{ id: "user1",  firstName: "Test", lastName: "User", devices: [], roles: [] }],
+				roles: [{ id: "role1", name: "Test Role 1" }]
+			};
+
+		api.usersLoad = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+
+		const response = await request(app)
+			.get("/api/usersload")
+			.expect(200);
+
+		// ********** Then
+
+		expect(response.body).toHaveProperty("users");
+		expect(response.body.users).toEqual(output.users);
+
+		expect(response.body).toHaveProperty("roles");
+		expect(response.body.roles).toEqual(output.roles);
+
+	});
+
+	it("saves user", async () => {
+		// ********** Given
+
+		const user = { firstName: "Test", lastName: "User", email: "test@nomail.com", phone: null },
+			output = { user: { ...user, id: "user1" }};
+
+		api.usersSave = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+
+		const response = await request(app)
+			.post("/api/userssave")
+			.send({ saveUser: user })
+			.expect(200);
+
+		// ********** Then
+
+		expect(response.body).toHaveProperty("user");
+		expect(response.body.user).toEqual(
+			expect.objectContaining({ id: output.user.id })
+		);
+
+	});
+
 });

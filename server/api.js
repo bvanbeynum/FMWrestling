@@ -731,6 +731,204 @@ export default {
 			output.data = { role: role };
 			return output;
 		}
+	},
+
+	usersLoad: async (serverPath) => {
+		const output = {
+			data: {}
+		};
+
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/user`);
+			output.data.users = clientResponse.body.users;
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/role`);
+			output.data.roles = clientResponse.body.roles.map(role => ({
+				id: role.id,
+				name: role.name
+			}));
+		}
+		catch (error) {
+			output.status = 562;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		return output;
+	},
+
+	usersSave: async (body, serverPath) => {
+		const output = {};
+
+		if (!body) {
+			output.status = 560;
+			output.error = "Missing action";
+			return output;
+		}
+		else if (body.saveUser) {
+			let saveId = null;
+
+			try {
+				const clientResponse = await client.post(`${ serverPath }/data/user`).send({ user: body.saveUser }).then();
+				saveId = clientResponse.body.id;
+			}
+			catch (error) {
+				output.status = 561;
+				output.error = error.message;
+				return output;
+			}
+
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/user?id=${ saveId }`).then();
+				
+				output.status = 200;
+				output.data = { user: {...clientResponse.body.users[0] } };
+				return output;
+			}
+			catch (error) {
+				output.status = 563;
+				output.error = error.message;
+				return output;
+			}
+		}
+		else if (body.deleteUser) {
+			try {
+				await client.delete(`${ serverPath }/data/user?id=${ body.deleteUser }`);
+
+				output.status = 200;
+				output.data = { status: "ok" };
+				return output;
+			}
+			catch (error) {
+				console.log(error);
+				output.status = 564;
+				output.error = error.message;
+				return output;
+			}
+		}
+		else if (body.deleteDevice) {
+			if (!body.deleteDevice.userId || !body.deleteDevice.token) {
+				output.status = 572;
+				output.error = "Missing required parameters to save";
+				return output;
+			}
+
+			let user = null;
+
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/user?id=${ body.deleteDevice.userId }`).then();
+				user = clientResponse.body.users[0];
+			}
+			catch (error) {
+				output.status = 573;
+				output.error = error.message;
+				return output;
+			}
+
+			user.devices = user.devices ? user.devices.filter(userDevice => userDevice.token !== body.deleteDevice.token) : [];
+			
+			try {
+				await client.post(`${ serverPath }/data/user`).send({ user: user }).then();
+			}
+			catch (error) {
+				output.status = 574;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			output.data = { user: user };
+			return output;
+		}
+		else if (body.saveRole) {
+			if (!body.saveRole.userId || !body.saveRole.roleId) {
+				output.status = 565;
+				output.error = "Missing required parameters to save";
+				return output;
+			}
+
+			let user = null,
+				role = null;
+
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/user?id=${ body.saveRole.userId }`).then();
+				user = clientResponse.body.users[0];
+			}
+			catch (error) {
+				output.status = 566;
+				output.error = error.message;
+				return output;
+			}
+
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/role?id=${ body.saveRole.roleId }`).then();
+				role = clientResponse.body.roles[0];
+			}
+			catch (error) {
+				output.status = 567;
+				output.error = error.message;
+				return output;
+			}
+
+			user.roles = user.roles && user.roles.some(userRole => userRole.id === role.id) ? user.roles // If already exists
+				: (user.roles || []).concat({ id: role.id, name: role.name });
+			
+			try {
+				await client.post(`${ serverPath }/data/user`).send({ user: user }).then();
+			}
+			catch (error) {
+				output.status = 568;
+				output.error = error.message;
+				return output;
+			}
+	
+			output.status = 200;
+			output.data = { user: user };
+			return output;
+		}
+		else if (body.deleteRole) {
+			if (!body.deleteRole.userId || !body.deleteRole.roleId) {
+				output.status = 569;
+				output.error = "Missing required parameters to save";
+				return output;
+			}
+
+			let user = null;
+
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/user?id=${ body.deleteRole.userId }`).then();
+				user = clientResponse.body.users[0];
+			}
+			catch (error) {
+				output.status = 570;
+				output.error = error.message;
+				return output;
+			}
+
+			user.roles = user.roles ? user.roles.filter(userRole => userRole.id !== body.deleteRole.roleId) : [];
+			
+			try {
+				await client.post(`${ serverPath }/data/user`).send({ user: user }).then();
+			}
+			catch (error) {
+				output.status = 571;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			output.data = { user: user };
+			return output;
+		}
+
 	}
 
 };
