@@ -24,6 +24,7 @@ const UsersComponent = props => {
 	const [ editPanel, setEditPanel ] = useState(null);
 	const [ savePanel, setSavePanel ] = useState(null);
 	const [ isNewRoleEdit, setisNewRoleEdt ] = useState(false);
+	const [ expanded, setExpanded ] = useState([]);
 	
 	const [ newUser, setNewUser ] = useState(emptyUser);
 
@@ -93,7 +94,7 @@ const UsersComponent = props => {
 			})
 			.then(data => {
 				if (!save.id) {
-					setUsers(users => users.concat(data.user));
+					setUsers(users => users.concat(buildUser(data.user)));
 					setNewUser(emptyUser);
 				}
 
@@ -151,7 +152,7 @@ const UsersComponent = props => {
 				}
 			})
 			.then(data => {
-				setUsers(users => users.map(user => user.id === data.user.id ? data.user : user));
+				setUsers(users => users.map(user => user.id === data.user.id ? buildUser(data.user) : user));
 				setEditPanel(null);
 				setSavePanel(null);
 				clearInterval(loadingInterval);
@@ -178,7 +179,7 @@ const UsersComponent = props => {
 				}
 			})
 			.then(data => {
-				setUsers(users => users.map(user => user.id === data.user.id ? data.user : user));
+				setUsers(users => users.map(user => user.id === data.user.id ? buildUser(data.user) : user));
 				setEditPanel(null);
 				setSavePanel(null);
 				setisNewRoleEdt(false);
@@ -206,7 +207,7 @@ const UsersComponent = props => {
 				}
 			})
 			.then(data => {
-				setUsers(users => users.map(user => user.id === data.user.id ? data.user : user));
+				setUsers(users => users.map(user => user.id === data.user.id ? buildUser(data.user) : user));
 				setEditPanel(null);
 				setSavePanel(null);
 				clearInterval(loadingInterval);
@@ -304,16 +305,15 @@ const UsersComponent = props => {
 
 			<div className="panel">
 				<div className="row">
-					<div className="rowContent">
-						<h3>New User</h3>
-					</div>
-
-					<button aria-label="Add User" className="action" onClick={ () => setEditPanel("new") }>
-						{/* Add */}
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
-							<path d="M440-200v-240H200v-80h240v-240h80v240h240v80H520v240h-80Z"/>
-						</svg>
-					</button>
+					<h3>
+						New User
+						<button aria-label="Add User" className="action" onClick={ () => setEditPanel("new") }>
+							{/* Add */}
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+								<path d="M440-200v-240H200v-80h240v-240h80v240h240v80H520v240h-80Z"/>
+							</svg>
+						</button>
+					</h3>
 				</div>
 			</div>
 
@@ -329,72 +329,38 @@ const UsersComponent = props => {
 			<div key={ user.id } data-testid={ user.id } className="panel">
 				<div className="row">
 					<div className="rowContent">
-						<h3>{ `${ user.lastName }, ${ user.firstName }` }</h3>
+						<h3>
+							{ `${ user.lastName }, ${ user.firstName }` }
+							<button aria-label="Edit User" className="action" onClick={ () => setEditPanel(user.id) }>
+								{/* pencil */}
+								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+									<path d="M200-200h56l345-345-56-56-345 345v56Zm572-403L602-771l56-56q23-23 56.5-23t56.5 23l56 56q23 23 24 55.5T829-660l-57 57Zm-58 59L290-120H120v-170l424-424 170 170Zm-141-29-28-28 56 56-28-28Z"/>
+								</svg>
+							</button>
+						</h3>
 
 						<div className="subHeading">
 							<div>{ user.devices.length } devices</div>
 							<div>{ user.roles.length } roles</div>
 						</div>
 					</div>
-
-					<button aria-label="Edit User" className="action" onClick={ () => setEditPanel(user.id) }>
-						{/* pencil */}
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
-							<path d="M200-200h56l345-345-56-56-345 345v56Zm572-403L602-771l56-56q23-23 56.5-23t56.5 23l56 56q23 23 24 55.5T829-660l-57 57Zm-58 59L290-120H120v-170l424-424 170 170Zm-141-29-28-28 56 56-28-28Z"/>
-						</svg>
+					
+					<button aria-label="Expand User" className="action" onClick={ () => setExpanded(expanded => expanded.includes(user.id) ? expanded.filter(item => item !== user.id) : expanded.concat(user.id)) }>
+						{
+						expanded.includes(user.id) ?
+						// Shrink
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m296-345-56-56 240-240 240 240-56 56-184-184-184 184Z"/></svg>
+						:
+						// Expand
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z"/></svg>
+						}
 					</button>
 				</div>
-			</div>
 
-			:
-
-			<div key={ user.id } data-testid={ user.id } className="panel">
+				{
+				expanded.includes(user.id) ?
+				
 				<>
-				<label>
-					<span>First Name</span>
-					<input type="text" value={ newUser.firstName } onChange={ event => editProperty(user.id, "firstName", event.target.value) } aria-label="First Name" />
-				</label>
-
-				<label>
-					<span>Last Name</span>
-					<input type="text" value={ newUser.lastName} onChange={ event => editProperty(user.id, "lastName", event.target.value) } aria-label="Last Name" />
-				</label>
-				
-				<label>
-					<span>Email</span>
-					<input type="email" value={ newUser.email } onChange={ event => editProperty(user.id, "email", event.target.value) } aria-label="Email" />
-				</label>
-				
-				<label>
-					<span>Phone</span>
-					<input type="phone" value={ newUser.phone } onChange={ event => editProperty(user.id, "phone", event.target.value) } aria-label="Phone" />
-				</label>
-				
-				<div className="row">
-					<div className="error">{ panelError }</div>
-
-					<button disabled="" onClick={ () => saveUser(user) } aria-label="Save User">
-						{/* Check */}
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
-							<path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/>
-						</svg>
-					</button>
-
-					<button disabled="" onClick={ () => setEditPanel(null) } aria-label="Cancel">
-						{/* Cancel */}
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
-							<path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/>
-						</svg>
-					</button>
-
-					<button disabled="" onClick={ () => deleteUser(user.id) } aria-label="Delete User">
-						{/* Trash */}
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
-							<path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/>
-						</svg>
-					</button>
-				</div>
-
 				<h3>Devices</h3>
 
 				<div className="sectionList">
@@ -458,13 +424,15 @@ const UsersComponent = props => {
 					{
 					isNewRoleEdit ?
 
-					<select value="" onChange={ event => addRoleToUser(user.id, event.target.value) } aria-label="New Role">
-						<option value="">-- Select Role --</option>
-						{
-						roles.map(role =>
-							<option key={ role.id } value={ role.id }>{ role.name }</option>
-						)}
-					</select>
+					<div className="pill">
+						<select value="" onChange={ event => addRoleToUser(user.id, event.target.value) } aria-label="New Role">
+							<option value="">-- Select Role --</option>
+							{
+							roles.map(role =>
+								<option key={ role.id } value={ role.id }>{ role.name }</option>
+							)}
+						</select>
+					</div>
 
 					:
 					
@@ -477,6 +445,60 @@ const UsersComponent = props => {
 
 					}
 
+				</div>
+				</>
+
+				: ""
+				}
+			</div>
+
+			:
+
+			<div key={ user.id } data-testid={ user.id } className="panel">
+				<>
+				<label>
+					<span>First Name</span>
+					<input type="text" value={ user.firstName || "" } onChange={ event => editProperty(user.id, "firstName", event.target.value) } aria-label="First Name" />
+				</label>
+
+				<label>
+					<span>Last Name</span>
+					<input type="text" value={ user.lastName || "" } onChange={ event => editProperty(user.id, "lastName", event.target.value) } aria-label="Last Name" />
+				</label>
+				
+				<label>
+					<span>Email</span>
+					<input type="email" value={ user.email || "" } onChange={ event => editProperty(user.id, "email", event.target.value) } aria-label="Email" />
+				</label>
+				
+				<label>
+					<span>Phone</span>
+					<input type="phone" value={ user.phone || "" } onChange={ event => editProperty(user.id, "phone", event.target.value) } aria-label="Phone" />
+				</label>
+				
+				<div className="row">
+					<div className="error">{ panelError }</div>
+
+					<button disabled="" onClick={ () => saveUser(user) } aria-label="Save User">
+						{/* Check */}
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+							<path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/>
+						</svg>
+					</button>
+
+					<button disabled="" onClick={ () => setEditPanel(null) } aria-label="Cancel">
+						{/* Cancel */}
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+							<path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/>
+						</svg>
+					</button>
+
+					<button disabled="" onClick={ () => deleteUser(user.id) } aria-label="Delete User">
+						{/* Trash */}
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+							<path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/>
+						</svg>
+					</button>
 				</div>
 				</>
 			</div>

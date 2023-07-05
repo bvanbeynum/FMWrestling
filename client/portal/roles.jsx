@@ -18,6 +18,7 @@ const RolesComponent = props => {
 	const [ saveItem, setSaveItem ] = useState(null);
 	const [ loadingIndex, setLoadingIndex ] = useState(0);
 	const [ errorMessage, setErrorMessage ] = useState("");
+	const [ expanded, setExpanded ] = useState([]);
 
 	const [ roles, setRoles ] = useState([]);
 	const [ users, setUsers ] = useState([]);
@@ -278,16 +279,15 @@ const RolesComponent = props => {
 				:
 
 				<div className="row">
-					<div className="rowContent">
-						<h3>New Role</h3>
-					</div>
-					
-					<button aria-label="Add" className="action" onClick={ () => setEditItem("new") }>
-						{/* Add */}
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
-							<path d="M440-200v-240H200v-80h240v-240h80v240h240v80H520v240h-80Z"/>
-						</svg>
-					</button>
+					<h3>
+						New Role
+						<button aria-label="Add" className="action" onClick={ () => setEditItem("new") }>
+							{/* Add */}
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+								<path d="M440-200v-240H200v-80h240v-240h80v240h240v80H520v240h-80Z"/>
+							</svg>
+						</button>
+					</h3>
 				</div>
 
 				}
@@ -341,6 +341,46 @@ const RolesComponent = props => {
 					</button>
 				</div>
 
+				</>
+
+				:
+
+				// Not edit
+				<>
+				<div className="row">
+					<div className="rowContent">
+						<h3>
+							{ role.name }
+							<button aria-label="Edit" className="action" onClick={ () => setEditItem(role.id) }>
+								{/* pencil */}
+								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+									<path d="M200-200h56l345-345-56-56-345 345v56Zm572-403L602-771l56-56q23-23 56.5-23t56.5 23l56 56q23 23 24 55.5T829-660l-57 57Zm-58 59L290-120H120v-170l424-424 170 170Zm-141-29-28-28 56 56-28-28Z"/>
+								</svg>
+							</button>
+						</h3>
+
+						<div className="subHeading">
+							<div>{ (role.users || []).length } members</div>
+							<div>{ (role.privileges || []).length } privileges</div>
+						</div>
+					</div>
+					
+					<button aria-label="Expand Role" className="action" onClick={ () => setExpanded(expanded => expanded.includes(role.id) ? expanded.filter(item => item !== role.id) : expanded.concat(role.id)) }>
+						{
+						expanded.includes(role.id) ?
+						// Shrink
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m296-345-56-56 240-240 240 240-56 56-184-184-184 184Z"/></svg>
+						:
+						// Expand
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z"/></svg>
+						}
+					</button>
+				</div>
+				
+				{
+				expanded.includes(role.id) ?
+
+				<>
 				<h3>Members</h3>
 
 				<div className="sectionList">
@@ -417,31 +457,13 @@ const RolesComponent = props => {
 						</button>
 						}
 					</div>
-				</div>
-
+				</div>	
 				</>
 
-				:
+				: ""
+				}
 
-				// Not edit
-				<div className="row">
-					<div className="rowContent">
-						<h3>{ role.name }</h3>
-
-						<div className="subHeading">
-							<div>{ (role.users || []).length } members</div>
-							<div>{ (role.privileges || []).length } privileges</div>
-						</div>
-					</div>
-					
-					<button aria-label="Edit" className="action" onClick={ () => setEditItem(role.id) }>
-						{/* pencil */}
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
-							<path d="M200-200h56l345-345-56-56-345 345v56Zm572-403L602-771l56-56q23-23 56.5-23t56.5 23l56 56q23 23 24 55.5T829-660l-57 57Zm-58 59L290-120H120v-170l424-424 170 170Zm-141-29-28-28 56 56-28-28Z"/>
-						</svg>
-					</button>
-				</div>
-
+				</>
 				}
 			</div>
 

@@ -123,11 +123,11 @@ describe("Roles component", () => {
 		expect(rolePanel).toBeInTheDocument();
 
 		// Click the edit button for the role
-		const expandButton = await screen.findByRole("button", { name: /edit/i });
+		const expandButton = await screen.findByRole("button", { name: /^edit$/i });
 		fireEvent.click(expandButton);
 
 		// Click the delete button for the role
-		const deleteRoleButton = await screen.findByRole("button", { name: /delete role/i });
+		const deleteRoleButton = await screen.findByRole("button", { name: /^delete role$/i });
 		fireEvent.click(deleteRoleButton);
 
 		await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/rolesave", expect.objectContaining({
@@ -160,11 +160,11 @@ describe("Roles component", () => {
 		});
 
 		// Click the edit on the role
-		const expandButton = await screen.findByRole("button", { name: /edit/i });
+		const expandButton = await screen.findByRole("button", { name: /^expand role$/i });
 		fireEvent.click(expandButton);
 
 		// Click to add a new member to the role
-		const addMemberButton = await screen.findByRole("button", { name: /add member/i });
+		const addMemberButton = await screen.findByRole("button", { name: /^add member$/i });
 		fireEvent.click(addMemberButton);
 
 		// Select the member to add (add button will show up after member is selected)
@@ -195,11 +195,11 @@ describe("Roles component", () => {
 		});
 
 		// Click the edit on the role
-		const expandButton = await screen.findByRole("button", { name: /edit/i });
+		const expandButton = await screen.findByRole("button", { name: /^expand role$/i });
 		fireEvent.click(expandButton);
 
 		// Remove member
-		const removeMemberButton = await screen.findByRole("button", { name: /remove member/i });
+		const removeMemberButton = await screen.findByRole("button", { name: /^remove member$/i });
 		fireEvent.click(removeMemberButton);
 
 		await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/rolesave", expect.objectContaining({
@@ -226,11 +226,11 @@ describe("Roles component", () => {
 		});
 
 		// Click the edit on the role
-		const expandButton = await screen.findByRole("button", { name: /edit/i });
+		const expandButton = await screen.findByRole("button", { name: /^expand role$/i });
 		fireEvent.click(expandButton);
 
 		// Click to add a new privilege to the role
-		const addPrivilegeButton = await screen.findByRole("button", { name: /add privilege/i });
+		const addPrivilegeButton = await screen.findByRole("button", { name: /^add privilege$/i });
 		fireEvent.click(addPrivilegeButton);
 
 		// Select the privilege to add
@@ -261,11 +261,11 @@ describe("Roles component", () => {
 		});
 
 		// Click the edit on the role
-		const expandButton = await screen.findByRole("button", { name: /edit/i });
+		const expandButton = await screen.findByRole("button", { name: /^expand role$/i });
 		fireEvent.click(expandButton);
 
 		// Remove privilege
-		const removePrivilegeButton = await screen.findByRole("button", { name: /remove privilege/i });
+		const removePrivilegeButton = await screen.findByRole("button", { name: /^remove privilege$/i });
 		fireEvent.click(removePrivilegeButton);
 
 		await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/rolesave", expect.objectContaining({

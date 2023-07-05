@@ -169,8 +169,8 @@ describe("Users Component", () => {
 			})
 		});
 
-		// Click the edit on the user
-		const expandButton = await screen.findByRole("button", { name: /^edit user$/i });
+		// Click to expand the user
+		const expandButton = await screen.findByRole("button", { name: /^expand user$/i });
 		fireEvent.click(expandButton);
 
 		// Remove device
@@ -197,8 +197,8 @@ describe("Users Component", () => {
 			})
 		});
 
-		// Click the edit on the user
-		const expandButton = await screen.findByRole("button", { name: /^edit user$/i });
+		// Click to expand the user
+		const expandButton = await screen.findByRole("button", { name: /^expand user$/i });
 		fireEvent.click(expandButton);
 
 		// Click to add a new member to the user
@@ -229,8 +229,8 @@ describe("Users Component", () => {
 			})
 		});
 
-		// Click the edit on the user
-		const expandButton = await screen.findByRole("button", { name: /^edit user$/i });
+		// Click to expand the user
+		const expandButton = await screen.findByRole("button", { name: /^expand user$/i });
 		fireEvent.click(expandButton);
 
 		// Remove role
