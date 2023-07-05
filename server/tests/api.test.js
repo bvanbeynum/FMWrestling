@@ -691,8 +691,19 @@ describe("Roles", () => {
 		// ********** Given
 
 		const deleteId = "testid",
+			user = { id: "testuserid", roles: [{ id: deleteId }] },
 			body = { delete: deleteId };
 
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { users: [user] }}) // Get users
+
+		const send = jest.fn().mockResolvedValue({
+			body: { id: user.id }
+		});
+		client.post = jest.fn(() => ({
+			send: send
+		}));
+	
 		client.delete = jest.fn(() => ({
 			status: "ok"
 		}));
@@ -703,6 +714,15 @@ describe("Roles", () => {
 
 		// ********** Then
 
+		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/user?roleid=${ deleteId }`);
+
+		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/user`);
+		expect(send).toHaveBeenCalledWith(
+			expect.objectContaining({
+				user: expect.objectContaining({ roles: [] })
+			})
+		);
+		
 		expect(client.delete).toHaveBeenCalledWith(`${ serverPath }/data/role?id=${ deleteId }`);
 
 		expect(results).toHaveProperty("status", 200);

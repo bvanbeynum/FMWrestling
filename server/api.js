@@ -506,6 +506,30 @@ export default {
 			}
 		}
 		else if (body.delete) {
+			// Delete role from existing users
+			let users = null;
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/user?roleid=${ body.delete }`).then();
+				users = clientResponse.body.users.map(user => ({
+					...user,
+					roles: user.roles.filter(role => role.id !== body.delete)
+				}));
+			}
+			catch (error) {
+				output.status = 584;
+				output.error = error.message;
+				return output;
+			}
+
+			try {
+				users.forEach(async user => await client.post(`${ serverPath }/data/user`).send({ user: user }).then());
+			}
+			catch (error) {
+				output.status = 585;
+				output.error = error.message;
+				return output;
+			}
+
 			try {
 				await client.delete(`${ serverPath }/data/role?id=${ body.delete }`);
 
@@ -514,7 +538,6 @@ export default {
 				return output;
 			}
 			catch (error) {
-				console.log(error);
 				output.status = 564;
 				output.error = error.message;
 				return output;
