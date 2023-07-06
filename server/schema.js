@@ -53,6 +53,9 @@ export default {
 
 	team: mongoose.model("team", {
 		name: String,
+		state: String,
+		confrence: String,
+		program: String,
 		wrestlers: [{ id: String, firstName: String, lastName: String }],
 		externalTeams: [{ id: String, name: String }]
 	}),
