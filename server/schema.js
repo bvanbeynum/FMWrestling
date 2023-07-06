@@ -51,6 +51,19 @@ export default {
 		created: Date
 	}),
 
+	team: mongoose.model("team", {
+		name: String,
+		wrestlers: [{ id: String, firstName: String, lastName: String }],
+		externalTeams: [{ id: String, name: String }]
+	}),
+
+	externalTeam: mongoose.model("externalTeam", {
+		dbId: String,
+		name: String,
+		matches: [ String ],
+		wrestlers: [ String ]
+	}),
+
 	wrestler: mongoose.model("wrestler", {
 		firstName: String,
 		lastName: String,

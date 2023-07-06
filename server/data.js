@@ -984,4 +984,111 @@ export default {
 		return output;
 	},
 
+	teamGet: async (userFilter = {}) => {
+		let filter = {},
+			output = {};
+
+		if (userFilter.id) {
+			filter["_id"] = mongoose.Types.ObjectId.isValid(userFilter.id) ? userFilter.id : null;
+		}
+
+		try {
+			const records = await data.team.find(filter).lean().exec();
+			output.status = 200;
+			output.data = { teams: records.map(({ _id, __v, ...data }) => ({ id: _id, ...data })) };
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+		}
+
+		return output;
+	},
+
+	teamSave: async (saveObject) => {
+		const output = {};
+
+		if (!saveObject) {
+			output.status = 550;
+			output.error = "Missing object to save";
+			return output;
+		}
+
+		if (saveObject.id) {
+			let record = null;
+			try {
+				record = await data.team.findById(saveObject.id).exec();
+			}
+			catch (error) {
+				output.status = 560;
+				output.error = error.message;
+				return output;
+			}
+
+			if (!record) {
+				output.status = 561;
+				output.error = "Record not found";
+				return output;
+			}
+
+			try {
+				Object.keys(saveObject).forEach(field => {
+					if (field != "id") {
+						record[field] = saveObject[field];
+					}
+				});
+				record.modified = new Date();
+
+				record = await record.save();
+			}
+			catch (error) {
+				output.status = 562;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			output.data = { id: record._id };
+		}
+		else {
+			let record = null;
+			try {
+				record = await (new data.team({ ...saveObject, created: new Date(), modified: new Date() })).save();
+			}
+			catch (error) {
+				output.status = 563;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			output.data = { id: record._id };
+		}
+
+		return output;
+	},
+
+	teamDelete: async (id) => {
+		const output = {};
+
+		if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+			output.status = 550;
+			output.error = "Missing ID to delete";
+			return output;
+		}
+
+		try {
+			await data.team.deleteOne({ _id: id });
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		output.data = { status: "ok" };
+		return output;
+	}
+
 };
