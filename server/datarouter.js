@@ -373,4 +373,106 @@ router.delete("/data/privilege", authInternal, async (request, response) => {
 	}
 });
 
+router.get("/data/team", authInternal, async (request, response) => {
+	try {
+		const results = await data.teamGet({ id: request.query.id });
+
+		if (results.error) {
+			client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64a7225d26539d4ed27751cc", message: `${ results.status }: ${results.error}` }}).then();
+		}
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64a7225d26539d4ed27751cc", message: `570: ${error.message}` }}).then();
+		response.status(570).json({ error: error.message });
+	}
+});
+
+router.post("/data/team", authInternal, async (request, response) => {
+	try {
+		const results = await data.teamSave(request.body.team);
+
+		if (results.error) {
+			client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64a722bf26539d4ed2775233", message: `${ results.status }: ${results.error}` }}).then();
+		}
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64a722bf26539d4ed2775233", message: `570: ${error.message}` }}).then();
+		response.status(570).json({ error: error.message });
+	}
+});
+
+router.delete("/data/team", authInternal, async (request, response) => {
+	try {
+		const results = await data.teamDelete(request.query.id);
+
+		if (results.error) {
+			client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64a722eb26539d4ed2775235", message: `${ results.status }: ${results.error}` }}).then();
+		}
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64a722eb26539d4ed2775235", message: `570: ${error.message}` }}).then();
+		response.status(570).json({ error: error.message });
+	}
+});
+
+router.get("/data/externalteam", authInternal, async (request, response) => {
+	try {
+		const results = await data.externalTeamGet({ id: request.query.id });
+
+		if (results.error) {
+			client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64a7242c26539d4ed27752a0", message: `${ results.status }: ${results.error}` }}).then();
+		}
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64a7242c26539d4ed27752a0", message: `570: ${error.message}` }}).then();
+		response.status(570).json({ error: error.message });
+	}
+});
+
+router.post("/data/externalteam", authInternal, async (request, response) => {
+	try {
+		const results = await data.externalTeamSave(request.body.externalteam);
+
+		if (results.error) {
+			client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64a7244d26539d4ed27752a2", message: `${ results.status }: ${results.error}` }}).then();
+		}
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64a7244d26539d4ed27752a2", message: `570: ${error.message}` }}).then();
+		response.status(570).json({ error: error.message });
+	}
+});
+
+router.delete("/data/externalteam", authInternal, async (request, response) => {
+	try {
+		const results = await data.externalTeamDelete(request.query.id);
+
+		if (results.error) {
+			client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64a725e426539d4ed277530e", message: `${ results.status }: ${results.error}` }}).then();
+		}
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64a725e426539d4ed277530e", message: `570: ${error.message}` }}).then();
+		response.status(570).json({ error: error.message });
+	}
+});
+
 export default router;

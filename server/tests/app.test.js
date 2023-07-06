@@ -241,6 +241,142 @@ describe("Data service", () => {
 		expect(response.body).toHaveProperty("status", "ok");
 	});
 
+	it("gets team", async () => {
+
+		// ********** Given
+
+		const output = { teams: [{ id: "testid" }]};
+
+		data.teamGet = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+		
+		const response = await request(app)
+			.get("/data/team")
+			.expect(200);
+		
+		// ********** Then
+
+		expect(response.body).toHaveProperty("teams");
+		expect(response.body.teams).toHaveLength(1);
+	});
+
+	it("saves team", async () => {
+		// ********** Given
+
+		const save = { name: "test team" },
+			output = { id: "testid" };
+
+		data.teamSave = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+		
+		const response = await request(app)
+			.post("/data/team")
+			.send({ team: save })
+			.expect(200);
+		
+		// ********** Then
+
+		expect(data.teamSave).toHaveBeenCalledWith(save);
+		expect(response.body).toHaveProperty("id", output.id);
+	});
+
+	it("deletes team", async () => {
+		// ********** Given
+
+		const teamId = "testid";
+
+		data.teamDelete = jest.fn().mockResolvedValue({
+			status: 200,
+			data: { status: "ok" }
+		});
+
+		// ********** When
+		
+		const response = await request(app)
+			.delete(`/data/team?id=${ teamId }`)
+			.expect(200);
+		
+		// ********** Then
+
+		expect(response.body).toHaveProperty("status", "ok");
+	});
+
+	it("gets external team", async () => {
+
+		// ********** Given
+
+		const output = { externalTeams: [{ id: "testid" }]};
+
+		data.externalTeamGet = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+		
+		const response = await request(app)
+			.get("/data/externalteam")
+			.expect(200);
+		
+		// ********** Then
+
+		expect(response.body).toHaveProperty("externalTeams");
+		expect(response.body.externalTeams).toHaveLength(1);
+	});
+
+	it("saves external team", async () => {
+		// ********** Given
+
+		const save = { name: "test team" },
+			output = { id: "testid" };
+
+		data.externalTeamSave = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+		
+		const response = await request(app)
+			.post("/data/externalteam")
+			.send({ externalteam: save })
+			.expect(200);
+		
+		// ********** Then
+
+		expect(data.externalTeamSave).toHaveBeenCalledWith(save);
+		expect(response.body).toHaveProperty("id", output.id);
+	});
+
+	it("deletes external team", async () => {
+		// ********** Given
+
+		const externalTeamId = "testid";
+
+		data.externalTeamDelete = jest.fn().mockResolvedValue({
+			status: 200,
+			data: { status: "ok" }
+		});
+
+		// ********** When
+		
+		const response = await request(app)
+			.delete(`/data/externalteam?id=${ externalTeamId }`)
+			.expect(200);
+		
+		// ********** Then
+
+		expect(response.body).toHaveProperty("status", "ok");
+	});
+
 });
 
 describe("API service", () => {
