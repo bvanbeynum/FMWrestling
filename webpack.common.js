@@ -7,6 +7,7 @@ export default {
 		posts: "./client/portal/posts.jsx",
 		schedule: "./client/portal/schedule.jsx",
 		users: "./client/portal/users.jsx",
+		teams: "./client/portal/teams.jsx",
 		roles: "./client/portal/roles.jsx",
 		requests: "./client/portal/requests.jsx",
 		dual: "./client/portal/dual/dual.jsx",
@@ -51,6 +52,16 @@ export default {
 				viewport: "width=device-width, initial-scale=1"
 			},
 			chunks: [ "users" ],
+			templateContent: "<html><body><div id='root'></div></body></html>"
+		}),
+		new HtmlWebpackPlugin({ 
+			filename: "./portal/teams.html",
+			title: "Fort Mill Wrestling - Portal",
+			favicon: "./client/media/favicon.ico",
+			meta: {
+				viewport: "width=device-width, initial-scale=1"
+			},
+			chunks: [ "teams" ],
 			templateContent: "<html><body><div id='root'></div></body></html>"
 		}),
 		new HtmlWebpackPlugin({ 
