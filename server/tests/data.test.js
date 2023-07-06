@@ -867,3 +867,92 @@ describe("Team data", () => {
 	});
 
 });
+
+describe("External team data", () => {
+	let createdId,
+		newData = {
+			dbId: "testid",
+			name: "Test Team",
+			matches: [ "match 1", "match 2" ]
+		};
+
+	it("should return return an array of items", async () => {
+		// ********** Given
+
+		// ********** When
+		const response = await data.externalTeamGet();
+
+		// ********** Then
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("externalTeams");
+	});
+
+	it("should create a new object", async () => {
+		// ********** Given
+
+		// ********** When
+		const response = await data.externalTeamSave(newData);
+
+		// ********** Then
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("id");
+
+		createdId = response.data.id;
+	});
+
+	it("should get the new object by id", async () => {
+		// ********** Given
+
+		// ********** When
+		const response = await data.externalTeamGet({ id: createdId });
+
+		// ********** Then
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("externalTeams");
+		expect(response.data.externalTeams).toHaveLength(1);
+
+		expect(response.data.externalTeams).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining(newData)
+			])
+		);
+	});
+
+	it("should return an empty array for non-existant object", async () => {
+		// ********** Given
+
+		// ********** When
+		const response = await data.externalTeamGet({ id: "abcd" });
+
+		// ********** Then
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("externalTeams");
+		expect(response.data.externalTeams).toHaveLength(0);
+	});
+
+	it("should delete the new object", async () => {
+		// ********** Given
+
+		// ********** When
+		const response = await data.externalTeamDelete(createdId);
+		
+		// ********** Then
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("status", "ok");
+	});
+
+	it("should return an empty array after deleting the new object", async () => {
+		const response = await data.externalTeamGet({ id: createdId });
+		
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("externalTeams");
+		expect(response.data.externalTeams).not.toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					id: createdId
+				})
+			])
+		);
+	});
+
+});
