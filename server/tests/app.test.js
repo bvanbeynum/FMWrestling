@@ -686,4 +686,30 @@ describe("API service", () => {
 
 	});
 
+	it("pulls teams", async () => {
+
+		// ********** Given
+
+		const output = {
+				teams: [{ id: "team1",  name: "Test Team", externalTeams: [] }]
+			};
+
+		api.teamsLoad = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+
+		const response = await request(app)
+			.get("/api/teamsload")
+			.expect(200);
+
+		// ********** Then
+
+		expect(response.body).toHaveProperty("teams");
+		expect(response.body.teams).toEqual(output.teams);
+
+	});
+
 });

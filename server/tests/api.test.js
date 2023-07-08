@@ -1157,3 +1157,43 @@ describe("Users", () => {
 	});
 
 });
+
+
+describe("Teams", () => {
+
+	it("loads the data for teams", async () => {
+
+		// ********** Given
+
+		const teams = [{
+			id: "testuserid",
+			name: "Test Team",
+			state: "TS",
+			confrence: "5A",
+			program: "Middle",
+			externalTeams: [{
+				id: "testexternalid", 
+				name: "External Team" 
+			}]
+		}];
+		
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { teams: teams }}) // Get the teams
+
+		// ********** When
+
+		const results = await api.teamsLoad(serverPath);
+
+		// ********** Then
+
+		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/team`);
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+
+		expect(results.data).toHaveProperty("teams");
+		expect(results.data.teams).toEqual(teams);
+
+	});
+
+});

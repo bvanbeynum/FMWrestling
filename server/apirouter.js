@@ -140,4 +140,16 @@ router.post("/api/userssave", authAPI, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 });
 
+// ***************** Teams ********************
+
+router.get("/api/teamsload", authAPI, async (request, response) => {
+	const results = await api.teamsLoad(request.serverPath);
+
+	if (results.error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64a7458c26539d4ed2775dd7", message: `${ results.status }: ${results.error}` }}).then();
+	}
+
+	response.status(results.status).json(results.error ? { error: results.error } : results.data);
+});
+
 export default router;

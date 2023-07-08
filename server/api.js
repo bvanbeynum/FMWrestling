@@ -952,6 +952,25 @@ export default {
 			return output;
 		}
 
+	},
+
+	teamsLoad: async (serverPath) => {
+		const output = {
+			data: {}
+		};
+
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/team`);
+			output.data.teams = clientResponse.body.teams;
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		return output;
 	}
 
 };

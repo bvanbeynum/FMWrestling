@@ -20,9 +20,29 @@ const Teams = props => {
 	const [ expandPanelList, setExpandPanelList ] = useState([]);
 	const [ expandListItemList, setExpandListItemList ] = useState([]);
 
+	const [ teams, setTeams ] = useState([]);
+
 	useEffect(() => {
 		if (!pageActive) {
-			setPageActive(true);
+			
+			fetch(`/api/teamsload`)
+				.then(response => {
+					if (response.ok) {
+						return response.json();
+					}
+					else {
+						throw Error(response.statusText);
+					}
+				})
+				.then(data => {
+					setTeams(data.teams);
+					setPageActive(true);
+				})
+				.catch(error => {
+					console.warn(error);
+					setLoadError(`Error: ${error.message}`);
+				});
+
 		}
 	}, []);
 
@@ -110,6 +130,117 @@ const Teams = props => {
 					</h3>
 				</div>
 			</div>
+
+			{
+			teams.map(team => 
+			
+			<div key={ team.id } data-testid={ team.id } className="panel">
+				<div className="row">
+					<div className="rowContent">
+						<h3>
+							{ team.name }
+							<button aria-label="Edit Team" className="action" onClick={ () => {} }>
+								{/* pencil */}
+								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+									<path d="M200-200h56l345-345-56-56-345 345v56Zm572-403L602-771l56-56q23-23 56.5-23t56.5 23l56 56q23 23 24 55.5T829-660l-57 57Zm-58 59L290-120H120v-170l424-424 170 170Zm-141-29-28-28 56 56-28-28Z"/>
+								</svg>
+							</button>
+						</h3>
+					</div>
+					
+					<button aria-label="Expand Team" className="action" onClick={ () => setExpandPanelList(expandPanelList => expandPanelList.includes(team.id) ? expandPanelList.filter(item => item !== team.id) : expandPanelList.concat(team.id)) }>
+						{
+						expandPanelList.includes(team.id) ?
+						// Shrink
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m296-345-56-56 240-240 240 240-56 56-184-184-184 184Z"/></svg>
+						:
+						// Expand
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z"/></svg>
+						}
+					</button>
+				</div>
+				
+				{
+				expandPanelList.includes(team.id) ?
+
+				<>
+				<h3>Flow Wrestling Sync</h3>
+
+				<label>
+					<input type="text" placeholder="Filter List" />
+				</label>
+
+				<ul>
+				<li>
+
+				<div className="listItem">
+						<button aria-label="Select Flow Team">
+							{/* Check */}
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/></svg>
+						</button>
+
+						<span className="listItemContent">Ft Mill</span>
+
+						<button aria-label="Expand Flow Team" className="secondary">
+							{/* Expand */}
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z"/></svg>
+						</button>
+					</div>
+					
+				</li>
+				<li>
+					
+					<div className="listItem">
+						<button aria-label="Select Flow Team" className="selected">
+							{/* Check */}
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/></svg>
+						</button>
+
+						<span className="listItemContent">Fort Mill</span>
+
+						<button aria-label="Expand Flow Team" className="secondary">
+							{/* Expand */}
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z"/></svg>
+						</button>
+					</div>
+				
+					<div className="sectionList">
+						<div className="pill">TJ</div>
+						<div className="pill">Lucas van Beynum</div>
+					</div>
+
+					<div className="sectionList">
+						<div className="pill">Southern Slam</div>
+						<div className="pill">May River</div>
+					</div>
+
+				</li>
+				<li>
+					
+					<div className="listItem">
+						<button aria-label="Select Flow Team">
+							{/* Check */}
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/></svg>
+						</button>
+
+						<span className="listItemContent">C2X</span>
+
+						<button aria-label="Expand Flow Team" className="secondary">
+							{/* Expand */}
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z"/></svg>
+						</button>
+					</div>
+					
+				</li>
+				</ul>
+				</>
+
+				: ""
+				}
+			</div>
+			
+			)
+			}
 			
 			<div className="panel">
 				<div className="row">
