@@ -712,4 +712,31 @@ describe("API service", () => {
 
 	});
 
+	it("saves team", async () => {
+		// ********** Given
+
+		const team = { name: "Test Team", confrence: "AA", externalTeams: [{ id: "externalid", name: "Test External" }] },
+			output = { team: { ...team, id: "savedteamid" }};
+
+		api.teamsSave = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+
+		const response = await request(app)
+			.post("/api/teamssave")
+			.send({ saveTeam: team })
+			.expect(200);
+
+		// ********** Then
+
+		expect(response.body).toHaveProperty("team");
+		expect(response.body.team).toEqual(
+			expect.objectContaining({ id: output.team.id })
+		);
+
+	});
+
 });

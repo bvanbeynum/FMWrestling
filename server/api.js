@@ -971,6 +971,49 @@ export default {
 
 		output.status = 200;
 		return output;
+	},
+
+	teamsSave: async (body, serverPath) => {
+		const output = {};
+
+		if (!body) {
+			output.status = 560;
+			output.error = "Missing action";
+			return output;
+		}
+		else if (body.saveTeam) {
+			let saveId = null;
+
+			try {
+				const clientResponse = await client.post(`${ serverPath }/data/team`).send({ team: body.saveTeam }).then();
+				saveId = clientResponse.body.id;
+			}
+			catch (error) {
+				output.status = 561;
+				output.error = error.message;
+				return output;
+			}
+
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/team?id=${ saveId }`).then();
+				
+				output.status = 200;
+				output.data = { team: {...clientResponse.body.teams[0] } };
+				return output;
+			}
+			catch (error) {
+				output.status = 563;
+				output.error = error.message;
+				return output;
+			}
+		}
+		else if (body.deleteTeam) {
+		}
+		else if (body.saveExternal) {
+		}
+		else if (body.deleteExternal) {
+		}
+
 	}
 
 };

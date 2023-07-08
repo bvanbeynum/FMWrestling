@@ -6,21 +6,27 @@ import "./include/index.css";
 const Teams = props => {
 
 	const loading = [
-		<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M324-168h312v-120q0-65-45.5-110.5T480-444q-65 0-110.5 45.5T324-288v120Zm156-348q65 0 110.5-45.5T636-672v-120H324v120q0 65 45.5 110.5T480-516ZM192-96v-72h60v-120q0-59 28-109.5t78-82.5q-49-32-77.5-82.5T252-672v-120h-60v-72h576v72h-60v120q0 59-28.5 109.5T602-480q50 32 78 82.5T708-288v120h60v72H192Z"/></svg>, // Empty
-		<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M324-168h312v-120q0-65-45.5-110.5T480-444q-65 0-110.5 45.5T324-288v120ZM192-96v-72h60v-120q0-59 28-109.5t78-82.5q-49-32-77.5-82.5T252-672v-120h-60v-72h576v72h-60v120q0 59-28.5 109.5T602-480q50 32 78 82.5T708-288v120h60v72H192Z"/></svg>, // Top
-		<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M192-96v-72h60v-120q0-59 28-109.5t78-82.5q-49-32-77.5-82.5T252-672v-120h-60v-72h576v72h-60v120q0 59-28.5 109.5T602-480q50 32 78 82.5T708-288v120h60v72H192Z"/></svg>, // Full
-		<svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" width="20"><path d="M480-516q65 0 110.5-45.5T636-672v-120H324v120q0 65 45.5 110.5T480-516ZM192-96v-72h60v-120q0-59 28-109.5t78-82.5q-49-32-77.5-82.5T252-672v-120h-60v-72h576v72h-60v120q0 59-28.5 109.5T602-480q50 32 78 82.5T708-288v120h60v72H192Z"/></svg> // Bottom
-	];
+			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M324-168h312v-120q0-65-45.5-110.5T480-444q-65 0-110.5 45.5T324-288v120Zm156-348q65 0 110.5-45.5T636-672v-120H324v120q0 65 45.5 110.5T480-516ZM192-96v-72h60v-120q0-59 28-109.5t78-82.5q-49-32-77.5-82.5T252-672v-120h-60v-72h576v72h-60v120q0 59-28.5 109.5T602-480q50 32 78 82.5T708-288v120h60v72H192Z"/></svg>, // Empty
+			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M324-168h312v-120q0-65-45.5-110.5T480-444q-65 0-110.5 45.5T324-288v120ZM192-96v-72h60v-120q0-59 28-109.5t78-82.5q-49-32-77.5-82.5T252-672v-120h-60v-72h576v72h-60v120q0 59-28.5 109.5T602-480q50 32 78 82.5T708-288v120h60v72H192Z"/></svg>, // Top
+			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M192-96v-72h60v-120q0-59 28-109.5t78-82.5q-49-32-77.5-82.5T252-672v-120h-60v-72h576v72h-60v120q0 59-28.5 109.5T602-480q50 32 78 82.5T708-288v120h60v72H192Z"/></svg>, // Full
+			<svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" width="20"><path d="M480-516q65 0 110.5-45.5T636-672v-120H324v120q0 65 45.5 110.5T480-516ZM192-96v-72h60v-120q0-59 28-109.5t78-82.5q-49-32-77.5-82.5T252-672v-120h-60v-72h576v72h-60v120q0 59-28.5 109.5T602-480q50 32 78 82.5T708-288v120h60v72H192Z"/></svg> // Bottom
+		],
+		emptyTeam = { name: "", state: "", confrence: "", externalTeams: [] };
 
 	const [ pageActive, setPageActive ] = useState(false);
 	const [ loadError, setLoadError ] = useState("");
 	const [ panelError, setPanelError ] = useState("");
+	const [ loadingIndex, setLoadingIndex ] = useState(0);
+
+	const [ editPanelId, setEditPanelId ] = useState(null);
+	const [ savePanelId, setSavePanelId ] = useState(null);
 
 	const [ isFilterExpanded, setIsFilterExpanded ] = useState(false);
 	const [ expandPanelList, setExpandPanelList ] = useState([]);
 	const [ expandListItemList, setExpandListItemList ] = useState([]);
 
 	const [ teams, setTeams ] = useState([]);
+	const [ newTeam, setNewTeam ] = useState(emptyTeam);
 
 	useEffect(() => {
 		if (!pageActive) {
@@ -45,6 +51,37 @@ const Teams = props => {
 
 		}
 	}, []);
+
+	const saveTeam = save => {
+		const loadingInterval = setInterval(() => setLoadingIndex(loadingIndex => loadingIndex + 1 === loading.length ? 0 : loadingIndex + 1), 1000);
+		setSavePanelId(save.id || "new");
+
+		fetch("/api/teamssave", { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ saveTeam: save }) })
+			.then(response => {
+				if (response.ok) {
+					return response.json();
+				}
+				else {
+					throw Error(response.statusText);
+				}
+			})
+			.then(data => {
+				if (!save.id) {
+					setTeams(teams => teams.concat(data.team));
+					setNewTeam(emptyTeam);
+				}
+
+				setEditPanelId(null);
+				setSavePanelId(null);
+				clearInterval(loadingInterval);
+			})
+			.catch(error => {
+				console.warn(error);
+				setPanelError("There was an error saving the user");
+				setSavePanelId(null);
+				clearInterval(loadingInterval);
+			});
+	};
 
 	return (
 		
@@ -94,16 +131,6 @@ const Teams = props => {
 					</label>
 					
 					<label>
-						Program
-						<select>
-							<option value="">-- Select --</option>
-							<option>High</option>
-							<option>Middle</option>
-							<option>Rec</option>
-						</select>
-					</label>
-
-					<label>
 						State
 						<select>
 							<option value="">-- Select --</option>
@@ -117,11 +144,77 @@ const Teams = props => {
 
 			</div>
 
+			{
+			
+			savePanelId === "new" ?
+
+			<div className="panel">
+				<div className="loading">
+					{
+					loading[loadingIndex]
+					}
+				</div>
+			</div>
+
+			: editPanelId === "new" ?
+			
+			<div className="panel">
+				<>
+				<label>
+					<span>Name</span>
+					<input type="text" value={ newTeam.name } onChange={ event => setNewTeam(newTeam => ({...newTeam, name: event.target.value })) } aria-label="Team Name" />
+				</label>
+
+				<label>
+					<span>State</span>
+					<select value={ newTeam.state } onChange={ event => setNewTeam(newTeam => ({...newTeam, state: event.target.value })) } aria-label="Team State">
+						<option value="">-- Select State --</option>
+						<option>SC</option>
+						<option>NC</option>
+						<option>GA</option>
+						<option>TN</option>
+					</select>
+				</label>
+
+				<label>
+					<span>Confrence</span>
+					<select value={ newTeam.confrence } onChange={ event => setNewTeam(newTeam => ({...newTeam, confrence: event.target.value })) } aria-label="Team Confrence">
+						<option value="">-- Select Confrence --</option>
+						<option>5A</option>
+						<option>4A</option>
+						<option>3A</option>
+						<option>2A-1A</option>
+						<option>SCISA</option>
+					</select>
+				</label>
+				
+				<div className="row">
+					<div className="error">{ panelError }</div>
+
+					<button disabled="" onClick={ () => saveTeam(newTeam) } aria-label="Save Team">
+						{/* Check */}
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+							<path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/>
+						</svg>
+					</button>
+
+					<button disabled="" onClick={ () => setEditPanelId(null) } aria-label="Cancel">
+						{/* Cancel */}
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+							<path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/>
+						</svg>
+					</button>
+				</div>
+				</>
+			</div>
+
+			:
+
 			<div className="panel">
 				<div className="row">
 					<h3>
 						Add Team
-						<button aria-label="Add Team" className="action" onClick={ () => {} }>
+						<button aria-label="Add Team" className="action" onClick={ () => setEditPanelId("new") }>
 							{/* Add */}
 							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
 								<path d="M440-200v-240H200v-80h240v-240h80v240h240v80H520v240h-80Z"/>
@@ -130,6 +223,8 @@ const Teams = props => {
 					</h3>
 				</div>
 			</div>
+
+			}
 
 			{
 			teams.map(team => 

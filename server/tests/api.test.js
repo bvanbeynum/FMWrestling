@@ -1170,7 +1170,6 @@ describe("Teams", () => {
 			name: "Test Team",
 			state: "TS",
 			confrence: "5A",
-			program: "Middle",
 			externalTeams: [{
 				id: "testexternalid", 
 				name: "External Team" 
@@ -1193,6 +1192,46 @@ describe("Teams", () => {
 
 		expect(results.data).toHaveProperty("teams");
 		expect(results.data.teams).toEqual(teams);
+
+	});
+
+	it("saves a new team", async () => {
+
+		// ********** Given
+
+		const body = { 
+				saveTeam: { name: "Test Team", confrence: "AA", state: "TS" }
+			},
+			returnId = "saveid";
+
+		const send = jest.fn().mockResolvedValue({
+			body: { id: returnId }
+		});
+		client.post = jest.fn(() => ({
+			send: send
+		}));
+
+		client.get = jest.fn()
+			.mockResolvedValue({ body: { teams: [{ ...body.saveTeam, id: returnId, created: new Date() }] }});
+
+		// ********** When
+
+		const results = await api.teamsSave(body, serverPath);
+
+		// ********** Then
+
+		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/team`);
+		expect(send).toHaveBeenCalledWith(
+			expect.objectContaining({
+				team: expect.objectContaining({ name: body.saveTeam.name })
+			})
+		);
+
+		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/team?id=${ returnId }`);
+		
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("team", expect.objectContaining({ id: returnId }));
 
 	});
 
