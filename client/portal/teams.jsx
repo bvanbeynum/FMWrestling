@@ -77,10 +77,20 @@ const Teams = props => {
 			})
 			.catch(error => {
 				console.warn(error);
-				setPanelError("There was an error saving the user");
+				setPanelError("There was an error saving the team");
 				setSavePanelId(null);
 				clearInterval(loadingInterval);
 			});
+	};
+
+	// Edit properties (e.g. name)
+	const editProperty = (teamId, property, value) => {
+		setTeams(team => team.map(team => {
+			return team.id === teamId ? {
+				...team,
+				[property]: value
+			} : team
+		}));
 	};
 
 	return (
@@ -159,7 +169,6 @@ const Teams = props => {
 			: editPanelId === "new" ?
 			
 			<div className="panel">
-				<>
 				<label>
 					<span>Name</span>
 					<input type="text" value={ newTeam.name } onChange={ event => setNewTeam(newTeam => ({...newTeam, name: event.target.value })) } aria-label="Team Name" />
@@ -205,7 +214,6 @@ const Teams = props => {
 						</svg>
 					</button>
 				</div>
-				</>
 			</div>
 
 			:
@@ -229,12 +237,74 @@ const Teams = props => {
 			{
 			teams.map(team => 
 			
+			savePanelId === team.id ?
+
+			<div key={ team.id } data-testid={ team.id } className="panel">
+				<div className="loading">
+					{
+					loading[loadingIndex]
+					}
+				</div>
+			</div>
+
+			: editPanelId === team.id ?
+
+			<div key={ team.id } data-testid={ team.id } className="panel">
+				<label>
+					<span>Name</span>
+					<input type="text" value={ team.name } onChange={ event => editProperty(team.id, "name", event.target.value) } aria-label="Team Name" />
+				</label>
+
+				<label>
+					<span>State</span>
+					<select value={ team.state } onChange={ event => editProperty(team.id, "state", event.target.value) } aria-label="Team State">
+						<option value="">-- Select State --</option>
+						<option>SC</option>
+						<option>NC</option>
+						<option>GA</option>
+						<option>TN</option>
+					</select>
+				</label>
+
+				<label>
+					<span>Confrence</span>
+					<select value={ team.confrence } onChange={ event => editProperty(team.id, "confrence", event.target.value) } aria-label="Team Confrence">
+						<option value="">-- Select Confrence --</option>
+						<option>5A</option>
+						<option>4A</option>
+						<option>3A</option>
+						<option>2A-1A</option>
+						<option>SCISA</option>
+					</select>
+				</label>
+				
+				<div className="row">
+					<div className="error">{ panelError }</div>
+
+					<button disabled="" onClick={ () => saveTeam(team) } aria-label="Save Team">
+						{/* Check */}
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+							<path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/>
+						</svg>
+					</button>
+
+					<button disabled="" onClick={ () => setEditPanelId(null) } aria-label="Cancel">
+						{/* Cancel */}
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+							<path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/>
+						</svg>
+					</button>
+				</div>
+			</div>
+
+			:
+
 			<div key={ team.id } data-testid={ team.id } className="panel">
 				<div className="row">
 					<div className="rowContent">
 						<h3>
 							{ team.name }
-							<button aria-label="Edit Team" className="action" onClick={ () => {} }>
+							<button aria-label="Edit Team" className="action" onClick={ () => setEditPanelId(team.id) }>
 								{/* pencil */}
 								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
 									<path d="M200-200h56l345-345-56-56-345 345v56Zm572-403L602-771l56-56q23-23 56.5-23t56.5 23l56 56q23 23 24 55.5T829-660l-57 57Zm-58 59L290-120H120v-170l424-424 170 170Zm-141-29-28-28 56 56-28-28Z"/>
@@ -341,98 +411,8 @@ const Teams = props => {
 				<div className="row">
 					<div className="rowContent">
 						<h3>
-							Fort Mill
-							<button aria-label="Edit Team" className="action" onClick={ () => {} }>
-								{/* pencil */}
-								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
-									<path d="M200-200h56l345-345-56-56-345 345v56Zm572-403L602-771l56-56q23-23 56.5-23t56.5 23l56 56q23 23 24 55.5T829-660l-57 57Zm-58 59L290-120H120v-170l424-424 170 170Zm-141-29-28-28 56 56-28-28Z"/>
-								</svg>
-							</button>
-						</h3>
-					</div>
-					
-					<button aria-label="Expand Team" className="action" onClick={ () => {} }>
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m296-345-56-56 240-240 240 240-56 56-184-184-184 184Z"/></svg>
-					</button>
-				</div>
-
-				<h3>Flow Wrestling Sync</h3>
-
-				<label>
-					<input type="text" placeholder="Filter List" />
-				</label>
-
-				<ul>
-				<li>
-
-				<div className="listItem">
-						<button aria-label="Select Flow Team">
-							{/* Check */}
-							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/></svg>
-						</button>
-
-						<span className="listItemContent">Ft Mill</span>
-
-						<button aria-label="Expand Flow Team" className="secondary">
-							{/* Expand */}
-							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z"/></svg>
-						</button>
-					</div>
-					
-				</li>
-				<li>
-					
-					<div className="listItem">
-						<button aria-label="Select Flow Team" className="selected">
-							{/* Check */}
-							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/></svg>
-						</button>
-
-						<span className="listItemContent">Fort Mill</span>
-
-						<button aria-label="Expand Flow Team" className="secondary">
-							{/* Expand */}
-							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z"/></svg>
-						</button>
-					</div>
-				
-					<div className="sectionList">
-						<div className="pill">TJ</div>
-						<div className="pill">Lucas van Beynum</div>
-					</div>
-
-					<div className="sectionList">
-						<div className="pill">Southern Slam</div>
-						<div className="pill">May River</div>
-					</div>
-
-				</li>
-				<li>
-					
-				<div className="listItem">
-						<button aria-label="Select Flow Team">
-							{/* Check */}
-							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/></svg>
-						</button>
-
-						<span className="listItemContent">C2X</span>
-
-						<button aria-label="Expand Flow Team" className="secondary">
-							{/* Expand */}
-							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z"/></svg>
-						</button>
-					</div>
-					
-				</li>
-				</ul>
-			</div>
-
-			<div className="panel">
-				<div className="row">
-					<div className="rowContent">
-						<h3>
 							Nations Ford
-							<button aria-label="Edit Team" className="action" onClick={ () => {} }>
+							<button aria-label="" className="action" onClick={ () => {} }>
 								{/* pencil */}
 								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
 									<path d="M200-200h56l345-345-56-56-345 345v56Zm572-403L602-771l56-56q23-23 56.5-23t56.5 23l56 56q23 23 24 55.5T829-660l-57 57Zm-58 59L290-120H120v-170l424-424 170 170Zm-141-29-28-28 56 56-28-28Z"/>

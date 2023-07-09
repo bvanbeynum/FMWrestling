@@ -84,4 +84,24 @@ describe("Users Component", () => {
 		expect(await screen.findByTestId(newTeamId)).toBeInTheDocument();
 	});
 
+	it("edits a team", async () => {
+
+		const newName = "New Team Name";
+
+		render(<TeamsComponent />);
+
+		const expandButton = await screen.findByRole("button", { name: /^edit team$/i });
+		fireEvent.click(expandButton);
+
+		const nameInput = await screen.findByLabelText(/^team name$/i),
+			saveButton = await screen.findByRole("button", { name: /^save team$/i });
+
+		fireEvent.change(nameInput, { target: { value: newName }});
+		fireEvent.click(saveButton);
+
+		await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/teamssave", expect.objectContaining({
+			body: expect.stringContaining(newName)
+		})));
+	});
+
 });
