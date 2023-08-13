@@ -1158,7 +1158,6 @@ describe("Users", () => {
 
 });
 
-
 describe("Teams", () => {
 
 	it("loads the data for teams", async () => {
@@ -1233,6 +1232,81 @@ describe("Teams", () => {
 		expect(results).toHaveProperty("data");
 		expect(results.data).toHaveProperty("team", expect.objectContaining({ id: returnId }));
 
+	});
+
+});
+
+describe("External Teams", () => {
+
+	it("gets all external teams", async () => {
+
+		// ********** Given
+
+		const externalTeams = [{
+			id: "testteamid",
+			name: "Test Team",
+			meets: [ "meet 1", "meet 2" ],
+			wrestlers: [ "Wrestler 1" ]
+		}];
+		
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { externalTeams: externalTeams }}) // Get the teams
+
+		// ********** When
+
+		const results = await api.externalTeamsGet(serverPath);
+
+		// ********** Then
+
+		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/externalteam`);
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+
+		expect(results.data).toHaveProperty("externalTeams");
+		expect(results.data.externalTeams).toEqual(externalTeams);
+
+	});
+
+	it("saves batch external teams", async () => {
+		
+		// ********** Given
+
+		const body = { 
+			updateTeams: [{ id: "test1", name: "test team", wrestlers: [], meets: [] }],
+			deleteTeams: [ "test2", "test3" ]
+		};
+
+		const send = jest.fn().mockResolvedValue({
+			body: { id: body.updateTeams[0].id }
+		});
+		client.post = jest.fn(() => ({
+			send: send
+		}));
+
+		client.delete = jest.fn(() => ({
+			status: "ok"
+		}));
+
+		// ********** When
+
+		const results = await api.externalTeamsSave(body, serverPath);
+
+		// ********** Then
+
+		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/externalteam`);
+		expect(send).toHaveBeenCalledWith(
+			expect.objectContaining({
+				externalteam: expect.objectContaining({ id: body.updateTeams[0].id })
+			})
+		);
+
+		expect(client.delete).toHaveBeenCalledTimes(2);
+		expect(client.delete).toHaveBeenNthCalledWith(1, `${ serverPath }/data/externalteam?id=${ body.deleteTeams[0] }`);
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("status", "ok");
 	});
 
 });

@@ -871,9 +871,8 @@ describe("Team data", () => {
 describe("External team data", () => {
 	let createdId,
 		newData = {
-			dbId: "testid",
 			name: "Test Team",
-			matches: [ "match 1", "match 2" ]
+			meets: [ "match 1", "match 2" ]
 		};
 
 	it("should return return an array of items", async () => {

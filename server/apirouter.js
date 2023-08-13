@@ -6,12 +6,12 @@ import browser from "express-useragent";
 const router = express.Router();
 
 const authAPI = (request, response, next) => {
-	if (api.authAPI(request.serverPath, request.headers["referer"])) {
+	if (api.authInternal(request.headers["x-forwarded-for"]) || api.authAPI(request.serverPath, request.headers["referer"])) {
 		next();
 	}
 	else {
 		response.status(401).send("Unauthorized");
-	}
+	} 
 };
 
 // ************************* API
@@ -157,6 +157,28 @@ router.post("/api/teamssave", authAPI, async (request, response) => {
 
 	if (results.error) {
 		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64a9608826539d4ed2781abe", message: `${ results.status }: ${results.error}` }}).then();
+	}
+
+	response.status(results.status).json(results.error ? { error: results.error } : results.data);
+});
+
+// ***************** External Teams ********************
+
+router.get("/api/externalteamsget", authAPI, async (request, response) => {
+	const results = await api.externalTeamsGet(request.serverPath);
+
+	if (results.error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64cab8c726539d4ed283b773", message: `${ results.status }: ${results.error}` }}).then();
+	}
+
+	response.status(results.status).json(results.error ? { error: results.error } : results.data);
+});
+
+router.post("/api/externalteamssave", authAPI, async (request, response) => {
+	const results = await api.externalTeamsSave(request.body, request.serverPath);
+
+	if (results.error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64d7dd6c26539d4ed28830ae", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);

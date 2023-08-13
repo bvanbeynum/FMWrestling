@@ -1014,6 +1014,57 @@ export default {
 		else if (body.deleteExternal) {
 		}
 
+	},
+
+	externalTeamsGet: async (serverPath) => {
+		const output = {
+			data: {}
+		};
+
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/externalteam`);
+			output.data.externalTeams = clientResponse.body.externalTeams;
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		return output;
+	},
+
+	externalTeamsSave: async (body, serverPath) => {
+		const output = {
+			data: {}
+		}
+
+		for (let teamIndex = 0; teamIndex < body.updateTeams.length; teamIndex++) {
+			try {
+				await client.post(`${ serverPath }/data/externalteam`).send({ externalteam: body.updateTeams[teamIndex] }).then();
+			}
+			catch (error) {
+				output.status = 561;
+				output.error = error.message;
+				return output;
+			}
+		}
+
+		for (let teamIndex = 0; teamIndex < body.deleteTeams.length; teamIndex++) {
+			try {
+				await client.delete(`${ serverPath }/data/externalteam?id=${ body.deleteTeams[teamIndex] }`);
+			}
+			catch (error) {
+				output.status = 562;
+				output.error = error.message;
+				return output;
+			}
+		}
+
+		output.status = 200;
+		output.data.status = "ok";
+		return output;
 	}
 
 };

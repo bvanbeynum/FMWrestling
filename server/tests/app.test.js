@@ -739,4 +739,56 @@ describe("API service", () => {
 
 	});
 
+	it("gets external teams", async () => {
+
+		// ********** Given
+
+		const output = {
+				externalTeams: [{ id: "team1",  name: "Test Team", meets: [], wrestlers: [ "Wrestler 1" ] }]
+			};
+
+		api.externalTeamsGet = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+
+		const response = await request(app)
+			.get("/api/externalteamsget")
+			.expect(200);
+
+		// ********** Then
+
+		expect(api.externalTeamsGet).toHaveBeenCalled();
+		expect(response.body).toHaveProperty("externalTeams");
+		expect(response.body.externalTeams).toEqual(output.externalTeams);
+
+	});
+
+	it("saves batch external teams", async () => {
+		// ********** Given
+
+		const updateTeams = [{ name: "test team", wrestlers: [], meets: [] }],
+			deleteTeams = [ "test1", "test2" ],
+			output = { status: "ok" };
+
+		api.externalTeamsSave = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+
+		const response = await request(app)
+			.post("/api/externalteamssave")
+			.send({ updateTeams: updateTeams, deleteTeams: deleteTeams })
+			.expect(200);
+
+		// ********** Then
+
+		expect(response.body).toHaveProperty("status", "ok");
+
+	});
+
 });

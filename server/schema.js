@@ -61,9 +61,8 @@ export default {
 	}),
 
 	externalTeam: mongoose.model("externalTeam", {
-		dbId: String,
 		name: String,
-		matches: [ String ],
+		meets: [ String ],
 		wrestlers: [ String ]
 	}),
 
