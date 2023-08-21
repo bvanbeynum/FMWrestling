@@ -3,11 +3,18 @@
  */
 
 import React from "react";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import Nav from "../nav.jsx";
 
 describe("Index component", () => {
+
+	const user = {
+		id: "user1",
+		firstName: "Test",
+		lastName: "User",
+		privileges: [{ id: "privilege1", token: "userAdmin" }]
+	};
 	
 	beforeEach(() => {
 	});
@@ -23,11 +30,19 @@ describe("Index component", () => {
 
 		// ******** When ****************
 
-		render(<Nav />);
+		render(<Nav loggedInUser={ user } />);
 
 		// ******** Then ****************
 
-		expect(await screen.findByText(/Home/i)).toBeInTheDocument();
+		expect(await screen.findByRole("heading")).toHaveTextContent(user.lastName);
+		
+		await waitFor(() => {
+			const teamsNav = screen.queryByRole("button", { name: /^team management$/i }),
+				userNav = screen.queryByRole("button", { name: /^user management$/i });
+			
+			expect(userNav).toBeInTheDocument();
+			expect(teamsNav).toBeNull();
+		});
 	});
 
 });

@@ -1,15 +1,43 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom/client";
 import Nav from "./nav.jsx";
 import "./include/index.css";
 
 const Index = () => {
 
+	const [ pageActive, setPageActive ] = useState(false);
+	const [ loggedInUser, setLoggedInUser ] = useState(null);
+
+	useEffect(() => {
+		if(!pageActive) {
+
+			fetch(`/api/homeload`)
+				.then(response => {
+					if (response.ok) {
+						return response.json();
+					}
+					else {
+						throw Error(response.statusText);
+					}
+				})
+				.then(data => {
+
+					setLoggedInUser(data.loggedInUser);
+					setPageActive(true);
+
+				})
+				.catch(error => {
+					console.warn(error);
+				});
+
+		}
+	}, [])
+
 	return (
 
 <div className="page">
 
-	<Nav />
+	<Nav loggedInUser={ loggedInUser } />
 
 	<div>
 		<header>

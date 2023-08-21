@@ -20,6 +20,10 @@ nav .actions {
 	height: 30px;
 }
 
+nav h2 {
+	margin-left: 20px;
+}
+
 nav svg {
 	margin-right: 10px;
 }
@@ -32,9 +36,6 @@ nav ul {
 nav li {
 	list-style: none;
 	padding: 10px 20px;
-	cursor: pointer;
-	user-select: none;
-	outline: none;
 	display: flex;
 	align-items: end;
 	font-size: 1.3em;

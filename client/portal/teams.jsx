@@ -18,15 +18,18 @@ const Teams = props => {
 	const [ panelError, setPanelError ] = useState("");
 	const [ loadingIndex, setLoadingIndex ] = useState(0);
 
+	const [ isFilterExpanded, setIsFilterExpanded ] = useState(false);
+
 	const [ editPanelId, setEditPanelId ] = useState(null);
 	const [ savePanelId, setSavePanelId ] = useState(null);
+	const [ expandPanelId, setExpandPanelId ] = useState(null);
 
-	const [ isFilterExpanded, setIsFilterExpanded ] = useState(false);
-	const [ expandPanelList, setExpandPanelList ] = useState([]);
-	const [ expandListItemList, setExpandListItemList ] = useState([]);
+	const [ externalFilter, setExternalFilter ] = useState("");
 
 	const [ teams, setTeams ] = useState([]);
+	const [ loggedInUser, setLoggedInUser ] = useState(null);
 	const [ newTeam, setNewTeam ] = useState(emptyTeam);
+	const [ externalTeams, setExternalTeams ] = useState([]);
 
 	useEffect(() => {
 		if (!pageActive) {
@@ -41,8 +44,21 @@ const Teams = props => {
 					}
 				})
 				.then(data => {
-					setTeams(data.teams);
+
+					setLoggedInUser(data.loggedInUser);
+
+					setTeams(data.teams.map(team => ({
+							...team, 
+							externalTeams: team.externalTeams.map(external => ({
+								...external,
+								wrestlers: external.wrestlers || [],
+								meets: external.meets || []
+							}))
+						})
+					));
+
 					setPageActive(true);
+
 				})
 				.catch(error => {
 					console.warn(error);
@@ -93,10 +109,34 @@ const Teams = props => {
 		}));
 	};
 
+	const filterExternal = event => {
+		const filterText = event.target.value;
+
+		setExternalFilter(filterText);
+
+		if (filterText.length > 2) {
+			fetch(`/api/externalteamssearch?filter=${ filterText }`)
+				.then(response => {
+					if (response.ok) {
+						return response.json();
+					}
+					else {
+						throw Error(response.statusText);
+					}
+				})
+				.then(data => {
+					setExternalTeams(data.externalTeams);
+				})
+				.catch(error => {
+					console.warn(error);
+				});
+		}
+	};
+
 	return (
 		
 <div className="page">
-	<Nav />
+	<Nav loggedInUser={ loggedInUser } />
 
 	<div>
 		<header><h1>Teams</h1></header>
@@ -219,17 +259,9 @@ const Teams = props => {
 			:
 
 			<div className="panel">
-				<div className="row">
-					<h3>
-						Add Team
-						<button aria-label="Add Team" className="action" onClick={ () => setEditPanelId("new") }>
-							{/* Add */}
-							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
-								<path d="M440-200v-240H200v-80h240v-240h80v240h240v80H520v240h-80Z"/>
-							</svg>
-						</button>
-					</h3>
-				</div>
+				<button aria-label="Add Team" className="action" onClick={ () => setEditPanelId("new") }>
+					<h3>Add Team</h3>
+				</button>
 			</div>
 
 			}
@@ -313,9 +345,9 @@ const Teams = props => {
 						</h3>
 					</div>
 					
-					<button aria-label="Expand Team" className="action" onClick={ () => setExpandPanelList(expandPanelList => expandPanelList.includes(team.id) ? expandPanelList.filter(item => item !== team.id) : expandPanelList.concat(team.id)) }>
+					<button aria-label="Expand Team" className="action" onClick={ () => setExpandPanelId(team.id) }>
 						{
-						expandPanelList.includes(team.id) ?
+						expandPanelId == team.id ?
 						// Shrink
 						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m296-345-56-56 240-240 240 240-56 56-184-184-184 184Z"/></svg>
 						:
@@ -326,19 +358,67 @@ const Teams = props => {
 				</div>
 				
 				{
-				expandPanelList.includes(team.id) ?
+				expandPanelId == team.id ?
 
 				<>
 				<h3>Flow Wrestling Sync</h3>
 
 				<label>
-					<input type="text" placeholder="Filter List" />
+					<input type="text" value={ externalFilter } onChange={ filterExternal } placeholder="Filter List" aria-label="External Filter" />
 				</label>
 
-				<ul>
+				<ul>	
+				{
+				team.externalTeams.sort((externalA, externalB) => externalA.name > externalB.name ? 1 : -1)
+				.map(externalTeam => 
+				<li key={ externalTeam.id } data-testid={ externalTeam.id }>
+				
+					<div className="listItem">
+						<button aria-label="Select Flow Team" className="selected">
+							{/* Check */}
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/></svg>
+						</button>
+
+						<span className="listItemContent">{ externalTeam.name }</span>
+					</div>
+				
+				</li>
+				)}
+
+				{
+				externalTeams.filter(external => !team.externalTeams.some(teamExternal => teamExternal.id == external.id)) // Filter out already selected
+				.sort((externalA, externalB) => externalA.name > externalB.name ? 1 : -1)
+				.map(externalTeam => 
+				<li key={ externalTeam.id } data-testid={ externalTeam.id }>
+				
+					<div className="listItem">
+						<button aria-label="Select Flow Team">
+							{/* Check */}
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/></svg>
+						</button>
+
+						<span className="listItemContent">{ externalTeam.name }</span>
+					</div>
+				
+					<div className="sectionList">
+						{
+						externalTeam.wrestlers.map((wrestler, wrestlerIndex) =>
+						<div className="pill" key={ wrestlerIndex }>{ wrestler }</div>
+						)}
+					</div>
+
+					<div className="sectionList">
+						{
+						externalTeam.meets.map((meet, meetIndex) =>
+						<div className="pill" key={ meetIndex }>{ meet }</div>
+						)}
+					</div>
+
+				</li>
+				)}
 				<li>
 
-				<div className="listItem">
+					<div className="listItem">
 						<button aria-label="Select Flow Team">
 							{/* Check */}
 							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/></svg>

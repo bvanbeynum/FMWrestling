@@ -5,14 +5,28 @@ import browser from "express-useragent";
 
 const router = express.Router();
 
-const authAPI = (request, response, next) => {
-	if (api.authInternal(request.headers["x-forwarded-for"]) || api.authAPI(request.serverPath, request.headers["referer"])) {
+const authAPI = async (request, response, next) => {
+	const results = await api.authAPI(request.serverPath, request.headers["referer"], request.cookies.wm);
+
+	if (api.authInternal(request.headers["x-forwarded-for"]) || results.isValid) {
+		if (results.loggedInUser) {
+			request.user = results.loggedInUser;
+		}
+
 		next();
 	}
 	else {
 		response.status(401).send("Unauthorized");
 	} 
 };
+
+// ***************** Home ********************
+
+router.get("/api/homeload", authAPI, (request, response) => {
+	const output = { loggedInUser: request.user };
+
+	response.status(200).json(output);
+});
 
 // ************************* API
 
@@ -149,7 +163,9 @@ router.get("/api/teamsload", authAPI, async (request, response) => {
 		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64a7458c26539d4ed2775dd7", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
-	response.status(results.status).json(results.error ? { error: results.error } : results.data);
+	const output = { loggedInUser: request.user, ...results.data };
+
+	response.status(results.status).json(results.error ? { error: results.error } : output );
 });
 
 router.post("/api/teamssave", authAPI, async (request, response) => {
@@ -179,6 +195,16 @@ router.post("/api/externalteamssave", authAPI, async (request, response) => {
 
 	if (results.error) {
 		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64d7dd6c26539d4ed28830ae", message: `${ results.status }: ${results.error}` }}).then();
+	}
+
+	response.status(results.status).json(results.error ? { error: results.error } : results.data);
+});
+
+router.get("/api/externalteamssearch", authAPI, async (request, response) => {
+	const results = await api.externalTeamsSearch(request.query.filter, request.serverPath);
+
+	if (results.error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64d9140326539d4ed28899aa", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);

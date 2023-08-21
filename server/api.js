@@ -14,12 +14,33 @@ export default {
 	},
 
 	authInternal: (forwardedIP) => {
-		return !forwardedIP || /10\.21\.0/g.test(forwardedIP); // Is the request being forwared through a proxy, or is the proxy IP internal
+		return !forwardedIP || /10\.21\.0/g.test(forwardedIP) || /70.63.102.158/g.test(forwardedIP); // Is the request being forwared through a proxy, or is the proxy IP internal
 	},
 
-	authAPI: (serverPath, referer) => {
+	authAPI: async (serverPath, referer, cookie) => {
+		const output = {};
+
 		const re = new RegExp(serverPath); // Build the regex based on the shorter path to the server
-		return re.test(referer); // The referer is the full URL, so it should include the server path
+		output.isValid = re.test(referer); // The referer is the full URL, so it should include the server path
+
+		if (output.isValid && cookie) {
+			
+			try {
+				let tokenData = jwt.verify(cookie, config.jwt);
+				let clientResponse = await client.get(`${ serverPath }/data/user?devicetoken=${ tokenData.token }`);
+				
+				output.loggedInUser = clientResponse.body.users[0];
+
+				clientResponse = await client.get(`${ serverPath }/data/role`);
+
+				output.loggedInUser.privileges = clientResponse.body.roles
+					.filter(role => output.loggedInUser.roles.some(userRole => userRole.id == role.id))
+					.flatMap(role => role.privileges)
+			}
+			catch { }
+
+		}
+		return output;
 	},
 
 	authPortal: async (cookie, urlPath, serverPath) => {
@@ -71,7 +92,28 @@ export default {
 				}))
 			};
 
-			client.post(`${ serverPath }/data/user`).send({ user: output.user }).then();
+			try {
+				await client.post(`${ serverPath }/data/user`).send({ user: output.user }).then();
+			}
+			catch (error) {
+				output.status = 565;
+				output.error = error.message
+				return output;
+			}
+
+			try {
+				clientResponse = await client.get(`${ serverPath }/data/role`);
+				const roles = clientResponse.body.roles;
+
+				output.user.privileges = roles
+					.filter(role => output.user.roles.some(userRole => userRole.id == role.id))
+					.flatMap(role => role.privileges)
+			}
+			catch (error) {
+				output.status = 566;
+				output.error = error.message
+				return output;
+			}
 		}
 		
 		output.status = 200;
@@ -1064,6 +1106,25 @@ export default {
 
 		output.status = 200;
 		output.data.status = "ok";
+		return output;
+	},
+
+	externalTeamsSearch: async (filter, serverPath) => {
+		const output = {
+			data: {}
+		};
+
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/externalteam?name=${ filter }`);
+			output.data.externalTeams = clientResponse.body.externalTeams;
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
 		return output;
 	}
 

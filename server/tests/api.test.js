@@ -42,25 +42,43 @@ describe("Middleware", () => {
 		expect(results).toBe(false);
 	});
 
-	it("successfully passes API authentication", () => {
-		const referer = serverPath + "/index.html";
-		
-		const results = api.authAPI(serverPath, referer);
+	it("successfully passes API authentication", async () => {
+		const referer = serverPath + "/index.html",
+			cookie = "testcookie",
+			token = "testtoken",
+			roles = [{ id: "testrole", privileges: [] }],
+			user = { id: "testuser", roles: roles };
+	
+		jwt.verify = jest.fn().mockReturnValue({
+			token: token
+		});
 
-		expect(results).toBe(true);
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { users: [user] }})
+			.mockResolvedValueOnce({ body: { roles: roles }});
+	
+		const results = await api.authAPI(serverPath, referer, cookie);
+
+		expect(client.get).toHaveBeenCalledTimes(2);
+		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/user?devicetoken=${ token }`);
+		expect(client.get).toHaveBeenNthCalledWith(2, `${ serverPath }/data/role`);
+		
+		expect(results).toHaveProperty("isValid", true);
+		expect(results).toHaveProperty("loggedInUser");
+		
 	});
 
-	it("fails API authentication", () => {
-		const referer = "https://badurl.com/index.html";
+	it("fails API authentication", async () => {
+		const referer = "https://badurl.com/index.html",
+			cookie = "testcookie";
 		
-		const results = api.authAPI(serverPath, referer);
+		const results = await api.authAPI(serverPath, referer, cookie);
 
-		expect(results).toBe(false);
+		expect(results).toHaveProperty("isValid", false);
 	});
 
 	it("skips portal authentication", async () => {
 		const cookie = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbiI6ImhmM3dpbDJmejAiLCJpYXQiOjE2ODQ5NTk4NDR9.HmOWSzP2XRN7R00gH7a2eQFX-sMa0qRnbsJxSeWhq-o",
-			token = "hf3wil2fz0",
 			urlPath = "/index.html";
 
 		jwt.verify = jest.fn();
@@ -79,15 +97,12 @@ describe("Middleware", () => {
 	it("successfully passes portal authentication", async () => {
 		const cookie = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbiI6ImhmM3dpbDJmejAiLCJpYXQiOjE2ODQ5NTk4NDR9.HmOWSzP2XRN7R00gH7a2eQFX-sMa0qRnbsJxSeWhq-o",
 			token = "hf3wil2fz0",
-			urlPath = "/portal/index.html";
-
-		jwt.verify = jest.fn().mockReturnValue({
-			token: token
-		});
-
-		client.get = jest.fn().mockResolvedValue({ body: {
-			users: [{
+			urlPath = "/portal/index.html",
+			privileges = [{ id: "priv1" }],
+			roles = [{ id: "role1", privileges: privileges }],
+			users = [{
 				"id": "646e6e9c439316107c5302d9",
+				"roles": roles,
 				"devices": [
 					{
 						"token": "hf3wil2fz0",
@@ -95,8 +110,17 @@ describe("Middleware", () => {
 						"_id": "646e733e0461883914f2fd31"
 					}
 				]
-			}]
-		}});
+			}];
+
+		jwt.verify = jest.fn().mockReturnValue({
+			token: token
+		});
+
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: {
+				users: users
+			}})
+			.mockResolvedValueOnce({ body: { roles: roles }});
 
 		client.post = jest.fn(() => ({
 			send: () => ({
@@ -106,15 +130,17 @@ describe("Middleware", () => {
 
 		const results = await api.authPortal(cookie, urlPath, serverPath);
 
-		expect(results).toHaveProperty("status", 200);
-		
 		expect(jwt.verify).toHaveBeenCalled();
 
-		expect(client.get).toHaveBeenCalled();
-		expect(client.get).toHaveBeenLastCalledWith(`${ serverPath }/data/user?devicetoken=${ token }`);
+		expect(client.get).toHaveBeenCalledTimes(2);
+		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/user?devicetoken=${ token }`);
+		expect(client.get).toHaveBeenNthCalledWith(2, `${ serverPath }/data/role`);
 
 		expect(client.post).toHaveBeenCalled();
 		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/user`);
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("user", expect.objectContaining({ privileges: privileges }))
 	});
 
 	it("fails the portal authentication with invalid token", async () => {
@@ -1307,6 +1333,38 @@ describe("External Teams", () => {
 		expect(results).toHaveProperty("status", 200);
 		expect(results).toHaveProperty("data");
 		expect(results.data).toHaveProperty("status", "ok");
+
 	});
+
+	it("filters for external teams", async () => {
+
+		// ********** Given
+
+		const filter = "test",
+			externalTeams = [{
+				id: "testteamid",
+				name: "Test Team",
+				meets: [ "meet 1", "meet 2" ],
+				wrestlers: [ "Wrestler 1" ]
+			}];
+		
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { externalTeams: externalTeams }}) // Get the teams
+
+		// ********** When
+
+		const results = await api.externalTeamsSearch(filter, serverPath);
+
+		// ********** Then
+
+		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/externalteam?name=${ filter }`);
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+
+		expect(results.data).toHaveProperty("externalTeams");
+		expect(results.data.externalTeams).toEqual(externalTeams);
+
+	})
 
 });

@@ -7,7 +7,7 @@ import { fireEvent, render, screen, waitFor, cleanup } from "@testing-library/re
 import "@testing-library/jest-dom";
 import TeamsComponent from "../teams.jsx";
 
-describe("Users Component", () => {
+describe("Teams Component", () => {
 	
 	const team = {
 		id: "team1",
@@ -39,6 +39,42 @@ describe("Users Component", () => {
 		await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/teamsload"));
 		expect(await screen.findByTestId(team.id)).toBeInTheDocument();
 		
+	});
+
+	it("filters external teams", async () => {
+
+		const filterText = "fort", 
+			externalTeams = [{
+					id: "1",
+					name: "Fort Mill",
+					wrestlers: [],
+					meets: []
+				}, {
+					id: "2",
+					name: "Fort Other",
+					wrestlers: [],
+					meets: []
+				}];
+
+		render(<TeamsComponent />);
+
+		global.fetch = jest.fn().mockResolvedValue({
+			ok: true,
+			status: 200,
+			json: jest.fn().mockResolvedValue({
+				externalTeams: externalTeams
+			})
+		});
+
+		const expandButton = await screen.findByRole("button", { name: /^expand team$/i });
+		fireEvent.click(expandButton);
+
+		const filterInput = await screen.findByLabelText(/^external filter$/i);
+		fireEvent.change(filterInput, { target: { value: filterText }});
+
+		await waitFor(() => expect(global.fetch).toHaveBeenCalledWith(`/api/externalteamssearch?filter=${ filterText }`));
+		
+		expect(await screen.findByTestId(externalTeams[0].id)).toBeInTheDocument();
 	});
 
 	it("adds a new team", async () => {

@@ -29,7 +29,7 @@ export default {
 		privileges: [{
 			id: String,
 			name: String,
-			code: String
+			token: String
 		}],
 		created: Date,
 		modified: Date
@@ -37,7 +37,8 @@ export default {
 
 	privilege: mongoose.model("privilege", {
 		name: String,
-		token: String
+		token: String,
+		url: String
 	}),
 
 	deviceRequest: mongoose.model("devicerequest", {

@@ -1098,6 +1098,9 @@ export default {
 		if (userFilter.id) {
 			filter["_id"] = mongoose.Types.ObjectId.isValid(userFilter.id) ? userFilter.id : null;
 		}
+		if (userFilter.name) {
+			filter.name = { $regex: new RegExp(userFilter.name, "i") }
+		}
 
 		try {
 			const records = await data.externalTeam.find(filter).lean().exec();

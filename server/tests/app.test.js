@@ -381,14 +381,39 @@ describe("Data service", () => {
 
 describe("API service", () => {
 
+	const privilegesGlobal = [{ id: "priv1", token: "testPriv" }],
+		rolesGlobal = [{ id: "role1", privileges: privilegesGlobal }],
+		userGlobal = {
+			id: "globaluser1",
+			firstName: "Global",
+			lastName: "Test",
+			roles: rolesGlobal
+		};
+
 	beforeEach(() => {
 		api.authInternal = jest.fn().mockReturnValue(true);
-		api.authPortal = jest.fn().mockResolvedValue({ status: 200, user: {} });
+		api.authPortal = jest.fn().mockResolvedValue({ status: 200, user: userGlobal });
 		api.authAPI = jest.fn().mockReturnValue(true);
 	});
 
 	afterEach(() => {
 		jest.restoreAllMocks();
+	});
+
+	it("loads home data", async () => {
+
+		// ********** Given
+
+		// ********** When
+
+		const response = await request(app)
+			.get("/api/homeload")
+			.expect(200);
+
+		// ********** Then
+
+		expect(response.body).toHaveProperty("loggedInUser", userGlobal);
+
 	});
 
 	it("pulls schedule events", async () => {
@@ -710,6 +735,8 @@ describe("API service", () => {
 		expect(response.body).toHaveProperty("teams");
 		expect(response.body.teams).toEqual(output.teams);
 
+		expect(response.body).toHaveProperty("loggedInUser");
+
 	});
 
 	it("saves team", async () => {
@@ -788,6 +815,33 @@ describe("API service", () => {
 		// ********** Then
 
 		expect(response.body).toHaveProperty("status", "ok");
+
+	});
+
+	it("searches external teams", async () => {
+
+		// ********** Given
+
+		const output = {
+				externalTeams: [{ id: "team1",  name: "Test Team", meets: [], wrestlers: [ "Wrestler 1" ] }]
+			};
+
+		api.externalTeamsSearch = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+
+		const response = await request(app)
+			.get("/api/externalteamssearch")
+			.expect(200);
+
+		// ********** Then
+
+		expect(api.externalTeamsSearch).toHaveBeenCalled();
+		expect(response.body).toHaveProperty("externalTeams");
+		expect(response.body.externalTeams).toEqual(output.externalTeams);
 
 	});
 
