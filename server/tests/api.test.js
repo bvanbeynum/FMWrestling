@@ -1260,6 +1260,29 @@ describe("Teams", () => {
 
 	});
 
+	it("deletes team", async () => {
+
+		// ********** Given
+
+		const body = { deleteTeam: "deleteteam" };
+
+		client.delete = jest.fn()
+			.mockResolvedValue({ body: { status: "ok" }});
+
+		// ********** When
+
+		const results = await api.teamsSave(body, serverPath);
+
+		// ********** Then
+
+		expect(client.delete).toHaveBeenCalledWith(`${ serverPath }/data/team?id=${ body.deleteTeam }`);
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("status", "ok");
+
+	});
+
 });
 
 describe("External Teams", () => {

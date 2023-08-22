@@ -873,7 +873,6 @@ export default {
 				return output;
 			}
 			catch (error) {
-				console.log(error);
 				output.status = 564;
 				output.error = error.message;
 				return output;
@@ -1050,6 +1049,18 @@ export default {
 			}
 		}
 		else if (body.deleteTeam) {
+			try {
+				await client.delete(`${ serverPath }/data/team?id=${ body.deleteTeam }`);
+
+				output.status = 200;
+				output.data = { status: "ok" };
+				return output;
+			}
+			catch (error) {
+				output.status = 564;
+				output.error = error.message;
+				return output;
+			}
 		}
 		else if (body.saveExternal) {
 		}

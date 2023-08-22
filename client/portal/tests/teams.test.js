@@ -66,8 +66,8 @@ describe("Teams Component", () => {
 			})
 		});
 
-		const expandButton = await screen.findByRole("button", { name: /^expand team$/i });
-		fireEvent.click(expandButton);
+		const externalButton = await screen.findByRole("button", { name: /^external teams$/i });
+		fireEvent.click(externalButton);
 
 		const filterInput = await screen.findByLabelText(/^external filter$/i);
 		fireEvent.change(filterInput, { target: { value: filterText }});
@@ -138,6 +138,34 @@ describe("Teams Component", () => {
 		await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/teamssave", expect.objectContaining({
 			body: expect.stringContaining(newName)
 		})));
+	});
+
+	it("deletes a team", async () => {
+
+		render(<TeamsComponent />);
+		
+		global.fetch = jest.fn().mockResolvedValue({
+			ok: true,
+			status: 200,
+			json: jest.fn().mockResolvedValue({ status: "ok" })
+		});
+		
+		const teamPanel = await screen.findByTestId(team.id);
+		expect(teamPanel).toBeInTheDocument();
+
+		// Click the delete button for the team
+		const deleteButton = await screen.findByRole("button", { name: /^delete team$/i });
+		fireEvent.click(deleteButton);
+
+		await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/teamssave", expect.objectContaining({
+			body: expect.stringContaining(team.id)
+		})));
+
+		await waitFor(() => {
+			const teamPanel = screen.queryByTestId(team.id);
+			expect(teamPanel).toBeNull();
+		});
+
 	});
 
 });
