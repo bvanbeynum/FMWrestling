@@ -1283,6 +1283,100 @@ describe("Teams", () => {
 
 	});
 
+	it("adds external team", async () => {
+
+		// ********** Given
+
+		const team = { id: "team1", externalTeams: [] },
+			externalTeam = { id: "external1", name: "Test External" },
+			body = { 
+				saveExternal: { teamId: team.id, externalId: externalTeam.id }
+			};
+
+		const send = jest.fn().mockResolvedValue({
+			body: { id: team.id }
+		});
+		client.post = jest.fn(() => ({
+			send: send
+		}));
+
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { teams: [team] }})
+			.mockResolvedValueOnce({ body: { externalTeams: [externalTeam] }})
+			.mockResolvedValueOnce({ body: { teams: [{...team, externalTeams: team.externalTeams.concat(externalTeam) }] }});
+
+		// ********** When
+
+		const results = await api.teamsSave(body, serverPath);
+
+		// ********** Then
+
+		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/team?id=${ team.id }`);
+		expect(client.get).toHaveBeenNthCalledWith(2, `${ serverPath }/data/externalteam?id=${ externalTeam.id }`);
+		
+		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/team`);
+		expect(send).toHaveBeenCalledWith(
+			expect.objectContaining({
+				team: expect.objectContaining({ 
+					externalTeams: expect.arrayContaining([externalTeam])
+				})
+			})
+		);
+
+		expect(client.get).toHaveBeenNthCalledWith(3, `${ serverPath }/data/team?id=${ team.id }`);
+		
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("team", expect.objectContaining({ externalTeams: expect.arrayContaining([externalTeam]) }));
+
+	});
+
+	it("deletes external team", async () => {
+
+		// ********** Given
+
+		const externalTeam = { id: "external1", name: "Test External" },
+			team = { id: "team1", externalTeams: [externalTeam] },
+			body = { 
+				deleteExternal: { teamId: team.id, externalId: externalTeam.id }
+			};
+
+		const send = jest.fn().mockResolvedValue({
+			body: { id: team.id }
+		});
+		client.post = jest.fn(() => ({
+			send: send
+		}));
+
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { teams: [team] }})
+			.mockResolvedValueOnce({ body: { teams: [{...team, externalTeams: [] }] }});
+
+		// ********** When
+
+		const results = await api.teamsSave(body, serverPath);
+
+		// ********** Then
+
+		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/team?id=${ team.id }`);
+		
+		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/team`);
+		expect(send).toHaveBeenCalledWith(
+			expect.objectContaining({
+				team: expect.objectContaining({ 
+					externalTeams: []
+				})
+			})
+		);
+
+		expect(client.get).toHaveBeenNthCalledWith(2, `${ serverPath }/data/team?id=${ team.id }`);
+		
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("team", expect.objectContaining({ externalTeams: [] }));
+
+	});
+
 });
 
 describe("External Teams", () => {

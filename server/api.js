@@ -1063,8 +1063,103 @@ export default {
 			}
 		}
 		else if (body.saveExternal) {
+			let saveTeam = null;
+			
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/team?id=${ body.saveExternal.teamId }`).then();
+				saveTeam = clientResponse.body.teams[0];
+			}
+			catch (error) {
+				output.status = 565;
+				output.error = error.message;
+				return output;
+			}
+
+			let externalTeam = null;
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/externalteam?id=${ body.saveExternal.externalId }`).then();
+				externalTeam = clientResponse.body.externalTeams[0];
+			}
+			catch (error) {
+				output.status = 566;
+				output.error = error.message;
+				return output;
+			}
+
+			try {
+				saveTeam.externalTeams = (saveTeam.externalTeams || []).concat({ id: externalTeam.id, name: externalTeam.name });
+			}
+			catch (error) {
+				output.status = 567;
+				output.error = error.message;
+				return output;
+			}
+
+			try {
+				await client.post(`${ serverPath }/data/team`).send({ team: saveTeam }).then();
+			}
+			catch (error) {
+				output.status = 568;
+				output.error = error.message;
+				return output;
+			}
+
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/team?id=${ body.saveExternal.teamId }`).then();
+				output.data = { team: clientResponse.body.teams[0] };
+			}
+			catch (error) {
+				output.status = 569;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			return output;
 		}
 		else if (body.deleteExternal) {
+			let saveTeam = null;
+			
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/team?id=${ body.deleteExternal.teamId }`).then();
+				saveTeam = clientResponse.body.teams[0];
+			}
+			catch (error) {
+				output.status = 570;
+				output.error = error.message;
+				return output;
+			}
+
+			try {
+				saveTeam.externalTeams = saveTeam.externalTeams.filter(external => external.id !== body.deleteExternal.externalId);
+			}
+			catch (error) {
+				output.status = 571;
+				output.error = error.message;
+				return output;
+			}
+
+			try {
+				await client.post(`${ serverPath }/data/team`).send({ team: saveTeam }).then();
+			}
+			catch (error) {
+				output.status = 572;
+				output.error = error.message;
+				return output;
+			}
+
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/team?id=${ body.deleteExternal.teamId }`).then();
+				output.data = { team: clientResponse.body.teams[0] };
+			}
+			catch (error) {
+				output.status = 573;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			return output;
 		}
 
 	},

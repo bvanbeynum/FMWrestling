@@ -142,16 +142,6 @@ const Teams = props => {
 			});
 	};
 
-	// Edit properties (e.g. name)
-	const editProperty = (teamId, property, value) => {
-		setTeams(team => team.map(team => {
-			return team.id === teamId ? {
-				...team,
-				[property]: value
-			} : team
-		}));
-	};
-
 	const filterExternal = event => {
 		const filterText = event.target.value;
 
@@ -168,12 +158,72 @@ const Teams = props => {
 					}
 				})
 				.then(data => {
-					setExternalTeams(data.externalTeams);
+					const currentTeam = teams.find(team => expandPanel.id === team.id);
+
+					setExternalTeams(
+						data.externalTeams.filter(external => !currentTeam.externalTeams.some(teamExternal => teamExternal.id === external.id))
+					);
 				})
 				.catch(error => {
 					console.warn(error);
 				});
 		}
+	};
+
+	const addExternal = externalId => {
+		const loadingInterval = setInterval(() => setLoadingIndex(loadingIndex => loadingIndex + 1 === loading.length ? 0 : loadingIndex + 1), 1000);
+		setExpandPanel(expandPanel => ({...expandPanel, mode: "save" }));
+
+		fetch("/api/teamssave", { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ saveExternal: { teamId: expandPanel.id, externalId: externalId } }) })
+			.then(response => {
+				if (response.ok) {
+					return response.json();
+				}
+				else {
+					throw Error(response.statusText);
+				}
+			})
+			.then(data => {
+
+				setTeams(teams => teams.map(team => team.id == data.team.id ? data.team : team));
+				setExpandPanel({...expandPanel, mode: "external" });
+				clearInterval(loadingInterval);
+
+			})
+			.catch(error => {
+				console.warn(error);
+				setPanelError("There was an error saving the team");
+				setExpandPanel({...expandPanel, mode: "external" });
+				clearInterval(loadingInterval);
+			});
+	};
+
+	const deleteExternal = externalId => {
+		const loadingInterval = setInterval(() => setLoadingIndex(loadingIndex => loadingIndex + 1 === loading.length ? 0 : loadingIndex + 1), 1000);
+		setExpandPanel(expandPanel => ({...expandPanel, mode: "save" }));
+
+		fetch("/api/teamssave", { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ deleteExternal: { teamId: expandPanel.id, externalId: externalId } }) })
+			.then(response => {
+				if (response.ok) {
+					return response.json();
+				}
+				else {
+					throw Error(response.statusText);
+				}
+			})
+			.then(data => {
+
+				setTeams(teams => teams.map(team => team.id == data.team.id ? data.team : team));
+				setExpandPanel({...expandPanel, mode: "external" });
+				clearInterval(loadingInterval);
+
+			})
+			.catch(error => {
+				console.warn(error);
+				setPanelError("There was an error saving the team");
+				setExpandPanel({...expandPanel, mode: "external" });
+				clearInterval(loadingInterval);
+			});
 	};
 
 	return (
@@ -401,10 +451,10 @@ const Teams = props => {
 						{
 						team.externalTeams.map(externalTeam =>
 
-						<div className="pill" key={ externalTeam.id }>
+						<div className="pill" key={ externalTeam.id } data-testid={ externalTeam.id }>
 							{ externalTeam.name }
 
-							<button aria-label="Delete External">
+							<button aria-label="Delete External Team" onClick={ () => deleteExternal(externalTeam.id) }>
 								{/* Trash */}
 								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/></svg>
 							</button>
@@ -429,7 +479,7 @@ const Teams = props => {
 							<div className="listItem">
 								<span className="listItemHeader">{ externalTeam.name }</span>
 
-								<button aria-label="Add external" className="secondary">
+								<button aria-label="Add external team" className="secondary" onClick={ () => addExternal(externalTeam.id)}>
 									{/* Add */}
 									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M440-200v-240H200v-80h240v-240h80v240h240v80H520v240h-80Z"/></svg>
 								</button>
