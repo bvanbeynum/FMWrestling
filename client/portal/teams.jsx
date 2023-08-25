@@ -472,6 +472,7 @@ const Teams = props => {
 						
 						{
 						externalTeams
+						.filter(external => !team.externalTeams.some(teamExternal => external.id == teamExternal.id))
 						.sort((externalA, externalB) => externalA.name > externalB.name ? 1 : -1)
 						.map(externalTeam => 
 						<li key={ externalTeam.id } data-testid={ externalTeam.id }>
