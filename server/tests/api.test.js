@@ -1485,3 +1485,39 @@ describe("External Teams", () => {
 	})
 
 });
+
+describe("Flo Events", () => {
+
+	it("saves flo Event", async () => {
+		
+		// ********** Given
+
+		const floEvent = { id: "test1", name: "Test Event" };
+
+		const send = jest.fn().mockResolvedValue({
+			body: { id: floEvent.id }
+		});
+		client.post = jest.fn(() => ({
+			send: send
+		}));
+
+		// ********** When
+
+		const results = await api.floEventSave(floEvent, serverPath);
+
+		// ********** Then
+
+		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/floevent`);
+		expect(send).toHaveBeenCalledWith(
+			expect.objectContaining({
+				floevent: expect.objectContaining({ name: floEvent.name })
+			})
+		);
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("id", floEvent.id);
+
+	});
+
+});

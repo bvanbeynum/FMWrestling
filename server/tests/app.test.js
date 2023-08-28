@@ -913,4 +913,27 @@ describe("API service", () => {
 
 	});
 
+	it("saves flo event", async () => {
+		// ********** Given
+
+		const floEvent = { id: "test1", name: "Test Team" };
+
+		api.floEventSave = jest.fn().mockResolvedValue({
+			status: 200,
+			data: { id: floEvent.id }
+		});
+
+		// ********** When
+
+		const response = await request(app)
+			.post("/api/floeventsave")
+			.send({ floEvent: floEvent })
+			.expect(200);
+
+		// ********** Then
+
+		expect(response.body).toHaveProperty("id", floEvent.id);
+
+	});
+
 });

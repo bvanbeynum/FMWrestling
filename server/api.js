@@ -1232,6 +1232,24 @@ export default {
 
 		output.status = 200;
 		return output;
+	},
+
+	floEventSave: async (floEvent, serverPath) => {
+		const output = {};
+		
+		try {
+			const clientResponse = await client.post(`${ serverPath }/data/floevent`).send({ floevent: floEvent }).then();
+
+			output.status = 200;
+			output.data = { id: clientResponse.body.id };
+			return output;
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+
 	}
 
 };

@@ -210,4 +210,15 @@ router.get("/api/externalteamssearch", authAPI, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 });
 
+router.post("/api/floeventsave", authAPI, async (request, response) => {
+	console.log(request.body);
+	const results = await api.floEventSave(request.body.floEvent, request.serverPath);
+
+	if (results.error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64ed25e226539d4ed2916e6e", message: `${ results.status }: ${results.error}` }}).then();
+	}
+
+	response.status(results.status).json(results.error ? { error: results.error } : results.data);
+});
+
 export default router;
