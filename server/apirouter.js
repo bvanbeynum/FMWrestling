@@ -211,7 +211,6 @@ router.get("/api/externalteamssearch", authAPI, async (request, response) => {
 });
 
 router.post("/api/floeventsave", authAPI, async (request, response) => {
-	console.log(request.body);
 	const results = await api.floEventSave(request.body.floEvent, request.serverPath);
 
 	if (results.error) {
