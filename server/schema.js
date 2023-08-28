@@ -130,6 +130,51 @@ export default {
 		location: String,
 		created: Date,
 		modified: Date
+	}),
+
+	floEvent: mongoose.model("floevent", {
+		name: String,
+		location: String,
+		city: String,
+		state: String,
+		startDate: Date,
+		endDate: Date,
+		divisions: [{
+			name: String,
+			sort: Number,
+			weightClasses: [{
+				name: String,
+				sort: Number,
+				pools: [{
+					name: String,
+					sort: Number,
+					matches: [{
+						round: String,
+						matchNumber: Number,
+						sort: Number,
+						mat: String,
+						topWrestler: {
+							name: String,
+							team: String,
+							isWinner: Boolean
+						},
+						bottomWrestler: {
+							name: String,
+							team: String,
+							isWinner: Boolean
+						},
+						winType: String,
+						results: String,
+						nextMatch: {
+							winnerGUID: String,
+							isWinnerTop: Boolean,
+							loserGUID: String,
+							isLoserTop: Boolean
+						}
+					}]
+				}]
+			}]
+		}]
 	})
 	
 };
