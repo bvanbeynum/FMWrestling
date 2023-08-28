@@ -57,7 +57,7 @@ router.get("/api/postload", authAPI, async (request, response) => {
 		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "647b4c2ef18254fde708ec96", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
-	response.status(results.status).json(results.error ? { error: results.error } : results.data);
+	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
 });
 
 router.post("/api/postsave", authAPI, async (request, response) => {
@@ -76,8 +76,10 @@ router.get("/api/scheduleload", authAPI, async (request, response) => {
 	if (results.error) {
 		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6480db2b4d7f52ba05e8180d", message: `${ results.status }: ${results.error}` }}).then();
 	}
+	
+	const output = { loggedInUser: request.user, ...results.data };
 
-	response.status(results.status).json(results.error ? { error: results.error } : results.data);
+	response.status(results.status).json(results.error ? { error: results.error } : output);
 });
 
 router.post("/api/schedulesave", authAPI, async (request, response) => {
@@ -97,7 +99,7 @@ router.get("/api/requestsload", authAPI, async (request, response) => {
 		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64836fdc4d7f52ba05e8fd63", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
-	response.status(results.status).json(results.error ? { error: results.error } : results.data);
+	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
 });
 
 router.post("/api/requestssave", authAPI, async (request, response) => {
@@ -151,7 +153,7 @@ router.post("/api/userssave", authAPI, async (request, response) => {
 		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64a32ad326539d4ed275ea1c", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
-	response.status(results.status).json(results.error ? { error: results.error } : results.data);
+	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
 });
 
 // ***************** Teams ********************
@@ -163,9 +165,7 @@ router.get("/api/teamsload", authAPI, async (request, response) => {
 		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64a7458c26539d4ed2775dd7", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
-	const output = { loggedInUser: request.user, ...results.data };
-
-	response.status(results.status).json(results.error ? { error: results.error } : output );
+	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data } );
 });
 
 router.post("/api/teamssave", authAPI, async (request, response) => {

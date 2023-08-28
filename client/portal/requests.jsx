@@ -21,6 +21,7 @@ const RequestsComponent = (props) => {
 
 	const [ requests, setRequests ] = useState([]);
 	const [ users, setUsers ] = useState([]);
+	const [ loggedInUser, setLoggedInUser ] = useState(null);
 
 	const [ requestUser, setRequestUser ] = useState("");
 	const [ newUser, setNewUser ] = useState(emptyUser);
@@ -40,6 +41,7 @@ const RequestsComponent = (props) => {
 				})
 				.then(data => {
 
+					setLoggedInUser(data.loggedInUser);
 					setRequests(data.deviceRequests.map(request => ({
 						...request,
 						created: new Date(request.created),
@@ -144,7 +146,7 @@ const RequestsComponent = (props) => {
 	return (
 
 <div className="page">
-	<Nav />
+	<Nav loggedInUser={ loggedInUser } />
 
 	<div>
 		<header>

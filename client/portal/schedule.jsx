@@ -25,6 +25,7 @@ const Schedule = props => {
 
 	const [ events, setEvents ] = useState([]);
 	const [ editItem, setEditItem ] = useState(null);
+	const [ loggedInUser, setLoggedInUser ] = useState(null);
 
 	const [ monthSelected, setMonthSelect ] = useState(new Date().getMonth());
 	const [ monthDays, setMonthDays ] = useState([]);
@@ -45,6 +46,7 @@ const Schedule = props => {
 					}
 				})
 				.then(data => {
+					setLoggedInUser(data.loggedInUser);
 					setEvents(
 						data.events ?
 							data.events.map(event => ({
@@ -166,7 +168,7 @@ const Schedule = props => {
 	return (
 
 <div className="page">
-	<Nav />
+	<Nav loggedInUser={ loggedInUser } />
 
 	<div>
 

@@ -108,7 +108,7 @@ describe("Schedule component", () => {
 		// ******** Given ***************
 
 		const testId = "testeventid",
-			newDate = new Date(new Date().setDate(new Date().getDate() + 5)),
+			newDate = new Date(new Date().setDate(new Date().getDate())),
 			newName = "Name Test",
 			newLocation = "Location Test";
 

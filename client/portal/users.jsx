@@ -19,6 +19,7 @@ const UsersComponent = props => {
 
 	const [ users, setUsers ] = useState([]);
 	const [ roles, setRoles ] = useState([]);
+	const [ loggedInUser, setLoggedInUser ] = useState(null);
 
 	const [ loadingIndex, setLoadingIndex ] = useState(0);
 	const [ editPanel, setEditPanel ] = useState(null);
@@ -41,6 +42,7 @@ const UsersComponent = props => {
 					}
 				})
 				.then(data => {
+					setLoggedInUser(data.loggedInUser);
 					setUsers(data.users.map(user => buildUser(user)));
 
 					setRoles(data.roles);
@@ -223,7 +225,7 @@ const UsersComponent = props => {
 	return (
 
 <div className="page">
-	<Nav />
+	<Nav loggedInUser={ loggedInUser } />
 
 	<div>
 		<header><h1>Users</h1></header>

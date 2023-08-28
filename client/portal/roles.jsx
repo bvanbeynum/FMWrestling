@@ -24,6 +24,7 @@ const RolesComponent = props => {
 	const [ users, setUsers ] = useState([]);
 	const [ privileges, setPrivileges ] = useState([]);
 	const [ newRole, setNewRole ] = useState(emptyRole);
+	const [ loggedInUser, setLoggedInUser ] = useState(null);
 
 	const [ sectionEdit, setSectionEdit ] = useState(null);
 
@@ -39,6 +40,7 @@ const RolesComponent = props => {
 					}
 				})
 				.then(data => {
+					setLoggedInUser(data.loggedInUser);
 					setRoles(data.roles);
 					setUsers(data.users);
 					setPrivileges(data.privileges);
@@ -232,7 +234,7 @@ const RolesComponent = props => {
 	return (
 
 <div className="page">
-	<Nav />
+	<Nav loggedInUser={ loggedInUser } />
 
 	<div>
 		<header>

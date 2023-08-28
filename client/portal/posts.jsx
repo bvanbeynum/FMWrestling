@@ -19,6 +19,7 @@ const Posts = props => {
 	const [ pageActive, setPageActive ] = useState(false);
 	const [ savingId, setSavingId ] = useState(null);
 	const [ loadingIndex, setLoadingIndex ] = useState(0);
+	const [ loggedInUser, setLoggedInUser ] = useState(null);
 	const [ newPost, setNewPost ] = useState(emptyPost);
 	const [ posts, setPosts ] = useState([]);
 	const [ errorMessage, setErrorMessage ] = useState("");
@@ -38,6 +39,7 @@ const Posts = props => {
 					}
 				})
 				.then(data => {
+					setLoggedInUser(data.loggedInUser);
 					setPosts(
 						data.posts ?
 							data.posts.map(post => ({
@@ -130,7 +132,7 @@ const Posts = props => {
 	return (
 
 <div className="page">
-	<Nav />
+	<Nav loggedInUser={ loggedInUser } />
 
 	<div>
 		<header>
