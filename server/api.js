@@ -255,15 +255,26 @@ export default {
 		try {
 			const clientResponse = await client.get(`${ serverPath }/data/event`);
 
-			output.status = 200;
 			output.data = { events: clientResponse.body.events };
-			return output;
 		}
 		catch (error) {
 			output.status = 561;
 			output.error = error.message;
 			return output;
 		}
+
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/floevent`);
+			output.data.floEvents = clientResponse.body.floEvents ;
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;		
+		return output;
 	},
 
 	scheduleSave: async (body, serverPath) => {

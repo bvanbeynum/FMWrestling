@@ -348,16 +348,21 @@ describe("API Schedule", () => {
 	it("loads the schedule data", async () => {
 		// ********** Given
 
-		const output = [{ 
+		const events = [{ 
 				id: "testid", 
 				name: "test event", 
 				location: "test location",
 				created: new Date() 
+			}],
+			floEvents = [{
+				id: "flo1",
+				name: "Flo Event",
+				sqlId: 1233
 			}];
 		
-		client.get = jest.fn().mockResolvedValue({ body: {
-			events: output
-		}});
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { events: events }}) // Get events
+			.mockResolvedValueOnce({ body: { floEvents: floEvents } });
 
 		// ********** When
 
@@ -365,17 +370,19 @@ describe("API Schedule", () => {
 
 		// ********** Then
 
-		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/event`);
+		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/event`);
+		expect(client.get).toHaveBeenNthCalledWith(2, `${ serverPath }/data/floevent`);
 
 		expect(results).toHaveProperty("status", 200);
 		expect(results).toHaveProperty("data");
 		expect(results.data).toHaveProperty("events");
+		expect(results.data).toHaveProperty("floEvents", floEvents);
 
 		// No expired posts
-		expect(results.data.events).toHaveLength(output.length);
+		expect(results.data.events).toHaveLength(events.length);
 
 		// First post matches mock
-		expect(results.data.events[0]).toHaveProperty("id", output[0].id);
+		expect(results.data.events[0]).toHaveProperty("id", events[0].id);
 	});
 
 	it("saves event", async () => {
