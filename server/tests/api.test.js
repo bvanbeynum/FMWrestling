@@ -1492,7 +1492,7 @@ describe("Flo Events", () => {
 		
 		// ********** Given
 
-		const floEvent = { id: "test1", name: "Test Event" };
+		const floEvent = { id: "test1", name: "Test Event", sqlId: 1234 };
 
 		const send = jest.fn().mockResolvedValue({
 			body: { id: floEvent.id }
@@ -1500,6 +1500,9 @@ describe("Flo Events", () => {
 		client.post = jest.fn(() => ({
 			send: send
 		}));
+		
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { floEvents: [] }}) // Lookup the event
 
 		// ********** When
 
@@ -1507,6 +1510,7 @@ describe("Flo Events", () => {
 
 		// ********** Then
 
+		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/floevent?sqlid=${ floEvent.sqlId }`);
 		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/floevent`);
 		expect(send).toHaveBeenCalledWith(
 			expect.objectContaining({

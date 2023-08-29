@@ -1236,6 +1236,21 @@ export default {
 
 	floEventSave: async (floEvent, serverPath) => {
 		const output = {};
+
+		if (floEvent.sqlId) {
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/floevent?sqlid=${ floEvent.sqlId }`);
+				
+				if (clientResponse.body.floEvents && clientResponse.body.floEvents.length === 1) {
+					floEvent.id = clientResponse.body.floEvents[0].id;
+				}
+			}
+			catch (error) {
+				output.status = 562;
+				output.error = error.message;
+				return output;
+			}
+		}
 		
 		try {
 			const clientResponse = await client.post(`${ serverPath }/data/floevent`).send({ floevent: floEvent }).then();

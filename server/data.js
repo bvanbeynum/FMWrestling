@@ -1208,6 +1208,9 @@ export default {
 		if (userFilter.id) {
 			filter["_id"] = mongoose.Types.ObjectId.isValid(userFilter.id) ? userFilter.id : null;
 		}
+		if (userFilter.sqlId) {
+			filter.sqlId = userFilter.sqlId
+		}
 
 		try {
 			const records = await data.floEvent.find(filter).lean().exec();

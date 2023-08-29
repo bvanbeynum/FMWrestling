@@ -133,21 +133,20 @@ export default {
 	}),
 
 	floEvent: mongoose.model("floevent", {
+		sqlId: Number,
 		name: String,
 		location: String,
 		city: String,
 		state: String,
 		startDate: Date,
 		endDate: Date,
+		hasBrackets: Boolean,
 		divisions: [{
 			name: String,
-			sort: Number,
 			weightClasses: [{
 				name: String,
-				sort: Number,
 				pools: [{
 					name: String,
-					sort: Number,
 					matches: [{
 						round: String,
 						matchNumber: Number,
