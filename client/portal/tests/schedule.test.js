@@ -10,18 +10,25 @@ import Schedule from "../schedule.jsx";
 describe("Schedule component", () => {
 
 	const events = [{
-		id: "testid",
-		name: "Event test name",
-		date: new Date(new Date().setHours(0,0,0,0)).toISOString(),
-		location: "Test location"
-	}];
+			id: "testid",
+			name: "Event test name",
+			date: new Date(new Date().setHours(0,0,0,0)).toISOString(),
+			location: "Test location"
+		}],
+		floEvents = [{
+			id: "flo1",
+			name: "Flo Event",
+			startDate: new Date(new Date().setHours(0,0,0,0)).toISOString(),
+			location: "testing"
+		}];
 
 	beforeEach(() => {
 		global.fetch = jest.fn().mockResolvedValue({
 			ok: true,
 			status: 200,
 			json: jest.fn().mockResolvedValue({
-				events: events
+				events: events,
+				floEvents: floEvents
 			})
 		});
 	});
@@ -35,8 +42,7 @@ describe("Schedule component", () => {
 
 		// ******** Given ***************
 
-		const monthLookup = null,
-			dateLookup = new Date(events[0].date).getDate();
+		const dateLookup = new Date(events[0].date).getDate();
 
 		// ******** When ****************
 
@@ -50,6 +56,7 @@ describe("Schedule component", () => {
 		const dateListItem = await screen.findByText(dateLookup, { selector: "li" });
 
 		expect(await screen.findByTestId(events[0].id)).toBeInTheDocument();
+		expect(await screen.findByTestId(floEvents[0].id)).toBeInTheDocument();
 	});
 
 	it("changes the month", async () => {

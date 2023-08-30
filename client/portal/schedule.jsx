@@ -28,13 +28,14 @@ const Schedule = props => {
 	const [ loggedInUser, setLoggedInUser ] = useState(null);
 
 	const [ monthSelected, setMonthSelect ] = useState(new Date().getMonth());
+	const [ yearSelected, setYearSelected ] = useState(new Date().getFullYear());
 	const [ monthDays, setMonthDays ] = useState([]);
 	const [ monthStart, setMonthStart ] = useState([]); // get the first day of the week for the current month
 
 	useEffect(() => {
 		if (!pageActive) {
 			setPageActive(true);
-			changeMonth(new Date().getMonth());
+			changeMonth(new Date().getMonth(), new Date().getFullYear());
 			
 			fetch(`/api/scheduleload`)
 				.then(response => {
@@ -46,16 +47,23 @@ const Schedule = props => {
 					}
 				})
 				.then(data => {
+					
 					setLoggedInUser(data.loggedInUser);
-					setEvents(
-						data.events ?
-							data.events.map(event => ({
-								...event, 
-								date: new Date(event.date),
+					setEvents([
+							...data.events.map(event => ({
+									...event, 
+									type: "mill",
+									date: new Date(event.date),
+									endDate: event.endDate ? new Date(event.endDate) : null
+								})),
+							...data.floEvents.map(event => ({
+								...event,
+								type: "flo",
+								date: new Date(event.startDate),
 								endDate: event.endDate ? new Date(event.endDate) : null
 							}))
-						: []
-					);
+						]);
+
 				})
 				.catch(error => {
 					console.warn(error);
@@ -64,26 +72,22 @@ const Schedule = props => {
 	}, []);
 
 	useEffect(() => {
-		changeMonth(monthSelected);
+		changeMonth(monthSelected, yearSelected);
 	}, [events]);
 
-	const changeMonth = monthNew => {
+	const changeMonth = (monthNew, yearNew) => {
 		setMonthSelect(monthNew);
-		setMonthStart(new Date(new Date().getFullYear(), monthNew, 1).getDay() + 1); // get the first day of the week for the current month
+		setYearSelected(yearNew);
+		setMonthStart(new Date(yearNew, monthNew, 1).getDay() + 1); // get the first day of the week for the current month
 
-		const days = Array.from(Array(new Date(new Date().getFullYear(), monthNew + 1, 0).getDate()).keys()) // Get array of dates, get last day of the month to know array length
+		const days = Array.from(Array(new Date(yearNew, monthNew + 1, 0).getDate()).keys()) // Get array of dates, get last day of the month to know array length
 			.map(day => {
-				const date = new Date(new Date().getFullYear(), monthNew, day + 1),
-					event = events.find(event => event.date <= date && date <= event.endDate || (+date == +event.date && !event.endDate));
+				const dateStart = new Date(yearNew, monthNew, day + 1),
+					dateEnd = new Date(yearNew, monthNew, day + 2);
 
 				return {
 					day: day + 1,
-					eventId: event ? event.id : null,
-					className: !event ? ""
-						: +date == +event.date && !event.endDate ? "single" // Convert dates to int to compare
-						: +date == +event.date && event.endDate ? "start"
-						: +date == +event.endDate ? "end"
-						: "middle"
+					className: events.some(event => (event.date >= dateStart && event.date < dateEnd) || (event.endDate && event.endDate > dateStart && event.endDate < dateEnd)) ? "single" : ""
 				};
 			})
 
@@ -180,9 +184,9 @@ const Schedule = props => {
 
 			<div className="panel">
 				<div className="calendarHeader">
-					<button onClick={ () => changeMonth(monthSelected == 0 ? 11 : monthSelected - 1) }>◀</button>
+					<button onClick={ () => changeMonth(monthSelected == 0 ? 11 : monthSelected - 1, monthSelected == 0 ? yearSelected - 1 : yearSelected) }>◀</button>
 					<h3 className="monthName">{ months[monthSelected] }</h3>
-					<button onClick={ () => changeMonth((monthSelected + 1) % 12) }>▶</button>
+					<button onClick={ () => changeMonth((monthSelected + 1) % 12, monthSelected == 11 ? yearSelected + 1 : yearSelected) }>▶</button>
 				</div>
 
 				<ol className="calendar">
@@ -204,7 +208,7 @@ const Schedule = props => {
 			</div>
 		</div>
 
-		<div className={`container ${ pageActive ? "active" : "" }`}>
+		<div className={`schedule container ${ pageActive ? "active" : "" }`}>
 
 			<div key={ "newEvent" } className="panel">
 				{
@@ -268,11 +272,11 @@ const Schedule = props => {
 
 			{
 			events
-			.filter(event => event.date.getMonth() === monthSelected)
+			.filter(event => event.date.getMonth() === monthSelected && event.date.getFullYear() === yearSelected)
 			.sort((eventA, eventB) => eventA.date - eventB.date)
 			.map(event =>
 				
-			<div key={ event.id } className="panel">
+			<div key={ event.id } className={`panel ${ event.type }`}>
 				{
 				editItem === event.id ?
 				<>
@@ -317,21 +321,25 @@ const Schedule = props => {
 
 				:
 				
-				<div key={ event.id } data-testid={ event.id } className="row">
+				<div data-testid={ event.id } className="row">
 					<div className="rowContent">
 						<h3>{ event.name }</h3>
 
 						<div className="subHeading">
-							<div>Date: { event.date.toLocaleDateString() }</div>
+							<div>Date: { event.date.toLocaleDateString() + (event.endDate && event.endDate - event.date > 86400000 ? " - " + event.endDate.toLocaleDateString() : "" ) }</div>
 							<div>Location: { event.location }</div>
 						</div>
 					</div>
 					
+					{
+					event.type === "mill" ?
 					<button aria-label="Edit" className="action" onClick={ () => setEditItem(event.id) }>
 						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
 							<path d="M200-200h56l345-345-56-56-345 345v56Zm572-403L602-771l56-56q23-23 56.5-23t56.5 23l56 56q23 23 24 55.5T829-660l-57 57Zm-58 59L290-120H120v-170l424-424 170 170Zm-141-29-28-28 56 56-28-28Z"/>
 						</svg>
 					</button>
+					: ""
+					}
 				</div>
 				}
 			</div>

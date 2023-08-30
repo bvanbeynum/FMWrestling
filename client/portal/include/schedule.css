@@ -1,7 +1,7 @@
 .schedule .calendarHeader {
 	display: grid;
 	align-items: center;
-	grid-template-columns: auto 70px auto;
+	grid-template-columns: auto 100px auto;
 	margin: auto;
 }
 
@@ -11,7 +11,7 @@
 }
 
 .schedule .monthName {
-	text-align: center;
+	justify-content: center;
 }
 
 .schedule .calendar {
@@ -48,4 +48,9 @@
 	background-color: rgb(242 192 41);
 	border-top-right-radius: 7px;
 	border-bottom-right-radius: 7px;
+}
+
+.schedule .panel.flo {
+	border: 2px solid rgb(255 20 15);
+	background-color: rgb(255 246 246);
 }
