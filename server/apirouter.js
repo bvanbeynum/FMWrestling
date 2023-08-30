@@ -220,4 +220,14 @@ router.post("/api/floeventsave", authAPI, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 });
 
+router.post("/api/trackeventsave", authAPI, async (request, response) => {
+	const results = await api.trackEventSave(request.body.trackEvent, request.serverPath);
+
+	if (results.error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64efa04c26539d4ed297e773", message: `${ results.status }: ${results.error}` }}).then();
+	}
+
+	response.status(results.status).json(results.error ? { error: results.error } : results.data);
+});
+
 export default router;

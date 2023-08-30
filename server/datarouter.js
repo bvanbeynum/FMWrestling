@@ -526,4 +526,55 @@ router.delete("/data/floevent", authInternal, async (request, response) => {
 	}
 });
 
+router.get("/data/trackevent", authInternal, async (request, response) => {
+	try {
+		const results = await data.trackEventGet({ id: request.query.id, name: request.query.name });
+
+		if (results.error) {
+			client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64ef9fe126539d4ed297e644", message: `${ results.status }: ${results.error}` }}).then();
+		}
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64ef9fe126539d4ed297e644", message: `570: ${error.message}` }}).then();
+		response.status(570).json({ error: error.message });
+	}
+});
+
+router.post("/data/trackevent", authInternal, async (request, response) => {
+	try {
+		const results = await data.trackEventSave(request.body.trackevent);
+
+		if (results.error) {
+			client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64ef9ff526539d4ed297e646", message: `${ results.status }: ${results.error}` }}).then();
+		}
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64ef9ff526539d4ed297e646", message: `570: ${error.message}` }}).then();
+		response.status(570).json({ error: error.message });
+	}
+});
+
+router.delete("/data/trackevent", authInternal, async (request, response) => {
+	try {
+		const results = await data.trackEventDelete(request.query.id);
+
+		if (results.error) {
+			client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64efa01126539d4ed297e6b5", message: `${ results.status }: ${results.error}` }}).then();
+		}
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64efa01126539d4ed297e6b5", message: `570: ${error.message}` }}).then();
+		response.status(570).json({ error: error.message });
+	}
+});
+
 export default router;

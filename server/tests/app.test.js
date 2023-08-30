@@ -400,10 +400,10 @@ describe("Data service", () => {
 		expect(response.body.floEvents).toHaveLength(1);
 	});
 
-	it("saves external team", async () => {
+	it("saves flo event", async () => {
 		// ********** Given
 
-		const save = { name: "test team" },
+		const save = { name: "test event" },
 			output = { id: "testid" };
 
 		data.floEventSave = jest.fn().mockResolvedValue({
@@ -424,7 +424,7 @@ describe("Data service", () => {
 		expect(response.body).toHaveProperty("id", output.id);
 	});
 
-	it("deletes external team", async () => {
+	it("deletes flo event", async () => {
 		// ********** Given
 
 		const floEventId = "testid";
@@ -438,6 +438,74 @@ describe("Data service", () => {
 		
 		const response = await request(app)
 			.delete(`/data/floevent?id=${ floEventId }`)
+			.expect(200);
+		
+		// ********** Then
+
+		expect(response.body).toHaveProperty("status", "ok");
+	});
+
+	it("gets track event", async () => {
+
+		// ********** Given
+
+		const output = { trackEvents: [{ id: "testid" }]};
+
+		data.trackEventGet = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+		
+		const response = await request(app)
+			.get("/data/trackevent")
+			.expect(200);
+		
+		// ********** Then
+
+		expect(response.body).toHaveProperty("trackEvents");
+		expect(response.body.trackEvents).toHaveLength(1);
+	});
+
+	it("saves track team", async () => {
+		// ********** Given
+
+		const save = { name: "test event" },
+			output = { id: "testid" };
+
+		data.trackEventSave = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+		
+		const response = await request(app)
+			.post("/data/trackevent")
+			.send({ trackevent: save })
+			.expect(200);
+		
+		// ********** Then
+
+		expect(data.trackEventSave).toHaveBeenCalledWith(save);
+		expect(response.body).toHaveProperty("id", output.id);
+	});
+
+	it("deletes track event", async () => {
+		// ********** Given
+
+		const trackEventId = "testid";
+
+		data.trackEventDelete = jest.fn().mockResolvedValue({
+			status: 200,
+			data: { status: "ok" }
+		});
+
+		// ********** When
+		
+		const response = await request(app)
+			.delete(`/data/trackevent?id=${ trackEventId }`)
 			.expect(200);
 		
 		// ********** Then
@@ -916,7 +984,7 @@ describe("API service", () => {
 	it("saves flo event", async () => {
 		// ********** Given
 
-		const floEvent = { id: "test1", name: "Test Team" };
+		const floEvent = { id: "test1", name: "Test flo Event" };
 
 		api.floEventSave = jest.fn().mockResolvedValue({
 			status: 200,
@@ -933,6 +1001,29 @@ describe("API service", () => {
 		// ********** Then
 
 		expect(response.body).toHaveProperty("id", floEvent.id);
+
+	});
+
+	it("saves track event", async () => {
+		// ********** Given
+
+		const trackEvent = { id: "test1", name: "Test track event" };
+
+		api.trackEventSave = jest.fn().mockResolvedValue({
+			status: 200,
+			data: { id: trackEvent.id }
+		});
+
+		// ********** When
+
+		const response = await request(app)
+			.post("/api/trackeventsave")
+			.send({ trackEvent: trackEvent })
+			.expect(200);
+
+		// ********** Then
+
+		expect(response.body).toHaveProperty("id", trackEvent.id);
 
 	});
 
