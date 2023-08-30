@@ -874,15 +874,36 @@ export default {
 		return output;
 	},
 
-	eventGet: async (id, includeExpired) => {
+	eventGet: async (userFilter = {}) => {
 		let filter = {},
 			output = {};
 
-		if (id) {
-			filter["_id"] = mongoose.Types.ObjectId.isValid(id) ? id : null;
+		if (userFilter.id) {
+			filter["_id"] = mongoose.Types.ObjectId.isValid(userFilter.id) ? userFilter.id : null;
 		}
-		else if (!includeExpired) {
+		else if (!userFilter.includeExpired) {
 			filter = { $or: [ { expires: null }, { expires: { $gt: new Date() }} ] };
+		}
+		if (userFilter.startDate && userFilter.endDate) {
+			const startDate = new Date(Date.parse(userFilter.startDate)),
+				endDate = new Date(Date.parse(userFilter.endDate));
+
+			filter = {
+				$or: [
+					{
+						$and: [
+							{ date: { $gte: startDate } },
+							{ date: { $lte: endDate } },
+						]
+					},
+					{
+						$and: [
+							{ endDate: { $lte: endDate } },
+							{ endDate: { $gte: startDate } }
+						]
+					}
+				]
+			}
 		}
 
 		try {
@@ -1209,7 +1230,28 @@ export default {
 			filter["_id"] = mongoose.Types.ObjectId.isValid(userFilter.id) ? userFilter.id : null;
 		}
 		if (userFilter.sqlId) {
-			filter.sqlId = userFilter.sqlId
+			filter.sqlId = userFilter.sqlId;
+		}
+		if (userFilter.startDate && userFilter.endDate) {
+			const startDate = new Date(Date.parse(userFilter.startDate)),
+				endDate = new Date(Date.parse(userFilter.endDate));
+
+			filter = {
+				$or: [
+					{
+						$and: [
+							{ date: { $gte: startDate } },
+							{ date: { $lte: endDate } },
+						]
+					},
+					{
+						$and: [
+							{ endDate: { $lte: endDate } },
+							{ endDate: { $gte: startDate } }
+						]
+					}
+				]
+			}
 		}
 
 		try {
@@ -1319,7 +1361,28 @@ export default {
 			filter["_id"] = mongoose.Types.ObjectId.isValid(userFilter.id) ? userFilter.id : null;
 		}
 		if (userFilter.sqlId) {
-			filter.sqlId = userFilter.sqlId
+			filter.sqlId = userFilter.sqlId;
+		}
+		if (userFilter.startDate && userFilter.endDate) {
+			const startDate = new Date(Date.parse(userFilter.startDate)),
+				endDate = new Date(Date.parse(userFilter.endDate));
+
+			filter = {
+				$or: [
+					{
+						$and: [
+							{ date: { $gte: startDate } },
+							{ date: { $lte: endDate } },
+						]
+					},
+					{
+						$and: [
+							{ endDate: { $lte: endDate } },
+							{ endDate: { $gte: startDate } }
+						]
+					}
+				]
+			}
 		}
 
 		try {

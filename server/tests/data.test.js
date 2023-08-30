@@ -704,7 +704,7 @@ describe("Event data", () => {
 		// ********** Given
 
 		// ********** When
-		const response = await data.eventGet(null);
+		const response = await data.eventGet();
 
 		// ********** Then
 		expect(response.status).toEqual(200);
@@ -728,7 +728,7 @@ describe("Event data", () => {
 		// ********** Given
 
 		// ********** When
-		const response = await data.eventGet(createdId);
+		const response = await data.eventGet({id: createdId});
 
 		// ********** Then
 		expect(response.status).toEqual(200);
@@ -746,7 +746,7 @@ describe("Event data", () => {
 		// ********** Given
 
 		// ********** When
-		const response = await data.eventGet("abcd");
+		const response = await data.eventGet({id: "abcd"});
 
 		// ********** Then
 		expect(response.status).toEqual(200);
@@ -766,7 +766,7 @@ describe("Event data", () => {
 	});
 
 	it("should return an empty array after deleting the new object", async () => {
-		const response = await data.eventGet(createdId);
+		const response = await data.eventGet({id: createdId});
 		
 		expect(response.status).toEqual(200);
 		expect(response.data).toHaveProperty("events");

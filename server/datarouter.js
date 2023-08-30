@@ -222,7 +222,7 @@ router.delete("/data/post", authInternal, async (request, response) => {
 
 router.get("/data/event", authInternal, async (request, response) => {
 	try {
-		const results = await data.eventGet(request.query.id);
+		const results = await data.eventGet({id: request.query.id, startDate: request.query.startdate, endDate: request.query.enddate });
 
 		if (results.error) {
 			client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6480e01c4d7f52ba05e81a02", message: `${ results.status }: ${results.error}` }}).then();
@@ -477,7 +477,7 @@ router.delete("/data/externalteam", authInternal, async (request, response) => {
 
 router.get("/data/floevent", authInternal, async (request, response) => {
 	try {
-		const results = await data.floEventGet({ id: request.query.id, name: request.query.name });
+		const results = await data.floEventGet({ id: request.query.id, sqlId: request.query.sqlid, startDate: request.query.startdate, endDate: request.query.enddate });
 
 		if (results.error) {
 			client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64ed207826539d4ed2915e5a", message: `${ results.status }: ${results.error}` }}).then();
@@ -528,7 +528,7 @@ router.delete("/data/floevent", authInternal, async (request, response) => {
 
 router.get("/data/trackevent", authInternal, async (request, response) => {
 	try {
-		const results = await data.trackEventGet({ id: request.query.id, name: request.query.name });
+		const results = await data.trackEventGet({ id: request.query.id, sqlId: request.query.sqlid, startDate: request.query.startdate, endDate: request.query.enddate });
 
 		if (results.error) {
 			client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64ef9fe126539d4ed297e644", message: `${ results.status }: ${results.error}` }}).then();

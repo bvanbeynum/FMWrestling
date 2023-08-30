@@ -358,11 +358,17 @@ describe("API Schedule", () => {
 				id: "flo1",
 				name: "Flo Event",
 				sqlId: 1233
+			}],
+			trackEvents = [{
+				id: "track1",
+				name: "Track event",
+				sqlId: 123
 			}];
 		
 		client.get = jest.fn()
 			.mockResolvedValueOnce({ body: { events: events }}) // Get events
-			.mockResolvedValueOnce({ body: { floEvents: floEvents } });
+			.mockResolvedValueOnce({ body: { floEvents: floEvents } }) // Get flo events
+			.mockResolvedValueOnce({ body: { trackEvents: trackEvents } }); // Get track events
 
 		// ********** When
 
@@ -372,11 +378,13 @@ describe("API Schedule", () => {
 
 		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/event`);
 		expect(client.get).toHaveBeenNthCalledWith(2, `${ serverPath }/data/floevent`);
+		expect(client.get).toHaveBeenNthCalledWith(3, `${ serverPath }/data/trackevent`);
 
 		expect(results).toHaveProperty("status", 200);
 		expect(results).toHaveProperty("data");
 		expect(results.data).toHaveProperty("events");
 		expect(results.data).toHaveProperty("floEvents", floEvents);
+		expect(results.data).toHaveProperty("floEvents", trackEvents);
 
 		// No expired posts
 		expect(results.data.events).toHaveLength(events.length);
