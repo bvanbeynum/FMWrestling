@@ -1276,6 +1276,39 @@ export default {
 			return output;
 		}
 
+	},
+
+	trackEventSave: async (trackEvent, serverPath) => {
+		const output = {};
+
+		if (trackEvent.sqlId) {
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/trackevent?sqlid=${ trackEvent.sqlId }`);
+				
+				if (clientResponse.body.trackEvents && clientResponse.body.trackEvents.length === 1) {
+					trackEvent.id = clientResponse.body.trackEvents[0].id;
+				}
+			}
+			catch (error) {
+				output.status = 562;
+				output.error = error.message;
+				return output;
+			}
+		}
+		
+		try {
+			const clientResponse = await client.post(`${ serverPath }/data/trackevent`).send({ trackevent: trackEvent }).then();
+
+			output.status = 200;
+			output.data = { id: clientResponse.body.id };
+			return output;
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+
 	}
 
 };

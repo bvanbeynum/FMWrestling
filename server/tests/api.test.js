@@ -1532,3 +1532,43 @@ describe("Flo Events", () => {
 	});
 
 });
+
+describe("Track Events", () => {
+
+	it("saves track event", async () => {
+		
+		// ********** Given
+
+		const trackEvent = { id: "test1", name: "Test Event", sqlId: 1234 };
+
+		const send = jest.fn().mockResolvedValue({
+			body: { id: trackEvent.id }
+		});
+		client.post = jest.fn(() => ({
+			send: send
+		}));
+		
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { trackEvents: [] }}) // Lookup the event
+
+		// ********** When
+
+		const results = await api.trackEventSave(trackEvent, serverPath);
+
+		// ********** Then
+
+		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/trackevent?sqlid=${ trackEvent.sqlId }`);
+		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/trackevent`);
+		expect(send).toHaveBeenCalledWith(
+			expect.objectContaining({
+				trackevent: expect.objectContaining({ name: trackEvent.name })
+			})
+		);
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("id", trackEvent.id);
+
+	});
+
+});

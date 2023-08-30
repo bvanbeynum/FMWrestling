@@ -138,7 +138,7 @@ export default {
 		location: String,
 		city: String,
 		state: String,
-		startDate: Date,
+		date: Date,
 		endDate: Date,
 		hasBrackets: Boolean,
 		divisions: [{
@@ -174,6 +174,16 @@ export default {
 				}]
 			}]
 		}]
+	}),
+
+	trackEvent: mongoose.model("trackevent", {
+		sqlId: Number,
+		trackId: String,
+		name: String,
+		date: Date,
+		endDate: Date,
+		location: String,
+		state: String
 	})
 	
 };
