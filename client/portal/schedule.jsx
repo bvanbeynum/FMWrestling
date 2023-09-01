@@ -22,6 +22,7 @@ const Schedule = props => {
 	const [ savingId, setSavingId ] = useState(null);
 	const [ loadingIndex, setLoadingIndex ] = useState(0);
 	const [ errorMessage, setErrorMessage ] = useState("");
+	const [ isEventsLoading, setEventsLoading ] = useState(false);
 
 	const [ events, setEvents ] = useState([]);
 	const [ editItem, setEditItem ] = useState(null);
@@ -35,9 +36,9 @@ const Schedule = props => {
 	useEffect(() => {
 		if (!pageActive) {
 			setPageActive(true);
-			changeMonth(new Date().getMonth(), new Date().getFullYear());
+			setEventsLoading(true);
 			
-			fetch(`/api/scheduleload`)
+			fetch(`/api/scheduleload?startdate=${ monthSelected + 1 }/1/${ yearSelected }&enddate=${ monthSelected + 1 }/${ new Date(yearSelected, monthSelected + 1, 0).getDate() }/${ yearSelected }`)
 				.then(response => {
 					if (response.ok) {
 						return response.json();
@@ -59,39 +60,91 @@ const Schedule = props => {
 							...data.floEvents.map(event => ({
 								...event,
 								type: "flo",
-								date: new Date(event.startDate),
+								date: new Date(event.date),
+								endDate: event.endDate ? new Date(event.endDate) : null,
+								location: event.location + " - " + event.city + ", " + event.state
+							})),
+							...data.trackEvents.map(event => ({
+								...event,
+								type: "track",
+								date: new Date(event.date),
 								endDate: event.endDate ? new Date(event.endDate) : null
 							}))
 						]);
+					
+					changeMonth(monthSelected, yearSelected);
+					setEventsLoading(false);
 
 				})
 				.catch(error => {
 					console.warn(error);
+					setEventsLoading(false);
 				});
 		}
 	}, []);
-
-	useEffect(() => {
-		changeMonth(monthSelected, yearSelected);
-	}, [events]);
 
 	const changeMonth = (monthNew, yearNew) => {
 		setMonthSelect(monthNew);
 		setYearSelected(yearNew);
 		setMonthStart(new Date(yearNew, monthNew, 1).getDay() + 1); // get the first day of the week for the current month
-
-		const days = Array.from(Array(new Date(yearNew, monthNew + 1, 0).getDate()).keys()) // Get array of dates, get last day of the month to know array length
-			.map(day => {
-				const dateStart = new Date(yearNew, monthNew, day + 1),
-					dateEnd = new Date(yearNew, monthNew, day + 2);
-
-				return {
-					day: day + 1,
-					className: events.some(event => (event.date >= dateStart && event.date < dateEnd) || (event.endDate && event.endDate > dateStart && event.endDate < dateEnd)) ? "single" : ""
-				};
+		setEventsLoading(true);
+		setMonthDays(Array.from(Array(new Date(yearNew, monthNew + 1, 0).getDate()).keys()).map(day => ({ day: day + 1})));
+		
+		fetch(`/api/scheduleload?startdate=${ monthNew + 1 }/1/${ yearNew }&enddate=${ monthNew + 1 }/${ new Date(yearNew, monthNew + 1, 0).getDate() }/${ yearNew }`)
+			.then(response => {
+				if (response.ok) {
+					return response.json();
+				}
+				else {
+					throw Error(response.statusText);
+				}
 			})
+			.then(data => {
 
-		setMonthDays(days);
+				const newEvents = [
+					...data.events.map(event => ({
+							...event, 
+							type: "mill",
+							date: new Date(event.date),
+							endDate: event.endDate ? new Date(event.endDate) : null
+						})),
+					...data.floEvents.map(event => ({
+						...event,
+						type: "flo",
+						date: new Date(event.date),
+						endDate: event.endDate ? new Date(event.endDate) : null,
+						location: event.location + " - " + event.city + ", " + event.state
+					})),
+					...data.trackEvents.map(event => ({
+						...event,
+						type: "track",
+						date: new Date(event.date),
+						endDate: event.endDate ? new Date(event.endDate) : null
+					}))
+				];
+				
+				setEvents(newEvents);
+					
+				const days = Array.from(Array(new Date(yearNew, monthNew + 1, 0).getDate()).keys()) // Get array of dates, get last day of the month to know array length
+				.map(day => {
+					const dateStart = new Date(yearNew, monthNew, day + 1),
+						dateEnd = new Date(yearNew, monthNew, day + 2);
+
+					return {
+						day: day + 1,
+						className: newEvents.some(event => (event.date >= dateStart && event.date < dateEnd) || (event.endDate && event.endDate > dateStart && event.endDate < dateEnd)) ? "single" : ""
+					};
+				})
+
+				setMonthDays(days);
+				setEventsLoading(false);
+
+			})
+			.catch(error => {
+				console.warn(error);
+				setEventsLoading(false);
+			});
+			
 	};
 
 	const saveEvent = event => {
@@ -323,7 +376,15 @@ const Schedule = props => {
 				
 				<div data-testid={ event.id } className="row">
 					<div className="rowContent">
+						{
+						event.type === "track" ?
+						<h3><a href={`https://www.trackwrestling.com/tw/opentournaments/VerifyPassword.jsp?tournamentId=${ event.trackId}`} target="_blank">{ event.name }</a></h3>
+						: event.type === "flo" ?
+						<h3><a href={`https://events.flowrestling.org/event/${ event.floGUID }/summary`} target="_blank">{ event.name }</a></h3>
+						:
 						<h3>{ event.name }</h3>
+						}
+						
 
 						<div className="subHeading">
 							<div>Date: { event.date.toLocaleDateString() + (event.endDate && event.endDate - event.date > 86400000 ? " - " + event.endDate.toLocaleDateString() : "" ) }</div>

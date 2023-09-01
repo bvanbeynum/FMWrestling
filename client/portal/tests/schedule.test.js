@@ -18,8 +18,13 @@ describe("Schedule component", () => {
 		floEvents = [{
 			id: "flo1",
 			name: "Flo Event",
-			startDate: new Date(new Date().setHours(0,0,0,0)).toISOString(),
+			date: new Date(new Date().setHours(0,0,0,0)).toISOString(),
 			location: "testing"
+		}],
+		trackEvents = [{
+			id: "track1",
+			name: "Track event",
+			date: new Date()
 		}];
 
 	beforeEach(() => {
@@ -28,7 +33,8 @@ describe("Schedule component", () => {
 			status: 200,
 			json: jest.fn().mockResolvedValue({
 				events: events,
-				floEvents: floEvents
+				floEvents: floEvents,
+				trackEvents: trackEvents
 			})
 		});
 	});
@@ -40,9 +46,10 @@ describe("Schedule component", () => {
 
 	it("initializes the components", async () => {
 
-		// ******** Given ***************
+		const startDate = new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+			endDate = new Date(startDate.getFullYear(), startDate.getMonth(), new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0).getDate());
 
-		const dateLookup = new Date(events[0].date).getDate();
+		// ******** Given ***************
 
 		// ******** When ****************
 
@@ -50,10 +57,9 @@ describe("Schedule component", () => {
 
 		// ******** Then ****************
 
-		await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/scheduleload"));
+		await waitFor(() => expect(global.fetch).toHaveBeenCalledWith(`/api/scheduleload?startdate=${ startDate.toLocaleDateString() }&enddate=${ endDate.toLocaleDateString() }`));
 
 		expect(await screen.findByText(new RegExp(new Date().toLocaleDateString("en-us", { month: "long" }), "i"))).toBeInTheDocument();
-		const dateListItem = await screen.findByText(dateLookup, { selector: "li" });
 
 		expect(await screen.findByTestId(events[0].id)).toBeInTheDocument();
 		expect(await screen.findByTestId(floEvents[0].id)).toBeInTheDocument();
@@ -67,7 +73,21 @@ describe("Schedule component", () => {
 
 		const nextMonthButton = await screen.findByRole("button", { name: "▶" }),
 			nextMonth = new Date(new Date().setMonth((new Date().getMonth() + 1) % 12)),
-			nextMonthLookup = new RegExp(nextMonth.toLocaleDateString("en-us", { month: "long" }), "i");
+			nextMonthLookup = new RegExp(nextMonth.toLocaleDateString("en-us", { month: "long" }), "i"),
+			filteredEvents = [{ id: "flo1", date: nextMonth } ],
+			startDate = new Date(nextMonth.getFullYear(),nextMonth.getMonth(),1),
+			endDate = new Date(nextMonth.getFullYear(), nextMonth.getMonth(), new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0).getDate());
+
+		global.fetch = jest.fn()
+			.mockResolvedValueOnce({
+				ok: true,
+				status: 200,
+				json: jest.fn().mockResolvedValue({
+					events: [],
+					floEvents: [],
+					trackEvents: filteredEvents
+				})
+			});
 
 		// ******** When ****************
 
@@ -76,6 +96,10 @@ describe("Schedule component", () => {
 		// ******** Then ****************
 
 		expect(await screen.findByText(nextMonthLookup)).toBeInTheDocument();
+		
+		await waitFor(() => expect(global.fetch).toHaveBeenCalledWith(`/api/scheduleload?startdate=${ startDate.toLocaleDateString() }&enddate=${ endDate.toLocaleDateString() }`));
+		expect(await screen.findByTestId(trackEvents[0].id)).toBeInTheDocument();
+
 	});
 
 	it("sets edit mode", async () => {

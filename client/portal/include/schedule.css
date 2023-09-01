@@ -54,3 +54,8 @@
 	border: 2px solid rgb(255 20 15);
 	background-color: rgb(255 246 246);
 }
+
+.schedule .panel.track {
+	border: 2px solid rgb(13 113 185);
+	background-color: rgb(242 249 255);
+}

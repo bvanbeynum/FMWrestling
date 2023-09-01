@@ -71,7 +71,7 @@ router.post("/api/postsave", authAPI, async (request, response) => {
 });
 
 router.get("/api/scheduleload", authAPI, async (request, response) => {
-	const results = await api.scheduleLoad(request.serverPath);
+	const results = await api.scheduleLoad(request.serverPath, request.query.startdate, request.query.enddate);
 
 	if (results.error) {
 		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6480db2b4d7f52ba05e8180d", message: `${ results.status }: ${results.error}` }}).then();

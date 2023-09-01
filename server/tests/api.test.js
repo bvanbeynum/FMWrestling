@@ -384,13 +384,45 @@ describe("API Schedule", () => {
 		expect(results).toHaveProperty("data");
 		expect(results.data).toHaveProperty("events");
 		expect(results.data).toHaveProperty("floEvents", floEvents);
-		expect(results.data).toHaveProperty("floEvents", trackEvents);
+		expect(results.data).toHaveProperty("trackEvents", trackEvents);
 
 		// No expired posts
 		expect(results.data.events).toHaveLength(events.length);
 
 		// First post matches mock
 		expect(results.data.events[0]).toHaveProperty("id", events[0].id);
+	});
+
+	it("filters for only given dates", async () => {
+		// ********** Given
+
+		const floEvents = [
+				{ id: "flo1", date: new Date(2023,8,12) }
+			],
+			startDate = new Date(2023,8,1),
+			endDate = new Date(2023,9,1);
+		
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { events: [] }}) // Get events
+			.mockResolvedValueOnce({ body: { floEvents: floEvents } }) // Get flo events
+			.mockResolvedValueOnce({ body: { trackEvents: [] } }); // Get track events
+
+		// ********** When
+
+		const results = await api.scheduleLoad(serverPath, startDate.toLocaleDateString(), endDate.toLocaleDateString());
+
+		// ********** Then
+
+		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/event?startdate=${ startDate.toLocaleDateString() }&enddate=${ endDate.toLocaleDateString() }`);
+		expect(client.get).toHaveBeenNthCalledWith(2, `${ serverPath }/data/floevent?startdate=${ startDate.toLocaleDateString() }&enddate=${ endDate.toLocaleDateString() }`);
+		expect(client.get).toHaveBeenNthCalledWith(3, `${ serverPath }/data/trackevent?startdate=${ startDate.toLocaleDateString() }&enddate=${ endDate.toLocaleDateString() }`);
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+
+		expect(results.data).toHaveProperty("floEvents", floEvents);
+		expect(results.data.floEvents).toHaveLength(1);
+
 	});
 
 	it("saves event", async () => {

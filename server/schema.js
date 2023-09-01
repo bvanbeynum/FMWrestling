@@ -134,6 +134,7 @@ export default {
 
 	floEvent: mongoose.model("floevent", {
 		sqlId: Number,
+		floGUID: String,
 		name: String,
 		location: String,
 		city: String,

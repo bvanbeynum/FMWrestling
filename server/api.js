@@ -249,11 +249,16 @@ export default {
 		}
 	},
 
-	scheduleLoad: async (serverPath) => {
+	scheduleLoad: async (serverPath, startDate, endDate) => {
 		const output = {};
+		let dateFilter = "";
+
+		if (startDate && endDate) {
+			dateFilter = `?startdate=${ startDate }&enddate=${ endDate }`;
+		}
 
 		try {
-			const clientResponse = await client.get(`${ serverPath }/data/event`);
+			const clientResponse = await client.get(`${ serverPath }/data/event${ dateFilter }`);
 
 			output.data = { events: clientResponse.body.events };
 		}
@@ -264,11 +269,21 @@ export default {
 		}
 
 		try {
-			const clientResponse = await client.get(`${ serverPath }/data/floevent`);
-			output.data.floEvents = clientResponse.body.floEvents ;
+			const clientResponse = await client.get(`${ serverPath }/data/floevent${ dateFilter }`);
+			output.data.floEvents = clientResponse.body.floEvents;
 		}
 		catch (error) {
-			output.status = 561;
+			output.status = 562;
+			output.error = error.message;
+			return output;
+		}
+
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/trackevent${ dateFilter }`);
+			output.data.trackEvents = clientResponse.body.trackEvents;
+		}
+		catch (error) {
+			output.status = 563;
 			output.error = error.message;
 			return output;
 		}
