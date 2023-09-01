@@ -29,6 +29,7 @@ if (config.mode === "development") {
 }
 else {
 	app.use(express.static(path.join(currentDirectory, "/client/static")));
+	console.log(`d: ${ currentDirectory }, s: ${ path.join(currentDirectory, "/client/static") }`)
 }
 
 // listen (start app with node server.js) ======================================
