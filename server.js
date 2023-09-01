@@ -7,8 +7,8 @@ import express from "express";
 // Declarations =======================================================================
 
 const port = config.port || 9201;
-// const currentDirectory = path.resolve(process.cwd());
-const currentDirectory = dirname(currentFile);
+const currentDirectory = path.join(path.resolve(process.cwd()), "/web");
+// const currentDirectory = dirname(currentFile);
 
 mongoose.connect(`mongodb://${config.db.user}:${config.db.pass}@${config.db.servers.join(",")}/${config.db.db}?authSource=${config.db.authDB}`, {useNewUrlParser: true, useUnifiedTopology: true });
 
