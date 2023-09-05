@@ -142,6 +142,7 @@ export default {
 		date: Date,
 		endDate: Date,
 		hasBrackets: Boolean,
+		isFavorite: Boolean,
 		divisions: [{
 			name: String,
 			weightClasses: [{

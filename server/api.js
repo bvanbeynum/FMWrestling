@@ -335,12 +335,68 @@ export default {
 				return output;
 			}
 			catch (error) {
-				console.log(error);
 				output.status = 563;
 				output.error = error.message;
 				return output;
 			}
 		}
+		else if (body.addFavorite) {
+			let floEvent = null;
+
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/floevent?id=${ body.addFavorite.floEventId }`).then();
+
+				floEvent = clientResponse.body.floEvents[0];
+				floEvent.isFavorite = true;
+			}
+			catch (error) {
+				output.status = 561;
+				output.error = error.message;
+				return output;
+			}
+
+			try {
+				await client.post(`${ serverPath }/data/floevent`).send({ floevent: floEvent }).then();
+			}
+			catch (error) {
+				output.status = 562;
+				output.error = error.message;
+				return output;
+			}
+			
+			output.status = 200;
+			output.data = { floEvent: floEvent };
+			return output;
+		}
+		else if (body.removeFavorite) {
+			let floEvent = null;
+
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/floevent?id=${ body.removeFavorite.floEventId }`).then();
+
+				floEvent = clientResponse.body.floEvents[0];
+				floEvent.isFavorite = false;
+			}
+			catch (error) {
+				output.status = 561;
+				output.error = error.message;
+				return output;
+			}
+
+			try {
+				await client.post(`${ serverPath }/data/floevent`).send({ floevent: floEvent }).then();
+			}
+			catch (error) {
+				output.status = 562;
+				output.error = error.message;
+				return output;
+			}
+			
+			output.status = 200;
+			output.data = { floEvent: floEvent };
+			return output;
+		}
+
 	},
 
 	requestsLoad: async (serverPath) => {

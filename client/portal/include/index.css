@@ -206,6 +206,23 @@ button svg, .button svg {
 	fill: rgb(10 66 115);
 }
 
+.panel .action svg {
+	width: 24px;
+	height: 24px;
+}
+
+.action.isFavorite svg {
+	fill: rgb(242 192 41);
+	stroke: rgb(191 126 4);
+	stroke-width: 50px;
+}
+
+.action.notFavorite svg {
+	fill: none;
+	stroke: black;
+	stroke-width: 50px;
+}
+
 .panel .seperator {
 	border-top: 3px solid rgb(201 201 201);
 	margin: 10px 0px;
@@ -215,10 +232,6 @@ button svg, .button svg {
 	list-style: none;
 	padding: 0;
 	margin: 0;
-}
-
-.panel li {
-	/* border-bottom: 2px solid rgb(10 66 115); */
 }
 
 .panel li:last-child {

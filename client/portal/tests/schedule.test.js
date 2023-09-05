@@ -79,13 +79,13 @@ describe("Schedule component", () => {
 			endDate = new Date(nextMonth.getFullYear(), nextMonth.getMonth(), new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0).getDate());
 
 		global.fetch = jest.fn()
-			.mockResolvedValueOnce({
+			.mockResolvedValue({
 				ok: true,
 				status: 200,
 				json: jest.fn().mockResolvedValue({
 					events: [],
-					floEvents: [],
-					trackEvents: filteredEvents
+					floEvents: filteredEvents,
+					trackEvents: []
 				})
 			});
 
@@ -98,7 +98,7 @@ describe("Schedule component", () => {
 		expect(await screen.findByText(nextMonthLookup)).toBeInTheDocument();
 		
 		await waitFor(() => expect(global.fetch).toHaveBeenCalledWith(`/api/scheduleload?startdate=${ startDate.toLocaleDateString() }&enddate=${ endDate.toLocaleDateString() }`));
-		expect(await screen.findByTestId(trackEvents[0].id)).toBeInTheDocument();
+		expect(await screen.findByTestId(filteredEvents[0].id)).toBeInTheDocument();
 
 	});
 
@@ -251,6 +251,49 @@ describe("Schedule component", () => {
 		})));
 
 		expect(screen.queryByTestId(events[0].id)).toBeNull();
+	});
+
+	it("marks a favorite", async () => {
+
+		// ******** Given ***************
+
+		const events = [],
+		floEvents = [{
+			id: "flo1",
+			name: "Flo Event",
+			date: new Date(new Date().setHours(0,0,0,0)).toISOString(),
+			location: "testing"
+		}],
+		trackEvents = [];
+
+		global.fetch = jest.fn().mockResolvedValue({
+			ok: true,
+			status: 200,
+			json: jest.fn().mockResolvedValue({
+				events: events,
+				floEvents: floEvents,
+				trackEvents: trackEvents
+			})
+		});
+
+		render(<Schedule />);
+
+		global.fetch = jest.fn().mockResolvedValue({
+			ok: true,
+			status: 200,
+			json: jest.fn().mockResolvedValue({
+				floEvent: {...floEvents[0], isFavorite: true }
+			})
+		});
+
+		const favoriteButton = await screen.findByRole("button", { name: /favorite/i });
+		fireEvent.click(favoriteButton);
+		
+		await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/schedulesave", expect.objectContaining({
+			body: expect.stringContaining(floEvents[0].id)
+		})));
+
+		expect(await screen.findByRole("button", { name: /favorite/i })).toHaveClass("favorite");
 	});
 
 });

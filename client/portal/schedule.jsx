@@ -30,8 +30,8 @@ const Schedule = props => {
 
 	const [ monthSelected, setMonthSelect ] = useState(new Date().getMonth());
 	const [ yearSelected, setYearSelected ] = useState(new Date().getFullYear());
-	const [ monthDays, setMonthDays ] = useState([]);
-	const [ monthStart, setMonthStart ] = useState([]); // get the first day of the week for the current month
+	const [ monthDays, setMonthDays ] = useState(Array.from(Array(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()).keys()).map(day => ({ day: day + 1})));
+	const [ monthStart, setMonthStart ] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1).getDay() + 1); // get the first day of the week for the current month
 
 	useEffect(() => {
 		if (!pageActive) {
@@ -49,30 +49,37 @@ const Schedule = props => {
 				})
 				.then(data => {
 					
-					setLoggedInUser(data.loggedInUser);
-					setEvents([
-							...data.events.map(event => ({
-									...event, 
-									type: "mill",
-									date: new Date(event.date),
-									endDate: event.endDate ? new Date(event.endDate) : null
-								})),
-							...data.floEvents.map(event => ({
-								...event,
-								type: "flo",
-								date: new Date(event.date),
-								endDate: event.endDate ? new Date(event.endDate) : null,
-								location: event.location + " - " + event.city + ", " + event.state
-							})),
-							...data.trackEvents.map(event => ({
-								...event,
-								type: "track",
+					const newEvents = [
+						...data.events.map(event => ({
+								...event, 
+								type: "mill",
 								date: new Date(event.date),
 								endDate: event.endDate ? new Date(event.endDate) : null
-							}))
-						]);
+							})),
+						...data.floEvents.map(event => ({
+							...event,
+							type: "flo",
+							date: new Date(event.date),
+							endDate: event.endDate ? new Date(event.endDate) : null,
+							location: event.location + " - " + event.city + ", " + event.state
+						})),
+						...data.trackEvents.map(event => ({
+							...event,
+							type: "track",
+							date: new Date(event.date),
+							endDate: event.endDate ? new Date(event.endDate) : null
+						}))
+					];
 					
-					changeMonth(monthSelected, yearSelected);
+					setLoggedInUser(data.loggedInUser);
+					setEvents(newEvents);
+					
+					setMonthDays(monthDays => monthDays.map(day => ({
+						...day,
+						className: newEvents.some(event => 
+							(event.date >= new Date(yearSelected, monthSelected, day.day + 1) && event.date < new Date(yearSelected, monthSelected, day.day + 2)) 
+							|| (event.endDate && event.endDate > new Date(yearSelected, monthSelected, day.day + 1) && event.endDate < new Date(yearSelected, monthSelected, day.day + 2))) ? "single" : ""
+					})));
 					setEventsLoading(false);
 
 				})
@@ -100,7 +107,7 @@ const Schedule = props => {
 				}
 			})
 			.then(data => {
-
+				
 				const newEvents = [
 					...data.events.map(event => ({
 							...event, 
@@ -165,6 +172,7 @@ const Schedule = props => {
 				if (!event.id) {
 					setEvents(events => events.concat({
 						...data.event, 
+						type: "mill",
 						date: new Date(data.event.date), 
 						endDate: data.event.endDate ? new Date(data.event.endDate) : null
 					}));
@@ -208,6 +216,38 @@ const Schedule = props => {
 				setErrorMessage("There was an error deleting the event");
 				setSavingId(null);
 				clearInterval(loadingInterval);
+			});
+	};
+
+	const markFavorite = event => {
+		if (!event.type === "flo")
+			return;
+
+		const saveObject = event.isFavorite ? { removeFavorite: { floEventId: event.id }} : { addFavorite: { floEventId: event.id }};
+
+		fetch("/api/schedulesave", { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify(saveObject) })
+			.then(response => {
+				if (response.ok) {
+					return response.json();
+				}
+				else {
+					throw Error(response.statusText);
+				}
+			})
+			.then(data => {
+				setEvents(events => events.map(event => event.id === data.floEvent.id ? 
+					{ 
+						...data.floEvent, 
+						type: "flo", 
+						date: new Date(data.floEvent.date),
+						endDate: data.floEvent.endDate ? new Date(data.floEvent.endDate) : null,
+						location: data.floEvent.location + " - " + data.floEvent.city + ", " + data.floEvent.state
+					} 
+					: event
+				));
+			})
+			.catch(error => {
+				console.warn(error);
 			});
 	};
 
@@ -394,11 +434,19 @@ const Schedule = props => {
 					
 					{
 					event.type === "mill" ?
+
 					<button aria-label="Edit" className="action" onClick={ () => setEditItem(event.id) }>
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
-							<path d="M200-200h56l345-345-56-56-345 345v56Zm572-403L602-771l56-56q23-23 56.5-23t56.5 23l56 56q23 23 24 55.5T829-660l-57 57Zm-58 59L290-120H120v-170l424-424 170 170Zm-141-29-28-28 56 56-28-28Z"/>
-						</svg>
+						{/* Pencil */}
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M200-200h56l345-345-56-56-345 345v56Zm572-403L602-771l56-56q23-23 56.5-23t56.5 23l56 56q23 23 24 55.5T829-660l-57 57Zm-58 59L290-120H120v-170l424-424 170 170Zm-141-29-28-28 56 56-28-28Z"/></svg>
 					</button>
+
+					: event.type === "flo" ?
+
+					<button aria-label="Favorite" className={`action ${ event.isFavorite ? "isFavorite" : "notFavorite" }`} onClick={ () => markFavorite(event) }>
+						{/* Star */}
+						<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24"><path d="m233-80 65-281L80-550l288-25 112-265 112 265 288 25-218 189 65 281-247-149L233-80Z"/></svg>
+					</button>
+
 					: ""
 					}
 				</div>

@@ -485,6 +485,78 @@ describe("API Schedule", () => {
 		expect(results.data).toHaveProperty("status", "ok");
 	});
 
+	it("saves favorite", async () => {
+		// ********** Given
+
+		const floEvent = { id: "event1", isFavorite: false },
+			body = { addFavorite: { floEventId: floEvent.id }};
+
+		const send = jest.fn().mockResolvedValue({
+			body: { id: floEvent.id }
+		});
+		client.post = jest.fn(() => ({
+			send: send
+		}));
+
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { floEvents: [{ ...floEvent }] }}); // get the event
+
+		// ********** When
+
+		const results = await api.scheduleSave(body, serverPath);
+
+		// ********** Then
+
+		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/floevent?id=${ floEvent.id }`);
+
+		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/floevent`);
+		expect(send).toHaveBeenCalledWith(
+			expect.objectContaining({
+				floevent: expect.objectContaining({ isFavorite: true })
+			})
+		);
+		
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("floEvent", { ...floEvent, isFavorite: true });
+	});
+
+	it("removes favorite", async () => {
+		// ********** Given
+
+		const floEvent = { id: "event1", isFavorite: true },
+			body = { removeFavorite: { floEventId: floEvent.id }};
+
+		const send = jest.fn().mockResolvedValue({
+			body: { id: floEvent.id }
+		});
+		client.post = jest.fn(() => ({
+			send: send
+		}));
+
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { floEvents: [{ ...floEvent }] }}); // get the event
+
+		// ********** When
+
+		const results = await api.scheduleSave(body, serverPath);
+
+		// ********** Then
+
+		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/floevent?id=${ floEvent.id }`);
+
+		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/floevent`);
+		expect(send).toHaveBeenCalledWith(
+			expect.objectContaining({
+				floevent: expect.objectContaining({ isFavorite: false })
+			})
+		);
+		
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("floEvent", { ...floEvent, isFavorite: false });
+	});
+
 });
 
 describe("API Requests", () => {
