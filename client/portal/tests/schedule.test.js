@@ -293,7 +293,7 @@ describe("Schedule component", () => {
 			body: expect.stringContaining(floEvents[0].id)
 		})));
 
-		expect(await screen.findByRole("button", { name: /favorite/i })).toHaveClass("favorite");
+		expect(await screen.findByRole("button", { name: /favorite/i })).toHaveClass("isFavorite");
 	});
 
 });
