@@ -1316,6 +1316,23 @@ export default {
 		return output;
 	},
 
+	floEventFavorites: async (serverPath) => {
+		const output = { data: {} };
+
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/floevent`);
+			output.data.floEvents = clientResponse.body.floEvents.filter(event => event.isFavorite);
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		return output;
+	},
+
 	floEventSave: async (floEvent, serverPath) => {
 		const output = {};
 

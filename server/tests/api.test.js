@@ -1607,6 +1607,40 @@ describe("External Teams", () => {
 
 describe("Flo Events", () => {
 
+	it("gets favorite flo events", async () => {
+
+		// ********** Given
+
+		const floEvents = [{
+			id: "flo1",
+			sqlId: 1234,
+			isFavorite: true
+		},
+		{
+			id: "flo2",
+			sqlId: 6789,
+			isFavorite: false
+		}];
+		
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { floEvents: floEvents }}) // Get the teams
+
+		// ********** When
+
+		const results = await api.floEventFavorites(serverPath);
+
+		// ********** Then
+
+		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/floevent`);
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+
+		expect(results.data).toHaveProperty("floEvents");
+		expect(results.data.floEvents).toHaveLength(floEvents.filter(event => event.isFavorite).length);
+
+	});
+
 	it("saves flo Event", async () => {
 		
 		// ********** Given

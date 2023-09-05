@@ -981,6 +981,28 @@ describe("API service", () => {
 
 	});
 
+	it("gets flo favorites", async () => {
+		// ********** Given
+
+		const floEvents = [{ id: "test1", name: "Test flo Event", isFavorite: true }];
+
+		api.floEventFavorites = jest.fn().mockResolvedValue({
+			status: 200,
+			data: { floEvents: floEvents }
+		});
+
+		// ********** When
+
+		const response = await request(app)
+			.get("/api/floeventfavorites")
+			.expect(200);
+
+		// ********** Then
+
+		expect(response.body).toHaveProperty("floEvents", floEvents);
+
+	});
+
 	it("saves flo event", async () => {
 		// ********** Given
 
