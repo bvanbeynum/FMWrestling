@@ -136,6 +136,7 @@ export default {
 		sqlId: Number,
 		floGUID: String,
 		name: String,
+		lastUpdate: Date,
 		location: String,
 		city: String,
 		state: String,
@@ -143,6 +144,7 @@ export default {
 		endDate: Date,
 		hasBrackets: Boolean,
 		isFavorite: Boolean,
+		isComplete: Boolean,
 		divisions: [{
 			name: String,
 			weightClasses: [{
@@ -150,16 +152,19 @@ export default {
 				pools: [{
 					name: String,
 					matches: [{
+						guid: String,
 						round: String,
-						matchNumber: Number,
+						matchNumber: String,
 						sort: Number,
 						mat: String,
 						topWrestler: {
+							guid: String,
 							name: String,
 							team: String,
 							isWinner: Boolean
 						},
 						bottomWrestler: {
+							guid: String,
 							name: String,
 							team: String,
 							isWinner: Boolean
@@ -174,6 +179,17 @@ export default {
 						}
 					}]
 				}]
+			}]
+		}],
+		updates: [{
+			dateTime: Date,
+			updates: [{
+				type: String,
+				division: String,
+				weightClass: String,
+				round: String,
+				teams: [ String ],
+				message: String
 			}]
 		}]
 	}),

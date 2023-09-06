@@ -1645,7 +1645,27 @@ describe("Flo Events", () => {
 		
 		// ********** Given
 
-		const floEvent = { id: "test1", name: "Test Event", sqlId: 1234 };
+		const floEvent = { 
+			id: "test1", 
+			name: "Test Event", 
+			sqlId: 1234, 
+			divisions: [{
+				name: "division 1",
+				weightClasses: [{
+					name: "111",
+					pools: [{
+						matches: [{
+							matchNumber: "1",
+							round: "2",
+							mat: "2",
+							topWrestler: { name: "Wrestler 1", team: "Team 1", isWinner: true },
+							bottomWrestler: { name: "Wrestler 2", team: "Team 2" },
+							winType: "Dec"
+						}]
+					}]
+				}]
+			}]
+		};
 
 		const send = jest.fn().mockResolvedValue({
 			body: { id: floEvent.id }
@@ -1655,21 +1675,31 @@ describe("Flo Events", () => {
 		}));
 		
 		client.get = jest.fn()
-			.mockResolvedValueOnce({ body: { floEvents: [] }}) // Lookup the event
+			.mockResolvedValueOnce({ body: { floEvents: [{ ...floEvent, divisions: [] }] }}) // Lookup the event
 
 		// ********** When
 
 		const results = await api.floEventSave(floEvent, serverPath);
+		console.log(results);
 
 		// ********** Then
 
 		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/floevent?sqlid=${ floEvent.sqlId }`);
 		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/floevent`);
-		expect(send).toHaveBeenCalledWith(
-			expect.objectContaining({
-				floevent: expect.objectContaining({ name: floEvent.name })
+
+		expect(send).toHaveBeenCalledWith({
+			floevent: expect.objectContaining({
+				updates: expect.arrayContaining([
+					expect.objectContaining({
+						updates: expect.arrayContaining([
+							expect.objectContaining({ type: "New Match"}),
+							expect.objectContaining({ type: "Wrestler Assignment"}),
+							expect.objectContaining({ type: "Match Completed"})
+						])
+					})
+				])
 			})
-		);
+		})
 
 		expect(results).toHaveProperty("status", 200);
 		expect(results).toHaveProperty("data");
