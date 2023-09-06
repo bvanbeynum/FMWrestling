@@ -1390,8 +1390,7 @@ export default {
 										weightClass: match.weightClass,
 										round: match.round,
 										teams: [
-											...(match.topWrestler ? [match.topWrestler.team] : []),
-											...(match.bottomWrestler ? [match.bottomWrestler.team] : [])
+											...(match.topWrestler ? [match.topWrestler.team] : [])
 										],
 										type: "Wrestler Assignment",
 										message: `${ topWrestler } assigned to match${ matchNumber } ${ match.round || "" }`
@@ -1405,7 +1404,6 @@ export default {
 										weightClass: match.weightClass,
 										round: match.round,
 										teams: [
-											...(match.topWrestler ? [match.topWrestler.team] : []),
 											...(match.bottomWrestler ? [match.bottomWrestler.team] : [])
 										],
 										type: "Wrestler Assignment",
