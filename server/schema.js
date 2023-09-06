@@ -184,7 +184,7 @@ export default {
 		updates: [{
 			dateTime: Date,
 			updates: [{
-				type: String,
+				updateType: String,
 				division: String,
 				weightClass: String,
 				round: String,

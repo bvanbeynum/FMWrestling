@@ -1378,7 +1378,7 @@ export default {
 											...(match.topWrestler ? [match.topWrestler.team] : []),
 											...(match.bottomWrestler ? [match.bottomWrestler.team] : [])
 										],
-										type: "New Match",
+										updateType: "New Match",
 										message: `Match${ matchNumber}: ${ topWrestler } vs ${ bottomWrestler }`
 									});
 								}
@@ -1392,7 +1392,7 @@ export default {
 										teams: [
 											...(match.topWrestler ? [match.topWrestler.team] : [])
 										],
-										type: "Wrestler Assignment",
+										updateType: "Wrestler Assignment",
 										message: `${ topWrestler } assigned to match${ matchNumber } ${ match.round || "" }`
 									});
 								}
@@ -1406,7 +1406,7 @@ export default {
 										teams: [
 											...(match.bottomWrestler ? [match.bottomWrestler.team] : [])
 										],
-										type: "Wrestler Assignment",
+										updateType: "Wrestler Assignment",
 										message: `${ bottomWrestler } assigned to match${ matchNumber } ${ match.round || "" }`
 									});
 								}
@@ -1421,7 +1421,7 @@ export default {
 											...(match.topWrestler ? [match.topWrestler.team] : []),
 											...(match.bottomWrestler ? [match.bottomWrestler.team] : [])
 										],
-										type: "Mat Assignment",
+										updateType: "Mat Assignment",
 										message: `Mat ${ match.mat }: match${ matchNumber } - ${ topWrestler } vs ${ bottomWrestler }`
 									});
 								}
@@ -1439,7 +1439,7 @@ export default {
 											...(match.topWrestler ? [match.topWrestler.team] : []),
 											...(match.bottomWrestler ? [match.bottomWrestler.team] : [])
 										],
-										type: "Match Completed",
+										updateType: "Match Completed",
 										message: `${ winner } beat ${ loser } by ${ match.winType }`
 									});
 								}
