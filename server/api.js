@@ -1316,6 +1316,23 @@ export default {
 		return output;
 	},
 
+	floEventLoad: async (floId, serverPath) => {
+		const output = { data: {} };
+
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/floevent?id=${ floId }`);
+			output.data.floEvent = clientResponse.body.floEvents[0];
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		return output;
+	},
+
 	floEventFavorites: async (serverPath) => {
 		const output = { data: {} };
 
@@ -1449,6 +1466,7 @@ export default {
 						if (updates.length > 0 && updates.length < 200) {
 							// Don't log too many updates
 							floEvent.updates = (floEvent.updates || []).concat({ dateTime: new Date(), updates: updates });
+							console.log(floEvent.updates);
 						}
 					}
 				}

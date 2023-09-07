@@ -1607,6 +1607,36 @@ describe("External Teams", () => {
 
 describe("Flo Events", () => {
 
+	it("gets a flo event", async () => {
+
+		// ********** Given
+
+		const floEvents = [{
+			id: "flo1",
+			sqlId: 1234,
+			isFavorite: true,
+			divisions: []
+		}];
+		
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { floEvents: floEvents }}) // Get the teams
+
+		// ********** When
+
+		const results = await api.floEventLoad(floEvents[0].id, serverPath);
+
+		// ********** Then
+
+		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/floevent?id=${ floEvents[0].id }`);
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+
+		expect(results.data).toHaveProperty("floEvent");
+		expect(results.data.floEvent).toEqual(floEvents[0]);
+
+	});
+
 	it("gets favorite flo events", async () => {
 
 		// ********** Given
@@ -1680,7 +1710,6 @@ describe("Flo Events", () => {
 		// ********** When
 
 		const results = await api.floEventSave(floEvent, serverPath);
-		console.log(results);
 
 		// ********** Then
 
@@ -1692,9 +1721,9 @@ describe("Flo Events", () => {
 				updates: expect.arrayContaining([
 					expect.objectContaining({
 						updates: expect.arrayContaining([
-							expect.objectContaining({ type: "New Match"}),
-							expect.objectContaining({ type: "Wrestler Assignment"}),
-							expect.objectContaining({ type: "Match Completed"})
+							expect.objectContaining({ updateType: "New Match"}),
+							expect.objectContaining({ updateType: "Wrestler Assignment"}),
+							expect.objectContaining({ updateType: "Match Completed"})
 						])
 					})
 				])

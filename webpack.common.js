@@ -11,6 +11,7 @@ export default {
 		roles: "./client/portal/roles.jsx",
 		requests: "./client/portal/requests.jsx",
 		dual: "./client/portal/dual/dual.jsx",
+		floevent: "./client/portal/floevent.jsx",
 		noaccess: "./client/portal/noaccess.jsx"
 	},
 	plugins: [
@@ -92,6 +93,16 @@ export default {
 				viewport: "width=device-width, initial-scale=1"
 			},
 			chunks: [ "schedule" ],
+			templateContent: "<html><body><div id='root'></div></body></html>"
+		}),
+		new HtmlWebpackPlugin({ 
+			filename: "./portal/floevent.html",
+			title: "Fort Mill Wrestling - Portal",
+			favicon: "./client/media/favicon.ico",
+			meta: {
+				viewport: "width=device-width, initial-scale=1"
+			},
+			chunks: [ "floevent" ],
 			templateContent: "<html><body><div id='root'></div></body></html>"
 		}),
 		new HtmlWebpackPlugin({ 

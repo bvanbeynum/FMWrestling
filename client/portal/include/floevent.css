@@ -1,0 +1,41 @@
+.bracketContainer {
+	width: 100%;
+	height: 70vh;
+	border: 1px solid rgb(145 145 145);
+	border-radius: 4px;
+	box-shadow: inset rgba(50, 50, 93, 0.25) 0px 0px 14px -3px, rgba(0, 0, 0, 0.3) 0px 1px 3px -1px;
+	overflow: auto;
+	background-color: rgb(245 246 250);
+}
+
+.bracket text {
+	font-size: 12px;
+	font-family: Verdana;
+	fill: rgb(113 113 113);
+}
+
+.bracket .team {
+	font-size: 9px;
+}
+
+.bracket .background, .bracket .foreground {
+	fill: rgb(251 251 251);
+}
+
+.bracket .background.win, .bracket .foreground.win {
+	fill: rgb(221 243 221);
+}
+
+.bracket .backgroundDark {
+	fill: rgb(209 209 209);
+}
+
+.bracket .backgroundDark.win {
+	fill: rgb(180 227 180);
+}
+
+.bracket .winPath {
+	stroke: rgb(57 119 57);
+	fill: none;
+	stroke-width: 2;
+}

@@ -92,10 +92,11 @@ button:disabled, .button:disabled {
 	display: grid;
 	grid-column-gap: 2vw;
 	grid-row-gap: 4vh;
-	margin: 0 auto 4vh auto;
+	margin: 0 auto 18vh auto;
 }
 .container.active {
 	transform: translateY(0);
+	padding-top: 30px;
 }
 
 .panel {
@@ -320,6 +321,36 @@ button svg, .button svg {
 	overflow-x: scroll;
 }
 
+.bottomNav {
+	position: fixed;
+	width: 100vw;
+	bottom: 0;
+	height: 60px;
+	background: rgb(255 255 255);
+	display: grid;
+	grid-template-columns: repeat(auto-fit, 50px);
+	justify-content: center;
+	box-shadow: rgba(0, 0, 0, 0.15) 5px -2px 8px 0px;
+	grid-column-gap: 8vw;
+}
+
+.bottomNav button, .bottomNav .button {
+	border: none;
+	background-color: transparent;
+	display: grid;
+	grid-auto-flow: row;
+	font-size: .9em;
+	justify-content: center;
+	color: rgb(79 79 79);
+	fill: rgb(79 79 79);
+}
+
+.bottomNav svg {
+	width: 36px;
+	height: 36px;
+	margin: auto;
+}
+
 @media (min-width: 1024px) {
 	.container {
 		grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
@@ -342,6 +373,11 @@ button svg, .button svg {
 		grid-template-columns: minmax(min-content, 90px) 1fr;
 	}
 
+	.panel.expandable {
+		max-width: inherit;
+		width: 71vw;
+	}
+
 	.filterExpand {
 		display: none;
 	}
@@ -361,6 +397,10 @@ button svg, .button svg {
 
 	.filterContent input, .filterContent select {
 		max-width: 110px;
+	}
+
+	.bottomNav {
+		width: 75vw;
 	}
 
 }

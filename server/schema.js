@@ -157,6 +157,8 @@ export default {
 						matchNumber: String,
 						sort: Number,
 						mat: String,
+						roundNumber: Number,
+						roundSpot: Number,
 						topWrestler: {
 							guid: String,
 							name: String,
