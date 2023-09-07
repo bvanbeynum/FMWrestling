@@ -264,7 +264,6 @@ button svg, .button svg {
 	background-color: rgb(121 145 166);
 	margin: 1rem 0px;
 	overflow-y: auto;
-	max-height: 60px;
 }
 
 .pill {
@@ -309,6 +308,10 @@ button svg, .button svg {
 	border: none;
 }
 
+.pill td {
+	padding: 4px 0px;
+}
+
 .textList {
 	margin: 15px 10px;
 	padding-bottom: 5px;
@@ -332,6 +335,7 @@ button svg, .button svg {
 	justify-content: center;
 	box-shadow: rgba(0, 0, 0, 0.15) 5px -2px 8px 0px;
 	grid-column-gap: 8vw;
+	align-items: center;
 }
 
 .bottomNav button, .bottomNav .button {
@@ -349,6 +353,10 @@ button svg, .button svg {
 	width: 36px;
 	height: 36px;
 	margin: auto;
+}
+
+.refreshDisplay.refresh {
+	color: rgb(229 87 87);
 }
 
 @media (min-width: 1024px) {

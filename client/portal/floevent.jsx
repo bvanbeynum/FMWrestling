@@ -8,52 +8,85 @@ const FloEvent = props => {
 
 	const [ pageActive, setPageActive ] = useState(false);
 	const [ loggedInUser, setLoggedInUser ] = useState(null);
+	const [ isRefreshing, setIsRefreshing ] = useState(false);
+	const [ timeInterval, setTimeInterval ] = useState(false);
+	const [ timeDisplay, setTimeDisplay ] = useState("");
+	const [ lastRefresh, setLastRefresh ] = useState(new Date());
+
 	const [ event, setEvent ] = useState(null);
 
 	const [ divisions, setDivisions ] = useState([]);
 	const [ weightClasses, setWeightClasses ] = useState([]);
+	const [ filterTeams, setFilterTeams ] = useState([]);
 
 	const [ isFilterExpanded, setIsFilterExpanded ] = useState(false);
 	const [ selectedBrackets, setSelectedBrackets ] = useState([]);
 
 	const [ selectedDivision, setSelectedDivision ] = useState("");
 	const [ selectedWeight, setSelectedWeight ] = useState("");
+	const [ selectedTeam, setSelectedTeam ] = useState("");
+
+	const [ pageView, setPageView ] = useState("bracket");
 
 	useEffect(() => {
 		if (!pageActive) {
-			const url = new window.URLSearchParams(window.location.search)
+			const url = new window.URLSearchParams(window.location.search);
+			refreshData(url.get("id"));
+		}
 
-			fetch(`/api/floeventload?id=${ url.get("id") }`)
-				.then(response => {
-					if (response.ok) {
-						return response.json();
-					}
-					else {
-						throw Error(response.statusText);
-					}
-				})
-				.then(data => {
+		return () => {
+			if (timeInterval) {
+				clearInterval(timeInterval);
+				setTimeInterval(null);
+			}
+		}
+	}, []);
 
-					setEvent(data.floEvent);
+	const refreshData = eventId => {
+		setIsRefreshing(true);
 
+		fetch(`/api/floeventload?id=${ eventId }`)
+			.then(response => {
+				if (response.ok) {
+					return response.json();
+				}
+				else {
+					throw Error(response.statusText);
+				}
+			})
+			.then(data => {
+				setEvent(({
+					...data.floEvent,
+					updates: data.floEvent.updates.map(update => ({...update, dateTime: new Date(update.dateTime)}))
+				}));
+				setLastRefresh(lastRefresh => data.floEvent.lastUpdate ? new Date(data.floEvent.lastUpdate) : lastRefresh);
+
+				setTimeout(() => refreshData(eventId), 30000);
+				setTimeInterval(
+					setInterval(() => setTimeDisplay(Math.floor(((new Date()) - lastRefresh) / 1000 / 60) + "m " + Math.floor(((new Date()) - lastRefresh) / 1000 % 60) + "s" ), 1000)
+				);
+
+				setIsRefreshing(false);
+
+				if (!pageActive) {
 					setDivisions([...new Set(data.floEvent.divisions.map(division => division.name))]);
+					setFilterTeams([...new Set(data.floEvent.updates ? data.floEvent.updates.flatMap(update => update.updates.flatMap(update => update.teams)) : [])].sort((teamA, teamB) => teamA > teamB ? 1 : -1))
 
 					setLoggedInUser(data.loggedInUser);
 					setPageActive(true);
+				}
+			})
+			.catch(error => {
+				console.warn(error);
+				setLoadError(`Error: ${error.message}`);
+			});
 
-				})
-				.catch(error => {
-					console.warn(error);
-					setLoadError(`Error: ${error.message}`);
-				});
-
-		}
-	}, []);
+	};
 
 	const selectDivision = newDivision => {
 		setWeightClasses([...new Set(event.divisions.filter(division => division.name == newDivision).flatMap(division => division.weightClasses.map(weight => weight.name))) ]);
 		setSelectedDivision(newDivision);
-	}
+	};
 
 	const selectWeight = newWeight => {
 
@@ -244,7 +277,11 @@ const FloEvent = props => {
 
 	<div>
 		<div className={`container ${ pageActive ? "active" : "" }`}>
-	
+
+			{
+			pageView == "bracket" ?
+			
+			<>
 			<div className="panel filter">
 				<div className="row">
 					<h3>Filter</h3>
@@ -384,18 +421,149 @@ const FloEvent = props => {
 
 			)
 			}
+			</>
+			
+			: pageView === "updates" ?
 
+			<>
+			<div className="panel filter">
+				<div className="row">
+					<h3>Filter</h3>
+
+					<div className="filterExpand" onClick={ () => setIsFilterExpanded(isFilterExpanded => !isFilterExpanded) }>
+						{
+						isFilterExpanded ?
+						// Close
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg>
+						: 
+						// Tune
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M440-120v-240h80v80h320v80H520v80h-80Zm-320-80v-80h240v80H120Zm160-160v-80H120v-80h160v-80h80v240h-80Zm160-80v-80h400v80H440Zm160-160v-240h80v80h160v80H680v80h-80Zm-480-80v-80h400v80H120Z"/></svg>
+						}
+					</div>
+				</div>
+
+				<div className={`filterContent ${ isFilterExpanded ? "active" : "" }`}>
+					<label>
+						Team
+						<select value={ selectedTeam } onChange={ event => setSelectedTeam(event.target.value)}>
+							<option value="">-- Select --</option>
+							{
+							filterTeams
+							.map((team, teamIndex) => 
+							<option key={ teamIndex } value={ team }>{ team }</option>
+							)
+							}
+						</select>
+					</label>
+				</div>
+
+			</div>
+			
+			{
+			event.updates
+			.sort((blockA, blockB) => blockB.dateTime - blockA.dateTime)
+			.map((updateBlock, blockIndex) =>
+				<div className="panel expandable" key={blockIndex}>
+					<h3>{ `${ updateBlock.dateTime.toLocaleString() }` }</h3>
+					
+					<div className="subHeading">Completed Matches</div>
+					<div className="sectionList">
+						<div key={ blockIndex } className="pill">
+							<table>
+							<tbody>
+							{
+							updateBlock.updates
+							.filter(update => /complete/i.test(update.updateType) && (!selectedTeam || update.teams.includes(selectedTeam)))
+							.map((update, updateIndex) => 
+							
+								<tr key={ updateIndex }>
+									<td>{ update.message }</td>
+								</tr>
+
+							)}
+							</tbody>
+							</table>
+						</div>
+					</div>
+		
+					<div className="subHeading">Mat Assignments</div>
+					<div className="sectionList">
+						<div key={ blockIndex } className="pill">
+							<table>
+							<tbody>
+							{
+							updateBlock.updates
+							.filter(update => /mat assignment/i.test(update.updateType) && (!selectedTeam || update.teams.includes(selectedTeam)))
+							.map((update, updateIndex) => 
+							
+								<tr key={ updateIndex }>
+									<td>{ update.message }</td>
+								</tr>
+
+							)}
+							</tbody>
+							</table>
+						</div>
+					</div>
+		
+					<div className="subHeading">New Matches</div>
+					<div className="sectionList">
+						<div key={ blockIndex } className="pill">
+							<table>
+							<tbody>
+							{
+							updateBlock.updates
+							.filter(update => /new match/i.test(update.updateType) && (!selectedTeam || update.teams.includes(selectedTeam)))
+							.map((update, updateIndex) => 
+							
+								<tr key={ updateIndex }>
+									<td>{ update.message }</td>
+								</tr>
+
+							)}
+							</tbody>
+							</table>
+						</div>
+					</div>
+		
+					<div className="subHeading">Wrestlers Assigned</div>
+					<div className="sectionList">
+						<div key={ blockIndex } className="pill">
+							<table>
+							<tbody>
+							{
+							updateBlock.updates
+							.filter(update => /wrestler/i.test(update.updateType) && (!selectedTeam || update.teams.includes(selectedTeam)))
+							.map((update, updateIndex) => 
+							
+								<tr key={ updateIndex }>
+									<td>{ update.message }</td>
+								</tr>
+
+							)}
+							</tbody>
+							</table>
+						</div>
+					</div>
+		
+				</div>
+			)
+			}
+			</>
+
+			: ""
+			}
 		</div>
 		
 		<div className="bottomNav">
 
-			<button aria-label="Brackets">
+			<button aria-label="Brackets" onClick={ () => setPageView("bracket") }>
 				{/* Bracket */}
 				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M570.77-180.001V-240h98.845q21.231 0 35.808-14.385Q720-268.77 720-289.231v-82.308q0-35.692 21.231-64 21.23-28.307 55.307-39.384v-10.154q-34.077-11.077-55.307-39.384-21.231-28.308-21.231-64v-82.308q0-20.461-14.577-34.846Q690.846-720 669.615-720H570.77v-59.999h98.845q46.153 0 78.268 31.923 32.116 31.923 32.116 77.307v82.308q0 21.231 14.961 35.616 14.962 14.385 36.578 14.385h28.461v116.92h-28.461q-21.616 0-36.578 14.385-14.961 14.385-14.961 35.616v82.308q0 45.384-32.116 77.307-32.115 31.923-78.268 31.923H570.77Zm-280.385 0q-45.769 0-78.076-31.923-32.308-31.923-32.308-77.307v-82.308q0-21.231-14.961-35.616-14.962-14.385-36.578-14.385h-28.461v-116.92h28.461q21.616 0 36.578-14.385 14.961-14.385 14.961-35.616v-82.308q0-45.384 32.308-77.307 32.307-31.923 78.076-31.923h99.23V-720h-99.23q-20.846 0-35.616 14.385Q240-691.23 240-670.769v82.308q0 35.692-21.038 64-21.039 28.307-55.5 39.384v10.154q34.461 11.077 55.5 39.384 21.038 28.308 21.038 64v82.308q0 20.461 14.769 34.846Q269.539-240 290.385-240h99.23v59.999h-99.23Z"/></svg>
 				Brackets
 			</button>
 
-			<button aria-label="Updates">
+			<button aria-label="Updates" onClick={ () => setPageView("updates") }>
 				{/* Brightness alert */}
 				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-290.77q13.731 0 23.019-9.288 9.288-9.289 9.288-23.019 0-13.731-9.288-23.019-9.288-9.288-23.019-9.288-13.731 0-23.019 9.288-9.288 9.288-9.288 23.019 0 13.73 9.288 23.019 9.288 9.288 23.019 9.288Zm-29.999-146.153h59.998v-240h-59.998v240ZM480-55.694 354.376-180.001H180.001v-174.375L55.694-480l124.307-125.624v-174.375h174.375L480-904.306l125.624 124.307h174.375v174.375L904.306-480 779.999-354.376v174.375H605.624L480-55.694ZM480-480Zm0 340 100-100h140v-140l100-100-100-100v-140H580L480-820 380-720H240v140L140-480l100 100v140h140l100 100Z"/></svg>
 				Updates
@@ -412,6 +580,10 @@ const FloEvent = props => {
 				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M0-240v-63q0-43 44-70t116-27q13 0 25 .5t23 2.5q-14 21-21 44t-7 48v65H0Zm240 0v-65q0-32 17.5-58.5T307-410q32-20 76.5-30t96.5-10q53 0 97.5 10t76.5 30q32 20 49 46.5t17 58.5v65H240Zm540 0v-65q0-26-6.5-49T754-397q11-2 22.5-2.5t23.5-.5q72 0 116 26.5t44 70.5v63H780Zm-455-80h311q-10-20-55.5-35T480-370q-55 0-100.5 15T325-320ZM160-440q-33 0-56.5-23.5T80-520q0-34 23.5-57t56.5-23q34 0 57 23t23 57q0 33-23 56.5T160-440Zm640 0q-33 0-56.5-23.5T720-520q0-34 23.5-57t56.5-23q34 0 57 23t23 57q0 33-23 56.5T800-440Zm-320-40q-50 0-85-35t-35-85q0-51 35-85.5t85-34.5q51 0 85.5 34.5T600-600q0 50-34.5 85T480-480Zm0-80q17 0 28.5-11.5T520-600q0-17-11.5-28.5T480-640q-17 0-28.5 11.5T440-600q0 17 11.5 28.5T480-560Zm1 240Zm-1-280Z"/></svg>
 				Teams
 			</button>
+
+			<div className={ `refreshDisplay ${ isRefreshing ? "refresh" : "" }` }>
+				{ timeDisplay }
+			</div>
 
 		</div>
 
