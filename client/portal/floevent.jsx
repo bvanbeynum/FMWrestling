@@ -136,9 +136,13 @@ const FloEvent = props => {
 			matchSize = { height: (boxSize.height * 2) + paddingSize.box + paddingSize.match, width: paddingSize.round + boxSize.primarySection + boxSize.secondarySection };
 		
 		const matches = event
-			.divisions.find(division => division.name == selectedDivision)
-			.weightClasses.find(weight => weight.name == newWeight)
-			.pools[0].matches
+			.divisions.filter(division => division.name == selectedDivision).flatMap(division =>
+				division.weightClasses.filter(weight => weight.name == newWeight).flatMap(weight =>
+					weight.pools.flatMap(pool =>
+						pool.matches
+						)
+					)
+				)
 			.sort((matchA, matchB) => matchA.roundSpot - matchB.roundSpot)
 
 		const newRounds = [...new Set(matches.map(match => match.round))]
@@ -152,7 +156,7 @@ const FloEvent = props => {
 		let sortedRounds = [],
 			paths = [];
 
-		const maxMatches = [...newRounds].sort((roundA, roundB) => roundB.matches.length - roundA.matches.length)[0].matches.length,
+		const maxMatches = [...newRounds].sort((roundA, roundB) => roundB.matches.length - roundA.matches.length).map(round => round.matches.length).find(() => true),
 			roundCount = newRounds.length,
 			roundSize = { width: boxSize.primarySection + boxSize.secondarySection + (paddingSize.round * 2), height: ((boxSize.height * 2) + paddingSize.box + paddingSize.match) * maxMatches },
 			svgSize = { width: (roundSize.width * roundCount) + paddingSize.left, height: roundSize.height + paddingSize.top },

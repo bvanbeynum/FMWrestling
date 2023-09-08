@@ -113,6 +113,10 @@ button:disabled, .button:disabled {
 	height: fit-content;
 }
 
+.panel.centered {
+	grid-column: 1 / -1;
+}
+
 .panel h3 {
 	margin: 10px 0;
 	display: flex;

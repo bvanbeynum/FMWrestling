@@ -84,6 +84,11 @@ const Schedule = props => {
 					})));
 					setEventsLoading(false);
 
+					// Expand filter box if no events are visible
+					if (!newEvents.some(event => event.date.getMonth() === monthSelected && event.date.getFullYear() === yearSelected && (!selectedState || event.state == selectedState || !event.state))) {
+						setIsFilterExpanded(true);
+					}
+					
 				})
 				.catch(error => {
 					console.warn(error);
@@ -181,7 +186,7 @@ const Schedule = props => {
 
 					setEvents(newEvents);
 					setNewEvent(emptyEvent);
-					
+
 					const days = Array.from(Array(new Date(yearSelected, monthSelected + 1, 0).getDate()).keys()) // Get array of dates, get last day of the month to know array length
 					.map(day => {
 						const dateStart = new Date(yearSelected, monthSelected, day + 1),
@@ -194,6 +199,7 @@ const Schedule = props => {
 					})
 
 					setMonthDays(days);
+					
 				}
 
 				setEditItem(null);
@@ -292,7 +298,7 @@ const Schedule = props => {
 
 		<div className={`schedule container ${ pageActive ? "active" : "" }`}>
 
-			<div className="panel">
+			<div className="panel centered">
 				<div className="calendarHeader">
 					<button onClick={ () => changeMonth(monthSelected == 0 ? 11 : monthSelected - 1, monthSelected == 0 ? yearSelected - 1 : yearSelected) }>◀</button>
 					<h3 className="monthName">{ months[monthSelected] }</h3>
@@ -337,7 +343,7 @@ const Schedule = props => {
 					<label>
 						State
 						<select value={ selectedState } onChange={ event => setSelectedState(event.target.value)}>
-							<option value="">-- Select --</option>
+							<option value="">All States</option>
 							<option value="SC">SC</option>
 							<option value="NC">NC</option>
 							<option value="TN">TN</option>
