@@ -43,7 +43,7 @@ const RolesComponent = props => {
 					setLoggedInUser(data.loggedInUser);
 					setRoles(data.roles);
 					setUsers(data.users);
-					setPrivileges(data.privileges);
+					setPrivileges(data.privileges.filter(privilege => !privilege.isDev));
 					setPageActive(true);
 				})
 				.catch(error => {
@@ -363,7 +363,7 @@ const RolesComponent = props => {
 
 						<div className="subHeading">
 							<div>{ (role.users || []).length } members</div>
-							<div>{ (role.privileges || []).length } privileges</div>
+							<div>{ (role.privileges || []).filter(privilege => !privilege.isDev).length } privileges</div>
 						</div>
 					</div>
 					
@@ -427,7 +427,7 @@ const RolesComponent = props => {
 
 				<div className="sectionList">
 					{
-					role.privileges.map(privilege =>
+					role.privileges.filter(privilege => !privilege.isDev).map(privilege =>
 						<div key={ privilege.id } className="pill">
 							{ privilege.name }
 							<button onClick={ () => removePrivilegeFromRole(role.id, privilege.id) } aria-label="Remove Privilege">

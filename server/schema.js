@@ -38,7 +38,8 @@ export default {
 	privilege: mongoose.model("privilege", {
 		name: String,
 		token: String,
-		url: String
+		url: String,
+		isDev: Boolean
 	}),
 
 	deviceRequest: mongoose.model("devicerequest", {
