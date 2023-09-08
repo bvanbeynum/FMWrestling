@@ -157,7 +157,7 @@ const RequestsComponent = (props) => {
 
 			{
 			requests
-			.sort((requestA,requestB) => requestA.created - requestB.created )
+			.sort((requestA,requestB) => requestB.created - requestA.created )
 			.map(request => 
 
 			<div key={ request.id } data-testid={ request.id } className="panel">
@@ -169,6 +169,7 @@ const RequestsComponent = (props) => {
 						<div className="subHeading">Date: { request.created.toLocaleDateString() } { request.created.toLocaleTimeString() }</div>
 						<div className="subHeading">Email: { request.email }</div>
 						<div className="subHeading">Device: { request.deviceName }</div>
+						<div className="subHeading">Domain: { request.device.domain }</div>
 					</div>
 					
 					{

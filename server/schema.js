@@ -11,6 +11,7 @@ export default {
 		devices: [{
 			token: String,
 			ip: String,
+			domain: String,
 			browser: Object,
 			created: Date,
 			lastAccess: Date
@@ -48,6 +49,7 @@ export default {
 		device: {
 			token: String,
 			ip: String,
+			domain: String,
 			browser: Object
 		},
 		created: Date

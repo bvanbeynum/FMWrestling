@@ -376,7 +376,10 @@ const UsersComponent = props => {
 						.map(device =>
 						
 						<tr key={ device["_id"] }>
-							<td>{ device.browserDisplay }</td>
+							<td>
+								{ device.browserDisplay }<br />
+								{ device.domain }
+							</td>
 							<td><pre>{ device.lastAccessDisplay }</pre></td>
 							<td>{ device.createdDisplay }</td>
 							<td>

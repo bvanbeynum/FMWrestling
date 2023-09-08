@@ -130,6 +130,7 @@ export default {
 				device: {
 						token: token,
 						ip: ipAddress,
+						domain: domain,
 						browser: userAgent
 					}
 				},
@@ -142,7 +143,14 @@ export default {
 			
 		try {
 			await client.post(`${ serverPath }/data/devicerequest`).send({ devicerequest: userRequest }).then();
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+			return output;
+		}
 
+		try {
 			const oauth = new google.auth.OAuth2(config.email.clientId, config.email.clientSecret, config.email.redirectURL);
 			oauth.setCredentials({ refresh_token: config.email.refreshToken });
 			const gmailToken = oauth.getAccessToken();
@@ -161,24 +169,17 @@ export default {
 
 			const sendMailAsync = (email) => new Promise(resolve => service.sendMail(email, (error) => resolve(error)));
 			const error = await sendMailAsync(email);
-
-			if (error) {
-				output.status = 561;
-				output.error = error.message;
-				return output;
-			}
-	
 			service.close();
+			
+			if (error) {
+				output.error = error.message;
+			}
+		}
+		catch { }
 
-			output.status = 200;
-			output.cookie = encryptedToken;
-			return output;
-		}
-		catch (error) {
-			output.status = 560;
-			output.error = error.message;
-			return output;
-		}
+		output.status = 200;
+		output.cookie = encryptedToken;
+		return output;
 	},
 
 	postLoad: async (serverPath) => {
