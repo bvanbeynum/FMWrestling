@@ -121,7 +121,7 @@ router.get("/api/roleload", authAPI, async (request, response) => {
 		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "648aa4534d7f52ba05eb7d64", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
-	response.status(results.status).json(results.error ? { error: results.error } : results.data);
+	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
 });
 
 router.post("/api/rolesave", authAPI, async (request, response) => {
