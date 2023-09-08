@@ -91,7 +91,7 @@ button:disabled, .button:disabled {
 	transition: transform 0.3s ease-in-out;
 	display: grid;
 	grid-column-gap: 2vw;
-	grid-row-gap: 4vh;
+	grid-row-gap: 3vh;
 	margin: 0 auto 18vh auto;
 }
 .container.active {
@@ -286,6 +286,10 @@ button svg, .button svg {
 	height: 14px;
 }
 
+.emptyTable {
+	text-align: center;
+}
+
 .pill:has(table) {
 	flex: 1;
 }
@@ -309,7 +313,15 @@ button svg, .button svg {
 }
 
 .pill td {
-	padding: 4px 0px;
+	padding: 4px 3px;
+}
+
+.pill td:nth-child(1) {
+	padding-left: 0;
+}
+
+.pill td:last-child {
+	padding-right: 0;
 }
 
 .textList {

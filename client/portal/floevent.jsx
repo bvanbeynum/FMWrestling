@@ -11,9 +11,12 @@ const FloEvent = props => {
 	const [ isRefreshing, setIsRefreshing ] = useState(false);
 	const [ timeInterval, setTimeInterval ] = useState(false);
 	const [ timeDisplay, setTimeDisplay ] = useState("");
-	const [ lastRefresh, setLastRefresh ] = useState(new Date());
+	const [ lastRefresh, setLastRefresh ] = useState(null);
+	const [ pageView, setPageView ] = useState("bracket");
 
 	const [ event, setEvent ] = useState(null);
+	const [ mats, setMats ] = useState([]);
+	const [ upcoming, setUpcoming ] = useState([]);
 
 	const [ divisions, setDivisions ] = useState([]);
 	const [ weightClasses, setWeightClasses ] = useState([]);
@@ -25,8 +28,7 @@ const FloEvent = props => {
 	const [ selectedDivision, setSelectedDivision ] = useState("");
 	const [ selectedWeight, setSelectedWeight ] = useState("");
 	const [ selectedTeam, setSelectedTeam ] = useState("");
-
-	const [ pageView, setPageView ] = useState("bracket");
+	const [ upcomingCount, setUpcomingCount ] = useState(30);
 
 	useEffect(() => {
 		if (!pageActive) {
@@ -42,6 +44,22 @@ const FloEvent = props => {
 		}
 	}, []);
 
+	useEffect(() => {
+		if (lastRefresh) {
+			if (timeInterval) {
+				clearInterval(timeInterval);
+			}
+
+			setTimeInterval(
+				setInterval(() => setTimeDisplay(
+					(new Date() - lastRefresh > (1000 * 60 * 60) ? Math.floor((new Date() - lastRefresh) / 1000 / 60 / 60) + "h " : "") +
+					(new Date() - lastRefresh > (1000 * 60) ? Math.floor(((new Date() - lastRefresh) / 1000 / 60) % 60) + "m " : "") + 
+					Math.floor(((new Date()) - lastRefresh) / 1000 % 60) + "s" 
+					), 1000)
+			);
+		}
+	}, [lastRefresh])
+
 	const refreshData = eventId => {
 		setIsRefreshing(true);
 
@@ -55,23 +73,46 @@ const FloEvent = props => {
 				}
 			})
 			.then(data => {
-				setEvent(({
-					...data.floEvent,
-					updates: data.floEvent.updates.map(update => ({...update, dateTime: new Date(update.dateTime)}))
-				}));
-				setLastRefresh(lastRefresh => data.floEvent.lastUpdate ? new Date(data.floEvent.lastUpdate) : lastRefresh);
+				const newEvent = data.floEvent,
+					matches = data.floEvent.divisions.flatMap(division =>
+						division.weightClasses.flatMap(weight =>
+							weight.pools.flatMap(pool =>
+								pool.matches.map(match => ({
+									...match,
+									division: division.name,
+									weightClass: weight.name,
+									pool: pool.name
+								}))
+								)
+							)
+						);
 
-				setTimeout(() => refreshData(eventId), 30000);
-				setTimeInterval(
-					setInterval(() => setTimeDisplay(Math.floor(((new Date()) - lastRefresh) / 1000 / 60) + "m " + Math.floor(((new Date()) - lastRefresh) / 1000 % 60) + "s" ), 1000)
-				);
+				setEvent(({
+					...newEvent,
+					updates: newEvent.updates.map(update => ({...update, dateTime: new Date(update.dateTime)}))
+				}));
+
+				setMats([...new Set(matches.filter(match => match.mat).map(match => match.mat))]
+					.sort((matA, matB) => matA > matB ? 1 : -1)
+					.map(mat => ({
+						name: mat,
+						matches: matches.filter(match => match.mat == mat && match.topWrestler && match.bottomWrestler).sort((matchA, matchB) => matchA.sort - matchB.sort),
+						upcoming: matches.filter(match => match.mat == mat && match.topWrestler && match.bottomWrestler && !match.winType).sort((matchA, matchB) => matchA.sort - matchB.sort)
+					})));
+				
+				setUpcoming(matches.filter(match => !match.winType && match.topWrestler && match.bottomWrestler).sort((matchA, matchB) => matchA.sort - matchB.sort));
+
+				setDivisions([...new Set(newEvent.divisions.map(division => division.name))]);
+				setFilterTeams([...new Set(newEvent.updates ? newEvent.updates.flatMap(update => update.updates.flatMap(update => update.teams)) : [])].sort((teamA, teamB) => teamA > teamB ? 1 : -1))
+
+				if (!newEvent.isComplete) {
+					setLastRefresh(new Date(data.floEvent.lastUpdate));
+					setTimeout(() => refreshData(eventId), 30000);
+				}
 
 				setIsRefreshing(false);
 
 				if (!pageActive) {
-					setDivisions([...new Set(data.floEvent.divisions.map(division => division.name))]);
-					setFilterTeams([...new Set(data.floEvent.updates ? data.floEvent.updates.flatMap(update => update.updates.flatMap(update => update.teams)) : [])].sort((teamA, teamB) => teamA > teamB ? 1 : -1))
-
 					setLoggedInUser(data.loggedInUser);
 					setPageActive(true);
 				}
@@ -277,11 +318,14 @@ const FloEvent = props => {
 
 	<div>
 		<div className={`container ${ pageActive ? "active" : "" }`}>
-
 			{
 			pageView == "bracket" ?
 			
 			<>
+			<header>
+				<h1>Brackets</h1>
+			</header>
+			
 			<div className="panel filter">
 				<div className="row">
 					<h3>Filter</h3>
@@ -426,6 +470,10 @@ const FloEvent = props => {
 			: pageView === "updates" ?
 
 			<>
+			<header>
+				<h1>Updates</h1>
+			</header>
+			
 			<div className="panel filter">
 				<div className="row">
 					<h3>Filter</h3>
@@ -444,6 +492,20 @@ const FloEvent = props => {
 
 				<div className={`filterContent ${ isFilterExpanded ? "active" : "" }`}>
 					<label>
+						Division
+						<select value={ selectedDivision } onChange={ event => selectDivision(event.target.value)}>
+							<option value="">-- Select --</option>
+							{
+							divisions
+							.sort((divisionA, divisionB) => divisionA > divisionB ? 1 : -1)
+							.map(division => 
+							<option key={ division } value={ division }>{ division }</option>
+							)
+							}
+						</select>
+					</label>
+					
+					<label>
 						Team
 						<select value={ selectedTeam } onChange={ event => setSelectedTeam(event.target.value)}>
 							<option value="">-- Select --</option>
@@ -461,11 +523,16 @@ const FloEvent = props => {
 			
 			{
 			event.updates
+			.filter(updateBlock => updateBlock.updates.some(update => (!selectedTeam || update.teams.includes(selectedTeam)) && (!selectedDivision || update.division == selectedDivision)))
 			.sort((blockA, blockB) => blockB.dateTime - blockA.dateTime)
 			.map((updateBlock, blockIndex) =>
+				
 				<div className="panel expandable" key={blockIndex}>
 					<h3>{ `${ updateBlock.dateTime.toLocaleString() }` }</h3>
 					
+					{
+					updateBlock.updates.some(update => /complete/i.test(update.updateType) && (!selectedTeam || update.teams.includes(selectedTeam)) && (!selectedDivision || update.division == selectedDivision)) ?
+					<>
 					<div className="subHeading">Completed Matches</div>
 					<div className="sectionList">
 						<div key={ blockIndex } className="pill">
@@ -473,7 +540,7 @@ const FloEvent = props => {
 							<tbody>
 							{
 							updateBlock.updates
-							.filter(update => /complete/i.test(update.updateType) && (!selectedTeam || update.teams.includes(selectedTeam)))
+							.filter(update => /complete/i.test(update.updateType) && (!selectedTeam || update.teams.includes(selectedTeam)) && (!selectedDivision || update.division == selectedDivision))
 							.map((update, updateIndex) => 
 							
 								<tr key={ updateIndex }>
@@ -485,7 +552,13 @@ const FloEvent = props => {
 							</table>
 						</div>
 					</div>
+					</>
+					: ""
+					}
 		
+					{
+					updateBlock.updates.some(update => /mat assignment/i.test(update.updateType) && (!selectedTeam || update.teams.includes(selectedTeam)) && (!selectedDivision || update.division == selectedDivision)) ?
+					<>
 					<div className="subHeading">Mat Assignments</div>
 					<div className="sectionList">
 						<div key={ blockIndex } className="pill">
@@ -493,7 +566,7 @@ const FloEvent = props => {
 							<tbody>
 							{
 							updateBlock.updates
-							.filter(update => /mat assignment/i.test(update.updateType) && (!selectedTeam || update.teams.includes(selectedTeam)))
+							.filter(update => /mat assignment/i.test(update.updateType) && (!selectedTeam || update.teams.includes(selectedTeam)) && (!selectedDivision || update.division == selectedDivision))
 							.map((update, updateIndex) => 
 							
 								<tr key={ updateIndex }>
@@ -505,7 +578,13 @@ const FloEvent = props => {
 							</table>
 						</div>
 					</div>
+					</>
+					: ""
+					}
 		
+					{
+					updateBlock.updates.some(update => /new match/i.test(update.updateType) && (!selectedTeam || update.teams.includes(selectedTeam)) && (!selectedDivision || update.division == selectedDivision)) ?
+					<>
 					<div className="subHeading">New Matches</div>
 					<div className="sectionList">
 						<div key={ blockIndex } className="pill">
@@ -513,7 +592,7 @@ const FloEvent = props => {
 							<tbody>
 							{
 							updateBlock.updates
-							.filter(update => /new match/i.test(update.updateType) && (!selectedTeam || update.teams.includes(selectedTeam)))
+							.filter(update => /new match/i.test(update.updateType) && (!selectedTeam || update.teams.includes(selectedTeam)) && (!selectedDivision || update.division == selectedDivision))
 							.map((update, updateIndex) => 
 							
 								<tr key={ updateIndex }>
@@ -525,7 +604,13 @@ const FloEvent = props => {
 							</table>
 						</div>
 					</div>
+					</>
+					: ""
+					}
 		
+					{
+					updateBlock.updates.some(update => /wrestler/i.test(update.updateType) && (!selectedTeam || update.teams.includes(selectedTeam)) && (!selectedDivision || update.division == selectedDivision)) ?
+					<>
 					<div className="subHeading">Wrestlers Assigned</div>
 					<div className="sectionList">
 						<div key={ blockIndex } className="pill">
@@ -545,10 +630,193 @@ const FloEvent = props => {
 							</table>
 						</div>
 					</div>
+					</>
+					: ""
+					}
 		
 				</div>
+
 			)
 			}
+			</>
+
+			: pageView == "upcoming" ?
+
+			<>
+			<header>
+				<h1>Upcoming</h1>
+			</header>
+			
+			<div className="panel filter">
+				<div className="row">
+					<h3>Filter</h3>
+
+					<div className="filterExpand" onClick={ () => setIsFilterExpanded(isFilterExpanded => !isFilterExpanded) }>
+						{
+						isFilterExpanded ?
+						// Close
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg>
+						: 
+						// Tune
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M440-120v-240h80v80h320v80H520v80h-80Zm-320-80v-80h240v80H120Zm160-160v-80H120v-80h160v-80h80v240h-80Zm160-80v-80h400v80H440Zm160-160v-240h80v80h160v80H680v80h-80Zm-480-80v-80h400v80H120Z"/></svg>
+						}
+					</div>
+				</div>
+
+				<div className={`filterContent ${ isFilterExpanded ? "active" : "" }`}>
+					<label>
+						Division
+						<select value={ selectedDivision } onChange={ event => selectDivision(event.target.value)}>
+							<option value="">-- Select --</option>
+							{
+							divisions
+							.sort((divisionA, divisionB) => divisionA > divisionB ? 1 : -1)
+							.map(division => 
+							<option key={ division } value={ division }>{ division }</option>
+							)
+							}
+						</select>
+					</label>
+					
+					<label>
+						Team
+						<select value={ selectedTeam } onChange={ event => setSelectedTeam(event.target.value)}>
+							<option value="">-- Select --</option>
+							{
+							filterTeams
+							.map((team, teamIndex) => 
+							<option key={ teamIndex } value={ team }>{ team }</option>
+							)
+							}
+						</select>
+					</label>
+					
+					<label>
+						Number of Upcoming
+						<select value={ upcomingCount } onChange={ event => setUpcomingCount(event.target.value)}>
+							<option value="">-- Select --</option>
+							<option value="10">10</option>
+							<option value="20">20</option>
+							<option value="30">30</option>
+							<option value="40">40</option>
+							<option value="50">50</option>
+							<option value="60">60</option>
+							<option value="70">70</option>
+							<option value="80">80</option>
+							<option value="90">90</option>
+							<option value="100">100</option>
+						</select>
+					</label>
+				</div>
+
+			</div>
+			
+			{
+			mats.map((mat, matIndex) => 
+
+			<div className="panel" key={matIndex}>
+				<h3>{ mat.name }</h3>
+				
+				<div className="sectionList">
+					<div className="pill">
+						<table>
+						<thead>
+						<tr>
+							<th>#</th>
+							<th>Division</th>
+							<th>Weight</th>
+							<th>Wrestler</th>
+							<th>Wrestler</th>
+						</tr>
+						</thead>
+						<tbody>
+						{
+						!mat.upcoming.some(match => (!selectedTeam || match.topWrestler.team == selectedTeam || match.bottomWrestler.team == selectedTeam) && (!selectedDivision || match.division == selectedDivision)) ?
+							<tr>
+								<td colSpan="5" className="emptyTable">No Upcoming Matches</td>
+							</tr>
+						:
+
+						mat.upcoming
+						.filter(match => (!selectedTeam || match.topWrestler.team == selectedTeam || match.bottomWrestler.team == selectedTeam) && (!selectedDivision || match.division == selectedDivision))
+						.map((match, matchIndex) => 
+						
+							<tr key={ matchIndex }>
+								<td>{ match.matchNumber }</td>
+								<td>{ match.division }</td>
+								<td>{ match.weightClass }</td>
+								<td>
+									{ match.topWrestler.name }<br />
+									{ match.topWrestler.team}
+								</td>
+								<td>
+									{ match.bottomWrestler.name }<br />
+									{ match.bottomWrestler.team}
+								</td>
+							</tr>
+
+						)}
+						</tbody>
+						</table>
+					</div>
+				</div>
+
+			</div>
+
+			)
+			}
+
+			<div className="panel">
+				<h3>Upcoming</h3>
+				
+				<div className="sectionList">
+					<div className="pill">
+						<table>
+						<thead>
+						<tr>
+							<th>#</th>
+							<th>Division</th>
+							<th>Weight</th>
+							<th>Wrestler</th>
+							<th>Wrestler</th>
+						</tr>
+						</thead>
+						<tbody>
+						{
+						!upcoming.some(match => (!selectedTeam || match.topWrestler.team == selectedTeam || match.bottomWrestler.team == selectedTeam) && (!selectedDivision || match.division == selectedDivision)) ?
+							<tr>
+								<td colSpan="5" className="emptyTable">No Upcoming Matches</td>
+							</tr>
+						:
+
+						upcoming
+						.filter(match => (!selectedTeam || match.topWrestler.team == selectedTeam || match.bottomWrestler.team == selectedTeam) && (!selectedDivision || match.division == selectedDivision))
+						.sort((matchA, matchB) => matchA.sort - matchB.sort)
+						.slice(0, upcomingCount)
+						.map((match, matchIndex) => 
+						
+							<tr key={ matchIndex }>
+								<td>{ match.matchNumber }</td>
+								<td>{ match.division }</td>
+								<td>{ match.weightClass }</td>
+								<td>
+									{ match.topWrestler.name }<br />
+									{ match.topWrestler.team}
+								</td>
+								<td>
+									{ match.bottomWrestler.name }<br />
+									{ match.bottomWrestler.team}
+								</td>
+							</tr>
+
+						)}
+						</tbody>
+						</table>
+					</div>
+				</div>
+
+			</div>
+
 			</>
 
 			: ""
@@ -569,7 +837,7 @@ const FloEvent = props => {
 				Updates
 			</button>
 
-			<button aria-label="Upcoming">
+			<button aria-label="Upcoming" onClick={ () => setPageView("upcoming") }>
 				{/* Data alert */}
 				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M120-160v-80h480v80H120Zm520-280q-83 0-141.5-58.5T440-640q0-83 58.5-141.5T640-840q83 0 141.5 58.5T840-640q0 83-58.5 141.5T640-440Zm-520-40v-80h252q7 22 16 42t22 38H120Zm0 160v-80h376q23 14 49 23.5t55 13.5v43H120Zm500-280h40v-160h-40v160Zm20 80q8 0 14-6t6-14q0-8-6-14t-14-6q-8 0-14 6t-6 14q0 8 6 14t14 6Z"/></svg>
 				Upcoming
@@ -581,9 +849,15 @@ const FloEvent = props => {
 				Teams
 			</button>
 
+			{
+			timeDisplay ?
+			
 			<div className={ `refreshDisplay ${ isRefreshing ? "refresh" : "" }` }>
 				{ timeDisplay }
 			</div>
+
+			: ""
+			}
 
 		</div>
 

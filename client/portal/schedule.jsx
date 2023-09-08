@@ -23,6 +23,8 @@ const Schedule = props => {
 	const [ loadingIndex, setLoadingIndex ] = useState(0);
 	const [ errorMessage, setErrorMessage ] = useState("");
 	const [ isEventsLoading, setEventsLoading ] = useState(false);
+	const [ isFilterExpanded, setIsFilterExpanded ] = useState(false);
+	const [ selectedState, setSelectedState ] = useState("SC");
 
 	const [ events, setEvents ] = useState([]);
 	const [ editItem, setEditItem ] = useState(null);
@@ -70,7 +72,7 @@ const Schedule = props => {
 							endDate: event.endDate ? new Date(event.endDate) : null
 						}))
 					];
-					
+
 					setLoggedInUser(data.loggedInUser);
 					setEvents(newEvents);
 					
@@ -170,13 +172,28 @@ const Schedule = props => {
 			})
 			.then(data => {
 				if (!event.id) {
-					setEvents(events => events.concat({
-						...data.event, 
-						type: "mill",
-						date: new Date(data.event.date), 
-						endDate: data.event.endDate ? new Date(data.event.endDate) : null
-					}));
+					const newEvents = events.concat({
+							...data.event, 
+							type: "mill",
+							date: new Date(data.event.date), 
+							endDate: data.event.endDate ? new Date(data.event.endDate) : null
+						});
+
+					setEvents(newEvents);
 					setNewEvent(emptyEvent);
+					
+					const days = Array.from(Array(new Date(yearSelected, monthSelected + 1, 0).getDate()).keys()) // Get array of dates, get last day of the month to know array length
+					.map(day => {
+						const dateStart = new Date(yearSelected, monthSelected, day + 1),
+							dateEnd = new Date(yearSelected, monthSelected, day + 2);
+
+						return {
+							day: day + 1,
+							className: newEvents.some(event => (event.date >= dateStart && event.date < dateEnd) || (event.endDate && event.endDate > dateStart && event.endDate < dateEnd)) ? "single" : ""
+						};
+					})
+
+					setMonthDays(days);
 				}
 
 				setEditItem(null);
@@ -255,8 +272,8 @@ const Schedule = props => {
 		setEvents(events => events.map(event => {
 			return event.id === eventId ? {
 				...event,
-				[property]: property === "date" ? new Date(new Date(value).getTime() + (new Date().getTimezoneOffset() * 60000)) 
-					: property === "endDate" ? new Date(new Date(value).getTime() + (new Date().getTimezoneOffset() * 60000)) 
+				[property]: property === "date" ? value ? new Date(new Date(value).getTime() + (new Date(new Date(value)).getTimezoneOffset() * 60000)) : null
+					: property === "endDate" ? value ? new Date(new Date(value).getTime() + (new Date(new Date(value)).getTimezoneOffset() * 60000)) : null
 					: value
 			}: event
 		}))
@@ -299,10 +316,38 @@ const Schedule = props => {
 				</ol>
 
 			</div>
-		</div>
+			
+			<div className="panel filter">
+				<div className="row">
+					<h3>Filter</h3>
 
-		<div className={`schedule container ${ pageActive ? "active" : "" }`}>
+					<div className="filterExpand" onClick={ () => setIsFilterExpanded(isFilterExpanded => !isFilterExpanded) }>
+						{
+						isFilterExpanded ?
+						// Close
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg>
+						: 
+						// Tune
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M440-120v-240h80v80h320v80H520v80h-80Zm-320-80v-80h240v80H120Zm160-160v-80H120v-80h160v-80h80v240h-80Zm160-80v-80h400v80H440Zm160-160v-240h80v80h160v80H680v80h-80Zm-480-80v-80h400v80H120Z"/></svg>
+						}
+					</div>
+				</div>
 
+				<div className={`filterContent ${ isFilterExpanded ? "active" : "" }`}>
+					<label>
+						State
+						<select value={ selectedState } onChange={ event => setSelectedState(event.target.value)}>
+							<option value="">-- Select --</option>
+							<option value="SC">SC</option>
+							<option value="NC">NC</option>
+							<option value="TN">TN</option>
+							<option value="GA">GA</option>
+						</select>
+					</label>
+				</div>
+
+			</div>
+			
 			<div key={ "newEvent" } className="panel">
 				{
 				editItem === "newEvent" ?
@@ -312,12 +357,12 @@ const Schedule = props => {
 
 				<label>
 					<span>Date</span>
-					<input type="date" min={ minDate.toLocaleDateString("fr-ca") } value={ newEvent.date ? newEvent.date.toLocaleDateString("fr-ca") : "" } onChange={ event => setNewEvent(newEvent => ({ ...newEvent, date: new Date(new Date(event.target.value).getTime() + (new Date().getTimezoneOffset() * 60000)) })) } aria-label="date" />
+					<input type="date" min={ minDate.toLocaleDateString("fr-ca") } value={ newEvent.date ? newEvent.date.toLocaleDateString("fr-ca") : "" } onChange={ event => setNewEvent(newEvent => ({ ...newEvent, date: new Date(new Date(event.target.value).getTime() + (new Date(new Date(event.target.value)).getTimezoneOffset() * 60000)) })) } aria-label="date" />
 				</label>
 
 				<label>
 					<span>End Date (leave blank if only one day)</span>
-					<input type="date" min={ minDate.toLocaleDateString("fr-ca") } value={ newEvent.endDate ? newEvent.endDate.toLocaleDateString("fr-ca") : "" } onChange={ event => setNewEvent(newEvent => ({ ...newEvent, endDate: new Date(new Date(event.target.value).getTime() + (new Date().getTimezoneOffset() * 60000)) })) } aria-label="End Date" />
+					<input type="date" min={ minDate.toLocaleDateString("fr-ca") } value={ newEvent.endDate ? newEvent.endDate.toLocaleDateString("fr-ca") : "" } onChange={ event => setNewEvent(newEvent => ({ ...newEvent, endDate: new Date(new Date(event.target.value).getTime() + (new Date(new Date(event.target.value)).getTimezoneOffset() * 60000)) })) } aria-label="End Date" />
 				</label>
 
 				<label>
@@ -365,7 +410,7 @@ const Schedule = props => {
 
 			{
 			events
-			.filter(event => event.date.getMonth() === monthSelected && event.date.getFullYear() === yearSelected)
+			.filter(event => event.date.getMonth() === monthSelected && event.date.getFullYear() === yearSelected && (!selectedState || event.state == selectedState || !event.state))
 			.sort((eventA, eventB) => eventA.date - eventB.date)
 			.map(event =>
 				
