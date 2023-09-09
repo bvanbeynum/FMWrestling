@@ -19,10 +19,10 @@ export default {
 
 	authAPI: async (serverPath, referer, cookie) => {
 		const output = {};
-
+		
 		const re = new RegExp(serverPath); // Build the regex based on the shorter path to the server
 		output.isValid = re.test(referer); // The referer is the full URL, so it should include the server path
-
+		console.log(`s: ${ serverPath }, r: ${ referer }, v: ${ output.isValid }`);
 		if (output.isValid && cookie) {
 			
 			try {
