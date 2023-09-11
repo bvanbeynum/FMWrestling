@@ -103,7 +103,11 @@ const FloEvent = props => {
 				setUpcoming(matches.filter(match => !match.winType && match.topWrestler && match.bottomWrestler).sort((matchA, matchB) => matchA.sort - matchB.sort));
 
 				setDivisions([...new Set(newEvent.divisions.map(division => division.name))]);
-				setFilterTeams([...new Set(newEvent.updates ? newEvent.updates.flatMap(update => update.updates.flatMap(update => update.teams)) : [])].sort((teamA, teamB) => teamA > teamB ? 1 : -1))
+				setFilterTeams(
+					[...new Set(matches.flatMap(match => [match.topWrestler ? match.topWrestler.team : null, match.bottomWrestler ? match.bottomWrestler.team : null]))]
+					.filter(team => team) // Remove null
+					.sort((teamA, teamB) => teamA > teamB ? 1 : -1)
+					);
 
 				if (!newEvent.isComplete) {
 					setLastRefresh(new Date(data.floEvent.lastUpdate));
