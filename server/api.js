@@ -1466,7 +1466,9 @@ export default {
 						
 						if (updates.length > 0 && updates.length < 200) {
 							// Don't log too many updates
-							floEvent.updates = (floEvent.updates || []).concat({ dateTime: new Date(), updates: updates });
+							floEvent.updates = (prevEvent.updates || [])
+								.slice(0, 100)
+								.concat({ dateTime: new Date(), updates: updates });
 						}
 					}
 				}
