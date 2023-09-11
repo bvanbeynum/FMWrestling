@@ -1615,6 +1615,7 @@ describe("Flo Events", () => {
 			id: "flo1",
 			sqlId: 1234,
 			isFavorite: true,
+			lastUpdate: new Date(),
 			divisions: []
 		}];
 		
@@ -1623,7 +1624,7 @@ describe("Flo Events", () => {
 
 		// ********** When
 
-		const results = await api.floEventLoad(floEvents[0].id, serverPath);
+		const results = await api.floEventLoad(floEvents[0].id, serverPath, new Date(new Date().setMinutes(0,0,0,0)));
 
 		// ********** Then
 
@@ -1634,6 +1635,37 @@ describe("Flo Events", () => {
 
 		expect(results.data).toHaveProperty("floEvent");
 		expect(results.data.floEvent).toEqual(floEvents[0]);
+
+	});
+
+	it("checks if there is any updates", async () => {
+
+		// ********** Given
+
+		const floEvents = [{
+			id: "flo1",
+			sqlId: 1234,
+			isFavorite: true,
+			lastUpdate: new Date(new Date().setMinutes(0,0,0,0)),
+			divisions: []
+		}];
+		
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { floEvents: floEvents }}) // Get the teams
+
+		// ********** When
+
+		const results = await api.floEventLoad(floEvents[0].id, serverPath, new Date());
+
+		// ********** Then
+
+		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/floevent?id=${ floEvents[0].id }`);
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+
+		expect(results.data).toHaveProperty("floEvent");
+		expect(results.data.floEvent).toBeNull();
 
 	});
 

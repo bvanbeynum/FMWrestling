@@ -1317,12 +1317,19 @@ export default {
 		return output;
 	},
 
-	floEventLoad: async (floId, serverPath) => {
+	floEventLoad: async (floId, serverPath, lastLoad = null) => {
 		const output = { data: {} };
 
 		try {
 			const clientResponse = await client.get(`${ serverPath }/data/floevent?id=${ floId }`);
-			output.data.floEvent = clientResponse.body.floEvents[0];
+			const floEvent = clientResponse.body.floEvents[0]
+
+			if (!lastLoad || floEvent.lastUpdate > new Date(lastLoad)) {
+				output.data.floEvent = floEvent;
+			}
+			else {
+				output.data.floEvent = null;
+			}
 		}
 		catch (error) {
 			output.status = 561;

@@ -14,6 +14,7 @@ const FloEvent = props => {
 	const [ lastRefresh, setLastRefresh ] = useState(null);
 	const [ pageView, setPageView ] = useState("bracket");
 
+	const [ eventId, setEventId ] = useState(null);
 	const [ event, setEvent ] = useState(null);
 	const [ mats, setMats ] = useState([]);
 	const [ upcoming, setUpcoming ] = useState([]);
@@ -33,7 +34,7 @@ const FloEvent = props => {
 	useEffect(() => {
 		if (!pageActive) {
 			const url = new window.URLSearchParams(window.location.search);
-			refreshData(url.get("id"));
+			setEventId(url.get("id"));
 		}
 
 		return () => {
@@ -44,26 +45,32 @@ const FloEvent = props => {
 		}
 	}, []);
 
+	// Make sure the event ID is set before it is used by the refresh function
 	useEffect(() => {
-		if (lastRefresh) {
-			if (timeInterval) {
-				clearInterval(timeInterval);
-			}
-
-			setTimeInterval(
-				setInterval(() => setTimeDisplay(
-					(new Date() - lastRefresh > (1000 * 60 * 60) ? Math.floor((new Date() - lastRefresh) / 1000 / 60 / 60) + "h " : "") +
-					(new Date() - lastRefresh > (1000 * 60) ? Math.floor(((new Date() - lastRefresh) / 1000 / 60) % 60) + "m " : "") + 
-					Math.floor(((new Date()) - lastRefresh) / 1000 % 60) + "s" 
-					), 1000)
-			);
+		if (eventId) {
+			refreshData();
 		}
-	}, [lastRefresh])
+	}, [eventId])
 
-	const refreshData = eventId => {
+	const updateTime = () => {
+		const updateTimeDiff = new Date() - lastRefresh;
+
+		setTimeDisplay(
+			(updateTimeDiff > (1000 * 60 * 60) ? Math.floor(updateTimeDiff / 1000 / 60 / 60) + "h " : "") +
+			(updateTimeDiff > (1000 * 60) ? Math.floor((updateTimeDiff / 1000 / 60) % 60) + "m " : "") + 
+			Math.floor(updateTimeDiff / 1000 % 60) + "s" 
+			);
+		
+		if (updateTimeDiff > 1000 * 10) {
+			// If the last update is more than 10 seconds out, then refresh
+			refreshData();
+		}
+	};
+
+	const refreshData = () => {
 		setIsRefreshing(true);
 
-		fetch(`/api/floeventload?id=${ eventId }`)
+		fetch(`/api/floeventload?id=${ eventId }${ lastRefresh ? "&lastLoad=" + lastRefresh : "" }`)
 			.then(response => {
 				if (response.ok) {
 					return response.json();
@@ -73,6 +80,9 @@ const FloEvent = props => {
 				}
 			})
 			.then(data => {
+				if (!data.floEvent)
+					return; // No updates since last checked
+
 				const newEvent = data.floEvent,
 					matches = data.floEvent.divisions.flatMap(division =>
 						division.weightClasses.flatMap(weight =>
@@ -109,11 +119,12 @@ const FloEvent = props => {
 					.sort((teamA, teamB) => teamA > teamB ? 1 : -1)
 					);
 
-				if (!newEvent.isComplete) {
-					setLastRefresh(new Date(data.floEvent.lastUpdate));
-					setTimeout(() => refreshData(eventId), 30000);
+				if (!newEvent.isComplete && !timeInterval) {
+					// If the event is not complete & we haven't already set the refresh interval, then set
+					setTimeInterval(setInterval(updateTime, 1000));
 				}
 
+				setLastRefresh(new Date());
 				setIsRefreshing(false);
 
 				if (!pageActive) {
