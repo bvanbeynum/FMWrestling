@@ -133,7 +133,7 @@ button:disabled, .button:disabled {
 }
 
 .filterContent.active {
-	display: block;
+	display: grid;
 }
 
 .panel .icon {
@@ -216,16 +216,8 @@ button svg, .button svg {
 	height: 24px;
 }
 
-.action.isFavorite svg {
-	fill: rgb(242 192 41);
-	stroke: rgb(191 126 4);
-	stroke-width: 50px;
-}
-
 .action.notFavorite svg {
-	fill: none;
-	stroke: black;
-	stroke-width: 50px;
+	fill: rgb(139 139 139);
 }
 
 .panel .seperator {
