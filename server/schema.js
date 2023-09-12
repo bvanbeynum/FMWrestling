@@ -176,6 +176,7 @@ export default {
 						},
 						winType: String,
 						results: String,
+						completeTime: Date,
 						nextMatch: {
 							winnerGUID: String,
 							isWinnerTop: Boolean,

@@ -1467,6 +1467,21 @@ export default {
 										updateType: "Match Completed",
 										message: `${ winner } beat ${ loser } by ${ match.winType }`
 									});
+
+									// Update the event with the current time
+									floEvent.divisions = floEvent.divisions.map(division => ({
+										...division,
+										weightClasses: division.weightClasses.map(weight => ({
+											...weight,
+											pools: weight.pools.map(pool => ({
+												...pool,
+												matches: pool.matches.map(updateMatch => ({
+													...updateMatch,
+													completeTime: updateMatch.guid == match.guid ? new Date() : updateMatch.completeTime
+												}))
+											}))
+										}))
+									}));
 								}
 
 							});
