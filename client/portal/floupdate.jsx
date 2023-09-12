@@ -8,6 +8,7 @@ const FloUpdate = props => {
 
 	const [ selectedDivision, setSelectedDivision ] = useState("");
 	const [ selectedTeam, setSelectedTeam ] = useState("");
+	const [ updateLength, setUpdateLength ] = useState("");
 
 	useEffect(() => {
 		if (props.updates) {
@@ -65,13 +66,29 @@ const FloUpdate = props => {
 				}
 			</select>
 		</label>
+		
+		<label>
+			Updates in Last
+			<select value={ updateLength } onChange={ event => setUpdateLength(event.target.value)}>
+				<option value="">-- Select --</option>
+				<option value="15">15 min</option>
+				<option value="30">30 min</option>
+				<option value="60">1 hour</option>
+				<option value="120">2 hours</option>
+				<option value="240">4 hours</option>
+			</select>
+		</label>
 	</div>
 
 </div>
 
 {
 updates
-.filter(updateBlock => updateBlock.updates.some(update => (!selectedTeam || update.teams.includes(selectedTeam)) && (!selectedDivision || update.division == selectedDivision)))
+.filter(updateBlock => updateBlock.updates.some(update => 
+	(!selectedTeam || update.teams.includes(selectedTeam)) && 
+	(!selectedDivision || update.division == selectedDivision) &&
+	(!updateLength || update.dateTime > new Date(new Date().setMinutes(new Date().getMinutes() + updateLength)))
+	))
 .sort((blockA, blockB) => blockB.dateTime - blockA.dateTime)
 .map((updateBlock, blockIndex) =>
 	
