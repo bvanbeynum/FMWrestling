@@ -92,7 +92,7 @@ updates
 				.map((update, updateIndex) => 
 				
 					<tr key={ updateIndex }>
-						<td>{ update.message }</td>
+						<td>{ `${ update.division } / ${ update.weightClass }: ${ update.message }` }</td>
 					</tr>
 
 				)}
@@ -170,7 +170,7 @@ updates
 				.map((update, updateIndex) => 
 				
 					<tr key={ updateIndex }>
-						<td>{ update.message }</td>
+						<td>{ `${ update.division } / ${ update.weightClass }: ${ update.message }` }</td>
 					</tr>
 
 				)}
