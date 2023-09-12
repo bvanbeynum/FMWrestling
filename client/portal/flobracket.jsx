@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import "./include/index.css";
 
 const FloBracket = props => {
@@ -6,6 +6,8 @@ const FloBracket = props => {
 	const paddingSize = { top: 20, left: 0, round: 40, box: 10, match: 30, textX: 10, winTextX: 18, path: 5 },
 		boxSize = { height: 40, primarySection: 160, secondarySection: 50, wrestlerTextY: 18, teamTextY: 33, winY: 25 },
 		matchSize = { height: (boxSize.height * 2) + paddingSize.box + paddingSize.match, width: paddingSize.round + boxSize.primarySection + boxSize.secondarySection };
+
+	const filterRef = useRef();
 
 	const [ isFilterExpanded, setIsFilterExpanded ] = useState(false);
 	const [ selectedDivision, setSelectedDivision ] = useState("");
@@ -46,7 +48,8 @@ const FloBracket = props => {
 			roundCount = newRounds.length,
 			roundSize = { width: boxSize.primarySection + boxSize.secondarySection + (paddingSize.round * 2), height: ((boxSize.height * 2) + paddingSize.box + paddingSize.match) * maxMatches },
 			svgSize = { width: (roundSize.width * roundCount) + paddingSize.left, height: roundSize.height + paddingSize.top },
-			innerBoxSize = { x: paddingSize.left, y: paddingSize.top };
+			innerBoxSize = { x: paddingSize.left, y: paddingSize.top },
+			maxZoom = filterRef.current.offsetWidth > filterRef.current.offsetHeight ? Math.ceil((svgSize.width * 100) / (filterRef.current.offsetWidth * .5)) : Math.ceil((svgSize.height * 100) / (filterRef.current.offsetHeight * 1.1));
 		
 		// If there's a next match then it is a bracket and not a round robin
 		if (matches.some(match => match.nextMatch)) {
@@ -177,9 +180,9 @@ const FloBracket = props => {
 			// Round robin, sort
 			sortedRounds = newRounds.map(round => ({
 				...round,
-				matches: round.matches.map(match => ({
+				matches: round.matches.map((match, matchIndex) => ({
 					...match,
-					startY: 0
+					startY: matchSize.height * matchIndex
 				}))
 			}));
 		}
@@ -190,6 +193,8 @@ const FloBracket = props => {
 			matches: matches,
 			rounds: sortedRounds,
 			paths: paths,
+			zoom: 100,
+			maxZoom: maxZoom,
 			position: {
 				svg: svgSize,
 				innerBox: innerBoxSize,
@@ -202,7 +207,18 @@ const FloBracket = props => {
 		}])
 
 		setSelectedWeight(newWeight);
-	}
+	};
+
+	const setZoom = bracketIndex => event => {
+		setSelectedBrackets([
+			...selectedBrackets.slice(0, bracketIndex),
+			{
+				...selectedBrackets[bracketIndex],
+				zoom: event.target.value
+			},
+			...selectedBrackets.slice(bracketIndex + 1)
+		])
+	};
 
 	return (
 
@@ -211,7 +227,7 @@ const FloBracket = props => {
 	<h1>Brackets</h1>
 </header>
 
-<div className="panel filter">
+<div className="panel filter" ref={ filterRef }>
 	<div className="row">
 		<h3>Filter</h3>
 
@@ -273,8 +289,12 @@ selectedBrackets
 <div className="panel expandable" key={bracketIndex}>
 	<h3>{ `${ bracket.division} - ${ bracket.weightClass }` }</h3>
 
+	<div>
+		<input type="range" min="100" max={ bracket.maxZoom } value={ bracket.zoom } onChange={ setZoom(bracketIndex) } step="1" />
+	</div>
+
 	<div className="bracketContainer">
-		<svg className="bracket" style={{ height: `${ bracket.position.svg.height }px`, width: `${ bracket.position.svg.width }px` }}>
+		<svg className="bracket" style={{ height: `${ bracket.zoom }%`, width: `${ bracket.zoom }%` }} viewBox={ `0 0 ${ bracket.position.svg.width } ${ bracket.position.svg.height }` } preserveAspectRatio="xMidYMid meet">
 			<defs>
 				<filter id="shadow" x="-20" y="-20" width="50" height="50">
 					<feOffset result="offOut" in="SourceAlpha" dx="0" dy="0" />
@@ -346,6 +366,7 @@ selectedBrackets
 			</g>
 		</svg>
 	</div>
+
 </div>
 
 )
