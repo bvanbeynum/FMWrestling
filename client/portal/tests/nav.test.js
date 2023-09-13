@@ -13,7 +13,7 @@ describe("Index component", () => {
 		id: "user1",
 		firstName: "Test",
 		lastName: "User",
-		privileges: [{ id: "privilege1", token: "userAdmin" }]
+		privileges: ["userAdmin"]
 	};
 	
 	beforeEach(() => {

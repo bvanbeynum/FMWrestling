@@ -25,7 +25,8 @@ describe("Schedule component", () => {
 			id: "track1",
 			name: "Track event",
 			date: new Date()
-		}];
+		}],
+		loggedInUser = { id: "user1", privileges: ["scheduleView", "scheduleManage"] };
 
 	beforeEach(() => {
 		global.fetch = jest.fn().mockResolvedValue({
@@ -34,7 +35,8 @@ describe("Schedule component", () => {
 			json: jest.fn().mockResolvedValue({
 				events: events,
 				floEvents: floEvents,
-				trackEvents: trackEvents
+				trackEvents: trackEvents,
+				loggedInUser: loggedInUser
 			})
 		});
 	});
@@ -272,7 +274,8 @@ describe("Schedule component", () => {
 			json: jest.fn().mockResolvedValue({
 				events: events,
 				floEvents: floEvents,
-				trackEvents: trackEvents
+				trackEvents: trackEvents,
+				loggedInUser: loggedInUser
 			})
 		});
 

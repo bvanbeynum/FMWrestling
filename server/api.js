@@ -33,9 +33,15 @@ export default {
 
 				clientResponse = await client.get(`${ serverPath }/data/role`);
 
-				output.loggedInUser.privileges = clientResponse.body.roles
-					.filter(role => output.loggedInUser.roles.some(userRole => userRole.id == role.id))
-					.flatMap(role => role.privileges)
+				// Add role privileges to any dev privileges added directly to the user
+				output.loggedInUser.privileges = [...new Set(
+						(output.loggedInUser.privileges || [])
+							.map(privilege => privilege.token)
+							.concat(clientResponse.body.roles
+								.filter(role => output.loggedInUser.roles.some(userRole => userRole.id == role.id))
+								.flatMap(role => role.privileges.map(privilege => privilege.token))
+							)
+					)];
 			}
 			catch { }
 
@@ -105,9 +111,16 @@ export default {
 				clientResponse = await client.get(`${ serverPath }/data/role`);
 				const roles = clientResponse.body.roles;
 
-				output.user.privileges = roles
-					.filter(role => output.user.roles.some(userRole => userRole.id == role.id))
-					.flatMap(role => role.privileges)
+				// Add role privileges to any dev privileges added directly to the user
+				output.user.privileges = [...new Set(
+					(output.user.privileges || [])
+						.map(privilege => privilege.token)
+						.concat(roles
+							.filter(role => output.user.roles.some(userRole => userRole.id == role.id))
+							.flatMap(role => role.privileges.map(privilege => privilege.token))
+						)
+				)];
+				
 			}
 			catch (error) {
 				output.status = 566;

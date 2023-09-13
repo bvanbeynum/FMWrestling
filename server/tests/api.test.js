@@ -98,7 +98,7 @@ describe("Middleware", () => {
 		const cookie = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbiI6ImhmM3dpbDJmejAiLCJpYXQiOjE2ODQ5NTk4NDR9.HmOWSzP2XRN7R00gH7a2eQFX-sMa0qRnbsJxSeWhq-o",
 			token = "hf3wil2fz0",
 			urlPath = "/portal/index.html",
-			privileges = [{ id: "priv1" }],
+			privileges = [{ id: "priv1", token: "myPriv" }],
 			roles = [{ id: "role1", privileges: privileges }],
 			users = [{
 				"id": "646e6e9c439316107c5302d9",
@@ -140,7 +140,7 @@ describe("Middleware", () => {
 		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/user`);
 
 		expect(results).toHaveProperty("status", 200);
-		expect(results).toHaveProperty("user", expect.objectContaining({ privileges: privileges }))
+		expect(results).toHaveProperty("user", expect.objectContaining({ privileges: privileges.map(privilege => privilege.token) }))
 	});
 
 	it("fails the portal authentication with invalid token", async () => {
