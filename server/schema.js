@@ -20,6 +20,11 @@ export default {
 			id: String,
 			name: String
 		}],
+		privileges: [{
+			id: String,
+			name: String,
+			token: String
+		}],
 		created: Date,
 		modified: Date
 	}),
