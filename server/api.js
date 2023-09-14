@@ -1460,7 +1460,7 @@ export default {
 											...(match.bottomWrestler ? [match.bottomWrestler.team] : [])
 										],
 										updateType: "Mat Assignment",
-										message: `Mat ${ match.mat }: match${ matchNumber } - ${ topWrestler } vs ${ bottomWrestler }`
+										message: `${ match.mat }: match${ matchNumber } - ${ topWrestler } vs ${ bottomWrestler }`
 									});
 								}
 
