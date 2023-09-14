@@ -33,6 +33,7 @@ svg {
 
 header {
 	display: flex;
+	grid-column: 1 / -1;
 }
 
 header h1 {
@@ -78,11 +79,6 @@ button:disabled, .button:disabled {
 	margin: 10px;
 	z-index: 10;
 	background-color: rgb(245 245 245);
-}
-
-.closeMenu {
-	position: fixed;
-	margin: 10px;
 }
 
 .container {

@@ -39,3 +39,105 @@
 	fill: none;
 	stroke-width: 2;
 }
+
+.chartGird {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	grid-column-gap: 1rem;
+	margin: 10px 0px 20px 0px;
+}
+
+.chartGridItem {
+	display: grid;
+	grid-auto-flow: column;
+	justify-content: center;
+}
+
+.progressChart {
+	width: 7rem;
+	height: 7rem;
+}
+
+.progressChart circle {
+	fill: transparent;
+	stroke: rgb(215 215 215);
+	stroke-width: .18rem;
+}
+
+circle.progressBar {
+	stroke: rgb(71 173 96);
+}
+
+line.progressDivide {
+	stroke: rgb(111 111 111);
+	stroke-width: .04rem;
+}
+
+text.progressActive {
+	font-size: 1.1em;
+	fill: rgb(111 111 111);
+}
+
+text.progressTotal {
+	font-size: .45em;
+	fill: rgb(111 111 111);
+}
+
+.teamPlaceSection {
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-end;
+}
+
+.teamPlacePodium {
+	background-color: rgb(71 173 96);
+	border-top: 3px solid rgb(169 245 153);
+	border-top-left-radius: 5px;
+	border-top-right-radius: 5px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: rgb(253 253 253);
+	font-size: 3ch;
+	width: 3.5rem;
+}
+
+.teamPlaceSection svg {
+	margin: 0px auto 3px auto;
+	width: 28px;
+	height: 28px;
+}
+
+.teamPlaceSection:nth-child(1) svg {
+	fill: rgb(192 192 192);
+	stroke: rgb(123 123 123);
+	stroke-width: .8px;
+}
+
+.teamPlaceSection:nth-child(1) .teamPlacePodium {
+	height: 40px;
+	margin-right: -3px;
+}
+
+.teamPlaceSection:nth-child(2) svg {
+	fill: rgb(239 202 0);
+	stroke: rgb(159 134 1);
+	stroke-width: .8px;
+}
+
+.teamPlaceSection:nth-child(2) .teamPlacePodium {
+	height: 50px;
+	background-color: rgb(125 211 105);
+	z-index: 10;
+}
+
+.teamPlaceSection:nth-child(3) svg {
+	fill: rgb(205 127 50);
+	stroke: rgb(141 90 39);
+	stroke-width: .8px;
+}
+
+.teamPlaceSection:nth-child(3) .teamPlacePodium {
+	height: 30px;
+	margin-left: -3px;
+}

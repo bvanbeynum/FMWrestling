@@ -6,6 +6,7 @@ import FloUpcoming from "./floupcoming.jsx";
 import "./include/index.css";
 import "./include/floevent.css";
 import FloBracket from "./flobracket.jsx";
+import FloTeam from "./floteam.jsx";
 
 const FloEvent = props => {
 
@@ -20,8 +21,10 @@ const FloEvent = props => {
 	const [ eventId, setEventId ] = useState(null);
 	const [ event, setEvent ] = useState(null);
 	const [ matches, setMatches ] = useState([]);
+	const [ teams, setTeams ] = useState([]);
 
 	const [ divisionNames, setDivisionNames ] = useState([]);
+	const [ weightClasses, setWeightClasses ] = useState([]);
 	const [ teamNames, setTeamNames ] = useState([]);
 
 	useEffect(() => {
@@ -43,7 +46,15 @@ const FloEvent = props => {
 		if (eventId) {
 			refreshData();
 		}
-	}, [eventId])
+	}, [eventId]);
+
+	// Set the interval when last refresh is ready
+	useEffect(() => {
+		// If the event is not complete & we haven't already set the refresh interval, then set
+		if (event && lastRefresh && !event.isComplete && !timeInterval) {
+			setTimeInterval(setInterval(() => updateTime(new Date()), 1000));
+		}
+	}, [lastRefresh]);
 
 	const updateTime = () => {
 		const updateTimeDiff = new Date() - lastRefresh;
@@ -53,9 +64,15 @@ const FloEvent = props => {
 			(updateTimeDiff > (1000 * 60) ? Math.floor((updateTimeDiff / 1000 / 60) % 60) + "m " : "") + 
 			Math.floor(updateTimeDiff / 1000 % 60) + "s" 
 			);
-		
-		if (updateTimeDiff > 1000 * 10) {
-			// If the last update is more than 10 seconds out, then refresh
+	
+		let interval = 1000 * 60 * 30; // Set the default refresh at 30 min
+
+		if ((new Date()) > (event.date.getTime() - (1000 * 60 * 60 * 24))) {
+			// If the event is < than a day from starting then update every 5 seconds
+			interval = 1000 * 5;
+		}
+
+		if (updateTimeDiff > interval) {
 			refreshData();
 		}
 	};
@@ -76,8 +93,13 @@ const FloEvent = props => {
 				if (!data.floEvent)
 					return; // No updates since last checked
 
-				const newEvent = data.floEvent,
-					newMatches = newEvent.divisions.flatMap(division =>
+				const newEvent = {
+					...data.floEvent,
+					date: new Date(data.floEvent.date),
+					endDate: data.floEvent.endDate ? new Date(data.floEvent.endDate) : null
+				};
+
+				const newMatches = newEvent.divisions.flatMap(division =>
 						division.weightClasses.flatMap(weight =>
 							weight.pools.flatMap(pool =>
 								pool.matches.map(match => ({
@@ -89,6 +111,38 @@ const FloEvent = props => {
 								)
 							)
 						);
+					
+				const newTeamNames = [...new Set(newMatches.flatMap(match => [match.topWrestler ? match.topWrestler.team : null, match.bottomWrestler ? match.bottomWrestler.team : null]))]
+						.filter(team => team) // Remove null
+						.sort((teamA, teamB) => teamA > teamB ? 1 : -1);
+
+				const teamData = newTeamNames.map(teamName => {
+					const teamMatches = newMatches.filter(match => (match.topWrestler && match.topWrestler.team == teamName) || (match.bottomWrestler && match.bottomWrestler.team == teamName));
+
+					const teamWrestlers = [...new Set(teamMatches.map(match => match.topWrestler && match.topWrestler.team === teamName ? match.topWrestler.name : match.bottomWrestler.name))]
+						.map(wrestlerName => {
+							const wrestlerMatches = teamMatches.filter(match => (match.topWrestler && match.topWrestler.name == wrestlerName) || (match.bottomWrestler && match.bottomWrestler.name === wrestlerName));
+
+							return {
+								name: wrestlerName,
+								division: wrestlerMatches[0].division,
+								weightClass: wrestlerMatches[0].weightClass,
+								isComplete: !wrestlerMatches.some(match => !match.winType),
+								wins: wrestlerMatches.filter(match => match.winType && match.winType != "BYE" && ((match.topWrestler && match.topWrestler.name == wrestlerName && match.topWrestler.isWinner) || (match.bottomWrestler && match.bottomWrestler.name == wrestlerName && match.bottomWrestler.isWinner))).length,
+								losses: wrestlerMatches.filter(match => match.winType && match.winType != "BYE" && ((match.topWrestler && match.topWrestler.name == wrestlerName && !match.topWrestler.isWinner) || (match.bottomWrestler && match.bottomWrestler.name == wrestlerName && !match.bottomWrestler.isWinner))).length,
+								place: wrestlerMatches.some(match => /^finals$/i.test(match.round) && ((match.topWrestler && match.topWrestler.name == wrestlerName && match.topWrestler.isWinner) || (match.bottomWrestler && match.bottomWrestler.name == wrestlerName && match.bottomWrestler.isWinner))) ? "1st"
+									: wrestlerMatches.some(match => /^finals$/i.test(match.round) && ((match.topWrestler && match.topWrestler.name == wrestlerName && !match.topWrestler.isWinner) || (match.bottomWrestler && match.bottomWrestler.name == wrestlerName && !match.bottomWrestler.isWinner))) ? "2nd"
+									: wrestlerMatches.some(match => /^3rd place$/i.test(match.round) && ((match.topWrestler && match.topWrestler.name == wrestlerName && match.topWrestler.isWinner) || (match.bottomWrestler && match.bottomWrestler.name == wrestlerName && match.bottomWrestler.isWinner))) ? "3rd"
+									: wrestlerMatches.some(match => /^3rd place$/i.test(match.round) && ((match.topWrestler && match.topWrestler.name == wrestlerName && !match.topWrestler.isWinner) || (match.bottomWrestler && match.bottomWrestler.name == wrestlerName && !match.bottomWrestler.isWinner))) ? "4th"
+									: ""
+							};
+						});
+					
+					return {
+						name: teamName,
+						wrestlers: teamWrestlers
+					};
+				});
 
 				setEvent(({
 					...newEvent,
@@ -96,19 +150,10 @@ const FloEvent = props => {
 				}));
 
 				setMatches(newMatches);
-
+				setTeams(teamData);
 				setDivisionNames([...new Set(newEvent.divisions.map(division => division.name))]);
-				setTeamNames(
-					[...new Set(matches.flatMap(match => [match.topWrestler ? match.topWrestler.team : null, match.bottomWrestler ? match.bottomWrestler.team : null]))]
-					.filter(team => team) // Remove null
-					.sort((teamA, teamB) => teamA > teamB ? 1 : -1)
-					);
-
-				if (!newEvent.isComplete && !timeInterval) {
-					// If the event is not complete & we haven't already set the refresh interval, then set
-					setTimeInterval(setInterval(updateTime, 1000));
-				}
-
+				setWeightClasses([...new Set(newEvent.divisions.flatMap(division => division.weightClasses.map(weight => weight.name))) ]);
+				setTeamNames(newTeamNames);
 				setLastRefresh(new Date());
 				setIsRefreshing(false);
 
@@ -134,7 +179,7 @@ const FloEvent = props => {
 			{
 			pageView == "bracket" ?
 
-				<FloBracket divisions={ event && event.divisions ? event.divisions : [] } />
+				<FloBracket divisions={ event && event.divisions ? event.divisions : [] } weightClasses={ weightClasses } />
 			
 			: pageView === "updates" ?
 
@@ -143,6 +188,10 @@ const FloEvent = props => {
 			: pageView == "upcoming" ?
 
 				<FloUpcoming matches={ matches } divisions={ divisionNames } teams={ teamNames } />
+
+			: pageView == "teams" ?
+
+				<FloTeam teams={ teams } weightClasses={ weightClasses } />
 
 			: ""
 			}
@@ -168,7 +217,7 @@ const FloEvent = props => {
 				Upcoming
 			</button>
 
-			<button aria-label="Teams">
+			<button aria-label="Teams" onClick={ () => setPageView("teams") }>
 				{/* Group */}
 				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M0-240v-63q0-43 44-70t116-27q13 0 25 .5t23 2.5q-14 21-21 44t-7 48v65H0Zm240 0v-65q0-32 17.5-58.5T307-410q32-20 76.5-30t96.5-10q53 0 97.5 10t76.5 30q32 20 49 46.5t17 58.5v65H240Zm540 0v-65q0-26-6.5-49T754-397q11-2 22.5-2.5t23.5-.5q72 0 116 26.5t44 70.5v63H780Zm-455-80h311q-10-20-55.5-35T480-370q-55 0-100.5 15T325-320ZM160-440q-33 0-56.5-23.5T80-520q0-34 23.5-57t56.5-23q34 0 57 23t23 57q0 33-23 56.5T160-440Zm640 0q-33 0-56.5-23.5T720-520q0-34 23.5-57t56.5-23q34 0 57 23t23 57q0 33-23 56.5T800-440Zm-320-40q-50 0-85-35t-35-85q0-51 35-85.5t85-34.5q51 0 85.5 34.5T600-600q0 50-34.5 85T480-480Zm0-80q17 0 28.5-11.5T520-600q0-17-11.5-28.5T480-640q-17 0-28.5 11.5T440-600q0 17 11.5 28.5T480-560Zm1 240Zm-1-280Z"/></svg>
 				Teams
