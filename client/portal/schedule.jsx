@@ -73,15 +73,20 @@ const Schedule = props => {
 						}))
 					];
 
+					const days = Array.from(Array(new Date(yearSelected, monthSelected + 1, 0).getDate()).keys()) // Get array of dates, get last day of the month to know array length
+					.map(day => {
+						const dateStart = new Date(yearSelected, monthSelected, day + 1),
+							dateEnd = new Date(yearSelected, monthSelected, day + 2);
+
+						return {
+							day: day + 1,
+							className: newEvents.some(event => (event.date >= dateStart && event.date < dateEnd) || (event.endDate && event.endDate > dateStart && event.endDate < dateEnd)) ? "single" : ""
+						};
+					});
+
 					setLoggedInUser(data.loggedInUser);
 					setEvents(newEvents);
-					
-					setMonthDays(monthDays => monthDays.map(day => ({
-						...day,
-						className: newEvents.some(event => 
-							(event.date >= new Date(yearSelected, monthSelected, day.day + 1) && event.date < new Date(yearSelected, monthSelected, day.day + 2)) 
-							|| (event.endDate && event.endDate > new Date(yearSelected, monthSelected, day.day + 1) && event.endDate < new Date(yearSelected, monthSelected, day.day + 2))) ? "single" : ""
-					})));
+					setMonthDays(days);
 					setEventsLoading(false);
 
 					// Expand filter box if no events are visible
