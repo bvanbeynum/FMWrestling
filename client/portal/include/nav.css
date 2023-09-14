@@ -20,6 +20,15 @@ nav .actions {
 	height: 30px;
 }
 
+.closeMenu {
+	position: fixed;
+	margin: 10px;
+}
+
+.fixedScroll {
+	position: fixed;
+}
+
 nav h2 {
 	margin-left: 20px;
 }
@@ -62,5 +71,9 @@ nav li.sub.active {
 	}
 	nav.active {
 		transform: none;
+	}
+
+	.closeMenu {
+		display: none;
 	}
 }
