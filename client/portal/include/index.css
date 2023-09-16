@@ -334,11 +334,9 @@ button svg, .button svg {
 	height: 60px;
 	background: rgb(255 255 255);
 	display: grid;
-	grid-template-columns: repeat(auto-fit, 50px);
-	justify-content: center;
 	box-shadow: rgba(0, 0, 0, 0.15) 5px -2px 8px 0px;
-	grid-column-gap: 8vw;
 	align-items: center;
+	grid-auto-flow: column;
 }
 
 .bottomNav button, .bottomNav .button {
@@ -353,8 +351,8 @@ button svg, .button svg {
 }
 
 .bottomNav svg {
-	width: 36px;
-	height: 36px;
+	width: 24px;
+	height: 24px;
 	margin: auto;
 }
 
@@ -387,6 +385,7 @@ button svg, .button svg {
 	.panel.expandable {
 		max-width: inherit;
 		width: 71vw;
+		grid-column: 1 / -1;
 	}
 
 	.filterExpand {

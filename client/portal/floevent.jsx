@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import ReactDOM from "react-dom/client";
 import Nav from "./nav.jsx";
 import FloUpdate from "./floupdate.jsx";
@@ -7,21 +7,33 @@ import "./include/index.css";
 import "./include/floevent.css";
 import FloBracket from "./flobracket.jsx";
 import FloTeam from "./floteam.jsx";
+import FloMatch from "./flomatch.jsx";
 
 const FloEvent = props => {
 
+	const lastRefresh = useRef(null);
+	const isRefreshing = useRef(false);
+
 	const [ pageActive, setPageActive ] = useState(false);
 	const [ loggedInUser, setLoggedInUser ] = useState(null);
-	const [ isRefreshing, setIsRefreshing ] = useState(false);
 	const [ timeInterval, setTimeInterval ] = useState(false);
 	const [ timeDisplay, setTimeDisplay ] = useState("");
-	const [ lastRefresh, setLastRefresh ] = useState(null);
 	const [ pageView, setPageView ] = useState("bracket");
 
 	const [ eventId, setEventId ] = useState(null);
 	const [ event, setEvent ] = useState(null);
 	const [ matches, setMatches ] = useState([]);
 	const [ teams, setTeams ] = useState([]);
+	const [ timingData, setTimingData ] = useState({
+		startTime: null,
+		endTime: null,
+		estimatedEndTime: null,
+		completedMatches: null,
+		remainingMatches: null,
+		currentEventLength: null,
+		estimatedEventLength: null,
+		averageMatchTime: null
+	});
 
 	const [ divisionNames, setDivisionNames ] = useState([]);
 	const [ weightClasses, setWeightClasses ] = useState([]);
@@ -48,39 +60,39 @@ const FloEvent = props => {
 		}
 	}, [eventId]);
 
-	// Set the interval when last refresh is ready
 	useEffect(() => {
-		// If the event is not complete & we haven't already set the refresh interval, then set
-		if (event && lastRefresh && !event.isComplete && !timeInterval) {
-			setTimeInterval(setInterval(() => updateTime(new Date()), 1000));
+		if (event && !event.isComplete && !timeInterval) {
+			setTimeInterval(setInterval(() => updateTime(), 1000));
 		}
-	}, [lastRefresh]);
+	}, [event]);
 
 	const updateTime = () => {
-		const updateTimeDiff = new Date() - lastRefresh;
+		const updateTimeDiff = new Date() - lastRefresh.current;
 
 		setTimeDisplay(
 			(updateTimeDiff > (1000 * 60 * 60) ? Math.floor(updateTimeDiff / 1000 / 60 / 60) + "h " : "") +
 			(updateTimeDiff > (1000 * 60) ? Math.floor((updateTimeDiff / 1000 / 60) % 60) + "m " : "") + 
 			Math.floor(updateTimeDiff / 1000 % 60) + "s" 
 			);
-	
-		let interval = 1000 * 60 * 30; // Set the default refresh at 30 min
+		
+		if (event && event.date && !isRefreshing.current && lastRefresh.current) {
+			let interval = 1000 * 60 * 30; // Set the default refresh at 30 min
 
-		if ((new Date()) > (event.date.getTime() - (1000 * 60 * 60 * 24))) {
-			// If the event is < than a day from starting then update every 5 seconds
-			interval = 1000 * 5;
-		}
+			if ((new Date()) > (event.date.getTime() - (1000 * 60 * 60 * 24)) && new Date().getDate() >= event.date.getDate()) {
+				// If the event is < than a day from starting then update every 5 seconds
+				interval = 1000 * 5;
+			}
 
-		if (updateTimeDiff > interval) {
-			refreshData();
+			if (updateTimeDiff > interval) {
+				refreshData();
+			}
 		}
 	};
 
 	const refreshData = () => {
-		setIsRefreshing(true);
+		isRefreshing.current = true;
 
-		fetch(`/api/floeventload?id=${ eventId }${ lastRefresh ? "&lastLoad=" + lastRefresh : "" }`)
+		fetch(`/api/floeventload?id=${ eventId }${ lastRefresh.current ? "&lastLoad=" + lastRefresh.current : "" }`)
 			.then(response => {
 				if (response.ok) {
 					return response.json();
@@ -90,6 +102,9 @@ const FloEvent = props => {
 				}
 			})
 			.then(data => {
+				lastRefresh.current = new Date();
+				isRefreshing.current = false;
+
 				if (!data.floEvent)
 					return; // No updates since last checked
 
@@ -106,12 +121,15 @@ const FloEvent = props => {
 									...match,
 									division: division.name,
 									weightClass: weight.name,
-									pool: pool.name
+									pool: pool.name,
+									completeTime: match.completeTime ? new Date(match.completeTime) : null
 								}))
 								)
 							)
 						);
-					
+				
+				// ***************** Team Data *******************
+
 				const newTeamNames = [...new Set(newMatches.flatMap(match => [match.topWrestler ? match.topWrestler.team : null, match.bottomWrestler ? match.bottomWrestler.team : null]))]
 						.filter(team => team) // Remove null
 						.sort((teamA, teamB) => teamA > teamB ? 1 : -1);
@@ -144,6 +162,33 @@ const FloEvent = props => {
 					};
 				});
 
+				// ****************** Timing Data *********************
+
+				if (newMatches.some(match => match.completeTime)) {
+					const startTime = newMatches.filter(match => match.completeTime).map(match => match.completeTime).sort((matchA, matchB) => matchA - matchB).find(() => true);
+					const currentTime = newMatches.filter(match => match.completeTime).map(match => match.completeTime).sort((matchA, matchB) => matchB - matchA).find(() => true);
+
+					const completedMatches = newMatches.filter(match => match.completeTime).length;
+					const remainingMatches = newMatches.filter(match => !match.completeTime).length;
+
+					const currentEventLength = currentTime - startTime;
+					const averageMatchTime = Math.round(currentEventLength / completedMatches);
+
+					const estimatedEndTime = new Date(currentTime.getTime() + (remainingMatches * averageMatchTime));
+					const estimatedEventLength = estimatedEndTime - startTime;
+					
+					setTimingData({
+						startTime: startTime,
+						currentTime: currentTime,
+						estimatedEndTime: estimatedEndTime,
+						completedMatches: completedMatches,
+						remainingMatches: remainingMatches,
+						currentEventLength: currentEventLength,
+						estimatedEventLength: estimatedEventLength,
+						averageMatchTime: averageMatchTime
+					});
+				}
+
 				setEvent(({
 					...newEvent,
 					updates: newEvent.updates.map(update => ({...update, dateTime: new Date(update.dateTime)}))
@@ -154,8 +199,6 @@ const FloEvent = props => {
 				setDivisionNames([...new Set(newEvent.divisions.map(division => division.name))]);
 				setWeightClasses([...new Set(newEvent.divisions.flatMap(division => division.weightClasses.map(weight => weight.name))) ]);
 				setTeamNames(newTeamNames);
-				setLastRefresh(new Date());
-				setIsRefreshing(false);
 
 				if (!pageActive) {
 					setLoggedInUser(data.loggedInUser);
@@ -193,6 +236,10 @@ const FloEvent = props => {
 
 				<FloTeam teams={ teams } weightClasses={ weightClasses } />
 
+			: pageView == "match" ?
+
+				<FloMatch matches={ matches } timingData={ timingData } />
+
 			: ""
 			}
 		</div>
@@ -223,10 +270,16 @@ const FloEvent = props => {
 				Teams
 			</button>
 
+			<button aria-label="Teams" onClick={ () => setPageView("match") }>
+				{/* Group */}
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m105-233-65-47 200-320 120 140 160-260 109 163q-23 1-43.5 5.5T545-539l-22-33-152 247-121-141-145 233ZM863-40 738-165q-20 14-44.5 21t-50.5 7q-75 0-127.5-52.5T463-317q0-75 52.5-127.5T643-497q75 0 127.5 52.5T823-317q0 26-7 50.5T795-221L920-97l-57 57ZM643-217q42 0 71-29t29-71q0-42-29-71t-71-29q-42 0-71 29t-29 71q0 42 29 71t71 29Zm89-320q-19-8-39.5-13t-42.5-6l205-324 65 47-188 296Z"/></svg>
+				Overview
+			</button>
+
 			{
 			timeDisplay ?
 			
-			<div className={ `refreshDisplay ${ isRefreshing ? "refresh" : "" }` }>
+			<div className={ `refreshDisplay ${ isRefreshing.current ? "refresh" : "" }` }>
 				{ timeDisplay }
 			</div>
 
