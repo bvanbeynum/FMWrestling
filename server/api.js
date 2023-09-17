@@ -1394,110 +1394,107 @@ export default {
 										))))
 							: [];
 						
-						floEvent.divisions.flatMap(division => 
-							division.weightClasses.flatMap(weight => 
-								weight.pools.flatMap(pool =>
-									pool.matches.map(match =>
-										({...match, division: division.name, weightClass: weight.name })
-									))))
-							.forEach(match => {
-								const prevMatch = prevMatches.find(prev => prev.guid == match.guid),
-									matchNumber = match.matchNumber ? ` ${ match.matchNumber}` : "",
-									topWrestler = match.topWrestler ? `${ match.topWrestler.name } (${ match.topWrestler.team })` : "",
-									bottomWrestler = match.bottomWrestler ? `${ match.bottomWrestler.name } (${ match.bottomWrestler.team })` : "";
+						
+						// Loop through each layer of the event to build updates and generate complete time
+						floEvent.divisions = floEvent.divisions.map(updateDivision => ({
+							...updateDivision,
+							weightClasses: updateDivision.weightClasses.map(updateWeight => ({
+								...updateWeight,
+								pools: updateWeight.pools.map(updatePool => ({
+									...updatePool,
+									matches: updatePool.matches.map(match => {
 
-								if (!prevMatch && match.topWrestler && match.bottomWrestler) {
-									// New Match
-									updates.push({ 
-										division: match.division,
-										weightClass: match.weightClass,
-										round: match.round,
-										teams: [
-											...(match.topWrestler ? [match.topWrestler.team] : []),
-											...(match.bottomWrestler ? [match.bottomWrestler.team] : [])
-										],
-										updateType: "New Match",
-										message: `Match${ matchNumber}: ${ topWrestler } vs ${ bottomWrestler }`
-									});
-								}
-
-								if (match.topWrestler && (!prevMatch || !prevMatch.topWrestler)) {
-									// Top wrestler assigned
-									updates.push({
-										division: match.division,
-										weightClass: match.weightClass,
-										round: match.round,
-										teams: [
-											...(match.topWrestler ? [match.topWrestler.team] : [])
-										],
-										updateType: "Wrestler Assignment",
-										message: `${ topWrestler } assigned to match${ matchNumber } ${ match.round || "" }`
-									});
-								}
-
-								if (match.bottomWrestler && (!prevMatch || !prevMatch.bottomWrestler)) {
-									// Bottom wrestler assigned
-									updates.push({
-										division: match.division,
-										weightClass: match.weightClass,
-										round: match.round,
-										teams: [
-											...(match.bottomWrestler ? [match.bottomWrestler.team] : [])
-										],
-										updateType: "Wrestler Assignment",
-										message: `${ bottomWrestler } assigned to match${ matchNumber } ${ match.round || "" }`
-									});
-								}
-
-								if (match.mat && match.topWrestler && match.bottomWrestler && (!prevMatch || !prevMatch.mat)) {
-									// Mat assigned
-									updates.push({
-										division: match.division,
-										weightClass: match.weightClass,
-										round: match.round,
-										teams: [
-											...(match.topWrestler ? [match.topWrestler.team] : []),
-											...(match.bottomWrestler ? [match.bottomWrestler.team] : [])
-										],
-										updateType: "Mat Assignment",
-										message: `${ match.mat }: match${ matchNumber } - ${ topWrestler } vs ${ bottomWrestler }`
-									});
-								}
-
-								if (match.winType && match.topWrestler && match.bottomWrestler && (!prevMatch || !prevMatch.winType)) {
-									// Match Completed
-									const winner = match.topWrestler.isWinner ? topWrestler : bottomWrestler,
-										loser = match.topWrestler.isWinner ? bottomWrestler : topWrestler;
-
-									updates.push({ 
-										division: match.division,
-										weightClass: match.weightClass,
-										round: match.round,
-										teams: [
-											...(match.topWrestler ? [match.topWrestler.team] : []),
-											...(match.bottomWrestler ? [match.bottomWrestler.team] : [])
-										],
-										updateType: "Match Completed",
-										message: `${ winner } beat ${ loser } by ${ match.winType }`
-									});
-
-									// Update the event with the current time
-									floEvent.divisions = floEvent.divisions.map(division => ({
-										...division,
-										weightClasses: division.weightClasses.map(weight => ({
-											...weight,
-											pools: weight.pools.map(pool => ({
-												...pool,
-												matches: pool.matches.map(updateMatch => ({
-													...updateMatch,
-													completeTime: updateMatch.guid == match.guid ? new Date() : updateMatch.completeTime
-												}))
-											}))
-										}))
-									}));
-								}
-
-							});
+										const prevMatch = prevMatches.find(prev => prev.guid == match.guid),
+											matchNumber = match.matchNumber ? ` ${ match.matchNumber}` : "",
+											topWrestler = match.topWrestler ? `${ match.topWrestler.name } (${ match.topWrestler.team })` : "",
+											bottomWrestler = match.bottomWrestler ? `${ match.bottomWrestler.name } (${ match.bottomWrestler.team })` : "";
+		
+										if (!prevMatch && match.topWrestler && match.bottomWrestler) {
+											// New Match
+											updates.push({ 
+												division: match.division,
+												weightClass: match.weightClass,
+												round: match.round,
+												teams: [
+													...(match.topWrestler ? [match.topWrestler.team] : []),
+													...(match.bottomWrestler ? [match.bottomWrestler.team] : [])
+												],
+												updateType: "New Match",
+												message: `Match${ matchNumber}: ${ topWrestler } vs ${ bottomWrestler }`
+											});
+										}
+		
+										if (match.topWrestler && (!prevMatch || !prevMatch.topWrestler)) {
+											// Top wrestler assigned
+											updates.push({
+												division: match.division,
+												weightClass: match.weightClass,
+												round: match.round,
+												teams: [
+													...(match.topWrestler ? [match.topWrestler.team] : [])
+												],
+												updateType: "Wrestler Assignment",
+												message: `${ topWrestler } assigned to match${ matchNumber } ${ match.round || "" }`
+											});
+										}
+		
+										if (match.bottomWrestler && (!prevMatch || !prevMatch.bottomWrestler)) {
+											// Bottom wrestler assigned
+											updates.push({
+												division: match.division,
+												weightClass: match.weightClass,
+												round: match.round,
+												teams: [
+													...(match.bottomWrestler ? [match.bottomWrestler.team] : [])
+												],
+												updateType: "Wrestler Assignment",
+												message: `${ bottomWrestler } assigned to match${ matchNumber } ${ match.round || "" }`
+											});
+										}
+		
+										if (match.mat && match.topWrestler && match.bottomWrestler && (!prevMatch || !prevMatch.mat)) {
+											// Mat assigned
+											updates.push({
+												division: match.division,
+												weightClass: match.weightClass,
+												round: match.round,
+												teams: [
+													...(match.topWrestler ? [match.topWrestler.team] : []),
+													...(match.bottomWrestler ? [match.bottomWrestler.team] : [])
+												],
+												updateType: "Mat Assignment",
+												message: `${ match.mat }: match${ matchNumber } - ${ topWrestler } vs ${ bottomWrestler }`
+											});
+										}
+		
+										if (match.winType && match.topWrestler && match.bottomWrestler && (!prevMatch || !prevMatch.winType)) {
+											// Match Completed
+											const winner = match.topWrestler.isWinner ? topWrestler : bottomWrestler,
+												loser = match.topWrestler.isWinner ? bottomWrestler : topWrestler;
+		
+											updates.push({ 
+												division: match.division,
+												weightClass: match.weightClass,
+												round: match.round,
+												teams: [
+													...(match.topWrestler ? [match.topWrestler.team] : []),
+													...(match.bottomWrestler ? [match.bottomWrestler.team] : [])
+												],
+												updateType: "Match Completed",
+												message: `${ winner } beat ${ loser } by ${ match.winType }`
+											});
+										}
+	
+										return {
+											...match,
+											completeTime: match.winType && match.topWrestler && match.bottomWrestler && (!prevMatch || !prevMatch.winType) ? new Date()
+												: prevMatch && prevMatch.completeTime ? prevMatch.completeTime
+												: null
+										};
+									})
+								}))
+							}))
+						}));
 						
 						if (updates.length > 0 && updates.length < 200) {
 							// Don't log too many updates
