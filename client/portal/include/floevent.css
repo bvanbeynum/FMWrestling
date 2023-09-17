@@ -179,12 +179,20 @@ line.axisLine {
 
 .chartBigData {
 	text-align: center;
-	font-size: 2.3em;
+	font-size: 2.5em;
 	color: rgb(107 107 107);
 }
 
 .chartBigLabel {
 	text-align: center;
-	font-size: .9em;
+	font-size: 1em;
 	color: rgb(171 171 171);
+}
+
+.chartLittleData {
+	color: rgb(107 107 107);
+}
+
+.chartLittleLabel {
+	color: rgb(107 107 107);
 }

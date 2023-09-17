@@ -61,7 +61,7 @@ const FloEvent = props => {
 	}, [eventId]);
 
 	useEffect(() => {
-		if (event && !event.isComplete && !timeInterval) {
+		if (event && !event.isComplete && event.isFavorite && !timeInterval) {
 			setTimeInterval(setInterval(() => updateTime(), 1000));
 		}
 	}, [event]);

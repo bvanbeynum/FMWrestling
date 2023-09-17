@@ -17,7 +17,7 @@ const FloMatch = props => {
 	const [ matchCount, setMatchCount ] = useState(0);
 	const [ matchesRemaining, setMatchesRemaining ] = useState(0);
 	const [ wrestlerCount, setWrestlerCount ] = useState(0);
-	const [ wrestlersRemain, setWrestlersRemain ] = useState(0);
+	const [ wrestlersRemaining, setWrestlersRemaining ] = useState(0);
 
 	useEffect(() => {
 		if (props.matches && props.matches.length > 0 && props.timingData && props.timingData.averageMatchTime) {
@@ -136,6 +136,9 @@ const FloMatch = props => {
 				currentCircle: currentCircle,
 				chartLabels: chartLabels
 			}));
+		}
+
+		if (props.matches && props.matches.length > 0) {
 
 			// ****************** Match Data **************************
 
@@ -143,7 +146,7 @@ const FloMatch = props => {
 			setMatchesRemaining(props.matches.filter(match => !match.winType).length);
 			
 			const wrestlers = [...new Set(props.matches.flatMap(match => [match.topWrestler ? match.topWrestler.name : null, match.bottomWrestler ? match.bottomWrestler.name : null]))];
-			const newWrestlersRemain = wrestlers.filter(wrestler => 
+			const newWrestlersRemaining = wrestlers.filter(wrestler => 
 				props.matches.some(match => 
 					!match.winType && (
 						(match.bottomWrestler && match.bottomWrestler.name == wrestler) ||
@@ -153,7 +156,7 @@ const FloMatch = props => {
 				).length;
 			
 			setWrestlerCount(wrestlers.length);
-			setWrestlersRemain(newWrestlersRemain);
+			setWrestlersRemaining(newWrestlersRemaining);
 
 			setAverageMatch(props.timingData.averageMatchTime);
 			setEstimatedCompletion(props.timingData.estimatedEndTime);
@@ -171,6 +174,9 @@ const FloMatch = props => {
 <header>
 	<h1>Match Details</h1>
 </header>
+
+{
+chartData.completeArea ?
 
 <div className="panel">
 	<h3>Event Timeline</h3>
@@ -228,6 +234,9 @@ const FloMatch = props => {
 	</div>
 </div>
 
+: ""
+}
+
 {
 estimatedCompletion && averageMatch ?
 
@@ -272,7 +281,23 @@ estimatedCompletion && averageMatch ?
 
 		<div>
 			<div className="chartLittleData">{ matchCount - matchesRemaining } completed</div>
-			<div className="chartLittleData">{ matchesRemaining } remaining</div>
+			<div className="chartLittleLabel">{ matchesRemaining } remaining</div>
+		</div>
+	</div>
+</div>
+
+<div className="panel">
+	<h3>Wrestlers</h3>
+
+	<div className="chartGrid">
+		<div>
+			<div className="chartBigData">{ wrestlerCount }</div>
+			<div className="chartBigLabel">wrestlers</div>
+		</div>
+
+		<div>
+			<div className="chartLittleData">{ wrestlerCount - wrestlersRemaining } completed</div>
+			<div className="chartLittleLabel">{ wrestlersRemaining } remaining</div>
 		</div>
 	</div>
 </div>
