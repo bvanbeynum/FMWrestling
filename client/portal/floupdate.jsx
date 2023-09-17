@@ -20,7 +20,8 @@ const FloUpdate = props => {
 
 <>
 <header>
-	<h1>Updates</h1>
+	<h1>{ props.eventName }</h1>
+	<h1 className="subTitle">Updates</h1>
 </header>
 
 <div className="panel filter">
@@ -98,25 +99,21 @@ updates
 		{
 		updateBlock.updates.some(update => /complete/i.test(update.updateType) && (!selectedTeam || update.teams.includes(selectedTeam)) && (!selectedDivision || update.division == selectedDivision)) ?
 		<>
-		<div className="subHeading">Completed Matches</div>
-		<div className="sectionList">
-			<div key={ blockIndex } className="pill">
-				<table>
-				<tbody>
-				{
-				updateBlock.updates
-				.filter(update => /complete/i.test(update.updateType) && (!selectedTeam || update.teams.includes(selectedTeam)) && (!selectedDivision || update.division == selectedDivision))
-				.map((update, updateIndex) => 
-				
-					<tr key={ updateIndex }>
-						<td>{ `${ update.division } / ${ update.weightClass }: ${ update.message }` }</td>
-					</tr>
+		<div className="sectionHeading">Completed Matches</div>
+		<table className="sectionTable">
+		<tbody>
+		{
+		updateBlock.updates
+		.filter(update => /complete/i.test(update.updateType) && (!selectedTeam || update.teams.includes(selectedTeam)) && (!selectedDivision || update.division == selectedDivision))
+		.map((update, updateIndex) => 
+		
+			<tr key={ updateIndex }>
+				<td>{ `${ update.division } / ${ update.weightClass }: ${ update.message }` }</td>
+			</tr>
 
-				)}
-				</tbody>
-				</table>
-			</div>
-		</div>
+		)}
+		</tbody>
+		</table>
 		</>
 		: ""
 		}
@@ -124,25 +121,21 @@ updates
 		{
 		updateBlock.updates.some(update => /mat assignment/i.test(update.updateType) && (!selectedTeam || update.teams.includes(selectedTeam)) && (!selectedDivision || update.division == selectedDivision)) ?
 		<>
-		<div className="subHeading">Mat Assignments</div>
-		<div className="sectionList">
-			<div key={ blockIndex } className="pill">
-				<table>
-				<tbody>
-				{
-				updateBlock.updates
-				.filter(update => /mat assignment/i.test(update.updateType) && (!selectedTeam || update.teams.includes(selectedTeam)) && (!selectedDivision || update.division == selectedDivision))
-				.map((update, updateIndex) => 
-				
-					<tr key={ updateIndex }>
-						<td>{ update.message }</td>
-					</tr>
+		<div className="sectionHeading">Mat Assignments</div>
+		<table className="sectionTable">
+		<tbody>
+		{
+		updateBlock.updates
+		.filter(update => /mat assignment/i.test(update.updateType) && (!selectedTeam || update.teams.includes(selectedTeam)) && (!selectedDivision || update.division == selectedDivision))
+		.map((update, updateIndex) => 
+		
+			<tr key={ updateIndex }>
+				<td>{ update.message }</td>
+			</tr>
 
-				)}
-				</tbody>
-				</table>
-			</div>
-		</div>
+		)}
+		</tbody>
+		</table>
 		</>
 		: ""
 		}
@@ -150,25 +143,21 @@ updates
 		{
 		updateBlock.updates.some(update => /new match/i.test(update.updateType) && (!selectedTeam || update.teams.includes(selectedTeam)) && (!selectedDivision || update.division == selectedDivision)) ?
 		<>
-		<div className="subHeading">New Matches</div>
-		<div className="sectionList">
-			<div key={ blockIndex } className="pill">
-				<table>
-				<tbody>
-				{
-				updateBlock.updates
-				.filter(update => /new match/i.test(update.updateType) && (!selectedTeam || update.teams.includes(selectedTeam)) && (!selectedDivision || update.division == selectedDivision))
-				.map((update, updateIndex) => 
-				
-					<tr key={ updateIndex }>
-						<td>{ update.message }</td>
-					</tr>
+		<div className="sectionHeading">New Matches</div>
+		<table className="sectionTable">
+		<tbody>
+		{
+		updateBlock.updates
+		.filter(update => /new match/i.test(update.updateType) && (!selectedTeam || update.teams.includes(selectedTeam)) && (!selectedDivision || update.division == selectedDivision))
+		.map((update, updateIndex) => 
+		
+			<tr key={ updateIndex }>
+				<td>{ update.message }</td>
+			</tr>
 
-				)}
-				</tbody>
-				</table>
-			</div>
-		</div>
+		)}
+		</tbody>
+		</table>
 		</>
 		: ""
 		}
@@ -176,25 +165,21 @@ updates
 		{
 		updateBlock.updates.some(update => /wrestler/i.test(update.updateType) && (!selectedTeam || update.teams.includes(selectedTeam)) && (!selectedDivision || update.division == selectedDivision)) ?
 		<>
-		<div className="subHeading">Wrestlers Assigned</div>
-		<div className="sectionList">
-			<div key={ blockIndex } className="pill">
-				<table>
-				<tbody>
-				{
-				updateBlock.updates
-				.filter(update => /wrestler/i.test(update.updateType) && (!selectedTeam || update.teams.includes(selectedTeam)))
-				.map((update, updateIndex) => 
-				
-					<tr key={ updateIndex }>
-						<td>{ `${ update.division } / ${ update.weightClass }: ${ update.message }` }</td>
-					</tr>
+		<div className="sectionHeading">Wrestlers Assigned</div>
+		<table className="sectionTable">
+		<tbody>
+		{
+		updateBlock.updates
+		.filter(update => /wrestler/i.test(update.updateType) && (!selectedTeam || update.teams.includes(selectedTeam)))
+		.map((update, updateIndex) => 
+		
+			<tr key={ updateIndex }>
+				<td>{ `${ update.division } / ${ update.weightClass }: ${ update.message }` }</td>
+			</tr>
 
-				)}
-				</tbody>
-				</table>
-			</div>
-		</div>
+		)}
+		</tbody>
+		</table>
 		</>
 		: ""
 		}

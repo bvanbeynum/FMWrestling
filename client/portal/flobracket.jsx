@@ -224,7 +224,8 @@ const FloBracket = props => {
 
 <>
 <header>
-	<h1>Brackets</h1>
+	<h1>{ props.eventName }</h1>
+	<h1 className="subTitle">Brackets</h1>
 </header>
 
 <div className="panel filter" ref={ filterRef }>

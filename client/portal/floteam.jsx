@@ -6,12 +6,14 @@ const FloTeam = props => {
 	const [ isFilterExpanded, setIsFilterExpanded ] = useState(false);
 	const [ selectedTeam, setSelectedTeam ] = useState("");
 	const [ selectedWeightClass, setSelectedWeightClass ] = useState("");
+	const [ teamSort, setTeamSort ] = useState("name");
 	
 	return (
 
 <>
 <header>
-	<h1>Teams</h1>
+	<h1>{ props.eventName }</h1>
+	<h1 className="subTitle">Teams</h1>
 </header>
 
 <div className="panel filter">
@@ -58,6 +60,16 @@ const FloTeam = props => {
 				}
 			</select>
 		</label>
+		
+		<label>
+			Sort
+			<select value={ teamSort } onChange={ event => setTeamSort(event.target.value)}>
+				<option value="name">Alphabetically</option>
+				<option value="remain">Wrestlers Remaining</option>
+				<option value="place">Most Placers</option>
+				<option value="wins">Most Wins</option>
+			</select>
+		</label>
 	</div>
 
 </div>
@@ -65,7 +77,19 @@ const FloTeam = props => {
 {
 props.teams
 .filter(team => (!selectedTeam || team.name == selectedTeam) && (!selectedWeightClass || team.wrestlers.some(wrestler => wrestler.weightClass == selectedWeightClass)))
-.sort((teamA, teamB) => teamA.name > teamB.name ? 1 : -1)
+.sort((teamA, teamB) => 
+teamSort == "remain" && teamB.wrestlers.filter(wrestler => !wrestler.isComplete).length != teamA.wrestlers.filter(wrestler => !wrestler.isComplete).length ?
+	teamB.wrestlers.filter(wrestler => !wrestler.isComplete).length - teamA.wrestlers.filter(wrestler => !wrestler.isComplete).length
+
+: teamSort == "place" && teamB.wrestlers.filter(wrestler => wrestler.place).length != teamA.wrestlers.filter(wrestler => wrestler.place).length ?
+	teamB.wrestlers.filter(wrestler => wrestler.place).length - teamA.wrestlers.filter(wrestler => wrestler.place).length
+
+: teamSort == "wins" && teamB.wrestlers.reduce((sum, wrestler) => sum += wrestler.wins, 0) != teamA.wrestlers.reduce((sum, wrestler) => sum += wrestler.wins, 0) ?
+teamB.wrestlers.reduce((sum, wrestler) => sum += wrestler.wins, 0) - teamA.wrestlers.reduce((sum, wrestler) => sum += wrestler.wins, 0)
+
+// if the teams didn't hit a previous condiction, then alphabetically
+: teamA.name > teamB.name ? 1 : -1
+)
 .map((team, teamIndex) => 
 <div className="panel" key={teamIndex}>
 	<h3>{ team.name }</h3>
@@ -110,39 +134,53 @@ props.teams
 	{
 	team.wrestlers.some(wrestler => !wrestler.isComplete && (!selectedWeightClass || wrestler.weightClass == selectedWeightClass)) ?
 	<>
-	<div className="subHeading">Wrestlers Competing</div>
-	<div className="sectionList">
-		<div className="pill">
-			<table>
-			<thead>
-			<tr>
-				<th>Div</th>
-				<th>Wt</th>
-				<th>Wrestler</th>
-				<th>W</th>
-				<th>L</th>
-				<th>Next Match</th>
-			</tr>
-			</thead>
-			<tbody>
+	<div className="sectionHeading">Wrestlers Competing</div>
+	<table className="sectionTable">
+	<thead>
+	<tr>
+		<th>Div</th>
+		<th>Wt</th>
+		<th>Wrestler</th>
+		<th className="dataColumn">W</th>
+		<th className="dataColumn">L</th>
+		<th>Next Match</th>
+	</tr>
+	</thead>
+	<tbody>
+	{
+	team.wrestlers
+	.filter(wrestler => !wrestler.isComplete && (!selectedWeightClass || wrestler.weightClass == selectedWeightClass))
+	.sort((wrestlerA, wrestlerB) => wrestlerB.wins - wrestlerA.wins)
+	.map((wrestler, wrestlerIndex) => 
+		<tr key={wrestlerIndex}>
+			<td>{ wrestler.division }</td>
+			<td>{ wrestler.weightClass }</td>
+			<td>{ wrestler.name }</td>
+			<td className="dataColumn">{ wrestler.wins }</td>
+			<td className="dataColumn">{ wrestler.losses }</td>
+			<td></td>
+		</tr>
+	)}
+	<tr>
+		<th colSpan="3">Totals</th>
+		<th className="dataColumn">
 			{
 			team.wrestlers
-			.filter(wrestler => !wrestler.isComplete && (!selectedWeightClass || wrestler.weightClass == selectedWeightClass))
-			.sort((wrestlerA, wrestlerB) => wrestlerB.wins - wrestlerA.wins)
-			.map((wrestler, wrestlerIndex) => 
-				<tr key={wrestlerIndex}>
-					<td>{ wrestler.division }</td>
-					<td>{ wrestler.weightClass }</td>
-					<td>{ wrestler.name }</td>
-					<td>{ wrestler.wins }</td>
-					<td>{ wrestler.losses }</td>
-					<td></td>
-				</tr>
-			)}
-			</tbody>
-			</table>
-		</div>
-	</div>
+				.filter(wrestler => !wrestler.isComplete && (!selectedWeightClass || wrestler.weightClass == selectedWeightClass))
+				.reduce((sum, wrestler) => sum += wrestler.wins, 0)
+			}
+		</th>
+		<th className="dataColumn">
+			{
+			team.wrestlers
+				.filter(wrestler => !wrestler.isComplete && (!selectedWeightClass || wrestler.weightClass == selectedWeightClass))
+				.reduce((sum, wrestler) => sum += wrestler.losses, 0)
+			}
+		</th>
+		<th className="dataColumn"></th>
+	</tr>
+	</tbody>
+	</table>
 	</>
 	: ""
 	}
@@ -150,39 +188,58 @@ props.teams
 	{
 	team.wrestlers.some(wrestler => wrestler.isComplete && (!selectedWeightClass || wrestler.weightClass == selectedWeightClass)) ?
 	<>
-	<div className="subHeading">Wrestlers Completed</div>
-	<div className="sectionList">
-		<div className="pill">
-			<table>
-			<thead>
-			<tr>
-				<th>Div</th>
-				<th>Wt</th>
-				<th>Wrestler</th>
-				<th>W</th>
-				<th>L</th>
-				<th>Place</th>
-			</tr>
-			</thead>
-			<tbody>
+	<div className="sectionHeading">Wrestlers Completed</div>
+	<table className="sectionTable">
+	<thead>
+	<tr>
+		<th>Div</th>
+		<th>Wt</th>
+		<th>Wrestler</th>
+		<th className="dataColumn">W</th>
+		<th className="dataColumn">L</th>
+		<th>Place</th>
+	</tr>
+	</thead>
+	<tbody>
+	{
+	team.wrestlers
+	.filter(wrestler => wrestler.isComplete && (!selectedWeightClass || wrestler.weightClass == selectedWeightClass))
+	.sort((wrestlerA, wrestlerB) => wrestlerA.weightClass - wrestlerB.weightClass)
+	.map((wrestler, wrestlerIndex) => 
+		<tr key={wrestlerIndex}>
+			<td>{ wrestler.division }</td>
+			<td>{ wrestler.weightClass }</td>
+			<td>{ wrestler.name }</td>
+			<td className="dataColumn">{ wrestler.wins }</td>
+			<td className="dataColumn">{ wrestler.losses }</td>
+			<td>{ wrestler.place }</td>
+		</tr>
+	)}
+	<tr>
+		<th colSpan="3">Totals</th>
+		<th className="dataColumn">
 			{
 			team.wrestlers
-			.filter(wrestler => wrestler.isComplete && (!selectedWeightClass || wrestler.weightClass == selectedWeightClass))
-			.sort((wrestlerA, wrestlerB) => wrestlerA.weightClass - wrestlerB.weightClass)
-			.map((wrestler, wrestlerIndex) => 
-				<tr key={wrestlerIndex}>
-					<td>{ wrestler.division }</td>
-					<td>{ wrestler.weightClass }</td>
-					<td>{ wrestler.name }</td>
-					<td>{ wrestler.wins }</td>
-					<td>{ wrestler.losses }</td>
-					<td>{ wrestler.place }</td>
-				</tr>
-			)}
-			</tbody>
-			</table>
-		</div>
-	</div>
+				.filter(wrestler => wrestler.isComplete && (!selectedWeightClass || wrestler.weightClass == selectedWeightClass))
+				.reduce((sum, wrestler) => sum += wrestler.wins, 0)
+			}
+		</th>
+		<th className="dataColumn">
+			{
+			team.wrestlers
+				.filter(wrestler => wrestler.isComplete && (!selectedWeightClass || wrestler.weightClass == selectedWeightClass))
+				.reduce((sum, wrestler) => sum += wrestler.losses, 0)
+			}
+		</th>
+		<th className="dataColumn">
+			{
+			team.wrestlers
+				.filter(wrestler => wrestler.isComplete && wrestler.place && (!selectedWeightClass || wrestler.weightClass == selectedWeightClass)).length
+			}
+		</th>
+	</tr>
+	</tbody>
+	</table>
 	</>
 	: ""
 	}

@@ -34,11 +34,17 @@ svg {
 header {
 	display: flex;
 	grid-column: 1 / -1;
+	flex-direction: column;
 }
 
 header h1 {
 	flex: 1;
 	color: rgb(10 66 115);
+}
+
+header h1.subTitle {
+	font-size: 1.5em;
+	color: rgb(223 170 3);
 }
 
 .subHeading {
@@ -174,16 +180,10 @@ label span {
 
 .panel button, .panel .button {
 	font-family: Roboto, Helvetica, Arial, sans-serif;
-	background-color: rgb(242 192 41);
-	border: 3px solid rgb(191 126 4);
-	border-radius: 7px;
+	background-color: transparent;
+	border: none;
 	font-size: 1em;
 	justify-self: flex-end;
-}
-
-.panel button.secondary {
-	background: none;
-	border: none;
 }
 
 .panel button.selected, .panel .pill .selected {
@@ -194,6 +194,7 @@ label span {
 button svg, .button svg {
 	width: 20px;
 	height: 20px;
+	fill: rgb(47 47 47);
 }
 
 .panel .rowContent {
@@ -212,7 +213,7 @@ button svg, .button svg {
 }
 
 .action.notFavorite svg {
-	fill: rgb(139 139 139);
+	fill: rgb(171 171 171);
 }
 
 .panel .seperator {
@@ -249,70 +250,78 @@ button svg, .button svg {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 10px;
-	border: solid 3px rgb(10 66 115);
-	border-radius: 3px;
-	padding: 5px;
-	background-color: rgb(121 145 166);
+	border-top: 2px solid rgb(199 199 199);
+	border-bottom: 2px solid rgb(199 199 199);
+	padding: .7rem 0px;
 	margin: 1rem 0px;
 	overflow-y: auto;
 }
 
+.sectionHeading {
+	color: rgb(87 87 87);
+	font-size: 14px;
+	margin-top: 10px;
+}
+
 .pill {
 	font-size: .85rem;
-	background-color: rgb(242 192 41);
-	border: 2px solid rgb(191 126 4);
+	background-color: rgb(239 239 239);
+	border: 2px solid rgb(151 151 151);
 	border-radius: 5px;
 	padding: 1px 6px;
 	display: flex;
 	align-items: center;
-}
-
-.pill button {
-	border: none;
-	background: transparent;
+	color: rgb(89 89 89);
 }
 
 .pill button svg {
 	width: 14px;
 	height: 14px;
+	fill: rgb(89 89 89);
 }
 
-.emptyTable {
-	text-align: center;
-}
-
-.pill:has(table) {
-	flex: 1;
-}
-
-.pill table {
+table.sectionTable {
 	font-size: .85rem;
 	flex: 1;
 	border-collapse: collapse;
+	margin: 10px 0px;
+	border-top: 3px solid rgb(199 199 199);
+	border-bottom: 3px solid rgb(199 199 199);
 }
 
-.pill th {
+.sectionTable th {
 	text-align: left;
+	padding: 7px 0px 3px 0px;
+	font-size: 1.1em;
 }
 
-.pill tr {
-	border-bottom: 2px solid rgb(249 227 160);
+.sectionTable .dataColumn {
+	text-align: center;
 }
 
-.pill tr:last-child {
-	border: none;
+.sectionTable tr {
+	border-bottom: 2px dashed rgb(243 243 243);
 }
 
-.pill td {
+.sectionTable tbody tr:last-child {
+	border-bottom: none;
+}
+
+.sectionTable td {
 	padding: 4px 3px;
 }
 
-.pill td:nth-child(1) {
+.sectionTable td:nth-child(1) {
 	padding-left: 0;
 }
 
-.pill td:last-child {
+.sectionTable td:last-child {
 	padding-right: 0;
+}
+
+.sectionTable td.emptyTable {
+	text-align: center;
+	padding: 20px 0px;
 }
 
 .textList {

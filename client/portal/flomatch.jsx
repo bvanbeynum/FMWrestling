@@ -172,7 +172,8 @@ const FloMatch = props => {
 	return (
 <>
 <header>
-	<h1>Match Details</h1>
+	<h1>{ props.eventName }</h1>
+	<h1 className="subTitle">Event Overview</h1>
 </header>
 
 {

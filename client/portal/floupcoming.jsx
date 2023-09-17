@@ -31,7 +31,8 @@ const FloUpcoming = props => {
 
 <>
 <header>
-	<h1>Upcoming</h1>
+	<h1>{ props.eventName }</h1>
+	<h1 className="subTitle">Upcoming</h1>
 </header>
 
 <div className="panel filter">
@@ -104,49 +105,45 @@ mats.map((mat, matIndex) =>
 <div className="panel" key={matIndex}>
 	<h3>{ mat.name }</h3>
 	
-	<div className="sectionList">
-		<div className="pill">
-			<table>
-			<thead>
-			<tr>
-				<th>#</th>
-				<th>Division</th>
-				<th>Weight</th>
-				<th>Wrestler</th>
-				<th>Wrestler</th>
-			</tr>
-			</thead>
-			<tbody>
-			{
-			!mat.upcoming.some(match => (!selectedTeam || match.topWrestler.team == selectedTeam || match.bottomWrestler.team == selectedTeam) && (!selectedDivision || match.division == selectedDivision)) ?
-				<tr>
-					<td colSpan="5" className="emptyTable">No Upcoming Matches</td>
-				</tr>
-			:
+	<table className="sectionTable">
+	<thead>
+	<tr>
+		<th>#</th>
+		<th>Division</th>
+		<th>Weight</th>
+		<th>Wrestler</th>
+		<th>Wrestler</th>
+	</tr>
+	</thead>
+	<tbody>
+	{
+	!mat.upcoming.some(match => (!selectedTeam || match.topWrestler.team == selectedTeam || match.bottomWrestler.team == selectedTeam) && (!selectedDivision || match.division == selectedDivision)) ?
+		<tr>
+			<td colSpan="5" className="emptyTable">No Upcoming Matches</td>
+		</tr>
+	:
 
-			mat.upcoming
-			.filter(match => (!selectedTeam || match.topWrestler.team == selectedTeam || match.bottomWrestler.team == selectedTeam) && (!selectedDivision || match.division == selectedDivision))
-			.map((match, matchIndex) => 
-			
-				<tr key={ matchIndex }>
-					<td>{ match.matchNumber }</td>
-					<td>{ match.division }</td>
-					<td>{ match.weightClass }</td>
-					<td>
-						{ match.topWrestler.name }<br />
-						{ match.topWrestler.team}
-					</td>
-					<td>
-						{ match.bottomWrestler.name }<br />
-						{ match.bottomWrestler.team}
-					</td>
-				</tr>
+	mat.upcoming
+	.filter(match => (!selectedTeam || match.topWrestler.team == selectedTeam || match.bottomWrestler.team == selectedTeam) && (!selectedDivision || match.division == selectedDivision))
+	.map((match, matchIndex) => 
+	
+		<tr key={ matchIndex }>
+			<td>{ match.matchNumber }</td>
+			<td>{ match.division }</td>
+			<td>{ match.weightClass }</td>
+			<td>
+				{ match.topWrestler.name }<br />
+				{ match.topWrestler.team}
+			</td>
+			<td>
+				{ match.bottomWrestler.name }<br />
+				{ match.bottomWrestler.team}
+			</td>
+		</tr>
 
-			)}
-			</tbody>
-			</table>
-		</div>
-	</div>
+	)}
+	</tbody>
+	</table>
 
 </div>
 
@@ -155,52 +152,48 @@ mats.map((mat, matIndex) =>
 
 <div className="panel">
 	<h3>Upcoming</h3>
+
+	<table className="sectionTable">
+	<thead>
+	<tr>
+		<th>#</th>
+		<th>Division</th>
+		<th>Weight</th>
+		<th>Wrestler</th>
+		<th>Wrestler</th>
+	</tr>
+	</thead>
+	<tbody>
+	{
+	!upcoming.some(match => (!selectedTeam || match.topWrestler.team == selectedTeam || match.bottomWrestler.team == selectedTeam) && (!selectedDivision || match.division == selectedDivision)) ?
+		<tr>
+			<td colSpan="5" className="emptyTable">No Upcoming Matches</td>
+		</tr>
+	:
+
+	upcoming
+	.filter(match => (!selectedTeam || match.topWrestler.team == selectedTeam || match.bottomWrestler.team == selectedTeam) && (!selectedDivision || match.division == selectedDivision))
+	.sort((matchA, matchB) => matchA.sort - matchB.sort)
+	.slice(0, upcomingCount)
+	.map((match, matchIndex) => 
 	
-	<div className="sectionList">
-		<div className="pill">
-			<table>
-			<thead>
-			<tr>
-				<th>#</th>
-				<th>Division</th>
-				<th>Weight</th>
-				<th>Wrestler</th>
-				<th>Wrestler</th>
-			</tr>
-			</thead>
-			<tbody>
-			{
-			!upcoming.some(match => (!selectedTeam || match.topWrestler.team == selectedTeam || match.bottomWrestler.team == selectedTeam) && (!selectedDivision || match.division == selectedDivision)) ?
-				<tr>
-					<td colSpan="5" className="emptyTable">No Upcoming Matches</td>
-				</tr>
-			:
+		<tr key={ matchIndex }>
+			<td>{ match.matchNumber }</td>
+			<td>{ match.division }</td>
+			<td>{ match.weightClass }</td>
+			<td>
+				{ match.topWrestler.name }<br />
+				{ match.topWrestler.team}
+			</td>
+			<td>
+				{ match.bottomWrestler.name }<br />
+				{ match.bottomWrestler.team}
+			</td>
+		</tr>
 
-			upcoming
-			.filter(match => (!selectedTeam || match.topWrestler.team == selectedTeam || match.bottomWrestler.team == selectedTeam) && (!selectedDivision || match.division == selectedDivision))
-			.sort((matchA, matchB) => matchA.sort - matchB.sort)
-			.slice(0, upcomingCount)
-			.map((match, matchIndex) => 
-			
-				<tr key={ matchIndex }>
-					<td>{ match.matchNumber }</td>
-					<td>{ match.division }</td>
-					<td>{ match.weightClass }</td>
-					<td>
-						{ match.topWrestler.name }<br />
-						{ match.topWrestler.team}
-					</td>
-					<td>
-						{ match.bottomWrestler.name }<br />
-						{ match.bottomWrestler.team}
-					</td>
-				</tr>
-
-			)}
-			</tbody>
-			</table>
-		</div>
-	</div>
+	)}
+	</tbody>
+	</table>
 
 </div>
 

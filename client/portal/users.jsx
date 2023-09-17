@@ -358,46 +358,42 @@ const UsersComponent = props => {
 				<>
 				<h3>Devices</h3>
 
-				<div className="sectionList">
-					<div className="pill">
-						<table>
-						<thead>
-						<tr>
-							<th>Device</th>
-							<th>Accessed</th>
-							<th>Created</th>
-							<th></th>
-						</tr>
-						</thead>
-						<tbody>
-						{
-						user.devices
-						.sort((deviceA, deviceB) => new Date(deviceB.lastAccess) - new Date(deviceA.lastAccess))
-						.map(device =>
-						
-						<tr key={ device["_id"] }>
-							<td>
-								{ device.browserDisplay }<br />
-								{ device.domain }
-							</td>
-							<td><pre>{ device.lastAccessDisplay }</pre></td>
-							<td>{ device.createdDisplay }</td>
-							<td>
-								<button onClick={ () => removeDeviceFromUser(user.id, device.token) } aria-label="Remove Device">
-									{/* Trash */}
-									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
-										<path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/>
-									</svg>
-								</button>
-							</td>
-						</tr>
+				<table className="sectionTable">
+				<thead>
+				<tr>
+					<th>Device</th>
+					<th>Accessed</th>
+					<th>Created</th>
+					<th></th>
+				</tr>
+				</thead>
+				<tbody>
+				{
+				user.devices
+				.sort((deviceA, deviceB) => new Date(deviceB.lastAccess) - new Date(deviceA.lastAccess))
+				.map(device =>
+				
+				<tr key={ device["_id"] }>
+					<td>
+						{ device.browserDisplay }<br />
+						{ device.domain }
+					</td>
+					<td><pre>{ device.lastAccessDisplay }</pre></td>
+					<td>{ device.createdDisplay }</td>
+					<td>
+						<button onClick={ () => removeDeviceFromUser(user.id, device.token) } aria-label="Remove Device">
+							{/* Trash */}
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+								<path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/>
+							</svg>
+						</button>
+					</td>
+				</tr>
 
-						)}
-						
-						</tbody>
-						</table>
-					</div>
-				</div>
+				)}
+				
+				</tbody>
+				</table>
 
 				<h3>Roles</h3>
 
