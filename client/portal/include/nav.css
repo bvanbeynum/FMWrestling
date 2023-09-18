@@ -27,6 +27,7 @@ nav .actions {
 
 .fixedScroll {
 	position: fixed;
+	width: inherit;
 }
 
 nav h2 {
