@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom/client";
 import Nav from "./nav.jsx";
 import "./include/index.css";
+import TeamsEdit from "./teamsedit.jsx";
 
 const Teams = () => {
 
@@ -10,13 +11,18 @@ const Teams = () => {
 	const [ pageActive, setPageActive ] = useState(false);
 	const [ isFilterExpanded, setIsFilterExpanded ] = useState(false);
 
-	const [ editTeam, setEditTeam ] = useState(null);
+	const [ editTeamId, setEditTeamId ] = useState(null);
 	const [ savingTeamId, setSavingTeamId ] = useState(null);
 	const [ savingError, setSavingError ] = useState("");
 
 	const [ teams, setTeams ] = useState([]);
 	const [ myTeam, setMyTeam ] = useState(null);
 	const [ loggedInUser, setLoggedInUser ] = useState(null);
+
+	const [ filterConfrence, setFilterConfrence ] = useState("");
+	const [ filterState, setFilterState ] = useState("");
+	const [ filterSection, setFilterSection ] = useState("");
+	const [ filterRegion, setFilterRegion ] = useState("");
 
 	useEffect(() => {
 		if (!pageActive) {
@@ -45,11 +51,11 @@ const Teams = () => {
 		}
 	}, []);
 
-	const saveTeam = () => {
-		setSavingTeamId(editTeam.id);
+	const saveTeam = (team) => {
+		setSavingTeamId(editTeamId);
 		setSavingError("");
 
-		fetch("/api/teamssave", { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ saveTeam: editTeam }) })
+		fetch("/api/teamssave", { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ saveTeam: team }) })
 			.then(response => {
 				if (response.ok) {
 					return response.json();
@@ -65,28 +71,31 @@ const Teams = () => {
 					setTeams(teams => teams.filter(team => team.id != data.team.id));
 				}
 				else {
-					setMyTeam(teams.filter(team => !team.isMyTeam && team.id != data.team.id));
-					setTeams(teams => editTeam.id ? 
+					if (myTeam && myTeam.id == data.team.id) {
+						setMyTeam(null);
+					}
+					
+					setTeams(teams => team.id ? 
 							teams.map(team => team.id == data.team.id ? data.team : team)
 						: teams.concat(data.team)
 					)
 				}
 
-				setEditTeam(null);
+				setEditTeamId(null);
 				setSavingTeamId(null);
 
 			})
 			.catch(error => {
 				console.warn(error);
 				setSavingError("There was an error saving the team");
-				setEditTeam(null);
+				setEditTeamId(null);
 			});
 	};
 
-	const deleteTeam = () => {
-		setSavingTeamId(editTeam.id);
+	const deleteTeam = teamId => {
+		setSavingTeamId(teamId);
 
-		fetch("/api/teamssave", { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ deleteTeam: editTeam.id }) })
+		fetch("/api/teamssave", { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ deleteTeam: teamId }) })
 			.then(response => {
 				if (response.ok) {
 					return response.json();
@@ -97,7 +106,7 @@ const Teams = () => {
 			})
 			.then(() => {
 
-				setTeams(teams => teams.filter(team => team.id != editTeam.id));
+				setTeams(teams => teams.filter(team => team.id != teamId));
 				setSavingTeamId(null);
 
 			})
@@ -147,81 +156,36 @@ const Teams = () => {
 						<img src="/media/wrestlingloading.gif" />
 					</div>
 
-					: editTeam && editTeam.id == myTeam.id ?
+					: editTeamId == myTeam.id ?
 
-					<div>
-						<label>
-							<span>Name</span>
-							<input type="text" value={ editTeam.name } onChange={ event => setEditTeam(editTeam => ({...editTeam, name: event.target.value })) } aria-label="Team Name" />
-						</label>
-
-						<label>
-							<span>State</span>
-							<select value={ editTeam.state } onChange={ event => setEditTeam(editTeam => ({...editTeam, state: event.target.value })) } aria-label="Team State">
-								<option value="">-- Select State --</option>
-								<option>SC</option>
-								<option>NC</option>
-								<option>GA</option>
-								<option>TN</option>
-							</select>
-						</label>
-
-						<label>
-							<span>Confrence</span>
-							<select value={ editTeam.confrence } onChange={ event => setEditTeam(editTeam => ({...editTeam, confrence: event.target.value })) } aria-label="Team Confrence">
-								<option value="">-- Select Confrence --</option>
-								<option>5A</option>
-								<option>4A</option>
-								<option>3A</option>
-								<option>2A-1A</option>
-								<option>SCISA</option>
-							</select>
-						</label>
-
-						<label>
-							<span>My Team</span>
-							<select value={ editTeam.isMyTeam } onChange={ event => setEditTeam(editTeam => ({...editTeam, confrence: event.target.value })) } aria-label="Team Confrence">
-								<option value={true}>Yes</option>
-								<option value={false}>No</option>
-							</select>
-						</label>
-
-						<div className="row">
-							<button onClick={ () => saveTeam() } aria-label="Save Team">
-								{/* Check */}
-								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
-									<path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/>
-								</svg>
-								<div>save</div>
-							</button>
-
-							<button aria-label="Cancel" onClick={ () => setEditTeam(null) }>
-								{/* Cancel */}
-								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
-									<path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/>
-								</svg>
-								<div>cancel</div>
-							</button>
-						</div>
-					</div>
+					<TeamsEdit team={ myTeam } saveTeam={ saveTeam } cancelEdit={ () => setEditTeamId(null) } deleteTeam={ null } />
 
 					:
-
+					<>
+					
+					<div className="subHeading">
+						{ myTeam.state }
+						{ myTeam.confrence ? ` • ${ myTeam.confrence }` : "" }
+						{ myTeam.section ? ` • ${ myTeam.section }` : "" }
+						{ myTeam.region ? ` • region ${ myTeam.region }` : "" }
+					</div>
 					<h3>{ myTeam.name }</h3>
 
+					</>
 					}
 
 				</div>
 
 				{
-				!editTeam || editTeam.id != myTeam.id ?
+				(editTeamId != myTeam.id) &&
+				(savingTeamId != myTeam.id || !savingError) ?
 
 				<div className="panelActionBar">
 					{
 					loggedInUser.privileges.includes("teamManage") ?
 					<>
 
-					<button aria-label="Edit Team" onClick={() => setEditTeam({...myTeam}) }>
+					<button aria-label="Edit Team" onClick={() => setEditTeamId(myTeam.id) }>
 						{/* pencil */}
 						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M200-200h56l345-345-56-56-345 345v56Zm572-403L602-771l56-56q23-23 56.5-23t56.5 23l56 56q23 23 24 55.5T829-660l-57 57Zm-58 59L290-120H120v-170l424-424 170 170Zm-141-29-28-28 56 56-28-28Z"/></svg>
 						<div>edit</div>
@@ -277,7 +241,7 @@ const Teams = () => {
 				<div className={`filterContent ${ isFilterExpanded ? "active" : "" }`}>
 					<label>
 						Confrence
-						<select>
+						<select value={ filterConfrence } onChange={ event => setFilterConfrence(event.target.value) }>
 							<option value="">-- Select --</option>
 							<option>5A</option>
 							<option>4A</option>
@@ -289,7 +253,7 @@ const Teams = () => {
 					
 					<label>
 						State
-						<select>
+						<select value={ filterState } onChange={ event => setFilterState(event.target.value) }>
 							<option value="">-- Select --</option>
 							<option>SC</option>
 							<option>NC</option>
@@ -297,12 +261,32 @@ const Teams = () => {
 							<option>TN</option>
 						</select>
 					</label>
+					
+					<label>
+						Section
+						<select value={ filterSection } onChange={ event => setFilterSection(event.target.value) }>
+							<option value="">-- Select --</option>
+							<option>Upper State</option>
+							<option>Lower State</option>
+						</select>
+					</label>
+					
+					<label>
+						Region
+						<input type="number" value={ filterRegion } onChange={ event => setFilterRegion(event.target.value) } />
+					</label>
 				</div>
 
 			</div>
 
 			{
 			teams
+			.filter(team => 
+				(!filterState || team.state == filterState) && 
+				(!filterConfrence || team.confrence == filterConfrence) &&
+				(!filterSection || team.section == filterSection) &&
+				(!filterRegion || team.region == filterRegion)
+				)
 			.sort((teamA, teamB) => teamA.name > teamB.name ? 1 : -1)
 			.map(team => 
 			
@@ -320,80 +304,28 @@ const Teams = () => {
 						<img src="/media/wrestlingloading.gif" />
 					</div>
 
-					: editTeam && editTeam.id == team.id ?
+					: editTeamId == team.id ?
 
-					<div>
-						<label>
-							<span>Name</span>
-							<input type="text" value={ editTeam.name } onChange={ event => setEditTeam(editTeam => ({...editTeam, name: event.target.value })) } aria-label="Team Name" />
-						</label>
-
-						<label>
-							<span>State</span>
-							<select value={ editTeam.state } onChange={ event => setEditTeam(editTeam => ({...editTeam, state: event.target.value })) } aria-label="Team State">
-								<option value="">-- Select State --</option>
-								<option>SC</option>
-								<option>NC</option>
-								<option>GA</option>
-								<option>TN</option>
-							</select>
-						</label>
-
-						<label>
-							<span>Confrence</span>
-							<select value={ editTeam.confrence } onChange={ event => setEditTeam(editTeam => ({...editTeam, confrence: event.target.value })) } aria-label="Team Confrence">
-								<option value="">-- Select Confrence --</option>
-								<option>5A</option>
-								<option>4A</option>
-								<option>3A</option>
-								<option>2A-1A</option>
-								<option>SCISA</option>
-							</select>
-						</label>
-
-						<label>
-							<span>My Team</span>
-							<select value={ editTeam.isMyTeam } onChange={ event => setEditTeam(editTeam => ({...editTeam, isMyTeam: event.target.value })) } aria-label="My Team">
-								<option value={true}>Yes</option>
-								<option value={false}>No</option>
-							</select>
-						</label>
-
-						<div className="row">
-							<button onClick={ () => saveTeam() } aria-label="Save Team">
-								{/* Check */}
-								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
-									<path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/>
-								</svg>
-								<div>save</div>
-							</button>
-
-							<button aria-label="Cancel" onClick={ () => setEditTeam(null) }>
-								{/* Cancel */}
-								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
-									<path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/>
-								</svg>
-								<div>cancel</div>
-							</button>
-							
-							<button aria-label="Delete Team" onClick={ () => deleteTeam()}>
-								{/* Trash */}
-								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/></svg>
-								<div>delete</div>
-							</button>
-						</div>
-					</div>
+					<TeamsEdit team={ team } saveTeam={ saveTeam } cancelEdit={ () => setEditTeamId(null) } deleteTeam={ deleteTeam } />
 
 					:
+					<>
 
+					<div className="subHeading">
+						{ team.state }
+						{ team.confrence ? ` • ${ team.confrence }` : "" }
+						{ team.section ? ` • ${ team.section }` : "" }
+						{ team.region ? ` • region ${ team.region }` : "" }
+					</div>
 					<h3>{ team.name }</h3>
 
+					</>
 					}
 
 				</div>
 
 				{
-				(!editTeam || editTeam.id != team.id) &&
+				(editTeamId != team.id) &&
 				(savingTeamId != team.id || !savingError) ?
 
 				<div className="panelActionBar">
@@ -401,7 +333,7 @@ const Teams = () => {
 					loggedInUser.privileges.includes("teamManage") ?
 					<>
 					
-					<button aria-label="Edit Team" onClick={() => setEditTeam({...team}) }>
+					<button aria-label="Edit Team" onClick={() => setEditTeamId(team.id) }>
 						{/* pencil */}
 						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M200-200h56l345-345-56-56-345 345v56Zm572-403L602-771l56-56q23-23 56.5-23t56.5 23l56 56q23 23 24 55.5T829-660l-57 57Zm-58 59L290-120H120v-170l424-424 170 170Zm-141-29-28-28 56 56-28-28Z"/></svg>
 						<div>edit</div>
@@ -437,7 +369,7 @@ const Teams = () => {
 			)
 			}
 
-			<div aria-label="Add Team" role="button" className={ `panel ${ !editTeam || !editTeam.id ? "button" : "" }` } onClick={ () => setEditTeam({...emptyTeam}) }>
+			<div aria-label="Add Team" role="button" className={ `panel ${ editTeamId != "new" ? "button" : "" }` } onClick={ () => { if (editTeamId != "new") { setEditTeamId("new") } }}>
 				
 				{
 				savingTeamId == "new" && savingError ?
@@ -450,63 +382,9 @@ const Teams = () => {
 					<img src="/media/wrestlingloading.gif" />
 				</div>
 
-				: editTeam && !editTeam.id ?
+				: editTeamId == "new" ?
 
-				<div>
-					<label>
-						<span>Name</span>
-						<input type="text" value={ editTeam.name } onChange={ event => setEditTeam(editTeam => ({...editTeam, name: event.target.value })) } aria-label="Team Name" />
-					</label>
-
-					<label>
-						<span>State</span>
-						<select value={ editTeam.state } onChange={ event => setEditTeam(editTeam => ({...editTeam, state: event.target.value })) } aria-label="Team State">
-							<option value="">-- Select State --</option>
-							<option>SC</option>
-							<option>NC</option>
-							<option>GA</option>
-							<option>TN</option>
-						</select>
-					</label>
-
-					<label>
-						<span>Confrence</span>
-						<select value={ editTeam.confrence } onChange={ event => setEditTeam(editTeam => ({...editTeam, confrence: event.target.value })) } aria-label="Team Confrence">
-							<option value="">-- Select Confrence --</option>
-							<option>5A</option>
-							<option>4A</option>
-							<option>3A</option>
-							<option>2A-1A</option>
-							<option>SCISA</option>
-						</select>
-					</label>
-
-					<label>
-						<span>My Team</span>
-						<select value={ editTeam.isMyTeam } onChange={ event => setEditTeam(editTeam => ({...editTeam, isMyTeam: event.target.value })) } aria-label="My Team">
-							<option value={true}>Yes</option>
-							<option value={false}>No</option>
-						</select>
-					</label>
-
-					<div className="row">
-						<button onClick={ () => saveTeam() } aria-label="Save Team">
-							{/* Check */}
-							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
-								<path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/>
-							</svg>
-							<div>save</div>
-						</button>
-
-						<button aria-label="Cancel" onClick={ () => setEditTeam(null) }>
-							{/* Cancel */}
-							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
-								<path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/>
-							</svg>
-							<div>cancel</div>
-						</button>
-					</div>
-				</div>
+				<TeamsEdit team={ {...emptyTeam} } saveTeam={ saveTeam } cancelEdit={ () => setEditTeamId(null) } deleteTeam={ null } />
 
 				:
 

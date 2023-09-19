@@ -9,19 +9,25 @@ import TeamsComponent from "../teams.jsx";
 
 describe("Teams Component", () => {
 	
-	const team = {
-		id: "team1",
-		name: "Test Team",
-		state: "TS",
-		confrence: "99",
-		externalTeams: [{ id: "externalid", name: "Test External Team" }]
-	};
+	const loggedInUser = {
+			firstName: "Test",
+			lastName: "User",
+			privileges: [ "teamManage", "teamView" ]
+		},
+		team = {
+			id: "team1",
+			name: "Test Team",
+			state: "TS",
+			confrence: "99",
+			externalTeams: [{ id: "externalid", name: "Test External Team" }]
+		};
 
 	beforeEach(() => {
 		global.fetch = jest.fn().mockResolvedValue({
 			ok: true,
 			status: 200,
 			json: jest.fn().mockResolvedValue({
+				loggedInUser: loggedInUser,
 				teams: [team],
 			})
 		});
