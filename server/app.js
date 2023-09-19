@@ -13,7 +13,7 @@ import routerAPI from "./apirouter.js";
 
 const app = express();
 const { json, urlencoded } = bodyParser;
-const currentDirectory = path.join(path.resolve(process.cwd()), "/web");
+const currentDirectory = path.resolve(process.cwd());
 
 // Config =======================================================================
 
