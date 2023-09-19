@@ -41,42 +41,6 @@ describe("Teams Component", () => {
 		
 	});
 
-	it("filters external teams", async () => {
-
-		const filterText = "fort", 
-			externalTeams = [{
-					id: "1",
-					name: "Fort Mill",
-					wrestlers: [],
-					meets: []
-				}, {
-					id: "2",
-					name: "Fort Other",
-					wrestlers: [],
-					meets: []
-				}];
-
-		render(<TeamsComponent />);
-
-		global.fetch = jest.fn().mockResolvedValue({
-			ok: true,
-			status: 200,
-			json: jest.fn().mockResolvedValue({
-				externalTeams: externalTeams
-			})
-		});
-
-		const externalButton = await screen.findByRole("button", { name: /^external teams$/i });
-		fireEvent.click(externalButton);
-
-		const filterInput = await screen.findByLabelText(/^external filter$/i);
-		fireEvent.change(filterInput, { target: { value: filterText }});
-
-		await waitFor(() => expect(global.fetch).toHaveBeenCalledWith(`/api/externalteamssearch?filter=${ filterText }`));
-		
-		expect(await screen.findByTestId(externalTeams[0].id)).toBeInTheDocument();
-	});
-
 	it("adds a new team", async () => {
 
 		const newTeamId = "saveid",
@@ -126,6 +90,14 @@ describe("Teams Component", () => {
 
 		render(<TeamsComponent />);
 
+		global.fetch = jest.fn().mockResolvedValue({
+			ok: true,
+			status: 200,
+			json: jest.fn().mockResolvedValue({
+				team: {...team, name: newName }
+			})
+		});
+
 		const expandButton = await screen.findByRole("button", { name: /^edit team$/i });
 		fireEvent.click(expandButton);
 
@@ -153,6 +125,9 @@ describe("Teams Component", () => {
 		const teamPanel = await screen.findByTestId(team.id);
 		expect(teamPanel).toBeInTheDocument();
 
+		const expandButton = await screen.findByRole("button", { name: /^edit team$/i });
+		fireEvent.click(expandButton);
+
 		// Click the delete button for the team
 		const deleteButton = await screen.findByRole("button", { name: /^delete team$/i });
 		fireEvent.click(deleteButton);
@@ -164,88 +139,6 @@ describe("Teams Component", () => {
 		await waitFor(() => {
 			const teamPanel = screen.queryByTestId(team.id);
 			expect(teamPanel).toBeNull();
-		});
-
-	});
-
-	it("adds an external team", async () => {
-
-		const filterText = "test",
-			newExternal = { id: "external2", name: "Test External", wrestlers: [], meets: [] };
-
-		render(<TeamsComponent />);
-
-		global.fetch = jest.fn()
-			.mockResolvedValueOnce({
-				ok: true,
-				status: 200,
-				json: jest.fn().mockResolvedValue({
-					externalTeams: [newExternal]
-				})
-			})
-			.mockResolvedValueOnce({
-				ok: true,
-				status: 200,
-				json: jest.fn().mockResolvedValue({
-					team: {
-						...team,
-						externalTeams: team.externalTeams.concat(newExternal)
-					}
-				})
-			});
-
-		const externalButton = await screen.findByRole("button", { name: /^external teams$/i });
-		fireEvent.click(externalButton);
-
-		const filterInput = await screen.findByLabelText(/^external filter$/i);
-		fireEvent.change(filterInput, { target: { value: filterText }});
-
-		await waitFor(() => expect(global.fetch).toHaveBeenCalledWith(`/api/externalteamssearch?filter=${ filterText }`));
-		
-		expect(await screen.findByTestId(newExternal.id)).toBeInTheDocument();
-
-		// Click to add the external to the team
-		const addButton = await screen.findByRole("button", { name: /^add external team$/i });
-		fireEvent.click(addButton);
-
-		await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/teamssave", expect.objectContaining({
-			body: expect.stringContaining(newExternal.id)
-		})));
-
-	});
-
-	it("deletes a external team", async () => {
-
-		render(<TeamsComponent />);
-
-		global.fetch = jest.fn()
-			.mockResolvedValue({
-				ok: true,
-				status: 200,
-				json: jest.fn().mockResolvedValue({
-					team: {
-						...team,
-						externalTeams: []
-					}
-				})
-			});
-
-		const externalButton = await screen.findByRole("button", { name: /^external teams$/i });
-		fireEvent.click(externalButton);
-
-		expect(await screen.findByTestId(team.externalTeams[0].id)).toBeInTheDocument();
-
-		// Click to remove the external from the team
-		const removeButton = await screen.findByRole("button", { name: /^delete external team$/i });
-		fireEvent.click(removeButton);
-
-		await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/teamssave", expect.objectContaining({
-			body: expect.stringContaining(team.externalTeams[0].id)
-		})));
-
-		await waitFor(() => {	
-			const externalPill = screen.queryByTestId(team.externalTeams[0].id);
-			expect(externalPill).toBeNull();
 		});
 
 	});

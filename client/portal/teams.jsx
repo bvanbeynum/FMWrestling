@@ -3,35 +3,20 @@ import ReactDOM from "react-dom/client";
 import Nav from "./nav.jsx";
 import "./include/index.css";
 
-const Teams = props => {
+const Teams = () => {
 
-	const loading = [
-			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M324-168h312v-120q0-65-45.5-110.5T480-444q-65 0-110.5 45.5T324-288v120Zm156-348q65 0 110.5-45.5T636-672v-120H324v120q0 65 45.5 110.5T480-516ZM192-96v-72h60v-120q0-59 28-109.5t78-82.5q-49-32-77.5-82.5T252-672v-120h-60v-72h576v72h-60v120q0 59-28.5 109.5T602-480q50 32 78 82.5T708-288v120h60v72H192Z"/></svg>, // Empty
-			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M324-168h312v-120q0-65-45.5-110.5T480-444q-65 0-110.5 45.5T324-288v120ZM192-96v-72h60v-120q0-59 28-109.5t78-82.5q-49-32-77.5-82.5T252-672v-120h-60v-72h576v72h-60v120q0 59-28.5 109.5T602-480q50 32 78 82.5T708-288v120h60v72H192Z"/></svg>, // Top
-			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M192-96v-72h60v-120q0-59 28-109.5t78-82.5q-49-32-77.5-82.5T252-672v-120h-60v-72h576v72h-60v120q0 59-28.5 109.5T602-480q50 32 78 82.5T708-288v120h60v72H192Z"/></svg>, // Full
-			<svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 -960 960 960" width="20"><path d="M480-516q65 0 110.5-45.5T636-672v-120H324v120q0 65 45.5 110.5T480-516ZM192-96v-72h60v-120q0-59 28-109.5t78-82.5q-49-32-77.5-82.5T252-672v-120h-60v-72h576v72h-60v120q0 59-28.5 109.5T602-480q50 32 78 82.5T708-288v120h60v72H192Z"/></svg> // Bottom
-		],
-		emptyTeam = { name: "", state: "", confrence: "", externalTeams: [] };
+	const emptyTeam = { name: "", state: "", confrence: "", isMyTeam: false };
 
 	const [ pageActive, setPageActive ] = useState(false);
-	const [ loadError, setLoadError ] = useState("");
-	const [ panelError, setPanelError ] = useState("");
-	const [ loadingIndex, setLoadingIndex ] = useState(0);
-
 	const [ isFilterExpanded, setIsFilterExpanded ] = useState(false);
 
-	const [ editPanelId, setEditPanelId ] = useState(null);
-	const [ savePanelId, setSavePanelId ] = useState(null);
-	const [ expandPanelId, setExpandPanelId ] = useState(null);
-
-	const [ expandPanel, setExpandPanel ] = useState({});
-
-	const [ externalFilter, setExternalFilter ] = useState("");
+	const [ editTeam, setEditTeam ] = useState(null);
+	const [ savingTeamId, setSavingTeamId ] = useState(null);
+	const [ savingError, setSavingError ] = useState("");
 
 	const [ teams, setTeams ] = useState([]);
+	const [ myTeam, setMyTeam ] = useState(null);
 	const [ loggedInUser, setLoggedInUser ] = useState(null);
-	const [ editTeam, setEditTeam ] = useState(emptyTeam);
-	const [ externalTeams, setExternalTeams ] = useState([]);
 
 	useEffect(() => {
 		if (!pageActive) {
@@ -48,42 +33,21 @@ const Teams = props => {
 				.then(data => {
 
 					setLoggedInUser(data.loggedInUser);
-
-					setTeams(data.teams.map(team => ({
-							...team, 
-							externalTeams: team.externalTeams.map(external => ({
-								...external,
-								wrestlers: external.wrestlers || [],
-								meets: external.meets || []
-							}))
-						})
-					));
-
+					setTeams(data.teams.filter(team => !team.isMyTeam).map(team => ({...team, isMyTeam: false })));
+					setMyTeam(data.teams.filter(team => team.isMyTeam).map(team => ({...team, isMyTeam: true })).find(() => true));
 					setPageActive(true);
 
 				})
 				.catch(error => {
 					console.warn(error);
-					setLoadError(`Error: ${error.message}`);
 				});
 
 		}
 	}, []);
 
-	const setTeamMode = (teamId, mode) => {
-		if (expandPanel.id === teamId && expandPanel.mode === mode) {
-			setExpandPanel({});
-			setEditTeam(null);
-		}
-		else {
-			setExpandPanel({ id: teamId, mode: mode });
-			setEditTeam(teamId == "new" ? emptyTeam : teams.find(team => team.id == teamId));
-		}
-	};
-
 	const saveTeam = () => {
-		const loadingInterval = setInterval(() => setLoadingIndex(loadingIndex => loadingIndex + 1 === loading.length ? 0 : loadingIndex + 1), 1000);
-		setExpandPanel(expandPanel => ({...expandPanel, mode: "save" }));
+		setSavingTeamId(editTeam.id);
+		setSavingError("");
 
 		fetch("/api/teamssave", { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ saveTeam: editTeam }) })
 			.then(response => {
@@ -96,29 +60,33 @@ const Teams = props => {
 			})
 			.then(data => {
 
-				setTeams(teams => 
-					expandPanel.id == "new" ? teams.concat(data.team)
-					: teams.map(team => team.id == expandPanel.id ? data.team : team)
-				);
+				if (data.team.isMyTeam) {
+					setMyTeam(data.team);
+					setTeams(teams => teams.filter(team => team.id != data.team.id));
+				}
+				else {
+					setMyTeam(teams.filter(team => !team.isMyTeam && team.id != data.team.id));
+					setTeams(teams => editTeam.id ? 
+							teams.map(team => team.id == data.team.id ? data.team : team)
+						: teams.concat(data.team)
+					)
+				}
 
 				setEditTeam(null);
-				setExpandPanel({});
-				clearInterval(loadingInterval);
+				setSavingTeamId(null);
 
 			})
 			.catch(error => {
 				console.warn(error);
-				setPanelError("There was an error saving the team");
-				setExpandPanel({});
-				clearInterval(loadingInterval);
+				setSavingError("There was an error saving the team");
+				setEditTeam(null);
 			});
 	};
 
-	const deleteTeam = teamId => {
-		const loadingInterval = setInterval(() => setLoadingIndex(loadingIndex => loadingIndex + 1 === loading.length ? 0 : loadingIndex + 1), 1000);
-		setExpandPanel(expandPanel => ({...expandPanel, mode: "save" }));
+	const deleteTeam = () => {
+		setSavingTeamId(editTeam.id);
 
-		fetch("/api/teamssave", { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ deleteTeam: teamId }) })
+		fetch("/api/teamssave", { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ deleteTeam: editTeam.id }) })
 			.then(response => {
 				if (response.ok) {
 					return response.json();
@@ -129,100 +97,13 @@ const Teams = props => {
 			})
 			.then(() => {
 
-				setTeams(teams => teams.filter(team => team.id != teamId));
-				setExpandPanel({});
-				clearInterval(loadingInterval);
+				setTeams(teams => teams.filter(team => team.id != editTeam.id));
+				setSavingTeamId(null);
 
 			})
 			.catch(error => {
 				console.warn(error);
-				setPanelError("There was an error saving the team");
-				setExpandPanel({});
-				clearInterval(loadingInterval);
-			});
-	};
-
-	const filterExternal = event => {
-		const filterText = event.target.value;
-
-		setExternalFilter(filterText);
-
-		if (filterText.length > 2) {
-			fetch(`/api/externalteamssearch?filter=${ filterText }`)
-				.then(response => {
-					if (response.ok) {
-						return response.json();
-					}
-					else {
-						throw Error(response.statusText);
-					}
-				})
-				.then(data => {
-					const currentTeam = teams.find(team => expandPanel.id === team.id);
-
-					setExternalTeams(
-						data.externalTeams.filter(external => !currentTeam.externalTeams.some(teamExternal => teamExternal.id === external.id))
-					);
-				})
-				.catch(error => {
-					console.warn(error);
-				});
-		}
-	};
-
-	const addExternal = externalId => {
-		const loadingInterval = setInterval(() => setLoadingIndex(loadingIndex => loadingIndex + 1 === loading.length ? 0 : loadingIndex + 1), 1000);
-		setExpandPanel(expandPanel => ({...expandPanel, mode: "save" }));
-
-		fetch("/api/teamssave", { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ saveExternal: { teamId: expandPanel.id, externalId: externalId } }) })
-			.then(response => {
-				if (response.ok) {
-					return response.json();
-				}
-				else {
-					throw Error(response.statusText);
-				}
-			})
-			.then(data => {
-
-				setTeams(teams => teams.map(team => team.id == data.team.id ? data.team : team));
-				setExpandPanel({...expandPanel, mode: "external" });
-				clearInterval(loadingInterval);
-
-			})
-			.catch(error => {
-				console.warn(error);
-				setPanelError("There was an error saving the team");
-				setExpandPanel({...expandPanel, mode: "external" });
-				clearInterval(loadingInterval);
-			});
-	};
-
-	const deleteExternal = externalId => {
-		const loadingInterval = setInterval(() => setLoadingIndex(loadingIndex => loadingIndex + 1 === loading.length ? 0 : loadingIndex + 1), 1000);
-		setExpandPanel(expandPanel => ({...expandPanel, mode: "save" }));
-
-		fetch("/api/teamssave", { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ deleteExternal: { teamId: expandPanel.id, externalId: externalId } }) })
-			.then(response => {
-				if (response.ok) {
-					return response.json();
-				}
-				else {
-					throw Error(response.statusText);
-				}
-			})
-			.then(data => {
-
-				setTeams(teams => teams.map(team => team.id == data.team.id ? data.team : team));
-				setExpandPanel({...expandPanel, mode: "external" });
-				clearInterval(loadingInterval);
-
-			})
-			.catch(error => {
-				console.warn(error);
-				setPanelError("There was an error saving the team");
-				setExpandPanel({...expandPanel, mode: "external" });
-				clearInterval(loadingInterval);
+				setSavingError("There was an error deleting the team");
 			});
 	};
 
@@ -232,18 +113,151 @@ const Teams = props => {
 	<Nav loggedInUser={ loggedInUser } />
 
 	<div>
-		<header><h1>Teams</h1></header>
+		{
+		!pageActive ?
+		<div className="pageLoading">
+			<img src="/media/wrestlingloading.gif" />
+		</div>
+		: ""
+		}
 
 		<div className={`container ${ pageActive ? "active" : "" }`}>
 
-		{
-		loadError ?
-			<div className="panel error">
-				<h3>{ loadError }</h3>
-			</div>
-		:
+			<header><h1>Teams</h1></header>
 
-		<>
+			{
+			myTeam ?
+			<>
+
+			<div className="panelHeader">
+				<div>My Team</div>
+			</div>
+
+			<div className="panel centered actionBar">
+				<div className="panelContent">
+					
+				{
+					savingTeamId == myTeam.id && savingError ?
+
+					<div className="panelError">{ savingError }</div>
+
+					: savingTeamId == myTeam.id ?
+
+					<div className="panelLoading">
+						<img src="/media/wrestlingloading.gif" />
+					</div>
+
+					: editTeam && editTeam.id == myTeam.id ?
+
+					<div>
+						<label>
+							<span>Name</span>
+							<input type="text" value={ editTeam.name } onChange={ event => setEditTeam(editTeam => ({...editTeam, name: event.target.value })) } aria-label="Team Name" />
+						</label>
+
+						<label>
+							<span>State</span>
+							<select value={ editTeam.state } onChange={ event => setEditTeam(editTeam => ({...editTeam, state: event.target.value })) } aria-label="Team State">
+								<option value="">-- Select State --</option>
+								<option>SC</option>
+								<option>NC</option>
+								<option>GA</option>
+								<option>TN</option>
+							</select>
+						</label>
+
+						<label>
+							<span>Confrence</span>
+							<select value={ editTeam.confrence } onChange={ event => setEditTeam(editTeam => ({...editTeam, confrence: event.target.value })) } aria-label="Team Confrence">
+								<option value="">-- Select Confrence --</option>
+								<option>5A</option>
+								<option>4A</option>
+								<option>3A</option>
+								<option>2A-1A</option>
+								<option>SCISA</option>
+							</select>
+						</label>
+
+						<label>
+							<span>My Team</span>
+							<select value={ editTeam.isMyTeam } onChange={ event => setEditTeam(editTeam => ({...editTeam, confrence: event.target.value })) } aria-label="Team Confrence">
+								<option value={true}>Yes</option>
+								<option value={false}>No</option>
+							</select>
+						</label>
+
+						<div className="row">
+							<button onClick={ () => saveTeam() } aria-label="Save Team">
+								{/* Check */}
+								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+									<path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/>
+								</svg>
+								<div>save</div>
+							</button>
+
+							<button aria-label="Cancel" onClick={ () => setEditTeam(null) }>
+								{/* Cancel */}
+								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+									<path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/>
+								</svg>
+								<div>cancel</div>
+							</button>
+						</div>
+					</div>
+
+					:
+
+					<h3>{ myTeam.name }</h3>
+
+					}
+
+				</div>
+
+				{
+				!editTeam || editTeam.id != myTeam.id ?
+
+				<div className="panelActionBar">
+					{
+					loggedInUser.privileges.includes("teamManage") ?
+					<>
+
+					<button aria-label="Edit Team" onClick={() => setEditTeam({...myTeam}) }>
+						{/* pencil */}
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M200-200h56l345-345-56-56-345 345v56Zm572-403L602-771l56-56q23-23 56.5-23t56.5 23l56 56q23 23 24 55.5T829-660l-57 57Zm-58 59L290-120H120v-170l424-424 170 170Zm-141-29-28-28 56 56-28-28Z"/></svg>
+						<div>edit</div>
+					</button>
+					
+					<button aria-label="Link Team">
+						{/* Link */}
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M432.307-298.463H281.539q-75.338 0-128.438-53.093-53.1-53.093-53.1-128.422t53.1-128.444q53.1-53.115 128.438-53.115h150.768v59.998H281.539q-50.385 0-85.962 35.577Q160-530.385 160-480q0 50.385 35.577 85.962 35.577 35.577 85.962 35.577h150.768v59.998ZM330.001-450.001v-59.998h299.998v59.998H330.001Zm197.692 151.538v-59.998h150.768q50.385 0 85.962-35.577Q800-429.615 800-480q0-50.385-35.577-85.962-35.577-35.577-85.962-35.577H527.693v-59.998h150.768q75.338 0 128.438 53.093 53.1 53.093 53.1 128.422t-53.1 128.444q-53.1 53.115-128.438 53.115H527.693Z"/></svg>
+						<div>link</div>
+					</button>
+
+					</>
+					: ""
+					}
+					
+					<button aria-label="View Wrestlers">
+						{/* wrestler */}
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M57-80 1-136l146-146-44-118q-7-18-3-41.5t23-42.5l132-132q12-12 26-18t31-6q17 0 31 6t26 18l80 78q27 27 66 42.5t84 15.5v80q-60 0-112-19t-90-57l-28-28-94 94 84 86v244h-80v-210l-52-48v88L57-80Zm542 0v-280l84-80-24-140q-15 18-33 32t-39 26q-33-2-62.5-14T475-568q45-8 79.5-30.5T611-656l40-64q17-27 47-36.5t59 2.5l202 86v188h-80v-136l-72-28L919-80h-84l-72-300-84 80v220h-80ZM459-620q-33 0-56.5-23.5T379-700q0-33 23.5-56.5T459-780q33 0 56.5 23.5T539-700q0 33-23.5 56.5T459-620Zm200-160q-33 0-56.5-23.5T579-860q0-33 23.5-56.5T659-940q33 0 56.5 23.5T739-860q0 33-23.5 56.5T659-780Z"/></svg>
+						<div>wrestlers</div>
+					</button>
+					
+					<button aria-label="Compare Team">
+						{/* Compare */}
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M420.001-55.386V-140H212.309q-30.308 0-51.308-21t-21-51.308v-535.382q0-30.308 21-51.308t51.308-21h207.692v-84.615H480v849.228h-59.999ZM200-240h220.001v-263.848L200-240Zm360 99.999V-480l200 240v-507.691q0-4.616-3.846-8.463-3.847-3.846-8.463-3.846H560v-59.999h187.691q30.308 0 51.308 21t21 51.308v535.382q0 30.308-21 51.308t-51.308 21H560Z"/></svg>
+						<div>compare</div>
+					</button>
+				</div>
+				: ""
+				}
+
+			</div>
+
+			</>
+			: ""
+			}
+
 			<div className="panel filter">
 				<div className="row">
 					<h3>Filter</h3>
@@ -288,112 +302,155 @@ const Teams = props => {
 			</div>
 
 			{
+			teams
+			.sort((teamA, teamB) => teamA.name > teamB.name ? 1 : -1)
+			.map(team => 
 			
-			expandPanel.id === "new" && expandPanel.mode == "save" ?
-
-			<div className="panel">
-				<div className="loading">
+			<div key={team.id} data-testid={ team.id } className="panel actionBar">
+				<div className="panelContent">
+					
 					{
-					loading[loadingIndex]
+					savingTeamId == team.id && savingError ?
+
+					<div className="panelError">{ savingError }</div>
+
+					: savingTeamId == team.id ?
+
+					<div className="panelLoading">
+						<img src="/media/wrestlingloading.gif" />
+					</div>
+
+					: editTeam && editTeam.id == team.id ?
+
+					<div>
+						<label>
+							<span>Name</span>
+							<input type="text" value={ editTeam.name } onChange={ event => setEditTeam(editTeam => ({...editTeam, name: event.target.value })) } aria-label="Team Name" />
+						</label>
+
+						<label>
+							<span>State</span>
+							<select value={ editTeam.state } onChange={ event => setEditTeam(editTeam => ({...editTeam, state: event.target.value })) } aria-label="Team State">
+								<option value="">-- Select State --</option>
+								<option>SC</option>
+								<option>NC</option>
+								<option>GA</option>
+								<option>TN</option>
+							</select>
+						</label>
+
+						<label>
+							<span>Confrence</span>
+							<select value={ editTeam.confrence } onChange={ event => setEditTeam(editTeam => ({...editTeam, confrence: event.target.value })) } aria-label="Team Confrence">
+								<option value="">-- Select Confrence --</option>
+								<option>5A</option>
+								<option>4A</option>
+								<option>3A</option>
+								<option>2A-1A</option>
+								<option>SCISA</option>
+							</select>
+						</label>
+
+						<label>
+							<span>My Team</span>
+							<select value={ editTeam.isMyTeam } onChange={ event => setEditTeam(editTeam => ({...editTeam, isMyTeam: event.target.value })) } aria-label="My Team">
+								<option value={true}>Yes</option>
+								<option value={false}>No</option>
+							</select>
+						</label>
+
+						<div className="row">
+							<button onClick={ () => saveTeam() } aria-label="Save Team">
+								{/* Check */}
+								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+									<path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/>
+								</svg>
+								<div>save</div>
+							</button>
+
+							<button aria-label="Cancel" onClick={ () => setEditTeam(null) }>
+								{/* Cancel */}
+								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+									<path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/>
+								</svg>
+								<div>cancel</div>
+							</button>
+							
+							<button aria-label="Delete Team" onClick={ () => deleteTeam()}>
+								{/* Trash */}
+								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/></svg>
+								<div>delete</div>
+							</button>
+						</div>
+					</div>
+
+					:
+
+					<h3>{ team.name }</h3>
+
 					}
-				</div>
-			</div>
 
-			: expandPanel.id === "new" && expandPanel.mode == "edit" ?
-			
-			<div className="panel">
-				<label>
-					<span>Name</span>
-					<input type="text" value={ editTeam.name } onChange={ event => setEditTeam(editTeam => ({...editTeam, name: event.target.value })) } aria-label="Team Name" />
-				</label>
-
-				<label>
-					<span>State</span>
-					<select value={ editTeam.state } onChange={ event => setEditTeam(editTeam => ({...editTeam, state: event.target.value })) } aria-label="Team State">
-						<option value="">-- Select State --</option>
-						<option>SC</option>
-						<option>NC</option>
-						<option>GA</option>
-						<option>TN</option>
-					</select>
-				</label>
-
-				<label>
-					<span>Confrence</span>
-					<select value={ editTeam.confrence } onChange={ event => setEditTeam(editTeam => ({...editTeam, confrence: event.target.value })) } aria-label="Team Confrence">
-						<option value="">-- Select Confrence --</option>
-						<option>5A</option>
-						<option>4A</option>
-						<option>3A</option>
-						<option>2A-1A</option>
-						<option>SCISA</option>
-					</select>
-				</label>
-				
-				<div className="row">
-					<div className="error">{ panelError }</div>
-
-					<button disabled="" onClick={ () => saveTeam() } aria-label="Save Team">
-						{/* Check */}
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
-							<path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/>
-						</svg>
-					</button>
-
-					<button disabled="" onClick={ () => setExpandPanel({}) } aria-label="Cancel">
-						{/* Cancel */}
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
-							<path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/>
-						</svg>
-					</button>
-				</div>
-			</div>
-
-			:
-
-			<div className="panel">
-				<button aria-label="Add Team" className="action" onClick={ () => setTeamMode("new", "edit") }>
-					<h3>Add Team</h3>
-				</button>
-			</div>
-
-			}
-
-			{
-			teams.map(team => 
-			
-			<div key={ team.id } data-testid={ team.id } className="panel">
-				<div className="row">
-					<div className="rowContent">
-						<h3>{ team.name }</h3>
-					</div>
-
-					<div className="actions">
-						
-						<button aria-label="Edit Team" className="action" onClick={ () => setTeamMode(team.id, "edit") }>
-							{/* pencil */}
-							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M200-200h56l345-345-56-56-345 345v56Zm572-403L602-771l56-56q23-23 56.5-23t56.5 23l56 56q23 23 24 55.5T829-660l-57 57Zm-58 59L290-120H120v-170l424-424 170 170Zm-141-29-28-28 56 56-28-28Z"/></svg>
-						</button>
-
-						<button aria-label="External Teams" className="action" onClick={ () => setTeamMode(team.id, "external") }>
-							{/* share */}
-							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M440-280H280q-83 0-141.5-58.5T80-480q0-83 58.5-141.5T280-680h160v80H280q-50 0-85 35t-35 85q0 50 35 85t85 35h160v80ZM320-440v-80h320v80H320Zm200 160v-80h160q50 0 85-35t35-85q0-50-35-85t-85-35H520v-80h160q83 0 141.5 58.5T880-480q0 83-58.5 141.5T680-280H520Z"/></svg>
-						</button>
-
-						<button aria-label="Wrestlers" className="action">
-							{/* wrestler */}
-							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M57-80 1-136l146-146-44-118q-7-18-3-41.5t23-42.5l132-132q12-12 26-18t31-6q17 0 31 6t26 18l80 78q27 27 66 42.5t84 15.5v80q-60 0-112-19t-90-57l-28-28-94 94 84 86v244h-80v-210l-52-48v88L57-80Zm542 0v-280l84-80-24-140q-15 18-33 32t-39 26q-33-2-62.5-14T475-568q45-8 79.5-30.5T611-656l40-64q17-27 47-36.5t59 2.5l202 86v188h-80v-136l-72-28L919-80h-84l-72-300-84 80v220h-80ZM459-620q-33 0-56.5-23.5T379-700q0-33 23.5-56.5T459-780q33 0 56.5 23.5T539-700q0 33-23.5 56.5T459-620Zm200-160q-33 0-56.5-23.5T579-860q0-33 23.5-56.5T659-940q33 0 56.5 23.5T739-860q0 33-23.5 56.5T659-780Z"/></svg>
-						</button>
-
-						<button aria-label="Delete Team" className="action" onClick={ () => deleteTeam(team.id) }>
-							{/* Trash */}
-							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/></svg>
-						</button>
-					</div>
 				</div>
 
 				{
-				expandPanel.id === team.id && expandPanel.mode == "edit" ?
+				(!editTeam || editTeam.id != team.id) &&
+				(savingTeamId != team.id || !savingError) ?
+
+				<div className="panelActionBar">
+					{
+					loggedInUser.privileges.includes("teamManage") ?
+					<>
+					
+					<button aria-label="Edit Team" onClick={() => setEditTeam({...team}) }>
+						{/* pencil */}
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M200-200h56l345-345-56-56-345 345v56Zm572-403L602-771l56-56q23-23 56.5-23t56.5 23l56 56q23 23 24 55.5T829-660l-57 57Zm-58 59L290-120H120v-170l424-424 170 170Zm-141-29-28-28 56 56-28-28Z"/></svg>
+						<div>edit</div>
+					</button>
+					
+					<button aria-label="Link Team">
+						{/* Link */}
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M432.307-298.463H281.539q-75.338 0-128.438-53.093-53.1-53.093-53.1-128.422t53.1-128.444q53.1-53.115 128.438-53.115h150.768v59.998H281.539q-50.385 0-85.962 35.577Q160-530.385 160-480q0 50.385 35.577 85.962 35.577 35.577 85.962 35.577h150.768v59.998ZM330.001-450.001v-59.998h299.998v59.998H330.001Zm197.692 151.538v-59.998h150.768q50.385 0 85.962-35.577Q800-429.615 800-480q0-50.385-35.577-85.962-35.577-35.577-85.962-35.577H527.693v-59.998h150.768q75.338 0 128.438 53.093 53.1 53.093 53.1 128.422t-53.1 128.444q-53.1 53.115-128.438 53.115H527.693Z"/></svg>
+						<div>link</div>
+					</button>
+
+					</>
+					: ""
+					}
+					
+					<button aria-label="View Wrestlers">
+						{/* wrestler */}
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M57-80 1-136l146-146-44-118q-7-18-3-41.5t23-42.5l132-132q12-12 26-18t31-6q17 0 31 6t26 18l80 78q27 27 66 42.5t84 15.5v80q-60 0-112-19t-90-57l-28-28-94 94 84 86v244h-80v-210l-52-48v88L57-80Zm542 0v-280l84-80-24-140q-15 18-33 32t-39 26q-33-2-62.5-14T475-568q45-8 79.5-30.5T611-656l40-64q17-27 47-36.5t59 2.5l202 86v188h-80v-136l-72-28L919-80h-84l-72-300-84 80v220h-80ZM459-620q-33 0-56.5-23.5T379-700q0-33 23.5-56.5T459-780q33 0 56.5 23.5T539-700q0 33-23.5 56.5T459-620Zm200-160q-33 0-56.5-23.5T579-860q0-33 23.5-56.5T659-940q33 0 56.5 23.5T739-860q0 33-23.5 56.5T659-780Z"/></svg>
+						<div>wrestlers</div>
+					</button>
+					
+					<button aria-label="Compare Team">
+						{/* Compare */}
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M420.001-55.386V-140H212.309q-30.308 0-51.308-21t-21-51.308v-535.382q0-30.308 21-51.308t51.308-21h207.692v-84.615H480v849.228h-59.999ZM200-240h220.001v-263.848L200-240Zm360 99.999V-480l200 240v-507.691q0-4.616-3.846-8.463-3.847-3.846-8.463-3.846H560v-59.999h187.691q30.308 0 51.308 21t21 51.308v535.382q0 30.308-21 51.308t-51.308 21H560Z"/></svg>
+						<div>compare</div>
+					</button>
+				</div>
+				: ""
+				}
+
+			</div>
+
+			)
+			}
+
+			<div aria-label="Add Team" role="button" className={ `panel ${ !editTeam || !editTeam.id ? "button" : "" }` } onClick={ () => setEditTeam({...emptyTeam}) }>
+				
+				{
+				savingTeamId == "new" && savingError ?
+
+				<div className="panelError">{ savingError }</div>
+
+				: savingTeamId == "new" ?
+
+				<div className="panelLoading">
+					<img src="/media/wrestlingloading.gif" />
+				</div>
+
+				: editTeam && !editTeam.id ?
 
 				<div>
 					<label>
@@ -423,100 +480,42 @@ const Teams = props => {
 							<option>SCISA</option>
 						</select>
 					</label>
-					
-					<div className="row">
-						<div className="error">{ panelError }</div>
 
-						<button disabled="" onClick={ () => saveTeam() } aria-label="Save Team">
+					<label>
+						<span>My Team</span>
+						<select value={ editTeam.isMyTeam } onChange={ event => setEditTeam(editTeam => ({...editTeam, isMyTeam: event.target.value })) } aria-label="My Team">
+							<option value={true}>Yes</option>
+							<option value={false}>No</option>
+						</select>
+					</label>
+
+					<div className="row">
+						<button onClick={ () => saveTeam() } aria-label="Save Team">
 							{/* Check */}
 							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
 								<path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/>
 							</svg>
+							<div>save</div>
 						</button>
 
-						<button disabled="" onClick={ () => setExpandPanel({}) } aria-label="Cancel">
+						<button aria-label="Cancel" onClick={ () => setEditTeam(null) }>
 							{/* Cancel */}
 							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
 								<path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/>
 							</svg>
+							<div>cancel</div>
 						</button>
 					</div>
 				</div>
 
-				: expandPanel.id === team.id && expandPanel.mode == "external" ?
+				:
 
-				<div>
-					
-					<div className="sectionList">
-						{
-						team.externalTeams.map(externalTeam =>
+				<h3>Add Team</h3>
 
-						<div className="pill" key={ externalTeam.id } data-testid={ externalTeam.id }>
-							{ externalTeam.name }
-
-							<button aria-label="Delete External Team" onClick={ () => deleteExternal(externalTeam.id) }>
-								{/* Trash */}
-								<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/></svg>
-							</button>
-							
-						</div>
-
-						)}
-					</div>
-					
-					<label>
-						<input type="text" value={ externalFilter } onChange={ filterExternal } placeholder="Filter List" aria-label="External Filter" />
-					</label>
-
-					<ul>
-						
-						{
-						externalTeams
-						.filter(external => !team.externalTeams.some(teamExternal => external.id == teamExternal.id))
-						.sort((externalA, externalB) => externalA.name > externalB.name ? 1 : -1)
-						.map(externalTeam => 
-						<li key={ externalTeam.id } data-testid={ externalTeam.id }>
-						
-							<div className="listItem">
-								<span className="listItemHeader">{ externalTeam.name }</span>
-
-								<button aria-label="Add external team" className="secondary" onClick={ () => addExternal(externalTeam.id)}>
-									{/* Add */}
-									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M440-200v-240H200v-80h240v-240h80v240h240v80H520v240h-80Z"/></svg>
-								</button>
-							</div>
-						
-							<div className="textList">
-								{
-								externalTeam.wrestlers.map((wrestler, wrestlerIndex, all) =>
-								<div key={ wrestlerIndex }>{ wrestler + (wrestlerIndex < all.length - 1 ? "," : "") }</div>
-								)}
-							</div>
-
-							<div className="textList">
-								{
-								externalTeam.meets.map((meet, meetIndex, all) =>
-								<div key={ meetIndex }>{ meet + (meetIndex < all.length - 1 ? "," : "") }</div>
-								)}
-							</div>
-
-						</li>
-						)}
-
-					</ul>
-
-				</div>
-
-				: ""
 				}
-			</div>
-			
-			)
-			}
-			
-		</>
 
-		}
+			</div>
+
 		</div>
 	</div>
 </div>
