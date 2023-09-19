@@ -178,6 +178,16 @@ router.post("/api/teamssave", authAPI, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 });
 
+router.get("/api/teamviewload", authAPI, async (request, response) => {
+	const results = await api.teamViewLoad(request.serverPath);
+
+	if (results.error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "650a118a7c6bf8ee965454ad", message: `${ results.status }: ${results.error}` }}).then();
+	}
+
+	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data } );
+});
+
 // ***************** External Teams ********************
 
 router.get("/api/externalteamsget", authAPI, async (request, response) => {

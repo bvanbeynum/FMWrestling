@@ -1496,6 +1496,40 @@ describe("Teams", () => {
 
 	});
 
+	it("loads data for the team view", async () => {
+
+		// ********** Given
+
+		const team = [{
+			id: "testuserid",
+			name: "Test Team",
+			state: "TS",
+			confrence: "5A",
+			wrestlers: [{ id: "wrestler1", firstName: "Test", lastName: "Wrestler" }],
+			externalTeams: [{
+				id: "testexternalid", 
+				name: "External Team" 
+			}]
+		}];
+		
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { teams: [team] }}) // Get the teams
+
+		// ********** When
+
+		const results = await api.teamViewLoad(team.id, serverPath);
+
+		// ********** Then
+
+		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/team?id=${ team.id }`);
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+
+		expect(results.data).toHaveProperty("team", team);
+
+	});
+
 });
 
 describe("External Teams", () => {

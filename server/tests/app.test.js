@@ -902,6 +902,32 @@ describe("API service", () => {
 
 	});
 
+	it("loads the team view data", async () => {
+		
+		// ********** Given
+
+		const output = {
+			team: { id: "team1",  name: "Test Team", externalTeams: [] }
+		};
+
+		api.teamViewLoad = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+
+		const response = await request(app)
+			.get("/api/teamviewload")
+			.expect(200);
+
+		// ********** Then
+
+		expect(response.body).toHaveProperty("team", output.team);
+		expect(response.body).toHaveProperty("loggedInUser");
+
+	});
+
 	it("gets external teams", async () => {
 
 		// ********** Given

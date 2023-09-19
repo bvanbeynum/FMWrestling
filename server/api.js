@@ -1260,6 +1260,25 @@ export default {
 
 	},
 
+	teamViewLoad: async (teamId, serverPath) => {
+		const output = {
+			data: {}
+		};
+
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/team?id=${ teamId }`);
+			output.data.team = clientResponse.body.teams[0]
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		return output;
+	},
+
 	externalTeamsGet: async (serverPath) => {
 		const output = {
 			data: {}
