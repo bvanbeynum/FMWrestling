@@ -15,6 +15,8 @@ const app = express();
 const { json, urlencoded } = bodyParser;
 const currentDirectory = path.resolve(process.cwd());
 
+console.log(currentDirectory);
+
 // Config =======================================================================
 
 app.set("x-powered-by", false);
