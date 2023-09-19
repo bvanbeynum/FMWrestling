@@ -179,7 +179,7 @@ router.post("/api/teamssave", authAPI, async (request, response) => {
 });
 
 router.get("/api/teamviewload", authAPI, async (request, response) => {
-	const results = await api.teamViewLoad(request.serverPath);
+	const results = await api.teamViewLoad(request.query.id, request.serverPath);
 
 	if (results.error) {
 		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "650a118a7c6bf8ee965454ad", message: `${ results.status }: ${results.error}` }}).then();

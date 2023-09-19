@@ -918,11 +918,12 @@ describe("API service", () => {
 		// ********** When
 
 		const response = await request(app)
-			.get("/api/teamviewload")
+			.get(`/api/teamviewload?id=${ output.team.id }`)
 			.expect(200);
 
 		// ********** Then
 
+		expect(api.teamViewLoad).toHaveBeenCalledWith(output.team.id, expect.anything());
 		expect(response.body).toHaveProperty("team", output.team);
 		expect(response.body).toHaveProperty("loggedInUser");
 
