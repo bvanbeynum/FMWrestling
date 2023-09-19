@@ -65,6 +65,7 @@ export default {
 		state: String,
 		confrence: String,
 		program: String,
+		isMyTeam: Boolean,
 		wrestlers: [{ id: String, firstName: String, lastName: String }],
 		externalTeams: [{ id: String, name: String }]
 	}),
