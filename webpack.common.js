@@ -10,7 +10,8 @@ export default {
 		teams: "./client/portal/teams.jsx",
 		roles: "./client/portal/roles.jsx",
 		requests: "./client/portal/requests.jsx",
-		dual: "./client/portal/dual/dual.jsx",
+		teamview: "./client/portal/teamview.jsx",
+		// dual: "./client/portal/dual/dual.jsx",
 		floevent: "./client/portal/floevent.jsx",
 		noaccess: "./client/portal/noaccess.jsx"
 	},
@@ -106,15 +107,25 @@ export default {
 			templateContent: "<html><body><div id='root'></div></body></html>"
 		}),
 		new HtmlWebpackPlugin({ 
-			filename: "./portal/dual.html",
-			title: "Fort Mill Wrestling - Dual",
+			filename: "./portal/teamview.html",
+			title: "Fort Mill Wrestling - Portal",
 			favicon: "./client/media/favicon.ico",
 			meta: {
 				viewport: "width=device-width, initial-scale=1"
 			},
-			chunks: [ "dual" ],
+			chunks: [ "teamview" ],
 			templateContent: "<html><body><div id='root'></div></body></html>"
 		}),
+		// new HtmlWebpackPlugin({ 
+		// 	filename: "./portal/dual.html",
+		// 	title: "Fort Mill Wrestling - Dual",
+		// 	favicon: "./client/media/favicon.ico",
+		// 	meta: {
+		// 		viewport: "width=device-width, initial-scale=1"
+		// 	},
+		// 	chunks: [ "dual" ],
+		// 	templateContent: "<html><body><div id='root'></div></body></html>"
+		// }),
 		new HtmlWebpackPlugin({ 
 			filename: "noaccess.html",
 			title: "Fort Mill Wrestling - Restricted Access",
