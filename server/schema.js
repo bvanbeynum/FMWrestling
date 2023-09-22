@@ -18,7 +18,8 @@ const externalWrestler = new mongoose.Schema({
 			winType: String,
 			sort: Number
 		}]
-	}]
+	}],
+	lastSQLUpdate: Date
 });
 
 export default {
@@ -99,7 +100,8 @@ export default {
 		sqlId: Number,
 		name: String,
 		events: [{ name: String, date: Date }],
-		wrestlers: [{ id: String, name: String }]
+		wrestlers: [{ id: String, name: String }],
+		lastSQLUpdate: Date,
 	}),
 
 	wrestler: mongoose.model("wrestler", {
