@@ -1349,6 +1349,23 @@ export default {
 		return output;
 	},
 
+	externalWrestlersBulk: async (serverPath) => {
+		const output = { data: {} };
+
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/externalwrestler`);
+			output.data.wrestlers = clientResponse.body.externalWrestlers;
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		return output;
+	},
+
 	teamsWrestlerSave: async (teamId, newWrestler, serverPath) => {
 		const output = { data: {} };
 

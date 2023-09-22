@@ -1676,6 +1676,30 @@ describe("External Teams", () => {
 
 });
 
+describe("External Links", () => {
+
+	it("gets all external wrestlers", async () => {
+
+		const externalWrestlers = [{
+			id: "external1",
+			sqlId: 111,
+			name: "Test Wrestler",
+			matches: []
+		}];
+
+		client.get = jest.fn().mockResolvedValue({ body: { externalWrestlers: externalWrestlers }});
+
+		const results = await api.externalWrestlersBulk(serverPath);
+
+		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/externalwrestler`);
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("wrestlers", externalWrestlers);
+
+	});
+
+});
+
 describe("Flo Events", () => {
 
 	it("gets a flo event", async () => {
