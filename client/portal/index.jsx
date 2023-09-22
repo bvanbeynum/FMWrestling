@@ -39,7 +39,7 @@ const Index = () => {
 
 	<Nav loggedInUser={ loggedInUser } />
 
-	<div>
+	<div className={`container ${ pageActive ? "active" : "" }`}>
 		<header>
 			<h1>Welcome</h1>
 		</header>
