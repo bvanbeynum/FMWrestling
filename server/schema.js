@@ -4,9 +4,7 @@ const externalWrestler = new mongoose.Schema({
 	sqlId: Number,
 	name: String,
 	eventCount: Number,
-	firstEvent: { date: Date, name: String },
-	lastEvent: { date: Date, name: String },
-	latestMeets: [{
+	events: [{
 		sqlId: Number,
 		date: Date,
 		name: String,
