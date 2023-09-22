@@ -188,6 +188,16 @@ router.get("/api/teamviewload", authAPI, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data } );
 });
 
+router.post("/api/teamswrestlersave", authAPI, async (request, response) => {
+	const results = await api.teamsWrestlerSave(request.query.teamid, request.body.wrestler, request.serverPath);
+
+	if (results.error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "650c8f44547ce0273641269c", message: `${ results.status }: ${results.error}` }}).then();
+	}
+
+	response.status(results.status).json(results.error ? { error: results.error } : results.data);
+});
+
 // ***************** External Teams ********************
 
 router.get("/api/externalteamsget", authAPI, async (request, response) => {

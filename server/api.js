@@ -1349,6 +1349,57 @@ export default {
 		return output;
 	},
 
+	teamsWrestlerSave: async (teamId, newWrestler, serverPath) => {
+		const output = { data: {} };
+
+		try {
+			const clientResponse = await client.post(`${ serverPath }/data/wrestler`).send({ wrestler: newWrestler }).then();
+			newWrestler.id = clientResponse.body.id;
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+
+		let team;
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/team?id=${ teamId }`);
+			team = clientResponse.body.teams[0];
+		}
+		catch (error) {
+			output.status = 562;
+			output.error = error.message;
+			return output;
+		}
+
+		try {
+			if (team.wrestlers.some(wrestler => wrestler.id == newWrestler.id)) {
+				team.wrestlers = team.wrestlers.map(wrestler => wrestler.id == newWrestler.id ? newWrestler : wrestler);
+			}
+			else {
+				team.wrestlers = (team.wrestlers || []).concat({
+					id: newWrestler.id,
+					firstName: newWrestler.firstName,
+					lastName: newWrestler.lastName,
+					division: newWrestler.division,
+					weightClass: newWrestler.weightClass
+				});
+			}
+
+			await client.post(`${ serverPath }/data/team`).send({ team: team }).then();
+		}
+		catch (error) {
+			output.status = 562;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		output.data.wrestler = newWrestler;
+		return output;
+	},
+
 	floEventLoad: async (floId, serverPath, lastLoad = null) => {
 		const output = { data: {} };
 

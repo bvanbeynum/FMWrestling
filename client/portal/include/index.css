@@ -305,21 +305,6 @@ button svg, .button svg {
 	border: none;
 }
 
-.panel .listItem {
-	display: flex;
-	align-items: center;
-	column-gap: 1rem;
-	margin: 1rem 0;
-}
-
-.listItemHeader {
-	font-weight: bold;
-}
-
-.listItemContent {
-	flex: 1;
-}
-
 .sectionList {
 	display: flex;
 	flex-wrap: wrap;
@@ -443,6 +428,39 @@ table.sectionTable {
 	color: rgb(229 87 87);
 }
 
+.listItem {
+	border-top: 2px solid rgb(199 199 199);
+	border-right: 2px solid rgb(199 199 199);
+	border-left: 7px solid rgb(203 203 203);
+	padding: 5px 5px;
+	background-color: rgb(255 255 255);
+}
+
+.listItem:nth-child(2) {
+	border-left: 7px solid rgb(109 215 109);
+}
+
+.listItem:nth-child(3) {
+	border-left: 7px solid rgb(247 243 113);
+}
+
+.listItem:last-child {
+	border-bottom: 2px solid rgb(199 199 199);
+}
+
+.listItem.dragging {
+	position: relative;
+	box-shadow: rgba(50, 50, 93, 0.25) 0px 2px 5px -1px, rgb(0 0 0 / 18%) 0px 1px 6px 1px;
+}
+
+.listItemHeader {
+	color: rgb(87 87 87);
+	font-size: 1.2em;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
 @media (min-width: 1024px) {
 	.container {
 		grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
@@ -490,10 +508,6 @@ table.sectionTable {
 
 	.filterContent input, .filterContent select {
 		max-width: 110px;
-	}
-
-	.bottomNav {
-		width: 75vw;
 	}
 
 }

@@ -1637,6 +1637,43 @@ describe("External Teams", () => {
 
 	})
 
+	it("saves a wrestler from teams", async () => {
+
+		const newWrestlerId = "wrestler1",
+			newWrestler = { firstName: "Test", lastName: "Wrestler", division: "Division", weightClass: "111" },
+			team = { id: "team1", wrestlers: [] };
+
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { teams: [team] } });
+		
+		const send = jest.fn()
+			.mockResolvedValueOnce({ body: { id: newWrestlerId } })
+			.mockResolvedValueOnce({ body: { id: team.id } });
+
+		client.post = jest.fn(() => ({ send: send }));
+
+		const results = await api.teamsWrestlerSave(team.id, newWrestler, serverPath);
+
+		expect(client.post).toHaveBeenNthCalledWith(1, `${ serverPath }/data/wrestler`);
+		expect(send).toHaveBeenNthCalledWith(1, { wrestler: newWrestler });
+
+		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/team?id=${ team.id }`);
+
+		expect(client.post).toHaveBeenNthCalledWith(2, `${ serverPath }/data/team`);
+		expect(send).toHaveBeenNthCalledWith(2, expect.objectContaining({ 
+			team: expect.objectContaining({
+				wrestlers: expect.arrayContaining([
+					expect.objectContaining({ id: newWrestlerId })
+				])
+			})
+		}));
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("wrestler");
+
+	});
+
 });
 
 describe("Flo Events", () => {

@@ -68,7 +68,7 @@ export default {
 		region: String,
 		program: String,
 		isMyTeam: Boolean,
-		wrestlers: [{ id: String, firstName: String, lastName: String }],
+		wrestlers: [{ id: String, firstName: String, lastName: String, division: String, weightClass: String, position: Number }],
 		externalTeams: [{ id: String, name: String }]
 	}),
 
@@ -81,7 +81,6 @@ export default {
 	wrestler: mongoose.model("wrestler", {
 		firstName: String,
 		lastName: String,
-		team: String,
 		division: String,
 		weightClass: String,
 		created: Date,

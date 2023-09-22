@@ -1008,6 +1008,32 @@ describe("API service", () => {
 
 	});
 
+	it("searches external teams", async () => {
+
+		// ********** Given
+
+		const teamId = "team1",
+			output = { wrestler: { id: "wrestler1", firstName: "Test", lastName: "Wrestler" } };
+
+		api.teamsWrestlerSave = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+
+		const response = await request(app)
+			.post(`/api/teamswrestlersave?teamid=${ teamId }`)
+			.send({ wrestler: output.wrestler })
+			.expect(200);
+
+		// ********** Then
+
+		expect(api.teamsWrestlerSave).toHaveBeenCalledWith(teamId, output.wrestler, expect.anything());
+		expect(response.body).toHaveProperty("wrestler", output.wrestler);
+
+	});
+
 	it("gets flo event", async () => {
 		// ********** Given
 
