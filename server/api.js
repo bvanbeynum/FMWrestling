@@ -1378,12 +1378,17 @@ export default {
 				team.wrestlers = team.wrestlers.map(wrestler => wrestler.id == newWrestler.id ? newWrestler : wrestler);
 			}
 			else {
+				newWrestler.position = team.wrestlers ?
+					team.wrestlers.filter(wrestler => wrestler.division == newWrestler.division && wrestler.weightClass == newWrestler.weightClass).length + 1
+					: 0;
+
 				team.wrestlers = (team.wrestlers || []).concat({
 					id: newWrestler.id,
 					firstName: newWrestler.firstName,
 					lastName: newWrestler.lastName,
 					division: newWrestler.division,
-					weightClass: newWrestler.weightClass
+					weightClass: newWrestler.weightClass,
+					position: newWrestler.position
 				});
 			}
 

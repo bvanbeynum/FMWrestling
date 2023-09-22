@@ -2,31 +2,17 @@ import React, { useEffect, useState, useRef } from "react";
 import ReactDOM from "react-dom/client";
 import Nav from "./nav.jsx";
 import "./include/index.css";
+import TeamWrestlers from "./teamwrestlers.jsx";
 
 const TeamView = () => {
 
-	const emptyWrestler = { firstName: "", lastName: "", division: "", weightClass: "" };
-
 	const [ pageActive, setPageActive ] = useState(false);
 	const [ pageView, setPageView ] = useState("overview");
-	const [ selectedDivision, setSelectedDivision ] = useState(null);
+	const [ savingError, setSavingError ] = useState("");
 
 	const [ teamId, setTeamId ] = useState(null);
 	const [ team, setTeam ] = useState(null);
 	const [ loggedInUser, setLoggedInUser ] = useState({});
-
-	const [ isFilterExpanded, setIsFilterExpanded ] = useState(false);
-	const [ filterDivisions, setFilterDivisions ] = useState([]);
-
-	const [ newWrestler, setNewWrestler ] = useState(null);
-	const [ isSaving, setIsSaving ] = useState(false);
-	const [ savingError, setSavingError ] = useState("");
-
-	const [ dragWrestlerId, setDragWrestlerId ] = useState(null);
-	const [ dragPosition, setDragPosition ] = useState(null);
-	const wrestlerRefs = useRef([]);
-	const dragWrestlerRef = useState(null);
-	const mousePosition = useRef();
 
 	useEffect(() => {
 		if (!pageActive) {
@@ -55,26 +41,7 @@ const TeamView = () => {
 				})
 				.then(data => {
 					
-					const newTeam = {
-							...data.team,
-							divisions: buildTeamWrestlers(data.team.wrestlers)
-						},
-						newSelected = newTeam.divisions
-							.sort((divisionA, divisionB) => /varsity/i.test(divisionA.name) ? -1 : /varsity/i.test(divisionB.name) ? 1 : divisionA.name > divisionB.name ? 1 : -1)
-							.find(() => true);
-
-					wrestlerRefs.current = newSelected.weightClasses
-						.flatMap(weightClass => weightClass.wrestlers)
-						.map(wrestler => ({
-							id: wrestler.id,
-							weightClass: wrestler.weightClass,
-							element: null
-						}));
-		
-					setTeam(newTeam);
-					setSelectedDivision(newSelected);
-					setFilterDivisions(newTeam.divisions.map(division => division.name));
-
+					setTeam(data.team);
 					setLoggedInUser(data.loggedInUser);
 					setPageActive(true);
 				})
@@ -85,8 +52,7 @@ const TeamView = () => {
 		}
 	}, [teamId]);
 
-	const saveWrestler = () => {
-		setIsSaving(true);
+	const addWrestler = newWrestler => {
 		setSavingError("");
 
 		fetch(`/api/teamswrestlersave?teamid=${ team.id }`, { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ wrestler: newWrestler }) })
@@ -99,109 +65,20 @@ const TeamView = () => {
 				}
 			})
 			.then(data => {
-
-				const newWrestlers = team.wrestlers.concat(data.wrestler),
-					divisions = buildTeamWrestlers(newWrestlers),
-					newSelected = divisions.find(division => division.name == selectedDivision.name);
-
-				wrestlerRefs.current = newSelected.weightClasses
-					.flatMap(weightClass => weightClass.wrestlers)
-					.map(wrestler => ({
-						id: wrestler.id,
-						weightClass: wrestler.weightClass,
-						element: null
-					}));
-
 				setTeam(team => ({
 					...team,
-					divisions: divisions
-				}))
-				setFilterDivisions(divisions.map(division => division.name));
-				setSelectedDivision(newSelected);
-
-				setNewWrestler(null);
-				setIsSaving(null);
-
+					wrestlers: team.wrestlers.concat(data.wrestler)
+				}));
 			})
 			.catch(error => {
 				console.warn(error);
 				setSavingError("There was an error saving the wretler");
-				setNewWrestler(null);
 			});
 	};
 
-	const buildTeamWrestlers = wrestlers => {
-		const divisions = [...new Set(wrestlers.map(wrestler => wrestler.division))]
-			.map(division => ({
-				name: division,
-				weightClasses: [...new Set(wrestlers.filter(wrestler => wrestler.division == division).map(wrestler => wrestler.weightClass)) ]
-					.map(weightClass => ({
-						name: weightClass,
-						wrestlers: wrestlers.filter(wrestler => wrestler.division == division && wrestler.weightClass == weightClass)
-					}))
-			}));
+	const updateWrestlers = wrestlers => {
+		const teamUpdate = {...team, wrestlers: wrestlers };
 
-		return divisions;
-	};
-
-	const onDragDown = (event, wrestlerId) => {
-		event.preventDefault();
-		mousePosition.current = event.touches ? event.touches[0].clientY : event.clientY;
-
-		dragWrestlerRef.current = wrestlerId;
-		setDragWrestlerId(wrestlerId);
-		setDragPosition(0)
-	};
-
-	const onDrag = (event, wrestlerId) => {
-		if (dragWrestlerRef.current == wrestlerId) {
-			event.preventDefault();
-
-			const newPosition = (event.touches ? event.touches[0].clientY : event.clientY) - mousePosition.current;
-			mousePosition.current = event.touches ? event.touches[0].clientY : event.clientY;
-			setDragPosition(dragPosition => dragPosition + newPosition);
-		}
-	};
-
-	const onDragUp = (event, weightClass, wrestlerId) => {
-		event.preventDefault();
-
-		const notMovingRefs = wrestlerRefs.current.filter(ref => ref.weightClass == weightClass && ref.id != wrestlerId);
-		const movingRef = wrestlerRefs.current.find(ref => ref.id == wrestlerId);
-
-		const newPosition = notMovingRefs.reduce((newPosition, ref, index) => movingRef.element.getBoundingClientRect().y > ref.element.getBoundingClientRect().y ? index + 1 : newPosition, 0);
-		const currentPosition = team.wrestlers.find(wrestler => wrestler.id == wrestlerId).position;
-
-		const wrestlersChanged = team.wrestlers.map(wrestler => {
-
-			if (wrestler.division == selectedDivision.name && wrestler.weightClass == weightClass) {
-				if (wrestler.id == wrestlerId) {
-					wrestler.position = newPosition;
-				}
-				else if (wrestler.position >= newPosition && wrestler.position < currentPosition) {
-					wrestler.position += 1;
-				}
-				else if (wrestler.position > currentPosition && wrestler.position <= newPosition) {
-					wrestler.position -= 1;
-				}
-			}
-
-			return wrestler;
-		});
-
-		const divisions = buildTeamWrestlers(wrestlersChanged);
-		const teamUpdate = {...team, wrestlers: wrestlersChanged};
-
-		setTeam(({
-			...team,
-			wrestlers: wrestlersChanged,
-			divisions: divisions
-		}));
-
-		mousePosition.current = null;
-		setDragWrestlerId(null);
-		setDragPosition(null);
-		
 		fetch(`/api/teamssave`, { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ saveTeam: teamUpdate }) })
 			.then(response => {
 				if (response.ok) {
@@ -211,58 +88,13 @@ const TeamView = () => {
 					throw Error(response.statusText);
 				}
 			})
+			.then(data => {
+				setTeam(data.team);
+			})
 			.catch(error => {
 				console.warn(error);
 			});
 	};
-
-	const onDragCancel = (event) => {
-		event.preventDefault();
-
-		mousePosition.current = null;
-		setDragWrestlerId(null);
-		setDragPosition(null);
-	};
-
-	const selectDivision = divisionName => {
-		const newDivision = team.divisions.find(division => division.name == divisionName);
-		
-		wrestlerRefs.current = newDivision.weightClasses
-			.flatMap(weightClass => weightClass.wrestlers)
-			.map(wrestler => ({
-				id: wrestler.id,
-				weightClass: wrestler.weightClass,
-				element: null
-			}));
-
-		setSelectedDivision(newDivision)
-	};
-
-	const setRef = (wrestlerId, element) => {
-		const ref = wrestlerRefs.current.find(ref => ref.id == wrestlerId);
-
-		if (ref)
-			ref.element = element;
-	};
-
-	useEffect(() => {
-		if (wrestlerRefs.current && wrestlerRefs.current.length > 0) {
-			for (let refIndex = 0; refIndex < wrestlerRefs.current.length; refIndex++) {
-				const ref = wrestlerRefs.current[refIndex];
-
-				if (ref.element) {
-					ref.element.addEventListener("touchstart", event => onDragDown(event, ref.id), { passive: false });
-					ref.element.addEventListener("touchmove", event => onDrag(event, ref.id), { passive: false });
-					ref.element.addEventListener("touchend", event => onDragUp(event, ref.weightClass, ref.id), { passive: false });
-					ref.element.addEventListener("touchcancel", event => onDragCancel(event), { passive: false });
-					
-					ref.element.addEventListener("mousedown", event => onDragDown(event, ref.id), { passive: false });
-					ref.element.addEventListener("mousemove", event => onDrag(event, ref.id), { passive: false });
-					ref.element.addEventListener("mouseup", event => onDragUp(event, ref.weightClass, ref.id), { passive: false });
-				}
-			}
-		}
-	}, [selectedDivision]);
 
 	return (
 <div className="page">
@@ -272,11 +104,12 @@ const TeamView = () => {
 		
 		{
 		!pageActive ?
+
 		<div className="pageLoading">
 			<img src="/media/wrestlingloading.gif" />
 		</div>
-		: ""
-		}
+		: 
+		<>
 
 		<div className={`container ${ pageActive ? "active" : "" }`}>
 			
@@ -292,147 +125,9 @@ const TeamView = () => {
 			</header>
 			
 			{
-			filterDivisions && selectedDivision ?
-			<div className="panel filter">
-				<div className="row">
-					<h3>Filter</h3>
-
-					<div className="filterExpand" onClick={ () => setIsFilterExpanded(isFilterExpanded => !isFilterExpanded) }>
-						{
-						isFilterExpanded ?
-						// Close
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg>
-						: 
-						// Tune
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M440-120v-240h80v80h320v80H520v80h-80Zm-320-80v-80h240v80H120Zm160-160v-80H120v-80h160v-80h80v240h-80Zm160-80v-80h400v80H440Zm160-160v-240h80v80h160v80H680v80h-80Zm-480-80v-80h400v80H120Z"/></svg>
-						}
-					</div>
-				</div>
-
-				<div className={`filterContent ${ isFilterExpanded ? "active" : "" }`}>
-					<label>
-						Division
-						<select value={ selectedDivision.name } onChange={ event => selectDivision(event.target.value) }>
-							{
-							filterDivisions
-							.sort((divisionA, divisionB) => divisionA > divisionB ? 1 : -1)
-							.map((division, divisionIndex) =>
-							<option key={divisionIndex}>{ division }</option>
-							)
-							}
-						</select>
-					</label>
-				</div>
-
-			</div>
-
-			: "" }
-			
-			{
-			selectedDivision ? 
-			<>
-			
-			<div className="panelHeader">
-				<div>{ selectedDivision.name }</div>
-			</div>
-			
-			{
-			selectedDivision.weightClasses
-			.sort((weightClassA, weightClassB) => weightClassA.name - weightClassB.name)
-			.map((weightClass, weightClassIndex) =>
-
-			<div className="panel" key={ weightClassIndex }>
-				<h3>{ weightClass.name }</h3>
-
-				{
-				weightClass.wrestlers
-				.sort((wrestlerA, wrestlerB) => wrestlerA.position ? wrestlerA.position - wrestlerB.position : wrestlerA.name > wrestlerB.name ? 1 : -1)
-				.map(wrestler => 
-				
-				<div className={`listItem ${ dragWrestlerId == wrestler.id ? "dragging": "" }`} key={wrestler.id} data-testid={ wrestler.id } style={ dragWrestlerId == wrestler.id ? { top: dragPosition }: {} }>
-
-					<div className="listItemHeader">
-						{ wrestler.firstName } { wrestler.lastName }
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" ref={ element => setRef(wrestler.id, element) }>
-							<path d="M360-175.386q-26.653 0-45.634-18.98-18.98-18.981-18.98-45.634t18.98-45.634q18.981-18.98 45.634-18.98t45.634 18.98q18.98 18.981 18.98 45.634t-18.98 45.634q-18.981 18.98-45.634 18.98Zm240 0q-26.653 0-45.634-18.98-18.98-18.981-18.98-45.634t18.98-45.634q18.981-18.98 45.634-18.98t45.634 18.98q18.98 18.981 18.98 45.634t-18.98 45.634q-18.981 18.98-45.634 18.98Zm-240-240q-26.653 0-45.634-18.98-18.98-18.981-18.98-45.634t18.98-45.634q18.981-18.98 45.634-18.98t45.634 18.98q18.98 18.981 18.98 45.634t-18.98 45.634q-18.981 18.98-45.634 18.98Zm240 0q-26.653 0-45.634-18.98-18.98-18.981-18.98-45.634t18.98-45.634q18.981-18.98 45.634-18.98t45.634 18.98q18.98 18.981 18.98 45.634t-18.98 45.634q-18.981 18.98-45.634 18.98Zm-240-240q-26.653 0-45.634-18.98-18.98-18.981-18.98-45.634t18.98-45.634q18.981-18.98 45.634-18.98t45.634 18.98q18.98 18.981 18.98 45.634t-18.98 45.634q-18.981 18.98-45.634 18.98Zm240 0q-26.653 0-45.634-18.98-18.98-18.981-18.98-45.634t18.98-45.634q18.981-18.98 45.634-18.98t45.634 18.98q18.98 18.981 18.98 45.634t-18.98 45.634q-18.981 18.98-45.634 18.98Z"/>
-						</svg>
-					</div>
-
-				</div>
-				
-				)}
-
-			</div>
-
-			)}
-
-			</>
+			pageView == "wrestlers" ? <TeamWrestlers wrestlers={ team.wrestlers } updateWrestlers={ updateWrestlers } addWrestler={ addWrestler } savingError={ savingError } />
 			: ""
 			}
-
-			<div aria-label="Add Wrestler" role="button" className={ `panel ${ !newWrestler ? "button" : "" }` } onClick={ () => { if (!newWrestler) { setNewWrestler({...emptyWrestler}) } }}>
-				
-				{
-				isSaving && savingError ?
-
-				<div className="panelError">{ savingError }</div>
-
-				: isSaving ?
-
-				<div className="panelLoading">
-					<img src="/media/wrestlingloading.gif" />
-				</div>
-
-				: newWrestler ?
-				
-				<div>
-					<label>
-						<span>First Name</span>
-						<input type="text" value={ newWrestler.firstName } onChange={ event => setNewWrestler(wrestler => ({...wrestler, firstName: event.target.value })) } aria-label="First Name" />
-					</label>
-					
-					<label>
-						<span>Last Name</span>
-						<input type="text" value={ newWrestler.lastName } onChange={ event => setNewWrestler(wrestler => ({...wrestler, lastName: event.target.value })) } aria-label="Last Name" />
-					</label>
-
-					<label>
-						<span>Division</span>
-						<input type="text" value={ newWrestler.division } onChange={ event => setNewWrestler(wrestler => ({...wrestler, division: event.target.value })) } aria-label="Wrestler Division" />
-					</label>
-
-					<label>
-						<span>Weight Class</span>
-						<input type="number" value={ newWrestler.weightClass } onChange={ event => setNewWrestler(wrestler => ({...wrestler, weightClass: event.target.value })) } aria-label="Wrestler Weight Class" />
-					</label>
-
-					<div className="row">
-						<button onClick={ () => saveWrestler() } aria-label="Save">
-							{/* Check */}
-							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
-								<path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/>
-							</svg>
-							<div>save</div>
-						</button>
-
-						<button aria-label="Cancel" onClick={ () => setNewWrestler(null) }>
-							{/* Cancel */}
-							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
-								<path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/>
-							</svg>
-							<div>cancel</div>
-						</button>
-					</div>
-				</div>
-
-
-				:
-
-				<h3>Add Wrestler</h3>
-
-				}
-
-			</div>
 
 		</div>
 
@@ -469,6 +164,9 @@ const TeamView = () => {
 			}
 
 		</div>
+		
+		</>
+		}
 
 	</div>
 </div>
