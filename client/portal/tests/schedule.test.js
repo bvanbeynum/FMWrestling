@@ -252,7 +252,7 @@ describe("Schedule component", () => {
 			body: expect.stringContaining(events[0].id)
 		})));
 
-		expect(screen.queryByTestId(events[0].id)).toBeNull();
+		await waitFor(() => expect(screen.queryByTestId(events[0].id)).toBeNull());
 	});
 
 	it("marks a favorite", async () => {

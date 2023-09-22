@@ -12,7 +12,7 @@ describe("Flo Event Component", () => {
 	const team = { 
 			id: "teamid",
 			name: "Test Team",
-			wrestlers: [{ id: "wrestler1", firstName: "Test", lastName: "Wrestler" }]
+			wrestlers: [{ id: "wrestler1", firstName: "Test", lastName: "Wrestler", division: "Varsity" }]
 		},
 		loggedInUser = {
 			id: "user`",
