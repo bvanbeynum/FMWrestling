@@ -475,6 +475,57 @@ router.delete("/data/externalteam", authInternal, async (request, response) => {
 	}
 });
 
+router.get("/data/externalwrestler", authInternal, async (request, response) => {
+	try {
+		const results = await data.externalWrestlerGet({ id: request.query.id, name: request.query.name });
+
+		if (results.error) {
+			client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "650e124d547ce02736559461", message: `${ results.status }: ${results.error}` }}).then();
+		}
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "650e124d547ce02736559461", message: `570: ${error.message}` }}).then();
+		response.status(570).json({ error: error.message });
+	}
+});
+
+router.post("/data/externalwrestler", authInternal, async (request, response) => {
+	try {
+		const results = await data.externalWrestlerSave(request.body.externalwrestler);
+
+		if (results.error) {
+			client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "650e1264547ce0273655956a", message: `${ results.status }: ${results.error}` }}).then();
+		}
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "650e1264547ce0273655956a", message: `570: ${error.message}` }}).then();
+		response.status(570).json({ error: error.message });
+	}
+});
+
+router.delete("/data/externalwrestler", authInternal, async (request, response) => {
+	try {
+		const results = await data.externalWrestlerDelete(request.query.id);
+
+		if (results.error) {
+			client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "650e1278547ce02736559672", message: `${ results.status }: ${results.error}` }}).then();
+		}
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "650e1278547ce02736559672", message: `570: ${error.message}` }}).then();
+		response.status(570).json({ error: error.message });
+	}
+});
+
 router.get("/data/floevent", authInternal, async (request, response) => {
 	try {
 		const results = await data.floEventGet({ id: request.query.id, sqlId: request.query.sqlid, startDate: request.query.startdate, endDate: request.query.enddate });

@@ -230,6 +230,16 @@ router.get("/api/externalteamssearch", authAPI, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 });
 
+router.get("/api/externalwrestlersbulk", authAPI, async (request, response) => {
+	const results = await api.externalWrestlersBulk(request.query.filter, request.serverPath);
+
+	if (results.error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "650e12ac547ce02736559930", message: `${ results.status }: ${results.error}` }}).then();
+	}
+
+	response.status(results.status).json(results.error ? { error: results.error } : results.data);
+});
+
 router.get("/api/floeventload", authAPI, async (request, response) => {
 	const results = await api.floEventLoad(request.query.id, request.serverPath, request.query.lastLoad);
 

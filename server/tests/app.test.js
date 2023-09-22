@@ -377,6 +377,74 @@ describe("Data service", () => {
 		expect(response.body).toHaveProperty("status", "ok");
 	});
 
+	it("gets external wrestler", async () => {
+
+		// ********** Given
+
+		const output = { externalWrestlers: [{ id: "testid" }]};
+
+		data.externalWrestlerGet = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+		
+		const response = await request(app)
+			.get("/data/externalwrestler")
+			.expect(200);
+		
+		// ********** Then
+
+		expect(response.body).toHaveProperty("externalWrestlers");
+		expect(response.body.externalWrestlers).toHaveLength(1);
+	});
+
+	it("saves external wrestler", async () => {
+		// ********** Given
+
+		const save = { name: "test wrestler" },
+			output = { id: "testid" };
+
+		data.externalWrestlerSave = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+		
+		const response = await request(app)
+			.post("/data/externalwrestler")
+			.send({ externalwrestler: save })
+			.expect(200);
+		
+		// ********** Then
+
+		expect(data.externalWrestlerSave).toHaveBeenCalledWith(save);
+		expect(response.body).toHaveProperty("id", output.id);
+	});
+
+	it("deletes external wrestler", async () => {
+		// ********** Given
+
+		const externalWrestlerId = "testid";
+
+		data.externalWrestlerDelete = jest.fn().mockResolvedValue({
+			status: 200,
+			data: { status: "ok" }
+		});
+
+		// ********** When
+		
+		const response = await request(app)
+			.delete(`/data/externalwrestler?id=${ externalWrestlerId }`)
+			.expect(200);
+		
+		// ********** Then
+
+		expect(response.body).toHaveProperty("status", "ok");
+	});
+
 	it("gets flo event", async () => {
 
 		// ********** Given
@@ -1031,6 +1099,30 @@ describe("API service", () => {
 
 		expect(api.teamsWrestlerSave).toHaveBeenCalledWith(teamId, output.wrestler, expect.anything());
 		expect(response.body).toHaveProperty("wrestler", output.wrestler);
+
+	});
+
+	it("loads bulk external wrestlers", async () => {
+
+		// ********** Given
+
+		const output = { wrestlers: [{ name: "Test Wrestler", sqlId: 111 }] };
+
+		api.externalWrestlersBulk = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+
+		const response = await request(app)
+			.get(`/api/externalwrestlersbulk`)
+			.expect(200);
+
+		// ********** Then
+
+		expect(api.externalWrestlersBulk).toHaveBeenCalled();
+		expect(response.body).toHaveProperty("wrestlers", output.wrestlers);
 
 	});
 
