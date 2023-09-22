@@ -14,6 +14,7 @@ const externalWrestler = new mongoose.Schema({
 			division: String,
 			weightClass: String,
 			round: String,
+			vs: String,
 			isWinner: Boolean,
 			winType: String,
 			sort: Number
