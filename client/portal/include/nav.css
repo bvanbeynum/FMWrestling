@@ -3,7 +3,7 @@ nav {
 	position: fixed;
 	z-index: 20;
 	left: 0;
-	width: 25vw;
+	width: 20rem;
 	min-width: 300px;
 	transform: translateX(-350px);
 	transition: transform 250ms ease-in-out;
