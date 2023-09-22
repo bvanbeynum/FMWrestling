@@ -245,7 +245,6 @@ describe("Wrestler data test", () => {
 		const response = await data.wrestlerSave({
 			firstName: "test",
 			lastName: "user",
-			team: "test team",
 			division: "Test division",
 			weightClass: "test weight"
 		});
@@ -269,7 +268,6 @@ describe("Wrestler data test", () => {
 					id: createdId,
 					firstName: "test",
 					lastName: "user",
-					team: "test team",
 					division: "Test division",
 					weightClass: "test weight"
 				})

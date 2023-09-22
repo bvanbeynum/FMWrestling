@@ -58,7 +58,7 @@ export default {
 
 			try {
 				Object.keys(saveObject).forEach(field => {
-					if (field != "id") {
+					if (field != "id" && field != "_id") {
 						record[field] = saveObject[field];
 					}
 				});
@@ -165,7 +165,7 @@ export default {
 
 			try {
 				Object.keys(saveObject).forEach(field => {
-					if (field != "id") {
+					if (field != "id" && field != "_id") {
 						record[field] = saveObject[field];
 					}
 				});
@@ -272,7 +272,7 @@ export default {
 
 			try {
 				Object.keys(saveObject).forEach(field => {
-					if (field != "id") {
+					if (field != "id" && field != "_id") {
 						record[field] = saveObject[field];
 					}
 				});
@@ -379,7 +379,7 @@ export default {
 
 			try {
 				Object.keys(saveObject).forEach(field => {
-					if (field != "id") {
+					if (field != "id" && field != "_id") {
 						record[field] = saveObject[field];
 					}
 				});
@@ -486,7 +486,7 @@ export default {
 
 			try {
 				Object.keys(saveObject).forEach(field => {
-					if (field != "id") {
+					if (field != "id" && field != "_id") {
 						record[field] = saveObject[field];
 					}
 				});
@@ -596,7 +596,7 @@ export default {
 
 			try {
 				Object.keys(saveObject).forEach(field => {
-					if (field != "id") {
+					if (field != "id" && field != "_id") {
 						record[field] = saveObject[field];
 					}
 				});
@@ -706,7 +706,7 @@ export default {
 
 			try {
 				Object.keys(saveObject).forEach(field => {
-					if (field != "id") {
+					if (field != "id" && field != "_id") {
 						record[field] = saveObject[field];
 					}
 				});
@@ -816,7 +816,7 @@ export default {
 
 			try {
 				Object.keys(saveObject).forEach(field => {
-					if (field != "id") {
+					if (field != "id" && field != "_id") {
 						record[field] = saveObject[field];
 					}
 				});
@@ -947,7 +947,7 @@ export default {
 
 			try {
 				Object.keys(saveObject).forEach(field => {
-					if (field != "id") {
+					if (field != "id" && field != "_id") {
 						record[field] = saveObject[field];
 					}
 				});
@@ -1054,7 +1054,7 @@ export default {
 
 			try {
 				Object.keys(saveObject).forEach(field => {
-					if (field != "id") {
+					if (field != "id" && field != "_id") {
 						record[field] = saveObject[field];
 					}
 				});
@@ -1164,7 +1164,7 @@ export default {
 
 			try {
 				Object.keys(saveObject).forEach(field => {
-					if (field != "id") {
+					if (field != "id" && field != "_id") {
 						record[field] = saveObject[field];
 					}
 				});
@@ -1295,7 +1295,7 @@ export default {
 
 			try {
 				Object.keys(saveObject).forEach(field => {
-					if (field != "id") {
+					if (field != "id" && field != "_id") {
 						record[field] = saveObject[field];
 					}
 				});
@@ -1426,7 +1426,7 @@ export default {
 
 			try {
 				Object.keys(saveObject).forEach(field => {
-					if (field != "id") {
+					if (field != "id" && field != "_id") {
 						record[field] = saveObject[field];
 					}
 				});
