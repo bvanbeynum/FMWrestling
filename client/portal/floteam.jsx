@@ -155,7 +155,7 @@ teamB.wrestlers.reduce((sum, wrestler) => sum += wrestler.wins, 0) - teamA.wrest
 	team.wrestlers.some(wrestler => !wrestler.isComplete && (!selectedWeightClass || wrestler.weightClass == selectedWeightClass)) ?
 	<>
 	<div className="sectionHeading">Wrestlers Competing</div>
-	<table className="sectionTable">
+	<table className="sectionTable teamPage">
 	<thead>
 	<tr>
 		<th>Div</th>
@@ -163,7 +163,6 @@ teamB.wrestlers.reduce((sum, wrestler) => sum += wrestler.wins, 0) - teamA.wrest
 		<th>Wrestler</th>
 		<th className="dataColumn">W</th>
 		<th className="dataColumn">L</th>
-		<th>Next Match</th>
 	</tr>
 	</thead>
 	<tbody>
@@ -178,7 +177,6 @@ teamB.wrestlers.reduce((sum, wrestler) => sum += wrestler.wins, 0) - teamA.wrest
 			<td>{ wrestler.name }</td>
 			<td className="dataColumn">{ wrestler.wins }</td>
 			<td className="dataColumn">{ wrestler.losses }</td>
-			<td></td>
 		</tr>
 	)}
 	<tr>
@@ -209,7 +207,7 @@ teamB.wrestlers.reduce((sum, wrestler) => sum += wrestler.wins, 0) - teamA.wrest
 	team.wrestlers.some(wrestler => wrestler.isComplete && (!selectedWeightClass || wrestler.weightClass == selectedWeightClass)) ?
 	<>
 	<div className="sectionHeading">Wrestlers Completed</div>
-	<table className="sectionTable">
+	<table className="sectionTable teamPage">
 	<thead>
 	<tr>
 		<th>Div</th>

@@ -146,6 +146,13 @@ text.progressTotal {
 	margin-left: -3px;
 }
 
+.teamPage.sectionTable th:nth-child(1), 
+.teamPage.sectionTable th:nth-child(2), 
+.teamPage.sectionTable th:nth-child(4), 
+.teamPage.sectionTable th:nth-child(5) {
+	width: 3.5rem;
+}
+
 svg.burndownChart {
 	width: 100%;
 	height: 100%;

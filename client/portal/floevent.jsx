@@ -133,6 +133,35 @@ const FloEvent = props => {
 							)
 						);
 				
+				// ****************** Timing Data *********************
+
+				if (newMatches.some(match => match.completeTime)) {
+					const wrestlerMatches = newMatches.filter(match => !match.winType || match.winType != "BYE"); // exclude BYEs
+
+					const startTime = wrestlerMatches.filter(match => match.completeTime).map(match => match.completeTime).sort((matchA, matchB) => matchA - matchB).find(() => true);
+					const currentTime = wrestlerMatches.filter(match => match.completeTime).map(match => match.completeTime).sort((matchA, matchB) => matchB - matchA).find(() => true);
+
+					const completedMatches = wrestlerMatches.filter(match => match.completeTime).length;
+					const remainingMatches = wrestlerMatches.filter(match => !match.completeTime).length;
+
+					const currentEventLength = currentTime - startTime;
+					const averageMatchTime = Math.round(currentEventLength / completedMatches);
+
+					const estimatedEndTime = new Date(currentTime.getTime() + (remainingMatches * averageMatchTime));
+					const estimatedEventLength = estimatedEndTime - startTime;
+					
+					setTimingData({
+						startTime: startTime,
+						currentTime: currentTime,
+						estimatedEndTime: estimatedEndTime,
+						completedMatches: completedMatches,
+						remainingMatches: remainingMatches,
+						currentEventLength: currentEventLength,
+						estimatedEventLength: estimatedEventLength,
+						averageMatchTime: averageMatchTime
+					});
+				}
+
 				// ***************** Team Data *******************
 
 				const newTeamNames = [...new Set(newMatches.flatMap(match => [match.topWrestler ? match.topWrestler.team : null, match.bottomWrestler ? match.bottomWrestler.team : null]))]
@@ -166,35 +195,6 @@ const FloEvent = props => {
 						wrestlers: teamWrestlers
 					};
 				});
-
-				// ****************** Timing Data *********************
-
-				if (newMatches.some(match => match.completeTime)) {
-					const wrestlerMatches = newMatches.filter(match => !match.winType || match.winType != "BYE"); // exclude BYEs
-
-					const startTime = wrestlerMatches.filter(match => match.completeTime).map(match => match.completeTime).sort((matchA, matchB) => matchA - matchB).find(() => true);
-					const currentTime = wrestlerMatches.filter(match => match.completeTime).map(match => match.completeTime).sort((matchA, matchB) => matchB - matchA).find(() => true);
-
-					const completedMatches = wrestlerMatches.filter(match => match.completeTime).length;
-					const remainingMatches = wrestlerMatches.filter(match => !match.completeTime).length;
-
-					const currentEventLength = currentTime - startTime;
-					const averageMatchTime = Math.round(currentEventLength / completedMatches);
-
-					const estimatedEndTime = new Date(currentTime.getTime() + (remainingMatches * averageMatchTime));
-					const estimatedEventLength = estimatedEndTime - startTime;
-					
-					setTimingData({
-						startTime: startTime,
-						currentTime: currentTime,
-						estimatedEndTime: estimatedEndTime,
-						completedMatches: completedMatches,
-						remainingMatches: remainingMatches,
-						currentEventLength: currentEventLength,
-						estimatedEventLength: estimatedEventLength,
-						averageMatchTime: averageMatchTime
-					});
-				}
 
 				setEvent(newEvent);
 				setMatches(newMatches);
