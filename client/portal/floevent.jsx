@@ -170,7 +170,7 @@ const FloEvent = props => {
 				// ****************** Timing Data *********************
 
 				if (newMatches.some(match => match.completeTime)) {
-					const wrestlerMatches = newMatches.filter(match => match.topWrestler && match.bottomWrestler); // exclude BYEs
+					const wrestlerMatches = newMatches.filter(match => !match.winType || match.winType != "BYE"); // exclude BYEs
 
 					const startTime = wrestlerMatches.filter(match => match.completeTime).map(match => match.completeTime).sort((matchA, matchB) => matchA - matchB).find(() => true);
 					const currentTime = wrestlerMatches.filter(match => match.completeTime).map(match => match.completeTime).sort((matchA, matchB) => matchB - matchA).find(() => true);

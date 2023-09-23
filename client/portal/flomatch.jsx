@@ -20,7 +20,7 @@ const FloMatch = props => {
 	const [ wrestlersRemaining, setWrestlersRemaining ] = useState(0);
 
 	useEffect(() => {
-		const wrestlerMatches = props.matches ? props.matches.filter(match => match.topWrestler && match.bottomWrestler) : []; // exclude BYEs
+		const wrestlerMatches = props.matches ? props.matches.filter(match => !match.winType || match.winType != "BYE") : []; // exclude BYEs
 
 		if (props.matches && props.matches.length > 0 && props.timingData && props.timingData.averageMatchTime) {
 			
@@ -57,18 +57,21 @@ const FloMatch = props => {
 				"L0 " + chartArea.height + " " +
 				"L0 0";
 			
-			const emptyPointCount = dataPointCount - completeBurnDown.length - 1;
-			const remainingMatchCount = props.timingData.remainingMatches / emptyPointCount;
-			const remainingMatchPoints = Array.from(Array(emptyPointCount).keys())
-				.map(() => remainingMatchCount);
-			
-			remain = completeBurnDown[completeBurnDown.length - 1];
-			const remainingBurndown = remainingMatchPoints.map(point => remain -= point);
-			remainingBurndown.unshift(completeBurnDown[completeBurnDown.length - 1]);
+			let remainingPath = []
+			if (dataPointCount - completeBurnDown.length - 1 > 0) {
+				const emptyPointCount = dataPointCount - completeBurnDown.length - 1;
+				const remainingMatchCount = props.timingData.remainingMatches / emptyPointCount;
+				const remainingMatchPoints = Array.from(Array(emptyPointCount).keys())
+					.map(() => remainingMatchCount);
+				
+				remain = completeBurnDown[completeBurnDown.length - 1];
+				const remainingBurndown = remainingMatchPoints.map(point => remain -= point);
+				remainingBurndown.unshift(completeBurnDown[completeBurnDown.length - 1]);
 
-			const remainingSectionWidth = (chartArea.width / dataPointCount) * remainingBurndown.length;
-			const remainingPoints = remainingBurndown.map((dataPoint, pointIndex) => ({ x: completeSectionWidth + ((remainingSectionWidth / remainingMatchPoints.length) * pointIndex), y: ((wrestlerMatches.length - dataPoint) * chartArea.height) / wrestlerMatches.length }));
-			const remainingPath = remainingPoints.reduce((output, point, pointIndex) => output += (pointIndex == 0 ? "M" : "L") + point.x + " " + point.y + " ", "");
+				const remainingSectionWidth = (chartArea.width / dataPointCount) * remainingBurndown.length;
+				const remainingPoints = remainingBurndown.map((dataPoint, pointIndex) => ({ x: completeSectionWidth + ((remainingSectionWidth / remainingMatchPoints.length) * pointIndex), y: ((wrestlerMatches.length - dataPoint) * chartArea.height) / wrestlerMatches.length }));
+				remainingPath = remainingPoints.reduce((output, point, pointIndex) => output += (pointIndex == 0 ? "M" : "L") + point.x + " " + point.y + " ", "");
+			}
 
 			const leftAxis = [
 				{
