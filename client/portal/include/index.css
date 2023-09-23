@@ -145,6 +145,10 @@ button:disabled, .button:disabled {
 
 .panelContent {
 	padding: 10px 20px;
+	display: flex;
+	flex-direction: column;
+	height: fit-content;
+	box-sizing: border-box;
 }
 
 .panel.actionBar {
@@ -397,7 +401,8 @@ table.sectionTable {
 
 .bottomNav {
 	position: fixed;
-	width: 100vw;
+	left: 0;
+	right: 0;
 	bottom: 0;
 	height: 60px;
 	background: rgb(255 255 255);
@@ -469,6 +474,10 @@ table.sectionTable {
 
 	.menuIconToggle {
 		display: none;
+	}
+
+	.bottomNav {
+		left: 20rem;
 	}
 
 	.panel {

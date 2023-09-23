@@ -1698,6 +1698,35 @@ describe("External Links", () => {
 
 	});
 
+	it("saves bulk wrestlers", async () => {
+
+		const externalWrestlers = [{
+			id: "external1",
+			sqlId: 111,
+			name: "Test Wrestler",
+			matches: []
+		}, {
+			id: "external2",
+			sqlId: 222,
+			name: "Test Wrestler 2",
+			matches: []
+		}];
+
+		const send = jest.fn().mockResolvedValue({ body: { id: newWrestlerId } });
+		client.post = jest.fn(() => ({ send: send }));
+
+		const results = await api.externalWrestlersBulkSave(externalWrestlers, serverPath);
+
+		expect(client.post).toHaveBeenNthCalledWith(1, `${ serverPath }/data/externalwrestler`);
+		expect(send).toHaveBeenCalledTimes(externalWrestlers.length);
+		expect(send).toHaveBeenNthCalledWith(1, { wrestler: externalWrestlers[0] });
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("wrestlers", externalWrestlers.map(wrestler => expect.objectContaining( wrestler.id) ));
+
+	});
+
 });
 
 describe("Flo Events", () => {

@@ -1366,6 +1366,33 @@ export default {
 		return output;
 	},
 
+	externalWrestlersBulkSave : async (wrestlers, serverPath) => {
+		const output = { 
+			data: {
+				wrestlers: []
+			}
+		};
+
+		wrestlers.forEach((wrestler, wrestlerIndex) => {
+			try {
+				const clientResponse = client.post(`${ serverPath }/data/externalwrestler`).send({ externalwrestler: wrestler }).then()
+				output.data.wrestlers.push({ index: wrestlerIndex, id: clientResponse.body.id });
+			}
+			catch (error) {
+				output.data.wrestlers.push({ index: wrestlerIndex, error: error.message })
+			}
+		});
+
+		if (output.data.wrestlers.some(response => response.error )) {
+			output.status = 561;
+		}
+		else {
+			output.status = 200;
+		}
+
+		return output;
+	},
+
 	teamsWrestlerSave: async (teamId, newWrestler, serverPath) => {
 		const output = { data: {} };
 

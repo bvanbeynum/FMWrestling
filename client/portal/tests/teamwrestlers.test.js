@@ -5,7 +5,7 @@
 import React from "react";
 import { fireEvent, render, screen, waitFor, cleanup } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import TeamWrestlers from "../teamwrestlers.jsx";
+import TeamWrestlersComponent from "../teamwrestlers.jsx";
 
 describe("Team Wrestler Component", () => {
 
@@ -16,7 +16,7 @@ describe("Team Wrestler Component", () => {
 
 	it("Initializes the component", async () => {
 
-		render(<TeamWrestlers wrestlers={ wrestlers } updateWrestlers={ updateWrestlers } addWrestler={ addWrestler } savingError={ "" } />)
+		render(<TeamWrestlersComponent wrestlers={ wrestlers } updateWrestlers={ updateWrestlers } addWrestler={ addWrestler } savingError={ "" } />)
 		expect(screen.getByTestId(wrestlers[0].id)).toBeInTheDocument();
 
 	});
@@ -32,7 +32,7 @@ describe("Team Wrestler Component", () => {
 			position: 2
 		};
 		
-		const {rerender} = render(<TeamWrestlers wrestlers={ wrestlers } updateWrestlers={ updateWrestlers } addWrestler={ addWrestler } savingError={ "" } />);
+		const {rerender} = render(<TeamWrestlersComponent wrestlers={ wrestlers } updateWrestlers={ updateWrestlers } addWrestler={ addWrestler } savingError={ "" } />);
 
 		const addButton = await screen.findByRole("button", { name: /^add wrestler$/i });
 		fireEvent.click(addButton);
@@ -50,7 +50,7 @@ describe("Team Wrestler Component", () => {
 
 		fireEvent.click(saveButton);
 
-		rerender(<TeamWrestlers wrestlers={ wrestlers.concat(newWrestler) } updateWrestlers={ updateWrestlers } addWrestler={ addWrestler } savingError={ "" } />)
+		rerender(<TeamWrestlersComponent wrestlers={ wrestlers.concat(newWrestler) } updateWrestlers={ updateWrestlers } addWrestler={ addWrestler } savingError={ "" } />)
 		
 		expect(await screen.findByTestId(newWrestler.id)).toBeInTheDocument();
 

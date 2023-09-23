@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import Nav from "./nav.jsx";
 import "./include/index.css";
 import TeamWrestlers from "./teamwrestlers.jsx";
+import TeamLink from "./teamlink.jsx";
 
 const TeamView = () => {
 
@@ -126,6 +127,9 @@ const TeamView = () => {
 			
 			{
 			pageView == "wrestlers" ? <TeamWrestlers wrestlers={ team.wrestlers } updateWrestlers={ updateWrestlers } addWrestler={ addWrestler } savingError={ savingError } />
+
+			: pageView == "link" ? <TeamLink flo={ team.externalTeams } />
+
 			: ""
 			}
 
