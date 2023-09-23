@@ -1449,19 +1449,12 @@ export default {
 		return output;
 	},
 
-	floEventLoad: async (floId, serverPath, lastLoad = null) => {
+	floEventLoad: async (floId, serverPath) => {
 		const output = { data: {} };
 
 		try {
 			const clientResponse = await client.get(`${ serverPath }/data/floevent?id=${ floId }`);
-			const floEvent = clientResponse.body.floEvents[0]
-
-			if (!lastLoad || floEvent.lastUpdate > new Date(lastLoad)) {
-				output.data.floEvent = floEvent;
-			}
-			else {
-				output.data.floEvent = null;
-			}
+			output.data.floEvent = clientResponse.body.floEvents[0]
 		}
 		catch (error) {
 			output.status = 561;
@@ -1531,8 +1524,8 @@ export default {
 										if (!prevMatch && match.topWrestler && match.bottomWrestler) {
 											// New Match
 											updates.push({ 
-												division: match.division,
-												weightClass: match.weightClass,
+												division: updateDivision.name,
+												weightClass: updateWeight.name,
 												round: match.round,
 												teams: [
 													...(match.topWrestler ? [match.topWrestler.team] : []),
@@ -1546,8 +1539,8 @@ export default {
 										if (match.topWrestler && (!prevMatch || !prevMatch.topWrestler)) {
 											// Top wrestler assigned
 											updates.push({
-												division: match.division,
-												weightClass: match.weightClass,
+												division: updateDivision.name,
+												weightClass: updateWeight.name,
 												round: match.round,
 												teams: [
 													...(match.topWrestler ? [match.topWrestler.team] : [])
@@ -1560,8 +1553,8 @@ export default {
 										if (match.bottomWrestler && (!prevMatch || !prevMatch.bottomWrestler)) {
 											// Bottom wrestler assigned
 											updates.push({
-												division: match.division,
-												weightClass: match.weightClass,
+												division: updateDivision.name,
+												weightClass: updateWeight.name,
 												round: match.round,
 												teams: [
 													...(match.bottomWrestler ? [match.bottomWrestler.team] : [])
@@ -1574,8 +1567,8 @@ export default {
 										if (match.mat && match.topWrestler && match.bottomWrestler && (!prevMatch || !prevMatch.mat)) {
 											// Mat assigned
 											updates.push({
-												division: match.division,
-												weightClass: match.weightClass,
+												division: updateDivision.name,
+												weightClass: updateWeight.name,
 												round: match.round,
 												teams: [
 													...(match.topWrestler ? [match.topWrestler.team] : []),
@@ -1592,8 +1585,8 @@ export default {
 												loser = match.topWrestler.isWinner ? bottomWrestler : topWrestler;
 		
 											updates.push({ 
-												division: match.division,
-												weightClass: match.weightClass,
+												division: updateDivision.name,
+												weightClass: updateWeight.name,
 												round: match.round,
 												teams: [
 													...(match.topWrestler ? [match.topWrestler.team] : []),

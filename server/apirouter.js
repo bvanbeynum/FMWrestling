@@ -241,7 +241,7 @@ router.get("/api/externalwrestlersbulk", authAPI, async (request, response) => {
 });
 
 router.get("/api/floeventload", authAPI, async (request, response) => {
-	const results = await api.floEventLoad(request.query.id, request.serverPath, request.query.lastLoad);
+	const results = await api.floEventLoad(request.query.id, request.serverPath);
 
 	if (results.error) {
 		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64f90a99834ebe5ef64faa77", message: `${ results.status }: ${results.error}` }}).then();
