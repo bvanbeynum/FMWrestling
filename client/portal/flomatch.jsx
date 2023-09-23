@@ -20,6 +20,8 @@ const FloMatch = props => {
 	const [ wrestlersRemaining, setWrestlersRemaining ] = useState(0);
 
 	useEffect(() => {
+		const wrestlerMatches = props.matches ? props.matches.filter(match => match.topWrestler && match.bottomWrestler) : []; // exclude BYEs
+
 		if (props.matches && props.matches.length > 0 && props.timingData && props.timingData.averageMatchTime) {
 			
 			// ****************** Build burndown chart **************************
@@ -34,7 +36,7 @@ const FloMatch = props => {
 			const sectionTimeLength = props.timingData.estimatedEventLength / dataPointCount;
 
 			let completeMatchPoints = Array.from(Array(dataPointCount - 1).keys())
-				.map(pointIndex => props.matches.filter(match =>
+				.map(pointIndex => wrestlerMatches.filter(match =>
 					match.completeTime &&
 					match.completeTime.getTime() >= (props.timingData.startTime.getTime() + (sectionTimeLength * pointIndex)) &&
 					match.completeTime.getTime() <= (props.timingData.startTime.getTime() + sectionTimeLength + (sectionTimeLength * pointIndex))
@@ -43,12 +45,12 @@ const FloMatch = props => {
 			const lastPoint = completeMatchPoints.reduce((lastPoint, point, pointIndex) => point > 0 ? pointIndex : lastPoint, completeMatchPoints.length - 1);
 			completeMatchPoints = completeMatchPoints.slice(0, lastPoint + 1);
 
-			let remain = props.matches.length;
+			let remain = wrestlerMatches.length;
 			const completeBurnDown = completeMatchPoints.map(point => remain -= point);
-			completeBurnDown.unshift(props.matches.length);
+			completeBurnDown.unshift(wrestlerMatches.length);
 
 			const completeSectionWidth = (chartArea.width / dataPointCount) * completeBurnDown.length;
-			const completePoints = completeBurnDown.map((dataPoint, pointIndex) => ({ x: (completeSectionWidth / completeMatchPoints.length) * pointIndex, y: ((props.matches.length - dataPoint) * chartArea.height) / props.matches.length }));
+			const completePoints = completeBurnDown.map((dataPoint, pointIndex) => ({ x: (completeSectionWidth / completeMatchPoints.length) * pointIndex, y: ((wrestlerMatches.length - dataPoint) * chartArea.height) / wrestlerMatches.length }));
 			const completePath = completePoints.reduce((output, point, pointIndex) => output += (pointIndex == 0 ? "M" : "L") + point.x + " " + point.y + " ", "");
 			const completeArea = completePath + 
 				"L" + completePoints[completePoints.length - 1].x + " " + chartArea.height + " " +
@@ -65,7 +67,7 @@ const FloMatch = props => {
 			remainingBurndown.unshift(completeBurnDown[completeBurnDown.length - 1]);
 
 			const remainingSectionWidth = (chartArea.width / dataPointCount) * remainingBurndown.length;
-			const remainingPoints = remainingBurndown.map((dataPoint, pointIndex) => ({ x: completeSectionWidth + ((remainingSectionWidth / remainingMatchPoints.length) * pointIndex), y: ((props.matches.length - dataPoint) * chartArea.height) / props.matches.length }));
+			const remainingPoints = remainingBurndown.map((dataPoint, pointIndex) => ({ x: completeSectionWidth + ((remainingSectionWidth / remainingMatchPoints.length) * pointIndex), y: ((wrestlerMatches.length - dataPoint) * chartArea.height) / wrestlerMatches.length }));
 			const remainingPath = remainingPoints.reduce((output, point, pointIndex) => output += (pointIndex == 0 ? "M" : "L") + point.x + " " + point.y + " ", "");
 
 			const leftAxis = [
@@ -73,7 +75,7 @@ const FloMatch = props => {
 					x: chartData.axis.left - 3,
 					y: 8,
 					anchor: "end",
-					text: props.matches.length
+					text: wrestlerMatches.length
 				},
 				{
 					x: chartData.axis.left - 3,
@@ -83,8 +85,6 @@ const FloMatch = props => {
 				}
 			];
 
-			const currentMatchTime = props.matches.filter(match => match.completeTime).map(match => match.completeTime).sort((matchA, matchB) => matchB - matchA).find(() => true);
-			
 			const bottomAxis = [
 				{
 					x: 0,
@@ -93,14 +93,6 @@ const FloMatch = props => {
 					text: ((props.timingData.startTime.getHours() == 12 ? 12 : props.timingData.startTime.getHours() % 12)) + ":" +
 						(props.timingData.startTime.getMinutes() + "").padStart(2, "0") +
 						(props.timingData.startTime.getHours() < 12 ? "am" : "pm")
-				},
-				{
-					x: completeSectionWidth,
-					y: chartData.axis.bottom - 2,
-					anchor: "middle",
-					text: ((currentMatchTime.getHours() == 12 ? 12 : currentMatchTime.getHours() % 12)) + ":" +
-						(currentMatchTime.getMinutes() + "").padStart(2, "0") +
-						(currentMatchTime.getHours() < 12 ? "am" : "pm")
 				},
 				{
 					x: chartData.svg.width - chartData.axis.left,
@@ -119,8 +111,8 @@ const FloMatch = props => {
 
 			const chartLabels = [
 				{
-					x: completePoints[completePoints.length - 1].x,
-					y: completePoints[completePoints.length - 1].y - 5,
+					x: completePoints[completePoints.length - 1].x + 10,
+					y: completePoints[completePoints.length - 1].y + 5,
 					text: completeBurnDown[completeBurnDown.length - 1]
 				}
 			];
@@ -138,21 +130,22 @@ const FloMatch = props => {
 			}));
 		}
 
-		if (props.matches && props.matches.length > 0) {
+		if (wrestlerMatches.length > 0) {
 
 			// ****************** Match Data **************************
 
-			setMatchCount(props.matches.length);
-			setMatchesRemaining(props.matches.filter(match => !match.winType).length);
+			setMatchCount(wrestlerMatches.length);
+			setMatchesRemaining(wrestlerMatches.filter(match => !match.winType).length);
 			
-			const wrestlers = [...new Set(props.matches.flatMap(match => [match.topWrestler ? match.topWrestler.name : null, match.bottomWrestler ? match.bottomWrestler.name : null]))];
+			const wrestlers = [...new Set(wrestlerMatches.flatMap(match => [match.topWrestler ? match.topWrestler.name : null, match.bottomWrestler ? match.bottomWrestler.name : null]))];
 			const newWrestlersRemaining = wrestlers.filter(wrestler => 
-				props.matches.some(match => 
-					!match.winType && (
-						(match.bottomWrestler && match.bottomWrestler.name == wrestler) ||
-						(match.bottomWrestler && match.bottomWrestler.name == wrestler)
-					)
-					)
+				wrestlerMatches
+					.some(match => 
+						!match.winType && (
+							(match.bottomWrestler && match.bottomWrestler.name == wrestler) ||
+							(match.topWrestler && match.topWrestler.name == wrestler)
+						)
+						)
 				).length;
 			
 			setWrestlerCount(wrestlers.length);

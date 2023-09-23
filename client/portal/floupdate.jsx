@@ -14,8 +14,8 @@ const FloUpdate = props => {
 		if (props.updates) {
 			setUpdates(props.updates.map(update => ({...update, dateTime: new Date(update.dateTime)})));
 		}
-	}, [props.updates])
-	
+	}, [props.updates]);
+
 	return (
 
 <>
@@ -43,7 +43,7 @@ const FloUpdate = props => {
 	<div className={`filterContent ${ isFilterExpanded ? "active" : "" }`}>
 		<label>
 			Division
-			<select value={ selectedDivision } onChange={ event => selectDivision(event.target.value)}>
+			<select value={ selectedDivision } onChange={ event => setSelectedDivision(event.target.value)}>
 				<option value="">-- Select --</option>
 				{
 				props.divisions
@@ -85,11 +85,13 @@ const FloUpdate = props => {
 
 {
 updates
-.filter(updateBlock => updateBlock.updates.some(update => 
-	(!selectedTeam || update.teams.includes(selectedTeam)) && 
-	(!selectedDivision || update.division == selectedDivision) &&
-	(!updateLength || update.dateTime > new Date(new Date().setMinutes(new Date().getMinutes() + updateLength)))
-	))
+.filter(updateBlock => 
+	updateBlock.updates.some(update => 
+		(!selectedTeam || update.teams.includes(selectedTeam)) && 
+		(!selectedDivision || update.division == selectedDivision)
+	) &&
+	(!updateLength || updateBlock.dateTime > new Date(new Date().setMinutes(new Date().getMinutes() - +updateLength)))
+)
 .sort((blockA, blockB) => blockB.dateTime - blockA.dateTime)
 .map((updateBlock, blockIndex) =>
 	
@@ -130,7 +132,7 @@ updates
 		.map((update, updateIndex) => 
 		
 			<tr key={ updateIndex }>
-				<td>{ update.message }</td>
+				<td>{ `${ update.division } / ${ update.weightClass }: ${update.message}` }</td>
 			</tr>
 
 		)}
@@ -152,7 +154,7 @@ updates
 		.map((update, updateIndex) => 
 		
 			<tr key={ updateIndex }>
-				<td>{ update.message }</td>
+				<td>{ `${ update.division } / ${ update.weightClass }: ${update.message}` }</td>
 			</tr>
 
 		)}

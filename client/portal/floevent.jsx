@@ -39,6 +39,8 @@ const FloEvent = props => {
 	const [ weightClasses, setWeightClasses ] = useState([]);
 	const [ teamNames, setTeamNames ] = useState([]);
 
+	const lastDBUpdateTime = useRef(null);
+
 	useEffect(() => {
 		if (!pageActive) {
 			const url = new window.URLSearchParams(window.location.search);
@@ -75,7 +77,7 @@ const FloEvent = props => {
 			Math.floor(updateTimeDiff / 1000 % 60) + "s" 
 			);
 		
-		if (event && event.date && !isRefreshing.current && lastRefresh.current) {
+		if (event && event.date && lastRefresh.current) {
 			let interval = 1000 * 60 * 30; // Set the default refresh at 30 min
 
 			if ((new Date()) > (event.date.getTime() - (1000 * 60 * 60 * 24)) && new Date().getDate() >= event.date.getDate()) {
@@ -83,7 +85,7 @@ const FloEvent = props => {
 				interval = 1000 * 5;
 			}
 
-			if (updateTimeDiff > interval) {
+			if (updateTimeDiff > interval && (!isRefreshing.current || updateTimeDiff > (interval * 2))) {
 				refreshData();
 			}
 		}
@@ -92,7 +94,7 @@ const FloEvent = props => {
 	const refreshData = () => {
 		isRefreshing.current = true;
 
-		fetch(`/api/floeventload?id=${ eventId }${ lastRefresh.current ? "&lastLoad=" + lastRefresh.current : "" }`)
+		fetch(`/api/floeventload?id=${ eventId }`)
 			.then(response => {
 				if (response.ok) {
 					return response.json();
@@ -105,14 +107,17 @@ const FloEvent = props => {
 				lastRefresh.current = new Date();
 				isRefreshing.current = false;
 
-				if (!data.floEvent)
-					return; // No updates since last checked
-
 				const newEvent = {
 					...data.floEvent,
+					updates: data.floEvent.updates.map(update => ({...update, dateTime: new Date(update.dateTime)})),
 					date: new Date(data.floEvent.date),
 					endDate: data.floEvent.endDate ? new Date(data.floEvent.endDate) : null
 				};
+
+				const latestUpdate = newEvent.updates.map(update => update.dateTime).sort((updateA, updateB) => updateB - updateA).find(() => true);
+				if (lastDBUpdateTime.current && +lastDBUpdateTime.current == +latestUpdate) {
+					return;
+				}
 
 				const newMatches = newEvent.divisions.flatMap(division =>
 						division.weightClasses.flatMap(weight =>
@@ -148,10 +153,10 @@ const FloEvent = props => {
 								isComplete: !wrestlerMatches.some(match => !match.winType),
 								wins: wrestlerMatches.filter(match => match.winType && match.winType != "BYE" && ((match.topWrestler && match.topWrestler.name == wrestlerName && match.topWrestler.isWinner) || (match.bottomWrestler && match.bottomWrestler.name == wrestlerName && match.bottomWrestler.isWinner))).length,
 								losses: wrestlerMatches.filter(match => match.winType && match.winType != "BYE" && ((match.topWrestler && match.topWrestler.name == wrestlerName && !match.topWrestler.isWinner) || (match.bottomWrestler && match.bottomWrestler.name == wrestlerName && !match.bottomWrestler.isWinner))).length,
-								place: wrestlerMatches.some(match => /^finals$/i.test(match.round) && ((match.topWrestler && match.topWrestler.name == wrestlerName && match.topWrestler.isWinner) || (match.bottomWrestler && match.bottomWrestler.name == wrestlerName && match.bottomWrestler.isWinner))) ? "1st"
-									: wrestlerMatches.some(match => /^finals$/i.test(match.round) && ((match.topWrestler && match.topWrestler.name == wrestlerName && !match.topWrestler.isWinner) || (match.bottomWrestler && match.bottomWrestler.name == wrestlerName && !match.bottomWrestler.isWinner))) ? "2nd"
-									: wrestlerMatches.some(match => /^3rd place$/i.test(match.round) && ((match.topWrestler && match.topWrestler.name == wrestlerName && match.topWrestler.isWinner) || (match.bottomWrestler && match.bottomWrestler.name == wrestlerName && match.bottomWrestler.isWinner))) ? "3rd"
-									: wrestlerMatches.some(match => /^3rd place$/i.test(match.round) && ((match.topWrestler && match.topWrestler.name == wrestlerName && !match.topWrestler.isWinner) || (match.bottomWrestler && match.bottomWrestler.name == wrestlerName && !match.bottomWrestler.isWinner))) ? "4th"
+								place: wrestlerMatches.some(match => match.winType && /^finals$/i.test(match.round) && ((match.topWrestler && match.topWrestler.name == wrestlerName && match.topWrestler.isWinner) || (match.bottomWrestler && match.bottomWrestler.name == wrestlerName && match.bottomWrestler.isWinner))) ? "1st"
+									: wrestlerMatches.some(match => match.winType && /^finals$/i.test(match.round) && ((match.topWrestler && match.topWrestler.name == wrestlerName && !match.topWrestler.isWinner) || (match.bottomWrestler && match.bottomWrestler.name == wrestlerName && !match.bottomWrestler.isWinner))) ? "2nd"
+									: wrestlerMatches.some(match => match.winType && /^3rd place$/i.test(match.round) && ((match.topWrestler && match.topWrestler.name == wrestlerName && match.topWrestler.isWinner) || (match.bottomWrestler && match.bottomWrestler.name == wrestlerName && match.bottomWrestler.isWinner))) ? "3rd"
+									: wrestlerMatches.some(match => match.winType && /^3rd place$/i.test(match.round) && ((match.topWrestler && match.topWrestler.name == wrestlerName && !match.topWrestler.isWinner) || (match.bottomWrestler && match.bottomWrestler.name == wrestlerName && !match.bottomWrestler.isWinner))) ? "4th"
 									: ""
 							};
 						});
@@ -165,11 +170,13 @@ const FloEvent = props => {
 				// ****************** Timing Data *********************
 
 				if (newMatches.some(match => match.completeTime)) {
-					const startTime = newMatches.filter(match => match.completeTime).map(match => match.completeTime).sort((matchA, matchB) => matchA - matchB).find(() => true);
-					const currentTime = newMatches.filter(match => match.completeTime).map(match => match.completeTime).sort((matchA, matchB) => matchB - matchA).find(() => true);
+					const wrestlerMatches = newMatches.filter(match => match.topWrestler && match.bottomWrestler); // exclude BYEs
 
-					const completedMatches = newMatches.filter(match => match.completeTime).length;
-					const remainingMatches = newMatches.filter(match => !match.completeTime).length;
+					const startTime = wrestlerMatches.filter(match => match.completeTime).map(match => match.completeTime).sort((matchA, matchB) => matchA - matchB).find(() => true);
+					const currentTime = wrestlerMatches.filter(match => match.completeTime).map(match => match.completeTime).sort((matchA, matchB) => matchB - matchA).find(() => true);
+
+					const completedMatches = wrestlerMatches.filter(match => match.completeTime).length;
+					const remainingMatches = wrestlerMatches.filter(match => !match.completeTime).length;
 
 					const currentEventLength = currentTime - startTime;
 					const averageMatchTime = Math.round(currentEventLength / completedMatches);
@@ -189,16 +196,14 @@ const FloEvent = props => {
 					});
 				}
 
-				setEvent(({
-					...newEvent,
-					updates: newEvent.updates.map(update => ({...update, dateTime: new Date(update.dateTime)}))
-				}));
-
+				setEvent(newEvent);
 				setMatches(newMatches);
 				setTeams(teamData);
 				setDivisionNames([...new Set(newEvent.divisions.map(division => division.name))]);
 				setWeightClasses([...new Set(newEvent.divisions.flatMap(division => division.weightClasses.map(weight => weight.name))) ]);
 				setTeamNames(newTeamNames);
+
+				lastDBUpdateTime.current = latestUpdate;
 
 				if (!pageActive) {
 					setLoggedInUser(data.loggedInUser);
@@ -234,7 +239,7 @@ const FloEvent = props => {
 
 			: pageView == "teams" ?
 
-				<FloTeam teams={ teams } weightClasses={ weightClasses } eventName={ event ? event.name : "" } />
+				<FloTeam teams={ teams } divisions={ divisionNames } weightClasses={ weightClasses } eventName={ event ? event.name : "" } />
 
 			: pageView == "match" ?
 

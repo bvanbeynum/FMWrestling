@@ -5,9 +5,10 @@ const FloTeam = props => {
 
 	const [ isFilterExpanded, setIsFilterExpanded ] = useState(false);
 	const [ selectedTeam, setSelectedTeam ] = useState("");
+	const [ selectedDivision, setSelectedDivision ] = useState("");
 	const [ selectedWeightClass, setSelectedWeightClass ] = useState("");
 	const [ teamSort, setTeamSort ] = useState("name");
-	
+
 	return (
 
 <>
@@ -31,6 +32,7 @@ const FloTeam = props => {
 			}
 		</div>
 	</div>
+	
 
 	<div className={`filterContent ${ isFilterExpanded ? "active" : "" }`}>
 		<label>
@@ -42,6 +44,20 @@ const FloTeam = props => {
 				.sort((teamA, teamB) => teamA.name > teamB.name ? 1 : -1)
 				.map((team, teamIndex) => 
 				<option key={ teamIndex } value={ team.name }>{ team.name }</option>
+				)
+				}
+			</select>
+		</label>
+		
+		<label>
+			Division
+			<select value={ selectedDivision } onChange={ event => setSelectedDivision(event.target.value)}>
+				<option value="">-- Select --</option>
+				{
+				props.divisions
+				.sort((divisionA, divisionB) => divisionA > divisionB ? 1 : -1)
+				.map(division => 
+				<option key={ division } value={ division }>{ division }</option>
 				)
 				}
 			</select>
@@ -76,7 +92,11 @@ const FloTeam = props => {
 
 {
 props.teams
-.filter(team => (!selectedTeam || team.name == selectedTeam) && (!selectedWeightClass || team.wrestlers.some(wrestler => wrestler.weightClass == selectedWeightClass)))
+.filter(team => 
+	(!selectedTeam || team.name == selectedTeam) && 
+	(!selectedDivision || team.wrestlers.some(wrestler => wrestler.division == selectedDivision)) &&
+	(!selectedWeightClass || team.wrestlers.some(wrestler => wrestler.weightClass == selectedWeightClass))
+)
 .sort((teamA, teamB) => 
 teamSort == "remain" && teamB.wrestlers.filter(wrestler => !wrestler.isComplete).length != teamA.wrestlers.filter(wrestler => !wrestler.isComplete).length ?
 	teamB.wrestlers.filter(wrestler => !wrestler.isComplete).length - teamA.wrestlers.filter(wrestler => !wrestler.isComplete).length

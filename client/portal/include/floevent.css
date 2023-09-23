@@ -34,10 +34,14 @@
 	fill: rgb(180 227 180);
 }
 
-.bracket .winPath {
-	stroke: rgb(57 119 57);
+.bracket .bracketPath {
 	fill: none;
 	stroke-width: 2;
+	stroke: rgb(197 197 197);
+}
+
+.bracket .bracketPath.complete {
+	stroke: rgb(57 119 57);
 }
 
 .chartGrid {

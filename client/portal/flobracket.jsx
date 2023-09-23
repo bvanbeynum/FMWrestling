@@ -143,13 +143,13 @@ const FloBracket = props => {
 					guid: match.guid,
 					winGUID: match.nextMatch ? match.nextMatch.winnerGUID : null, // Where will the path go for winner
 					loseGUID: match.nextMatch && round.bracketType == "initial" && match.topWrestler && match.bottomWrestler ? match.nextMatch.loserGUID : null, // Where will the path go for loser (only the initial loser gets mapped)
-					winStart: match.nextMatch && match.winType ?
+					winStart: match.nextMatch ?
 						match.startY + (
 							match.topWrestler && match.topWrestler.isWinner ? boxSize.height / 2 // If the winner is on the top box start there
 							: boxSize.height + paddingSize.box + (boxSize.height / 2) // If the winner is on the bottom box then start there
 						)
 						: null,
-					loseStart: match.nextMatch && round.bracketType == "initial" && match.topWrestler && match.bottomWrestler && match.winType ?
+					loseStart: match.nextMatch && round.bracketType == "initial" && match.topWrestler && match.bottomWrestler ?
 						match.startY + (
 							match.topWrestler.isWinner ? boxSize.height + paddingSize.box + (boxSize.height / 2)
 							: boxSize.height / 2
@@ -290,10 +290,6 @@ selectedBrackets
 <div className="panel expandable" key={bracketIndex}>
 	<h3>{ `${ bracket.division} - ${ bracket.weightClass }` }</h3>
 
-	<div>
-		<input type="range" min="100" max={ bracket.maxZoom } value={ bracket.zoom } onChange={ setZoom(bracketIndex) } step="1" />
-	</div>
-
 	<div className="bracketContainer">
 		<svg className="bracket" style={{ height: `${ bracket.zoom }%`, width: `${ bracket.zoom }%` }} viewBox={ `0 0 ${ bracket.position.svg.width } ${ bracket.position.svg.height }` } preserveAspectRatio="xMidYMid meet">
 			<defs>
@@ -353,7 +349,7 @@ selectedBrackets
 				bracket.paths
 				.filter(path => path.loseStartY)
 				.map((path, pathIndex) =>
-					<path key={pathIndex} d={ `M${ path.loseStartX } ${ path.loseStartY } C${ path.loseEndX } ${ path.loseStartY }, ${ path.loseStartX } ${ path.loseEndY}, ${ path.loseEndX } ${ path.loseEndY }` } className="winPath" />
+					<path key={pathIndex} d={ `M${ path.loseStartX } ${ path.loseStartY } C${ path.loseEndX } ${ path.loseStartY }, ${ path.loseStartX } ${ path.loseEndY}, ${ path.loseEndX } ${ path.loseEndY }` } className={ `bracketPath ${ path.winType ? "complete" : "" }` } />
 				)
 				}
 
@@ -361,11 +357,15 @@ selectedBrackets
 				bracket.paths
 				.filter(path => path.winStartY)
 				.map((path, pathIndex) =>
-					<path key={pathIndex} d={ `M${ path.winStartX } ${ path.winStartY } C${ path.winEndX  } ${ path.winStartY }, ${ path.winStartX } ${ path.winEndY}, ${ path.winEndX } ${ path.winEndY }` } className="winPath" style={{strokeWidth: path.winType == "F" ? 4 : 2 }} />
+					<path key={pathIndex} d={ `M${ path.winStartX } ${ path.winStartY } C${ path.winEndX  } ${ path.winStartY }, ${ path.winStartX } ${ path.winEndY}, ${ path.winEndX } ${ path.winEndY }` } className={ `bracketPath ${ path.winType ? "complete" : "" }` } style={{strokeWidth: path.winType == "F" ? 4 : 2 }} />
 				)
 				}
 			</g>
 		</svg>
+	</div>
+
+	<div>
+		<input type="range" min="100" max={ bracket.maxZoom } value={ bracket.zoom } onChange={ setZoom(bracketIndex) } step="1" />
 	</div>
 
 </div>
