@@ -1106,7 +1106,7 @@ describe("API service", () => {
 
 		// ********** Given
 
-		const output = { wrestlers: [{ name: "Test Wrestler", sqlId: 111 }] };
+		const output = { externalWrestlers: [{ name: "Test Wrestler", sqlId: 111 }] };
 
 		api.externalWrestlersBulk = jest.fn().mockResolvedValue({
 			status: 200,
@@ -1122,7 +1122,35 @@ describe("API service", () => {
 		// ********** Then
 
 		expect(api.externalWrestlersBulk).toHaveBeenCalled();
-		expect(response.body).toHaveProperty("wrestlers", output.wrestlers);
+		expect(response.body).toHaveProperty("externalWrestlers", output.externalWrestlers);
+
+	});
+
+	it("saves bulk external wrestlers", async () => {
+
+		// ********** Given
+
+		const save = [{ id: "wrestler1", name: "TestWrestler" }],
+			output = { externalWrestlers: [{ index: 0, id: "wrestler1 "}] };
+
+		api.externalWrestlersBulkSave = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+
+		const response = await request(app)
+			.post(`/api/externalwrestlersbulksave`)
+			.send({ externalwrestlers: save })
+			.expect(200);
+
+		// ********** Then
+
+		console.log(response.body);
+
+		expect(api.externalWrestlersBulkSave).toHaveBeenCalledWith(save, expect.anything());
+		expect(response.body).toHaveProperty("externalWrestlers", output.externalWrestlers);
 
 	});
 

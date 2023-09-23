@@ -1354,7 +1354,7 @@ export default {
 
 		try {
 			const clientResponse = await client.get(`${ serverPath }/data/externalwrestler`);
-			output.data.wrestlers = clientResponse.body.externalWrestlers;
+			output.data.externalWrestlers = clientResponse.body.externalWrestlers;
 		}
 		catch (error) {
 			output.status = 561;
@@ -1366,24 +1366,24 @@ export default {
 		return output;
 	},
 
-	externalWrestlersBulkSave : async (wrestlers, serverPath) => {
+	externalWrestlersBulkSave : async (externalWrestlers, serverPath) => {
 		const output = { 
 			data: {
-				wrestlers: []
+				externalWrestlers: []
 			}
 		};
 
-		wrestlers.forEach((wrestler, wrestlerIndex) => {
+		for (let wrestlerIndex = 0; wrestlerIndex < externalWrestlers.length; wrestlerIndex++) {
 			try {
-				const clientResponse = client.post(`${ serverPath }/data/externalwrestler`).send({ externalwrestler: wrestler }).then()
-				output.data.wrestlers.push({ index: wrestlerIndex, id: clientResponse.body.id });
+				const clientResponse = await client.post(`${ serverPath }/data/externalwrestler`).send({ externalwrestler: externalWrestlers[wrestlerIndex] }).then();
+				output.data.externalWrestlers.push({ index: wrestlerIndex, id: clientResponse.body.id });
 			}
 			catch (error) {
-				output.data.wrestlers.push({ index: wrestlerIndex, error: error.message })
+				output.data.externalWrestlers.push({ index: wrestlerIndex, error: error.message });
 			}
-		});
+		}
 
-		if (output.data.wrestlers.some(response => response.error )) {
+		if (output.data.externalWrestlers.some(response => response.error )) {
 			output.status = 561;
 		}
 		else {

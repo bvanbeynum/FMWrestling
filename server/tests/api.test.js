@@ -1694,7 +1694,7 @@ describe("External Links", () => {
 		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/externalwrestler`);
 		expect(results).toHaveProperty("status", 200);
 		expect(results).toHaveProperty("data");
-		expect(results.data).toHaveProperty("wrestlers", externalWrestlers);
+		expect(results.data).toHaveProperty("externalWrestlers", externalWrestlers);
 
 	});
 
@@ -1721,11 +1721,11 @@ describe("External Links", () => {
 
 		expect(client.post).toHaveBeenNthCalledWith(1, `${ serverPath }/data/externalwrestler`);
 		expect(send).toHaveBeenCalledTimes(externalWrestlers.length);
-		expect(send).toHaveBeenNthCalledWith(1, { wrestler: externalWrestlers[0] });
+		expect(send).toHaveBeenNthCalledWith(1, { externalwrestler: externalWrestlers[0] });
 
 		expect(results).toHaveProperty("status", 200);
 		expect(results).toHaveProperty("data");
-		expect(results.data).toHaveProperty("wrestlers", externalWrestlers.map(wrestler => expect.objectContaining( wrestler.id) ));
+		expect(results.data).toHaveProperty("externalWrestlers", externalWrestlers.map(wrestler => expect.objectContaining({ id: wrestler.id }) ));
 
 	});
 
