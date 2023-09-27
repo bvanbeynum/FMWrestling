@@ -997,6 +997,29 @@ describe("API service", () => {
 
 	});
 
+	it("saves team session data", async () => {
+		// ********** Given
+
+		const packet = { teamId: "team1", selectedDivision: "Varsity", compare: { opponentId: "team2" } };
+
+		api.teamViewSave = jest.fn().mockResolvedValue({
+			status: 200,
+			data: { status: "ok" }
+		});
+
+		// ********** When
+
+		const response = await request(app)
+			.post("/api/teamviewsave")
+			.send({ savepacket: packet })
+			.expect(200);
+
+		// ********** Then
+
+		expect(api.teamViewSave).toHaveBeenCalledWith(packet, expect.anything(), expect.anything());
+
+	});
+
 	it("gets external teams", async () => {
 
 		// ********** Given
@@ -1146,8 +1169,6 @@ describe("API service", () => {
 			.expect(200);
 
 		// ********** Then
-
-		console.log(response.body);
 
 		expect(api.externalWrestlersBulkSave).toHaveBeenCalledWith(save, expect.anything());
 		expect(response.body).toHaveProperty("externalWrestlers", output.externalWrestlers);

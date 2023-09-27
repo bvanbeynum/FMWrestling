@@ -1234,7 +1234,7 @@ export default {
 		}
 
 		try {
-			const records = await data.externalWrestler.find(filter).lean().exec();
+			const records = await data.externalWrestler.find(filter).lean().limit(userFilter.max).exec();
 			output.status = 200;
 			output.data = { externalWrestlers: records.map(({ _id, __v, ...data }) => ({ id: _id, ...data })) };
 		}

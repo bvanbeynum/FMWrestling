@@ -187,7 +187,7 @@ const Teams = () => {
 						<div>wrestlers</div>
 					</button>
 					
-					<button aria-label="Compare Team">
+					<button aria-label="Compare Team" onClick={ () => window.location = `/portal/teamview.html?id=${ myTeam.id }&page=compare` }>
 						{/* Compare */}
 						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M420.001-55.386V-140H212.309q-30.308 0-51.308-21t-21-51.308v-535.382q0-30.308 21-51.308t51.308-21h207.692v-84.615H480v849.228h-59.999ZM200-240h220.001v-263.848L200-240Zm360 99.999V-480l200 240v-507.691q0-4.616-3.846-8.463-3.847-3.846-8.463-3.846H560v-59.999h187.691q30.308 0 51.308 21t21 51.308v535.382q0 30.308-21 51.308t-51.308 21H560Z"/></svg>
 						<div>compare</div>
@@ -335,7 +335,7 @@ const Teams = () => {
 						<div>wrestlers</div>
 					</button>
 					
-					<button aria-label="Compare Team">
+					<button aria-label="Compare Team" onClick={ () => window.location = `/portal/teamview.html?id=${ team.id }&page=compare` }>
 						{/* Compare */}
 						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M420.001-55.386V-140H212.309q-30.308 0-51.308-21t-21-51.308v-535.382q0-30.308 21-51.308t51.308-21h207.692v-84.615H480v849.228h-59.999ZM200-240h220.001v-263.848L200-240Zm360 99.999V-480l200 240v-507.691q0-4.616-3.846-8.463-3.847-3.846-8.463-3.846H560v-59.999h187.691q30.308 0 51.308 21t21 51.308v535.382q0 30.308-21 51.308t-51.308 21H560Z"/></svg>
 						<div>compare</div>

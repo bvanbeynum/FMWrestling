@@ -261,7 +261,6 @@ label span {
 	background-color: transparent;
 	border: none;
 	font-size: 1em;
-	justify-self: flex-end;
 }
 
 .panel button.selected, .panel .pill .selected {

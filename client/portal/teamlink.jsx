@@ -34,7 +34,7 @@ const TeamLink = props => {
 	<div className={`filterContent ${ isFilterExpanded ? "active" : "" }`}>
 		<label>
 			Site
-			<select value="" aria-label="Select Site">
+			<select aria-label="Select Site">
 				<option value="flo">Flo</option>
 				<option value="scmat">SC Mat</option>
 			</select>

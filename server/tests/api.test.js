@@ -1500,33 +1500,91 @@ describe("Teams", () => {
 
 		// ********** Given
 
-		const team = [{
-			id: "testuserid",
-			name: "Test Team",
-			state: "TS",
-			confrence: "5A",
-			wrestlers: [{ id: "wrestler1", firstName: "Test", lastName: "Wrestler" }],
-			externalTeams: [{
-				id: "testexternalid", 
-				name: "External Team" 
-			}]
-		}];
+		const teams = [
+				{
+					id: "team1",
+					name: "Test Team",
+					state: "TS",
+					confrence: "5A",
+					wrestlers: [{ id: "wrestler1", firstName: "Test", lastName: "Wrestler" }],
+					externalTeams: [{
+						id: "testexternalid", 
+						name: "External Team" 
+					}]
+				}, 
+				{ id: "team1", name: "Other Team", wrestlers: [{ id: "wrestler1", firstName: "Test", lastName: "Wrestler", division: "Varsity", weightClass: "106" }]}
+			];
 		
 		client.get = jest.fn()
-			.mockResolvedValueOnce({ body: { teams: [team] }}) // Get the teams
+			.mockResolvedValueOnce({ body: { teams: teams }}); // Get the teams
 
 		// ********** When
 
-		const results = await api.teamViewLoad(team.id, serverPath);
+		const results = await api.teamViewLoad(teams[0].id, serverPath);
 
 		// ********** Then
 
-		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/team?id=${ team.id }`);
+		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/team`);
 
 		expect(results).toHaveProperty("status", 200);
 		expect(results).toHaveProperty("data");
 
-		expect(results.data).toHaveProperty("team", team);
+		expect(results.data).toHaveProperty("team", teams[0]);
+		expect(results.data).toHaveProperty("teams", teams.filter(team => team.id != teams[0].id).map(team => expect.objectContaining({ id: team.id })));
+
+	});
+
+	it("saves team session data", async () => {
+
+		// ********** Given
+
+		const user = { id: "user1" },
+			packet = { 
+				teamId: "team1",
+				selectedDivision: "Varsity",
+				compare: { 
+					opponentId: "team2", 
+					weightClasses: [
+						{ name: "106", teamScore: 0, opponentScore: 6 },
+						{ name: "Bracket 5", teamScore: "", opponentScore: "" }
+					]
+				}
+			};
+		
+		client.get = jest.fn().mockResolvedValue({ body: { users: [user] }});
+
+		const send = jest.fn().mockResolvedValue({
+			body: { status: "ok" }
+		});
+		client.post = jest.fn(() => ({
+			send: send
+		}));
+
+		// ********** When
+
+		const results = await api.teamViewSave(packet, user, serverPath);
+
+		// ********** Then
+
+		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/user?id=${ user.id }`);
+
+		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/user`);
+		expect(send).toHaveBeenCalledWith({
+			user: expect.objectContaining({
+				id: user.id,
+				session: expect.objectContaining({ 
+					selectedDivision: packet.selectedDivision,
+					teams: [{
+						id: packet.teamId,
+						compare: expect.objectContaining({ opponentId: packet.compare.opponentId })
+					}]
+				})
+			})
+		});
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("status", "ok");
 
 	});
 

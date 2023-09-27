@@ -966,7 +966,7 @@ describe("External wrestler data", () => {
 		// ********** Given
 
 		// ********** When
-		const response = await data.externalWrestlerGet();
+		const response = await data.externalWrestlerGet({ max: 100 });
 
 		// ********** Then
 		expect(response.status).toEqual(200);

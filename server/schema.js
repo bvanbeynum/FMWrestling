@@ -47,7 +47,24 @@ export default {
 			token: String
 		}],
 		created: Date,
-		modified: Date
+		modified: Date,
+		session: {
+			selectedDivision: String,
+			teams: [{
+				id: String,
+				compare: {
+					division: String,
+					opponentId: String,
+					weightClasses: [{
+						name: String,
+						teamWrestler: String,
+						teamScore: Number,
+						opponentWrestler: String,
+						opponentScore: Number
+					}]
+				}
+			}]
+		}
 	}),
 
 	role: mongoose.model("role", {

@@ -4,6 +4,7 @@ import Nav from "./nav.jsx";
 import "./include/index.css";
 import TeamWrestlers from "./teamwrestlers.jsx";
 import TeamLink from "./teamlink.jsx";
+import TeamCompare from "./teamcompare.jsx";
 
 const TeamView = () => {
 
@@ -13,7 +14,13 @@ const TeamView = () => {
 
 	const [ teamId, setTeamId ] = useState(null);
 	const [ team, setTeam ] = useState(null);
+	const [ opponents, setOpponents ] = useState([]);
 	const [ loggedInUser, setLoggedInUser ] = useState({});
+
+	const [ divisions, setDivisions ] = useState([]);
+	const [ selectedDivision, setSelectedDivision ] = useState("");
+
+	const [ compareData, setCompareData ] = useState(null);
 
 	useEffect(() => {
 		if (!pageActive) {
@@ -42,7 +49,17 @@ const TeamView = () => {
 				})
 				.then(data => {
 					
-					setTeam(data.team);
+					if (data.loggedInUser.session) {
+						if (data.loggedInUser.session.selectedDivision) {
+							setSelectedDivision(data.loggedInUser.session.selectedDivision);
+						}
+
+						if (data.loggedInUser.session.teams && data.loggedInUser.session.teams.some(team => team.id == teamId && team.compare)) {
+							setCompareData(data.loggedInUser.session.teams.find(team => team.id == teamId).compare);
+						}
+					}
+
+					resetData(data.team, data.teams);
 					setLoggedInUser(data.loggedInUser);
 					setPageActive(true);
 				})
@@ -52,6 +69,12 @@ const TeamView = () => {
 
 		}
 	}, [teamId]);
+
+	const resetData = (newTeam, newOpponents) => {
+		setDivisions([...new Set(newTeam.wrestlers.map(wrestler => wrestler.division))])
+		setTeam(newTeam);
+		setOpponents(newOpponents);		
+	};
 
 	const addWrestler = newWrestler => {
 		setSavingError("");
@@ -66,10 +89,7 @@ const TeamView = () => {
 				}
 			})
 			.then(data => {
-				setTeam(team => ({
-					...team,
-					wrestlers: team.wrestlers.concat(data.wrestler)
-				}));
+				resetData({...team, wrestlers: team.wrestlers.concat(data.wrestler) }, opponents);
 			})
 			.catch(error => {
 				console.warn(error);
@@ -90,8 +110,30 @@ const TeamView = () => {
 				}
 			})
 			.then(data => {
-				setTeam(data.team);
+				resetData(data.team, opponents);
 			})
+			.catch(error => {
+				console.warn(error);
+			});
+	};
+
+	const saveCompareData = compareData => {
+		const savePacket = {
+			selectedDivision: selectedDivision,
+			teamId: team.id,
+			compare: compareData
+		};
+
+		fetch(`/api/teamviewsave`, { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ savepacket: savePacket }) })
+			.then(response => {
+				if (response.ok) {
+					return response.json();
+				}
+				else {
+					throw Error(response.statusText);
+				}
+			})
+			.then(() => { })
 			.catch(error => {
 				console.warn(error);
 			});
@@ -129,6 +171,17 @@ const TeamView = () => {
 			pageView == "wrestlers" ? <TeamWrestlers wrestlers={ team.wrestlers } updateWrestlers={ updateWrestlers } addWrestler={ addWrestler } savingError={ savingError } />
 
 			: pageView == "link" ? <TeamLink flo={ team.externalTeams } />
+
+			: pageView == "compare" ? 
+				<TeamCompare 
+					team={ team }
+					opponents={ opponents }
+					compareData={ compareData }
+					saveCompareData={ saveCompareData }
+					selectedDivision={ selectedDivision } 
+					setSelectedDivision={ setSelectedDivision } 
+					divisions={ divisions }
+					/>
 
 			: ""
 			}

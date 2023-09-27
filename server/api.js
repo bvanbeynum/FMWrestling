@@ -28,8 +28,16 @@ export default {
 			try {
 				let tokenData = jwt.verify(cookie, config.jwt);
 				let clientResponse = await client.get(`${ serverPath }/data/user?devicetoken=${ tokenData.token }`);
-				
-				output.loggedInUser = clientResponse.body.users[0];
+				const user = clientResponse.body.users[0];
+
+				output.loggedInUser = {
+					id: user.id,
+					firstName: user.firstName,
+					lastName: user.lastName,
+					privileges: user.privileges,
+					session: user.session,
+					roles: user.roles
+				};
 
 				clientResponse = await client.get(`${ serverPath }/data/role`);
 
@@ -1266,8 +1274,17 @@ export default {
 		};
 
 		try {
-			const clientResponse = await client.get(`${ serverPath }/data/team?id=${ teamId }`);
-			output.data.team = clientResponse.body.teams[0]
+			const clientResponse = await client.get(`${ serverPath }/data/team`);
+			const teams = clientResponse.body.teams;
+
+			output.data.team = teams.find(team => team.id == teamId);
+			output.data.teams = teams
+				.filter(team => team.id != teamId)
+				.map(team => ({
+					id: team.id,
+					name: team.name,
+					wrestlers: team.wrestlers
+				}));
 		}
 		catch (error) {
 			output.status = 561;
@@ -1276,6 +1293,74 @@ export default {
 		}
 
 		output.status = 200;
+		return output;
+	},
+
+	teamViewSave: async (packet, user, serverPath) => {
+		const output = { data: {} };
+
+		let saveUser = null;
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/user?id=${ user.id }`);
+			saveUser = clientResponse.body.users[0];
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+
+		try {
+			if (!saveUser.session) {
+				saveUser.session = {}
+			}
+
+			if (packet.selectedDivision) {
+				saveUser.session.selectedDivision = packet.selectedDivision;
+			}
+
+			if (packet.teamId && packet.compare) {
+				if (!saveUser.session.teams) {
+					saveUser.session.teams = [];
+				}
+
+				if (!saveUser.session.teams.some(team => team.id == packet.teamId)) {
+					saveUser.session.teams.push({ id: packet.teamId });
+				}
+
+				saveUser.session.teams = saveUser.session.teams.map(team => ({
+					...team,
+					compare: {
+						division: packet.compare.division,
+						opponentId: packet.compare.opponentId,
+						weightClasses: (packet.compare.weightClasses || []).map(weightClass => ({
+							name: weightClass.name,
+							teamWrestler: weightClass.teamWrestler,
+							teamScore: weightClass.teamScore,
+							opponentWrestler: weightClass.opponentWrestler,
+							opponentScore: weightClass.opponentScore
+						}))
+					}
+				}));
+			}
+		}
+		catch (error) {
+			output.status = 562;
+			output.error = error.message;
+			return output;
+		}
+
+		try {
+			await client.post(`${ serverPath }/data/user`).send({ user: saveUser }).then();
+		}
+		catch (error) {
+			output.status = 563;
+			output.error = error.message;
+			return output;
+		}
+		
+		output.status = 200;
+		output.data.status = "ok";
 		return output;
 	},
 

@@ -477,7 +477,7 @@ router.delete("/data/externalteam", authInternal, async (request, response) => {
 
 router.get("/data/externalwrestler", authInternal, async (request, response) => {
 	try {
-		const results = await data.externalWrestlerGet({ id: request.query.id, name: request.query.name });
+		const results = await data.externalWrestlerGet({ id: request.query.id, name: request.query.name, max: request.query.max });
 
 		if (results.error) {
 			client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "650e124d547ce02736559461", message: `${ results.status }: ${results.error}` }}).then();

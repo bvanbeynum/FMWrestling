@@ -188,6 +188,21 @@ router.get("/api/teamviewload", authAPI, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data } );
 });
 
+router.post("/api/teamviewsave", authAPI, async (request, response) => {
+	if (!request.user) {
+		response.status(200).json({});
+		return;
+	}
+
+	const results = await api.teamViewSave(request.body.savepacket, request.user, request.serverPath);
+
+	if (results.error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "65134c08547ce02736864de8", message: `${ results.status }: ${results.error}` }}).then();
+	}
+
+	response.status(results.status).json(results.error ? { error: results.error } : results.data);
+});
+
 router.post("/api/teamswrestlersave", authAPI, async (request, response) => {
 	const results = await api.teamsWrestlerSave(request.query.teamid, request.body.wrestler, request.serverPath);
 
