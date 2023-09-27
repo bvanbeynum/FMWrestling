@@ -4,6 +4,7 @@ import "./include/team.css";
 const TeamCompare = props => {
 
 	const [ opponentId, setOpponentId ] = useState("");
+	const [ startingWeight, setStartingWeight ] = useState(0);
 	const [ isFilterExpanded, setIsFilterExpanded ] = useState(false);
 	const [ weightClasses, setWeightClasses ] = useState([]);
 	const [ dropDown, setDropDown ] = useState({});
@@ -211,7 +212,12 @@ const TeamCompare = props => {
 			let teamRunningScore = 0,
 				opponentRunningScore = 0;
 
-			const scores = weightClasses.map(weightClass => ({ 
+			const weightClassesOrdered = [
+				...weightClasses.slice(startingWeight),
+				...weightClasses.slice(0, startingWeight)
+			]
+
+			const scores = weightClassesOrdered.map(weightClass => ({ 
 				name: weightClass.name, 
 				teamScore: weightClass.teamScore || 0, 
 				teamRunning: weightClass.teamScore > 0 ? teamRunningScore += +weightClass.teamScore
@@ -273,7 +279,7 @@ const TeamCompare = props => {
 
 			setScoreChart(chartData);
 		}
-	}, [ weightClasses ]);
+	}, [ weightClasses, startingWeight ]);
 
 	return (
 <>
@@ -426,12 +432,12 @@ const TeamCompare = props => {
 	
 </div>
 
+{
+scoreChart ?
+
 <div className="panel">
 	<h3>Score</h3>
 
-	{
-	scoreChart ?
-	
 	<svg viewBox={`0 0 ${ scoreChart.svg.width } ${ scoreChart.svg.height }`} className="lineChart">
 
 		<g className="chartArea" transform={`translate(${ scoreChart.chart.left }, ${ scoreChart.chart.top })`}>
@@ -497,11 +503,18 @@ const TeamCompare = props => {
 
 	</svg>
 
-	:
+	<div className="chartGrid">
+		<div className="row">
+			<input type="range" min="0" max={ weightClasses.length } value={ startingWeight } onChange={ event => setStartingWeight(event.target.value) } step="1" />
+			<div>{ weightClasses[startingWeight].name }</div>
+		</div>
+	</div>
 
-	""
-	}
 </div>
+:
+
+""
+}
 
 </>
 	)
