@@ -1525,7 +1525,7 @@ export default {
 				else {
 					// if the team doesn't exist, we'll create it
 					team = {
-						name: team,
+						name: team.name,
 						events: [],
 						wrestlers: []
 					};
