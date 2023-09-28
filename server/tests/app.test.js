@@ -1099,7 +1099,7 @@ describe("API service", () => {
 
 	});
 
-	it("searches external teams", async () => {
+	it("adds a wrestler to the team", async () => {
 
 		// ********** Given
 

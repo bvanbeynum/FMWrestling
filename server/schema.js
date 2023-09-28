@@ -1,26 +1,5 @@
 import mongoose from "mongoose";
 
-const externalWrestler = new mongoose.Schema({
-	sqlId: Number,
-	name: String,
-	eventCount: Number,
-	events: [{
-		sqlId: Number,
-		date: Date,
-		name: String,
-		matches: [{
-			division: String,
-			weightClass: String,
-			round: String,
-			vs: String,
-			isWinner: Boolean,
-			winType: String,
-			sort: Number
-		}]
-	}],
-	lastSQLUpdate: Date
-});
-
 export default {
 
 	user: mongoose.model("user", {
@@ -110,12 +89,33 @@ export default {
 		externalTeams: [{ id: String, name: String }]
 	}),
 
-	externalWrestler: mongoose.model("externalWrestler", externalWrestler),
+	externalWrestler: mongoose.model("externalWrestler", {
+		sqlId: Number,
+		firstName: String,
+		lastName: String,
+		name: String,
+		eventCount: Number,
+		events: [{
+			sqlId: Number,
+			date: Date,
+			name: String,
+			team: String,
+			matches: [{
+				division: String,
+				weightClass: String,
+				round: String,
+				vs: String,
+				isWinner: Boolean,
+				winType: String,
+				sort: Number
+			}]
+		}],
+		lastSQLUpdate: Date
+	}),
 
 	externalTeam: mongoose.model("externalTeam", {
-		sqlId: Number,
 		name: String,
-		events: [{ name: String, date: Date }],
+		events: [{ id: String, name: String, date: Date }],
 		wrestlers: [{ id: String, name: String }],
 		lastSQLUpdate: Date,
 	}),
