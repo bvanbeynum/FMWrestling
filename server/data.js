@@ -1123,7 +1123,7 @@ export default {
 			filter.name = { $regex: new RegExp(userFilter.name, "i") }
 		}
 		if (userFilter.exactName) {
-			filter.name = { $regex: new RegExp("^" + userFilter.name + "$", "i") }
+			filter.name = { $regex: new RegExp("^" + userFilter.exactName + "$", "i") }
 		}
 
 		try {
@@ -1205,6 +1205,7 @@ export default {
 	externalTeamDelete: async (id) => {
 		const output = {};
 
+		console.log(`delete: ${ id }`);
 		if (!id || !mongoose.Types.ObjectId.isValid(id)) {
 			output.status = 550;
 			output.error = "Missing ID to delete";

@@ -1513,11 +1513,11 @@ export default {
 		}
 
 		// Loop through all the teams that had a wrestler added
-		let team = null;
 		for (let teamIndex = 0; teamIndex < teams.length; teamIndex++) {
+			let team = null;
 			try {
 				// Get the team from the database
-				const clientResponse = await client.get(`${ serverPath }/data/externalteam?exactName=${ teams[teamIndex] }`);
+				const clientResponse = await client.get(`${ serverPath }/data/externalteam?exactname=${ teams[teamIndex] }`);
 				
 				if (clientResponse.body.externalTeams.length == 1) {
 					team = clientResponse.body.externalTeams[0];
@@ -1525,7 +1525,7 @@ export default {
 				else {
 					// if the team doesn't exist, we'll create it
 					team = {
-						name: team.name,
+						name: teams[teamIndex],
 						events: [],
 						wrestlers: []
 					};
@@ -1566,7 +1566,8 @@ export default {
 
 			// Save the team
 			try {
-				await client.post(`${ serverPath }/data/externalteam`).send({ externalteam: team }).then();
+				const clientResponse = await client.post(`${ serverPath }/data/externalteam`).send({ externalteam: team }).then();
+				output.data.externalTeams.push({ index: teamIndex, id: clientResponse.body.id });
 			}
 			catch (error) {
 				output.status = 568;

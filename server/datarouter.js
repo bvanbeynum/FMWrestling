@@ -426,7 +426,7 @@ router.delete("/data/team", authInternal, async (request, response) => {
 
 router.get("/data/externalteam", authInternal, async (request, response) => {
 	try {
-		const results = await data.externalTeamGet({ id: request.query.id, name: request.query.name });
+		const results = await data.externalTeamGet({ id: request.query.id, name: request.query.name, exactName: request.query.exactname });
 
 		if (results.error) {
 			client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64a7242c26539d4ed27752a0", message: `${ results.status }: ${results.error}` }}).then();
