@@ -1122,6 +1122,9 @@ export default {
 		if (userFilter.name) {
 			filter.name = { $regex: new RegExp(userFilter.name, "i") }
 		}
+		if (userFilter.exactName) {
+			filter.name = { $regex: new RegExp("^" + userFilter.name + "$", "i") }
+		}
 
 		try {
 			const records = await data.externalTeam.find(filter).lean().exec();

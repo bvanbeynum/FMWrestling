@@ -115,8 +115,8 @@ export default {
 
 	externalTeam: mongoose.model("externalTeam", {
 		name: String,
-		events: [{ id: String, name: String, date: Date }],
-		wrestlers: [{ id: String, name: String }],
+		events: [{ sqlId: Number, name: String, date: Date }],
+		wrestlers: [{ id: String, sqlId: Number, name: String }],
 		lastSQLUpdate: Date,
 	}),
 

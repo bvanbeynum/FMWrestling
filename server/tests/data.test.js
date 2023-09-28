@@ -869,8 +869,7 @@ describe("Team data", () => {
 describe("External team data", () => {
 	let createdId,
 		newData = {
-			sqlId: 111,
-			name: "Test Team",
+			name: "Test Team"
 		};
 
 	it("should return return an array of items", async () => {
@@ -958,8 +957,7 @@ describe("External wrestler data", () => {
 	let createdId,
 		newData = {
 			sqlId: 111,
-			name: "Test Team",
-			eventCount: 5
+			name: "Test Team"
 		};
 
 	it("should return return an array of items", async () => {

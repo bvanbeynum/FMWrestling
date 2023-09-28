@@ -1759,27 +1759,43 @@ describe("External Links", () => {
 	it("saves bulk wrestlers", async () => {
 
 		const externalWrestlers = [{
-			id: "external1",
-			sqlId: 111,
-			name: "Test Wrestler",
-			matches: []
-		}, {
-			id: "external2",
-			sqlId: 222,
-			name: "Test Wrestler 2",
-			matches: []
-		}];
+				id: "external1",
+				sqlId: 111,
+				name: "Test Wrestler",
+				events: [{ id: "event1", sqlId: 444, name: "Event 1", team: "Team 1", date: new Date() }]
+			}, {
+				id: "external2",
+				sqlId: 222,
+				name: "Test Wrestler 2",
+				events: [{ id: "event2", sqlId: 333, name: "Event 2", team: "Team 1", date: new Date() }]
+			}],
+			externalTeam = { id: "team1", name: "Team 1", wrestlers: [], events: [] };
 
 		const send = jest.fn()
 			.mockResolvedValueOnce({ body: { id: externalWrestlers[0].id } })
-			.mockResolvedValueOnce({ body: { id: externalWrestlers[1].id } });
+			.mockResolvedValueOnce({ body: { id: externalWrestlers[1].id } })
+			.mockResolvedValueOnce({ body: { id: externalTeam.id } });
 		client.post = jest.fn(() => ({ send: send }));
 
+		client.get = jest.fn().mockResolvedValue({ body: { externalTeams: [externalTeam] }});
+
 		const results = await api.externalWrestlersBulkSave(externalWrestlers, serverPath);
+		console.log(results);
 
 		expect(client.post).toHaveBeenNthCalledWith(1, `${ serverPath }/data/externalwrestler`);
-		expect(send).toHaveBeenCalledTimes(externalWrestlers.length);
 		expect(send).toHaveBeenNthCalledWith(1, { externalwrestler: externalWrestlers[0] });
+		expect(send).toHaveBeenNthCalledWith(2, { externalwrestler: externalWrestlers[1] });
+
+		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/externalteam?exactName=${ externalTeam.name }`);
+
+		expect(client.post).toHaveBeenNthCalledWith(3, `${ serverPath }/data/externalteam`);
+		expect(send).toHaveBeenNthCalledWith(3, { 
+			externalteam: expect.objectContaining({
+				id: externalTeam.id,
+				wrestlers: [ expect.objectContaining({ id: externalWrestlers[0].id}), expect.objectContaining({ id: externalWrestlers[1].id}) ],
+				events: expect.arrayContaining([ expect.objectContaining({ sqlId: externalWrestlers[0].events[0].sqlId }) ])
+			})
+		});
 
 		expect(results).toHaveProperty("status", 200);
 		expect(results).toHaveProperty("data");
