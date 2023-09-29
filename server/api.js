@@ -1856,6 +1856,24 @@ export default {
 			return output;
 		}
 
+	},
+
+	scmatTeamBulkSave: async (teamsSave, serverPath) => {
+		const output = { data: { teams: [] } };
+
+		for (let teamIndex = 0; teamIndex < teamsSave.length; teamIndex++) {
+			try {
+				const clientResponse = await client.post(`${ serverPath }/data/scmatteam`).send({ scmatteam: teamsSave[teamIndex] }).then();
+				output.data.teams.push({ index: teamIndex, id: clientResponse.body.id });
+			}
+			catch (error) {
+				output.status = 561;
+				output.data.teams.push({ index: teamIndex, error: error.message });
+			}
+		}
+
+		output.status = output.status || 200;
+		return output;
 	}
 
 };

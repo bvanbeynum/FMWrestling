@@ -1786,7 +1786,7 @@ describe("External Links", () => {
 		expect(send).toHaveBeenNthCalledWith(1, { externalwrestler: externalWrestlers[0] });
 		expect(send).toHaveBeenNthCalledWith(2, { externalwrestler: externalWrestlers[1] });
 
-		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/externalteam?exactName=${ externalTeam.name }`);
+		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/externalteam?exactname=${ externalTeam.name }`);
 
 		expect(client.post).toHaveBeenNthCalledWith(3, `${ serverPath }/data/externalteam`);
 		expect(send).toHaveBeenNthCalledWith(3, { 
@@ -1974,6 +1974,55 @@ describe("Track Events", () => {
 		expect(results).toHaveProperty("status", 200);
 		expect(results).toHaveProperty("data");
 		expect(results.data).toHaveProperty("id", trackEvent.id);
+
+	});
+
+});
+
+describe("SC Mat Teams", () => {
+
+	it("saves bulk SC mat teams", async () => {
+
+		const teams = [{ 
+				id: "team1",
+				confrence: "AA", 
+				name: "Test Team", 
+				rankings: [{ ranking: 5, date: new Date(2023, 8, 29) }], 
+				wrestlers: [{ 
+					firstName: "Test", 
+					lastName: "Wrestler",
+					rankings: [{ weightClass: "111", ranking: 1, date: new Date(2023, 8, 29) }]
+				}] 
+			}, { 
+				id: "team2",
+				confrence: "AA", 
+				name: "Test Team 2", 
+				rankings: [{ ranking: 2, date: new Date(2023, 8, 29) }], 
+				wrestlers: [{ 
+					firstName: "Test", 
+					lastName: "Wrestler",
+					rankings: [{ weightClass: "111", ranking: 1, date: new Date(2023, 8, 29) }]
+				}] 
+			}];
+
+		const send = jest.fn()
+			.mockResolvedValueOnce({ body: { id: teams[0].id } })
+			.mockResolvedValueOnce({ body: { id: teams[1].id } });
+
+		client.post = jest.fn(() => ({
+			send: send
+		}));
+		
+		const results = await api.scmatTeamBulkSave(teams, serverPath);
+
+		expect(client.post).toHaveBeenCalledTimes(2);
+		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/scmatteam`);
+		expect(send).toHaveBeenNthCalledWith(1, { scmatteam: expect.objectContaining({ name: teams[0].name }) });
+		expect(send).toHaveBeenNthCalledWith(2, { scmatteam: expect.objectContaining({ name: teams[1].name }) });
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("teams", [{ index: 0, id: teams[0].id }, { index: 1, id: teams[1].id }]);
 
 	});
 

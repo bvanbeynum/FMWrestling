@@ -257,6 +257,22 @@ export default {
 		endDate: Date,
 		location: String,
 		state: String
+	}),
+
+	scmatTeam: mongoose.model("scmatteam", {
+		name: String,
+		confrence: String,
+		rankings: [{ ranking: Number, date: Date }],
+		wrestlers: [{
+			firstName: String,
+			lastName: String,
+			rankings: [{
+				grade: String,
+				weightClass: Number,
+				ranking: Number,
+				date: Date
+			}]
+		}]
 	})
 	
 };

@@ -536,7 +536,7 @@ describe("Data service", () => {
 		expect(response.body.trackEvents).toHaveLength(1);
 	});
 
-	it("saves track team", async () => {
+	it("saves track event", async () => {
 		// ********** Given
 
 		const save = { name: "test event" },
@@ -574,6 +574,74 @@ describe("Data service", () => {
 		
 		const response = await request(app)
 			.delete(`/data/trackevent?id=${ trackEventId }`)
+			.expect(200);
+		
+		// ********** Then
+
+		expect(response.body).toHaveProperty("status", "ok");
+	});
+
+	it("gets SC Mat team", async () => {
+
+		// ********** Given
+
+		const output = { scmatTeams: [{ id: "testid" }]};
+
+		data.scmatTeamGet = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+		
+		const response = await request(app)
+			.get("/data/scmatteam")
+			.expect(200);
+		
+		// ********** Then
+
+		expect(response.body).toHaveProperty("scmatTeams");
+		expect(response.body.scmatTeams).toHaveLength(1);
+	});
+
+	it("saves SC Mat team", async () => {
+		// ********** Given
+
+		const save = { name: "Test Team" },
+			output = { id: "testid" };
+
+		data.scmatTeamSave = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+		
+		const response = await request(app)
+			.post("/data/scmatteam")
+			.send({ scmatteam: save })
+			.expect(200);
+		
+		// ********** Then
+
+		expect(data.scmatTeamSave).toHaveBeenCalledWith(save);
+		expect(response.body).toHaveProperty("id", output.id);
+	});
+
+	it("deletes SC Mat team", async () => {
+		// ********** Given
+
+		const scmatTeamId = "testid";
+
+		data.scmatTeamDelete = jest.fn().mockResolvedValue({
+			status: 200,
+			data: { status: "ok" }
+		});
+
+		// ********** When
+		
+		const response = await request(app)
+			.delete(`/data/scmatteam?id=${ scmatTeamId }`)
 			.expect(200);
 		
 		// ********** Then
