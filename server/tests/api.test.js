@@ -1984,7 +1984,6 @@ describe("SC Mat Teams", () => {
 	it("saves bulk SC mat teams", async () => {
 
 		const teams = [{ 
-				id: "team1",
 				confrence: "AA", 
 				name: "Test Team", 
 				rankings: [{ ranking: 5, date: new Date(2023, 8, 29) }], 
@@ -1994,7 +1993,6 @@ describe("SC Mat Teams", () => {
 					rankings: [{ weightClass: "111", ranking: 1, date: new Date(2023, 8, 29) }]
 				}] 
 			}, { 
-				id: "team2",
 				confrence: "AA", 
 				name: "Test Team 2", 
 				rankings: [{ ranking: 2, date: new Date(2023, 8, 29) }], 
@@ -2003,11 +2001,16 @@ describe("SC Mat Teams", () => {
 					lastName: "Wrestler",
 					rankings: [{ weightClass: "111", ranking: 1, date: new Date(2023, 8, 29) }]
 				}] 
-			}];
+			}],
+			teamIds = ["team1", "team2"];
+
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { scmatTeams: [{...teams[0], id: teamIds[0] }] }}) // Get an existing team
+			.mockResolvedValueOnce({ body: { scmatTeams: [] }}); // Don't find a team
 
 		const send = jest.fn()
-			.mockResolvedValueOnce({ body: { id: teams[0].id } })
-			.mockResolvedValueOnce({ body: { id: teams[1].id } });
+			.mockResolvedValueOnce({ body: { id: teamIds[0] } })
+			.mockResolvedValueOnce({ body: { id: teamIds[1] } });
 
 		client.post = jest.fn(() => ({
 			send: send
@@ -2015,14 +2018,17 @@ describe("SC Mat Teams", () => {
 		
 		const results = await api.scmatTeamBulkSave(teams, serverPath);
 
+		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/scmatteam?exactname=${ teams[0].name }`);
+		expect(client.get).toHaveBeenNthCalledWith(2, `${ serverPath }/data/scmatteam?exactname=${ teams[1].name }`);
+
 		expect(client.post).toHaveBeenCalledTimes(2);
 		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/scmatteam`);
-		expect(send).toHaveBeenNthCalledWith(1, { scmatteam: expect.objectContaining({ name: teams[0].name }) });
+		expect(send).toHaveBeenNthCalledWith(1, { scmatteam: expect.objectContaining({ id: teamIds[0] }) });
 		expect(send).toHaveBeenNthCalledWith(2, { scmatteam: expect.objectContaining({ name: teams[1].name }) });
 
 		expect(results).toHaveProperty("status", 200);
 		expect(results).toHaveProperty("data");
-		expect(results.data).toHaveProperty("teams", [{ index: 0, id: teams[0].id }, { index: 1, id: teams[1].id }]);
+		expect(results.data).toHaveProperty("teams", [{ index: 0, id: teamIds[0] }, { index: 1, id: teamIds[1] }]);
 
 	});
 

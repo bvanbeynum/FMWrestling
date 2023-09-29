@@ -630,7 +630,7 @@ router.delete("/data/trackevent", authInternal, async (request, response) => {
 
 router.get("/data/scmatteam", authInternal, async (request, response) => {
 	try {
-		const results = await data.scmatTeamGet({ id: request.query.id, name: request.query.name });
+		const results = await data.scmatTeamGet({ id: request.query.id, name: request.query.name, exactName: request.query.exactname });
 
 		if (results.error) {
 			client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6516c7fecf4fc75b630d12a4", message: `${ results.status }: ${results.error}` }}).then();

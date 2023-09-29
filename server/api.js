@@ -1862,14 +1862,36 @@ export default {
 		const output = { data: { teams: [] } };
 
 		for (let teamIndex = 0; teamIndex < teamsSave.length; teamIndex++) {
+
+			let team = null;
 			try {
-				const clientResponse = await client.post(`${ serverPath }/data/scmatteam`).send({ scmatteam: teamsSave[teamIndex] }).then();
-				output.data.teams.push({ index: teamIndex, id: clientResponse.body.id });
+				const clientResponse = await client.get(`${ serverPath }/data/scmatteam?exactname=${ teamsSave[teamIndex].name }`)
+
+				if (clientResponse.body.scmatTeams.length > 0) {
+					team = {
+						...teamsSave[teamIndex],
+						id: clientResponse.body.scmatTeams[0].id
+					};
+				}
+				else {
+					team = teamsSave[teamIndex];
+				}
 			}
 			catch (error) {
 				output.status = 561;
 				output.data.teams.push({ index: teamIndex, error: error.message });
+				continue;
 			}
+
+			try {
+				const clientResponse = await client.post(`${ serverPath }/data/scmatteam`).send({ scmatteam: team }).then();
+				output.data.teams.push({ index: teamIndex, id: clientResponse.body.id });
+			}
+			catch (error) {
+				output.status = 562
+				output.data.teams.push({ index: teamIndex, error: error.message });
+			}
+
 		}
 
 		output.status = output.status || 200;

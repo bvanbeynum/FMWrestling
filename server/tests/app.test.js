@@ -1333,4 +1333,28 @@ describe("API service", () => {
 
 	});
 
+	it("saves SC Mat team", async () => {
+		// ********** Given
+
+		const scmatTeams = [{ name: "Test Team", rankings: [{ ranking: 1, date: new Date() }] }],
+			output = [{ index: 0, id: "team1" }];
+
+		api.scmatTeamBulkSave = jest.fn().mockResolvedValue({
+			status: 200,
+			data: { teams: output }
+		});
+
+		// ********** When
+
+		const response = await request(app)
+			.post("/api/scmatteambulksave")
+			.send({ teamssave: scmatTeams })
+			.expect(200);
+
+		// ********** Then
+
+		expect(response.body).toHaveProperty("teams", output);
+
+	});
+
 });

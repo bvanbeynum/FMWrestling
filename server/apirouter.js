@@ -305,4 +305,14 @@ router.post("/api/trackeventsave", authAPI, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 });
 
+router.post("/api/scmatteambulksave", authAPI, async (request, response) => {
+	const results = await api.scmatTeamBulkSave(request.body.teamssave, request.serverPath);
+
+	if (results.error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6516f5c0cf4fc75b63100c9d", message: `${ results.status }: ${results.error}` }}).then();
+	}
+
+	response.status(results.status).json(results.error ? { error: results.error } : results.data);
+});
+
 export default router;

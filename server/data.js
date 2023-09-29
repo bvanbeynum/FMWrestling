@@ -1608,6 +1608,9 @@ export default {
 		if (userFilter.name) {
 			filter.name = { $regex: new RegExp(userFilter.name, "i") }
 		}
+		if (userFilter.exactName) {
+			filter.name = { $regex: new RegExp("^" + userFilter.exactName + "$", "i") }
+		}
 
 		try {
 			const records = await data.scmatTeam.find(filter).lean().exec();
