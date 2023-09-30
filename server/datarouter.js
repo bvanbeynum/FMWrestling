@@ -477,7 +477,9 @@ router.delete("/data/externalteam", authInternal, async (request, response) => {
 
 router.get("/data/externalwrestler", authInternal, async (request, response) => {
 	try {
-		const results = await data.externalWrestlerGet({ id: request.query.id, name: request.query.name, max: request.query.max });
+		const idsList = request.query.ids ? JSON.parse(request.query.ids) : null;
+
+		const results = await data.externalWrestlerGet({ id: request.query.id, ids: idsList, name: request.query.name, max: request.query.max });
 
 		if (results.error) {
 			client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "650e124d547ce02736559461", message: `${ results.status }: ${results.error}` }}).then();
@@ -630,7 +632,9 @@ router.delete("/data/trackevent", authInternal, async (request, response) => {
 
 router.get("/data/scmatteam", authInternal, async (request, response) => {
 	try {
-		const results = await data.scmatTeamGet({ id: request.query.id, name: request.query.name, exactName: request.query.exactname });
+		const idsList = request.query.ids ? JSON.parse(request.query.ids) : null;
+
+		const results = await data.scmatTeamGet({ id: request.query.id, ids: idsList, name: request.query.name, exactName: request.query.exactname });
 
 		if (results.error) {
 			client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6516c7fecf4fc75b630d12a4", message: `${ results.status }: ${results.error}` }}).then();

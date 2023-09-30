@@ -236,7 +236,7 @@ router.post("/api/externalteamssave", authAPI, async (request, response) => {
 });
 
 router.get("/api/externalteamssearch", authAPI, async (request, response) => {
-	const results = await api.externalTeamsSearch(request.query.filter, request.serverPath);
+	const results = await api.externalTeamsSearch(request.query.name, request.serverPath);
 
 	if (results.error) {
 		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64d9140326539d4ed28899aa", message: `${ results.status }: ${results.error}` }}).then();

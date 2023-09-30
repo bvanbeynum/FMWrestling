@@ -1125,6 +1125,9 @@ export default {
 		if (userFilter.exactName) {
 			filter.name = { $regex: new RegExp("^" + userFilter.exactName + "$", "i") }
 		}
+		if (userFilter.ids) {
+			filter["_id"] = { $in: userFilter.ids.filter(id => mongoose.Types.ObjectId.isValid(id)) }
+		}
 
 		try {
 			const records = await data.externalTeam.find(filter).lean().exec();
@@ -1205,7 +1208,6 @@ export default {
 	externalTeamDelete: async (id) => {
 		const output = {};
 
-		console.log(`delete: ${ id }`);
 		if (!id || !mongoose.Types.ObjectId.isValid(id)) {
 			output.status = 550;
 			output.error = "Missing ID to delete";
@@ -1235,6 +1237,9 @@ export default {
 		}
 		if (userFilter.name) {
 			filter.name = { $regex: new RegExp(userFilter.name, "i") }
+		}
+		if (userFilter.ids) {
+			filter["_id"] = { $in: userFilter.ids.filter(id => mongoose.Types.ObjectId.isValid(id)) }
 		}
 
 		try {
@@ -1610,6 +1615,9 @@ export default {
 		}
 		if (userFilter.exactName) {
 			filter.name = { $regex: new RegExp("^" + userFilter.exactName + "$", "i") }
+		}
+		if (userFilter.ids) {
+			filter["_id"] = { $in: userFilter.ids.filter(id => mongoose.Types.ObjectId.isValid(id)) }
 		}
 
 		try {

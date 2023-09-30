@@ -1166,105 +1166,6 @@ export default {
 				return output;
 			}
 		}
-		else if (body.saveExternal) {
-			let saveTeam = null;
-			
-			try {
-				const clientResponse = await client.get(`${ serverPath }/data/team?id=${ body.saveExternal.teamId }`).then();
-				saveTeam = clientResponse.body.teams[0];
-			}
-			catch (error) {
-				output.status = 565;
-				output.error = error.message;
-				return output;
-			}
-
-			let externalTeam = null;
-			try {
-				const clientResponse = await client.get(`${ serverPath }/data/externalteam?id=${ body.saveExternal.externalId }`).then();
-				externalTeam = clientResponse.body.externalTeams[0];
-			}
-			catch (error) {
-				output.status = 566;
-				output.error = error.message;
-				return output;
-			}
-
-			try {
-				saveTeam.externalTeams = (saveTeam.externalTeams || []).concat({ id: externalTeam.id, name: externalTeam.name });
-			}
-			catch (error) {
-				output.status = 567;
-				output.error = error.message;
-				return output;
-			}
-
-			try {
-				await client.post(`${ serverPath }/data/team`).send({ team: saveTeam }).then();
-			}
-			catch (error) {
-				output.status = 568;
-				output.error = error.message;
-				return output;
-			}
-
-			try {
-				const clientResponse = await client.get(`${ serverPath }/data/team?id=${ body.saveExternal.teamId }`).then();
-				output.data = { team: clientResponse.body.teams[0] };
-			}
-			catch (error) {
-				output.status = 569;
-				output.error = error.message;
-				return output;
-			}
-
-			output.status = 200;
-			return output;
-		}
-		else if (body.deleteExternal) {
-			let saveTeam = null;
-			
-			try {
-				const clientResponse = await client.get(`${ serverPath }/data/team?id=${ body.deleteExternal.teamId }`).then();
-				saveTeam = clientResponse.body.teams[0];
-			}
-			catch (error) {
-				output.status = 570;
-				output.error = error.message;
-				return output;
-			}
-
-			try {
-				saveTeam.externalTeams = saveTeam.externalTeams.filter(external => external.id !== body.deleteExternal.externalId);
-			}
-			catch (error) {
-				output.status = 571;
-				output.error = error.message;
-				return output;
-			}
-
-			try {
-				await client.post(`${ serverPath }/data/team`).send({ team: saveTeam }).then();
-			}
-			catch (error) {
-				output.status = 572;
-				output.error = error.message;
-				return output;
-			}
-
-			try {
-				const clientResponse = await client.get(`${ serverPath }/data/team?id=${ body.deleteExternal.teamId }`).then();
-				output.data = { team: clientResponse.body.teams[0] };
-			}
-			catch (error) {
-				output.status = 573;
-				output.error = error.message;
-				return output;
-			}
-
-			output.status = 200;
-			return output;
-		}
 
 	},
 
@@ -1299,69 +1200,170 @@ export default {
 	teamViewSave: async (packet, user, serverPath) => {
 		const output = { data: {} };
 
-		let saveUser = null;
-		try {
-			const clientResponse = await client.get(`${ serverPath }/data/user?id=${ user.id }`);
-			saveUser = clientResponse.body.users[0];
-		}
-		catch (error) {
-			output.status = 561;
-			output.error = error.message;
-			return output;
-		}
-
-		try {
-			if (!saveUser.session) {
-				saveUser.session = {}
+		if (packet.selectedDivision || (packet.teamId && packet.compare)) {
+			let saveUser = null;
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/user?id=${ user.id }`);
+				saveUser = clientResponse.body.users[0];
+			}
+			catch (error) {
+				output.status = 561;
+				output.error = error.message;
+				return output;
 			}
 
-			if (packet.selectedDivision) {
-				saveUser.session.selectedDivision = packet.selectedDivision;
-			}
-
-			if (packet.teamId && packet.compare) {
-				if (!saveUser.session.teams) {
-					saveUser.session.teams = [];
+			try {
+				if (!saveUser.session) {
+					saveUser.session = {}
 				}
 
-				if (!saveUser.session.teams.some(team => team.id == packet.teamId)) {
-					saveUser.session.teams.push({ id: packet.teamId });
+				if (packet.selectedDivision) {
+					saveUser.session.selectedDivision = packet.selectedDivision;
 				}
 
-				saveUser.session.teams = saveUser.session.teams.map(team => ({
-					...team,
-					compare: {
-						division: packet.compare.division,
-						opponentId: packet.compare.opponentId,
-						weightClasses: (packet.compare.weightClasses || []).map(weightClass => ({
-							name: weightClass.name,
-							teamWrestler: weightClass.teamWrestler,
-							teamScore: weightClass.teamScore,
-							opponentWrestler: weightClass.opponentWrestler,
-							opponentScore: weightClass.opponentScore
-						}))
+				if (packet.teamId && packet.compare) {
+					if (!saveUser.session.teams) {
+						saveUser.session.teams = [];
 					}
-				}));
-			}
-		}
-		catch (error) {
-			output.status = 562;
-			output.error = error.message;
-			return output;
-		}
 
-		try {
-			await client.post(`${ serverPath }/data/user`).send({ user: saveUser }).then();
-		}
-		catch (error) {
-			output.status = 563;
-			output.error = error.message;
+					if (!saveUser.session.teams.some(team => team.id == packet.teamId)) {
+						saveUser.session.teams.push({ id: packet.teamId });
+					}
+
+					saveUser.session.teams = saveUser.session.teams.map(team => ({
+						...team,
+						compare: {
+							division: packet.compare.division,
+							opponentId: packet.compare.opponentId,
+							weightClasses: (packet.compare.weightClasses || []).map(weightClass => ({
+								name: weightClass.name,
+								teamWrestler: weightClass.teamWrestler,
+								teamScore: weightClass.teamScore,
+								opponentWrestler: weightClass.opponentWrestler,
+								opponentScore: weightClass.opponentScore
+							}))
+						}
+					}));
+				}
+			}
+			catch (error) {
+				output.status = 562;
+				output.error = error.message;
+				return output;
+			}
+
+			try {
+				await client.post(`${ serverPath }/data/user`).send({ user: saveUser }).then();
+			}
+			catch (error) {
+				output.status = 563;
+				output.error = error.message;
+				return output;
+			}
+			
+			output.status = 200;
+			output.data.status = "ok";
 			return output;
 		}
-		
-		output.status = 200;
-		output.data.status = "ok";
-		return output;
+		else if (packet.saveExternal) {
+			let saveTeam = null;
+			
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/team?id=${ packet.saveExternal.teamId }`).then();
+				saveTeam = clientResponse.body.teams[0];
+			}
+			catch (error) {
+				output.status = 565;
+				output.error = error.message;
+				return output;
+			}
+
+			let externalTeam = null;
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/externalteam?id=${ packet.saveExternal.externalId }`).then();
+				externalTeam = clientResponse.body.externalTeams[0];
+			}
+			catch (error) {
+				output.status = 566;
+				output.error = error.message;
+				return output;
+			}
+
+			try {
+				saveTeam.externalTeams = (saveTeam.externalTeams || []).concat({ id: externalTeam.id, name: externalTeam.name });
+			}
+			catch (error) {
+				output.status = 567;
+				output.error = error.message;
+				return output;
+			}
+
+			try {
+				await client.post(`${ serverPath }/data/team`).send({ team: saveTeam }).then();
+			}
+			catch (error) {
+				output.status = 568;
+				output.error = error.message;
+				return output;
+			}
+
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/team?id=${ packet.saveExternal.teamId }`).then();
+				output.data = { team: clientResponse.body.teams[0] };
+			}
+			catch (error) {
+				output.status = 569;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			return output;
+		}
+		else if (packet.deleteExternal) {
+			let saveTeam = null;
+			
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/team?id=${ packet.deleteExternal.teamId }`).then();
+				saveTeam = clientResponse.body.teams[0];
+			}
+			catch (error) {
+				output.status = 570;
+				output.error = error.message;
+				return output;
+			}
+
+			try {
+				saveTeam.externalTeams = saveTeam.externalTeams.filter(external => external.id !== packet.deleteExternal.externalId);
+			}
+			catch (error) {
+				output.status = 571;
+				output.error = error.message;
+				return output;
+			}
+
+			try {
+				await client.post(`${ serverPath }/data/team`).send({ team: saveTeam }).then();
+			}
+			catch (error) {
+				output.status = 572;
+				output.error = error.message;
+				return output;
+			}
+
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/team?id=${ packet.deleteExternal.teamId }`).then();
+				output.data = { team: clientResponse.body.teams[0] };
+			}
+			catch (error) {
+				output.status = 573;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			return output;
+		}
 	},
 
 	externalTeamsGet: async (serverPath) => {
@@ -1426,6 +1428,31 @@ export default {
 		}
 		catch (error) {
 			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+
+		try {
+			const searchIds = output.data.externalTeams.flatMap(team => team.wrestlers.map(wrestler => wrestler.id));
+			const clientResponse = await client.get(`${ serverPath }/data/externalwrestler?ids=${ JSON.stringify(searchIds) }`);
+
+			const externalWrestlers = clientResponse.body.externalWrestlers;
+
+			output.data.externalTeams = output.data.externalTeams.map(team => ({
+				...team,
+				wrestlers: externalWrestlers
+					.filter(wrestler => team.wrestlers.some(teamWrestler => teamWrestler.id == wrestler.id))
+					.map(wrestler => ({
+						id: wrestler.id,
+						name: wrestler.firstName + " " + wrestler.lastName,
+						eventCount: wrestler.events.length,
+						firstEvent: [...wrestler.events].sort((eventA, eventB) => new Date(eventA.date) - new Date(eventB.date)).find(() => true),
+						lastEvent: [...wrestler.events].sort((eventA, eventB) => new Date(eventB.date) - new Date(eventA.date)).find(() => true)
+					}))
+			}));
+		}
+		catch (error) {
+			output.status = 562;
 			output.error = error.message;
 			return output;
 		}
@@ -1538,12 +1565,13 @@ export default {
 
 			try {
 				// Get all the wrestlers that have this team, and are not already in the list for the team
-				team.wrestlers = externalWrestlers
+				team.wrestlers = team.wrestlers.concat(externalWrestlers
 					.filter(wrestler => 
 						wrestler.events.some(event => event.team == team.name) &&
 						!team.wrestlers.some(teamWrestler => teamWrestler.sqlId == wrestler.sqlId)
 					)
-					.map(wrestler => ({ id: wrestler.id, sqlId: wrestler.sqlId, name: wrestler.name }));
+					.map(wrestler => ({ id: wrestler.id, sqlId: wrestler.sqlId, name: wrestler.name }))
+				);
 			}
 			catch (error) {
 				output.status = 564;
@@ -1552,12 +1580,13 @@ export default {
 			
 			try {
 				// Add the events to the team
-				team.events = events
+				team.events = team.events.concat(events
 					.filter(event => 
 						event.teams.includes(team.name) &&
 						!team.events.some(teamEvent => event.sqlId == teamEvent.sqlId)
 					)
-					.map(event => ({ sqlId: event.sqlId, name: event.name, date: event.date }));
+					.map(event => ({ sqlId: event.sqlId, name: event.name, date: event.date }))
+				);
 			}
 			catch (error) {
 				output.status = 566;

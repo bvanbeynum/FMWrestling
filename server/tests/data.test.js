@@ -1002,6 +1002,24 @@ describe("External wrestler data", () => {
 		);
 	});
 
+	it("should search by a list of IDs", async () => {
+		// ********** Given
+
+		// ********** When
+		const response = await data.externalWrestlerGet({ ids: [createdId] });
+
+		// ********** Then
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("externalWrestlers");
+		expect(response.data.externalWrestlers).toHaveLength(1);
+
+		expect(response.data.externalWrestlers).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining(newData)
+			])
+		);
+	});
+
 	it("should return an empty array for non-existant object", async () => {
 		// ********** Given
 

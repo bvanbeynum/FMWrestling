@@ -86,7 +86,8 @@ export default {
 		program: String,
 		isMyTeam: Boolean,
 		wrestlers: [{ id: String, firstName: String, lastName: String, division: String, weightClass: String, position: Number }],
-		externalTeams: [{ id: String, name: String }]
+		floTeams: [{ id: String, name: String }],
+		scmatTeams: [{ id: String, name: String }]
 	}),
 
 	externalWrestler: mongoose.model("externalWrestler", {
