@@ -1357,4 +1357,20 @@ describe("API service", () => {
 
 	});
 
+	it("search SC Mat teams", async () => {
+
+		const filter = "test",
+			output = [{ id: "team1", name: "Test Team", rankings: [], wrestlers: [] }];
+
+		api.scmatTeamSearch = jest.fn()
+			.mockResolvedValueOnce({ status: 200, data: { scmatTeams: output }});
+
+			const response = await request(app)
+			.get(`/api/scmatteamsearch?filter=${ filter }`)
+			.expect(200);
+
+		expect(response.body).toHaveProperty("scmatTeams", output);
+
+	});
+
 });

@@ -139,6 +139,103 @@ const TeamView = () => {
 			});
 	};
 
+	const linkFlo = floTeamId => {
+		const savePacket = {
+			saveFloTeam: { teamId: team.id, floTeamId: floTeamId }
+		};
+
+		fetch(`/api/teamviewsave`, { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ savepacket: savePacket }) })
+			.then(response => {
+				if (response.ok) {
+					return response.json();
+				}
+				else {
+					throw Error(response.statusText);
+				}
+			})
+			.then(data => {
+				resetData(c, opponents);
+			})
+			.catch(error => {
+				console.warn(error);
+			});
+	};
+
+	const unlinkFlo = floTeamId => {
+		const savePacket = {
+			deleteFloTeam: { teamId: team.id, floTeamId: floTeamId }
+		};
+
+		fetch(`/api/teamviewsave`, { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ savepacket: savePacket }) })
+			.then(response => {
+				if (response.ok) {
+					return response.json();
+				}
+				else {
+					throw Error(response.statusText);
+				}
+			})
+			.then(data => {
+				resetData({
+					...team,
+					floTeams: data.floTeams
+				}, opponents);
+			})
+			.catch(error => {
+				console.warn(error);
+			});
+	};
+
+	const linkSCMat = scmatTeamId => {
+		const savePacket = {
+			saveSCMatTeam: { teamId: team.id, scmatTeamId: scmatTeamId }
+		};
+
+		fetch(`/api/teamviewsave`, { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ savepacket: savePacket }) })
+			.then(response => {
+				if (response.ok) {
+					return response.json();
+				}
+				else {
+					throw Error(response.statusText);
+				}
+			})
+			.then(data => {
+				resetData({
+					...team,
+					scmatTeams: data.scmatTeams
+				}, opponents);
+			})
+			.catch(error => {
+				console.warn(error);
+			});
+	};
+
+	const unlinkSCMat = scmatTeamId => {
+		const savePacket = {
+			deleteSCMatTeam: { teamId: team.id, scmatTeamId: scmatTeamId }
+		};
+
+		fetch(`/api/teamviewsave`, { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ savepacket: savePacket }) })
+			.then(response => {
+				if (response.ok) {
+					return response.json();
+				}
+				else {
+					throw Error(response.statusText);
+				}
+			})
+			.then(data => {
+				resetData({
+					...team,
+					scmatTeams: data.scmatTeams
+				}, opponents);
+			})
+			.catch(error => {
+				console.warn(error);
+			});
+	};
+
 	return (
 <div className="page">
 	<Nav loggedInUser={ loggedInUser } />
@@ -170,7 +267,15 @@ const TeamView = () => {
 			{
 			pageView == "wrestlers" ? <TeamWrestlers wrestlers={ team.wrestlers } updateWrestlers={ updateWrestlers } addWrestler={ addWrestler } savingError={ savingError } />
 
-			: pageView == "link" ? <TeamLink flo={ team.externalTeams } />
+			: pageView == "link" ? 
+				<TeamLink 
+					scmatTeams={ (team.scmatTeams || []) } 
+					floTeams={ (team.floTeams || []) } 
+					linkFlo={ linkFlo }
+					unlinkFlo={ unlinkFlo }
+					linkSCMat={ linkSCMat }
+					unlinkSCMat={ unlinkSCMat }
+					/>
 
 			: pageView == "compare" ? 
 				<TeamCompare 

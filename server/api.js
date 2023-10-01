@@ -1174,6 +1174,8 @@ export default {
 			data: {}
 		};
 
+		let floTeamIds = [];
+		let scmatTeamIds = [];
 		try {
 			const clientResponse = await client.get(`${ serverPath }/data/team`);
 			const teams = clientResponse.body.teams;
@@ -1186,11 +1188,38 @@ export default {
 					name: team.name,
 					wrestlers: team.wrestlers
 				}));
+
+			floTeamIds = (output.data.team.floTeams || []).map(floTeam => floTeam.id);
+			scmatTeamIds = (output.data.team.scmatTeams || []).map(scmatTeam => scmatTeam.id);
 		}
 		catch (error) {
 			output.status = 561;
 			output.error = error.message;
 			return output;
+		}
+
+		if (floTeamIds.length > 0) {
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/externalteam?ids=${ JSON.stringify(floTeamIds) }`);
+				output.data.team.floTeams = clientResponse.body.externalTeams;
+			}
+			catch (error) {
+				output.status = 562;
+				output.error = error.message;
+				return output;
+			}
+		}
+
+		if (scmatTeamIds.length > 0) {
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/scmatteam?ids=${ JSON.stringify(scmatTeamIds) }`);
+				output.data.team.scmatTeams = clientResponse.body.scmatTeams;
+			}
+			catch (error) {
+				output.status = 563;
+				output.error = error.message;
+				return output;
+			}
 		}
 
 		output.status = 200;
@@ -1265,11 +1294,11 @@ export default {
 			output.data.status = "ok";
 			return output;
 		}
-		else if (packet.saveExternal) {
+		else if (packet.saveFloTeam) {
 			let saveTeam = null;
 			
 			try {
-				const clientResponse = await client.get(`${ serverPath }/data/team?id=${ packet.saveExternal.teamId }`).then();
+				const clientResponse = await client.get(`${ serverPath }/data/team?id=${ packet.saveFloTeam.teamId }`).then();
 				saveTeam = clientResponse.body.teams[0];
 			}
 			catch (error) {
@@ -1278,10 +1307,10 @@ export default {
 				return output;
 			}
 
-			let externalTeam = null;
+			let floTeam = null;
 			try {
-				const clientResponse = await client.get(`${ serverPath }/data/externalteam?id=${ packet.saveExternal.externalId }`).then();
-				externalTeam = clientResponse.body.externalTeams[0];
+				const clientResponse = await client.get(`${ serverPath }/data/externalteam?id=${ packet.saveFloTeam.floTeamId }`).then();
+				floTeam = clientResponse.body.externalTeams[0];
 			}
 			catch (error) {
 				output.status = 566;
@@ -1290,7 +1319,7 @@ export default {
 			}
 
 			try {
-				saveTeam.externalTeams = (saveTeam.externalTeams || []).concat({ id: externalTeam.id, name: externalTeam.name });
+				saveTeam.floTeams = (saveTeam.floTeams || []).concat({ id: floTeam.id, name: floTeam.name });
 			}
 			catch (error) {
 				output.status = 567;
@@ -1307,24 +1336,25 @@ export default {
 				return output;
 			}
 
+			const floTeamIds = saveTeam.floTeams.map(floTeam => floTeam.id);
 			try {
-				const clientResponse = await client.get(`${ serverPath }/data/team?id=${ packet.saveExternal.teamId }`).then();
-				output.data = { team: clientResponse.body.teams[0] };
+				const clientResponse = await client.get(`${ serverPath }/data/externalteam?ids=${ JSON.stringify(floTeamIds) }`);
+				output.data.floTeams = clientResponse.body.externalTeams;
 			}
 			catch (error) {
-				output.status = 569;
+				output.status = 575;
 				output.error = error.message;
 				return output;
 			}
-
+			
 			output.status = 200;
 			return output;
 		}
-		else if (packet.deleteExternal) {
+		else if (packet.deleteFloTeam) {
 			let saveTeam = null;
 			
 			try {
-				const clientResponse = await client.get(`${ serverPath }/data/team?id=${ packet.deleteExternal.teamId }`).then();
+				const clientResponse = await client.get(`${ serverPath }/data/team?id=${ packet.deleteFloTeam.teamId }`).then();
 				saveTeam = clientResponse.body.teams[0];
 			}
 			catch (error) {
@@ -1334,7 +1364,7 @@ export default {
 			}
 
 			try {
-				saveTeam.externalTeams = saveTeam.externalTeams.filter(external => external.id !== packet.deleteExternal.externalId);
+				saveTeam.floTeams = saveTeam.floTeams.filter(floTeam => floTeam.id !== packet.deleteFloTeam.floTeamId);
 			}
 			catch (error) {
 				output.status = 571;
@@ -1351,16 +1381,130 @@ export default {
 				return output;
 			}
 
+			const floTeamIds = saveTeam.floTeams.map(floTeam => floTeam.id);
+
+			if (floTeamIds.length > 0) {
+				try {
+					const clientResponse = await client.get(`${ serverPath }/data/externalteam?ids=${ JSON.stringify(floTeamIds) }`);
+					output.data.floTeams = clientResponse.body.externalTeams;
+				}
+				catch (error) {
+					output.status = 576;
+					output.error = error.message;
+					return output;
+				}
+			}
+			else {
+				output.data.floTeams = [];
+			}
+	
+			output.status = 200;
+			return output;
+		}
+		else if (packet.saveSCMatTeam) {
+			let saveTeam = null;
+			
 			try {
-				const clientResponse = await client.get(`${ serverPath }/data/team?id=${ packet.deleteExternal.teamId }`).then();
-				output.data = { team: clientResponse.body.teams[0] };
+				const clientResponse = await client.get(`${ serverPath }/data/team?id=${ packet.saveSCMatTeam.teamId }`).then();
+				saveTeam = clientResponse.body.teams[0];
 			}
 			catch (error) {
-				output.status = 573;
+				output.status = 580;
 				output.error = error.message;
 				return output;
 			}
 
+			let scmatTeam = null;
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/scmatteam?id=${ packet.saveSCMatTeam.scmatTeamId }`).then();
+				scmatTeam = clientResponse.body.scmatTeams[0];
+			}
+			catch (error) {
+				output.status = 581;
+				output.error = error.message;
+				return output;
+			}
+
+			try {
+				saveTeam.scmatTeams = (saveTeam.scmatTeams || []).concat({ id: scmatTeam.id, name: scmatTeam.name });
+			}
+			catch (error) {
+				output.status = 582;
+				output.error = error.message;
+				return output;
+			}
+
+			try {
+				await client.post(`${ serverPath }/data/team`).send({ team: saveTeam }).then();
+			}
+			catch (error) {
+				output.status = 583;
+				output.error = error.message;
+				return output;
+			}
+
+			try {
+				const scmatTeamIds = saveTeam.scmatTeams.map(scmatTeam => scmatTeam.id);
+				const clientResponse = await client.get(`${ serverPath }/data/scmatteam?ids=${ JSON.stringify(scmatTeamIds) }`);
+				output.data.scmatTeams = clientResponse.body.scmatTeams;
+			}
+			catch (error) {
+				output.status = 585;
+				output.error = error.message;
+				return output;
+			}
+	
+			output.status = 200;
+			return output;
+		}
+		else if (packet.deleteSCMatTeam) {
+			let saveTeam = null;
+			
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/team?id=${ packet.deleteSCMatTeam.teamId }`).then();
+				saveTeam = clientResponse.body.teams[0];
+			}
+			catch (error) {
+				output.status = 590;
+				output.error = error.message;
+				return output;
+			}
+
+			try {
+				saveTeam.scmatTeams = saveTeam.scmatTeams.filter(scmatTeam => scmatTeam.id !== packet.deleteSCMatTeam.scmatTeamId);
+			}
+			catch (error) {
+				output.status = 591;
+				output.error = error.message;
+				return output;
+			}
+
+			try {
+				await client.post(`${ serverPath }/data/team`).send({ team: saveTeam }).then();
+			}
+			catch (error) {
+				output.status = 592;
+				output.error = error.message;
+				return output;
+			}
+
+			const scmatTeamIds = saveTeam.scmatTeams.map(scmatTeam => scmatTeam.id);
+
+			if (scmatTeamIds.length > 0) {
+				try {
+					const clientResponse = await client.get(`${ serverPath }/data/scmatteam?ids=${ JSON.stringify(scmatTeamIds) }`);
+					output.data.scmatTeams = clientResponse.body.scmatTeams;
+				}
+				catch (error) {
+					output.status = 594;
+					output.error = error.message;
+					return output;
+				}
+			}
+			else {
+				output.data.scmatTeams = [];
+			}
+	
 			output.status = 200;
 			return output;
 		}
@@ -1417,14 +1561,14 @@ export default {
 		return output;
 	},
 
-	externalTeamsSearch: async (filter, serverPath) => {
+	externalTeamsSearch: async (name, serverPath) => {
 		const output = {
 			data: {}
 		};
 
 		try {
-			const clientResponse = await client.get(`${ serverPath }/data/externalteam?name=${ filter }`);
-			output.data.externalTeams = clientResponse.body.externalTeams;
+			const clientResponse = await client.get(`${ serverPath }/data/externalteam?name=${ name }`);
+			output.data.floTeams = clientResponse.body.externalTeams;
 		}
 		catch (error) {
 			output.status = 561;
@@ -1432,15 +1576,28 @@ export default {
 			return output;
 		}
 
+		// Check that the flo team isn't already linked
 		try {
-			const searchIds = output.data.externalTeams.flatMap(team => team.wrestlers.map(wrestler => wrestler.id));
-			const clientResponse = await client.get(`${ serverPath }/data/externalwrestler?ids=${ JSON.stringify(searchIds) }`);
+			const clientResponse = await client.get(`${ serverPath }/data/team`);
+			const linkedFloIds = clientResponse.body.teams.flatMap(team => (team.floTeams || []).map(floTeam => floTeam.id));
 
-			const externalWrestlers = clientResponse.body.externalWrestlers;
+			output.data.floTeams = output.data.floTeams.filter(floTeam => !linkedFloIds.includes(floTeam.id));
+		}
+		catch (error) {
+			output.status = 563;
+			output.error = error.message;
+			return output;
+		}
 
-			output.data.externalTeams = output.data.externalTeams.map(team => ({
+		try {
+			const searchIds = output.data.floTeams.flatMap(team => team.wrestlers.map(wrestler => wrestler.id));
+			
+			const clientResponse = await client.get(`${ serverPath }/data/externalwrestler`);
+			const floWrestlers = clientResponse.body.externalWrestlers.filter(wrestler => searchIds.includes(wrestler.id));
+
+			output.data.floTeams = output.data.floTeams.map(team => ({
 				...team,
-				wrestlers: externalWrestlers
+				wrestlers: floWrestlers
 					.filter(wrestler => team.wrestlers.some(teamWrestler => teamWrestler.id == wrestler.id))
 					.map(wrestler => ({
 						id: wrestler.id,
@@ -1924,6 +2081,49 @@ export default {
 		}
 
 		output.status = output.status || 200;
+		return output;
+	},
+
+	scmatTeamSearch: async (name, serverPath) => {
+		const output = { data: {} };
+
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/scmatteam?name=${ name }`);
+			output.data.scmatTeams = clientResponse.body.scmatTeams;
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/team`);
+			const linkedTeamIds = clientResponse.body.teams.flatMap(team => (team.scmatTeams || []).map(scmatTeam => scmatTeam.id));
+
+			output.data.scmatTeams = output.data.scmatTeams
+				.filter(scmatTeam => !linkedTeamIds.includes(scmatTeam.id))
+				.map(scmatTeam => ({
+					id: scmatTeam.id,
+					name: scmatTeam.name,
+					lastUpdate: (scmatTeam.rankings || [])
+						.map(rank => new Date(rank.date))
+						.sort((dateA, dateB) => +dateB - +dateA)
+						.find(() => true),
+					lastRanking: (scmatTeam.rankings || [])
+						.sort((rankA, rankB) => +(new Date(rankB.date)) - +(new Date(rankA.date)))
+						.map(rank => rank.ranking)
+						.find(() => true),
+					wrestlerCount: (scmatTeam.wrestlers || []).length
+				}));
+		}
+		catch (error) {
+			output.status = 562;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
 		return output;
 	}
 
