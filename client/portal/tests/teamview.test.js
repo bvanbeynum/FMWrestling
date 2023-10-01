@@ -7,7 +7,7 @@ import { fireEvent, render, screen, waitFor, cleanup } from "@testing-library/re
 import "@testing-library/jest-dom";
 import TeamViewComponent from "../teamview.jsx";
 
-describe("Flo Event Component", () => {
+describe("Team View Component", () => {
 	
 	const team = { 
 			id: "teamid",
