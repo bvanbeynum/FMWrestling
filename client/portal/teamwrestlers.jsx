@@ -85,9 +85,18 @@ const TeamWrestlers = props => {
 
 	const onDragDown = (event, wrestlerId) => {
 		event.preventDefault();
+
 		mousePosition.current = event.touches ? event.touches[0].clientY : event.clientY;
-		boxRef.current = event.target.parentElement.parentElement;
 		boxPositionRef.current = 0;
+		
+		if (event.target.tagName.toLowerCase() == "svg") {
+			boxRef.current = event.target.parentElement.parentElement;
+		}
+		else {
+			boxRef.current = event.target.parentElement.parentElement.parentElement;
+		}
+
+		boxRef.current.style.top = boxPositionRef.current + "px";
 
 		setDragWrestlerId(wrestlerId);
 	};
@@ -100,6 +109,8 @@ const TeamWrestlers = props => {
 			mousePosition.current = event.touches ? event.touches[0].clientY : event.clientY;
 			boxPositionRef.current = boxPositionRef.current + newPosition;
 			boxRef.current.style.top = boxPositionRef.current + "px";
+			
+			console.log(`drag: ${ boxRef.current.style.top }`);
 		}
 	};
 
@@ -230,10 +241,16 @@ selectedDivision.weightClasses
 	.sort((wrestlerA, wrestlerB) => wrestlerA.position ? wrestlerA.position - wrestlerB.position : wrestlerA.name > wrestlerB.name ? 1 : -1)
 	.map(wrestler => 
 	
-	<div className={`listItem ${ dragWrestlerId == wrestler.id ? "dragging": "" }`} key={wrestler.id} data-testid={ wrestler.id }>
+	<div className={`listItem teamWrestler ${ dragWrestlerId == wrestler.id ? "dragging": "" }`} key={wrestler.id} data-testid={ wrestler.id }>
+		<button className="wrestlerInfo" onClick={ () => window.location = `/portal/wrestlerview.html?id=${ wrestler.id }` }>
+			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M450.001-290.001h59.998V-520h-59.998v229.999ZM480-588.461q13.731 0 23.019-9.288 9.288-9.288 9.288-23.019 0-13.73-9.288-23.019-9.288-9.288-23.019-9.288-13.731 0-23.019 9.288-9.288 9.289-9.288 23.019 0 13.731 9.288 23.019 9.288 9.288 23.019 9.288Zm.067 488.46q-78.836 0-148.204-29.92-69.369-29.92-120.682-81.21-51.314-51.291-81.247-120.629-29.933-69.337-29.933-148.173t29.92-148.204q29.92-69.369 81.21-120.682 51.291-51.314 120.629-81.247 69.337-29.933 148.173-29.933t148.204 29.92q69.369 29.92 120.682 81.21 51.314 51.291 81.247 120.629 29.933 69.337 29.933 148.173t-29.92 148.204q-29.92 69.369-81.21 120.682-51.291 51.314-120.629 81.247-69.337 29.933-148.173 29.933ZM480-160q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"></path></svg>
+		</button>
 
 		<div className="listItemHeader">
 			{ wrestler.firstName } { wrestler.lastName }
+		</div>
+
+		<div className="dragBar">
 			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" ref={ element => setRef(wrestler.id, element) }>
 				<path d="M360-175.386q-26.653 0-45.634-18.98-18.98-18.981-18.98-45.634t18.98-45.634q18.981-18.98 45.634-18.98t45.634 18.98q18.98 18.981 18.98 45.634t-18.98 45.634q-18.981 18.98-45.634 18.98Zm240 0q-26.653 0-45.634-18.98-18.98-18.981-18.98-45.634t18.98-45.634q18.981-18.98 45.634-18.98t45.634 18.98q18.98 18.981 18.98 45.634t-18.98 45.634q-18.981 18.98-45.634 18.98Zm-240-240q-26.653 0-45.634-18.98-18.98-18.981-18.98-45.634t18.98-45.634q18.981-18.98 45.634-18.98t45.634 18.98q18.98 18.981 18.98 45.634t-18.98 45.634q-18.981 18.98-45.634 18.98Zm240 0q-26.653 0-45.634-18.98-18.98-18.981-18.98-45.634t18.98-45.634q18.981-18.98 45.634-18.98t45.634 18.98q18.98 18.981 18.98 45.634t-18.98 45.634q-18.981 18.98-45.634 18.98Zm-240-240q-26.653 0-45.634-18.98-18.98-18.981-18.98-45.634t18.98-45.634q18.981-18.98 45.634-18.98t45.634 18.98q18.98 18.981 18.98 45.634t-18.98 45.634q-18.981 18.98-45.634 18.98Zm240 0q-26.653 0-45.634-18.98-18.98-18.981-18.98-45.634t18.98-45.634q18.981-18.98 45.634-18.98t45.634 18.98q18.98 18.981 18.98 45.634t-18.98 45.634q-18.981 18.98-45.634 18.98Z"/>
 			</svg>

@@ -1,3 +1,9 @@
+.teamWrestler {
+	display: grid;
+	grid-column-gap: .5rem;
+	grid-template-columns: max-content 1fr max-content;
+}
+
 .compareHeader {
 	display: grid;
 	grid-template-columns: 1fr 1fr;
