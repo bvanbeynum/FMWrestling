@@ -17,6 +17,23 @@ html, body, #root {
 	justify-content: center;
 }
 
+.noAccess {
+	display: flex;
+	background: white;
+	height: 100%;
+	align-items: center;
+	justify-content: center;
+	flex-direction: column;
+	font-size: 2rem;
+	color: rgb(237 78 78);
+}
+
+.noaccess svg {
+	width: 6rem;
+	height: 6rem;
+	fill: rgb(237 78 78);
+}
+
 h1 {
 	text-align: center;
 	font-family: 'Russo One';
