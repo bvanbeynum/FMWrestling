@@ -525,7 +525,7 @@ table.sectionTable {
 
 @media (min-width: 1024px) {
 	.container {
-		grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+		grid-template-columns: repeat(auto-fit, minmax(410px, 1fr));
 		max-width: 71vw;
 	}
 
@@ -538,7 +538,7 @@ table.sectionTable {
 	}
 
 	.panel {
-		width: 350px;
+		width: 400px;
 	}
 
 	.panel.filter {

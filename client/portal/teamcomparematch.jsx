@@ -8,8 +8,10 @@ const TeamCompareMatch = props => {
 
 	const [ startingWeight, setStartingWeight ] = useState(0);
 	const [ dropDown, setDropDown ] = useState({});
-	const [ scoreChart, setScoreChart ] = useState();
 	const [ isLoading, setIsLoading ] = useState(false);
+	
+	const [ opposingChart, setOpposingChart ] = useState(null);
+	const [ cumulativeChart, setCumulativeChart ] = useState(null);
 
 	useEffect(() => {
 		if (props.selectedOpponentId) {
@@ -91,17 +93,19 @@ const TeamCompareMatch = props => {
 
 	useEffect(() => {
 		if (weightClasses && weightClasses.length > 0) {
-			const chartData = {
+			const opposingChart = {
 				svg: { width: 350, height: 200 },
 				leftAxis: { top: 0 },
 				bottomAxis: { left: 25, top: 180 },
 				chart: { left: 25, top: 20, width: 325, height: 150 },
-				team: {},
-				opponent: {}
+				team: { },
+				opponent: { }
 			};
 
 			let teamRunningScore = 0,
-				opponentRunningScore = 0;
+				teamCumulative = 0,
+				opponentRunningScore = 0,
+				opponentCumulative = 0;
 
 			const weightClassesOrdered = [
 				...weightClasses.slice(startingWeight),
@@ -114,61 +118,119 @@ const TeamCompareMatch = props => {
 				teamRunning: weightClass.teamScore > 0 ? teamRunningScore += +weightClass.teamScore
 					: weightClass.opponentScore > 0 ? teamRunningScore += (+weightClass.opponentScore * -1)
 					: teamRunningScore,
+				teamCumulative: teamCumulative += +weightClass.teamScore,
 				opponentScore: weightClass.opponentScore || 0,
 				opponentRunning: weightClass.opponentScore > 0 ? opponentRunningScore += +weightClass.opponentScore
 					: weightClass.teamScore > 0 ? opponentRunningScore += (+weightClass.teamScore * -1)
-					: opponentRunningScore
+					: opponentRunningScore,
+				opponentCumulative: opponentCumulative += +weightClass.opponentScore,
 			}));
 
-			const maxScore = scores.reduce((max, score) => score.teamRunning > max ? score.teamRunning : score.opponentRunning > max ? score.opponentRunning : max, 0) || 10,
-				minScore = scores.reduce((max, score) => score.teamRunning < max ? score.teamRunning : score.opponentRunning < max ? score.opponentRunning : max, 0) || -10,
-				range = Math.abs(maxScore) + Math.abs(minScore);
+			const maxOpposingScore = scores.reduce((max, score) => score.teamRunning > max ? score.teamRunning : score.opponentRunning > max ? score.opponentRunning : max, 0) || 10,
+				minOpposingScore = scores.reduce((max, score) => score.teamRunning < max ? score.teamRunning : score.opponentRunning < max ? score.opponentRunning : max, 0) || -10,
+				opposingRange = Math.abs(maxOpposingScore) + Math.abs(minOpposingScore);
 			
-			const pointWidth = chartData.chart.width / scores.length;
+			const pointWidth = opposingChart.chart.width / scores.length;
 
-			chartData.team.points = scores.map((score, scoreIndex) => ({
+			opposingChart.team.points = scores.map((score, scoreIndex) => ({
 				x: ((scoreIndex * pointWidth) + (pointWidth / 2)),
-				y: (chartData.chart.height - ((((range / 2) + score.teamRunning) * chartData.chart.height) / range))
+				y: (opposingChart.chart.height - ((((opposingRange / 2) + score.teamRunning) * opposingChart.chart.height) / opposingRange))
 			}));
 
-			chartData.team.labels = chartData.team.points.map((point, pointIndex) => ({
+			opposingChart.team.labels = opposingChart.team.points.map((point, pointIndex) => ({
 				x: point.x,
 				y: point.y - 10,
 				text: scores[pointIndex].teamRunning
 			}));
 
-			chartData.team.path = chartData.team.points.map((point, pointIndex) =>
+			opposingChart.team.path = opposingChart.team.points.map((point, pointIndex) =>
 				(pointIndex == 0 ? "M" : "L") + point.x + " " + point.y
 				).join(" ");
 
-			chartData.opponent.points = scores.map((score, scoreIndex) => ({
+			opposingChart.opponent.points = scores.map((score, scoreIndex) => ({
 				x: ((scoreIndex * pointWidth) + (pointWidth / 2)),
-				y: (chartData.chart.height - ((((range / 2) + score.opponentRunning) * chartData.chart.height) / range))
+				y: (opposingChart.chart.height - ((((opposingRange / 2) + score.opponentRunning) * opposingChart.chart.height) / opposingRange))
 			}));
 
-			chartData.opponent.labels = chartData.opponent.points.map((point, pointIndex) => ({
+			opposingChart.opponent.labels = opposingChart.opponent.points.map((point, pointIndex) => ({
 				x: point.x,
 				y: point.y - 10,
 				text: scores[pointIndex].opponentRunning
 			}));
 
-			chartData.opponent.path = chartData.opponent.points.map((point, pointIndex) =>
+			opposingChart.opponent.path = opposingChart.opponent.points.map((point, pointIndex) =>
 				(pointIndex == 0 ? "M" : "L") + point.x + " " + point.y
 				).join(" ");
 				
-			chartData.leftAxis.text = [
-				{ x: chartData.chart.left - 5, y: 5, text: maxScore, align: "hanging" },
-				{ x: chartData.chart.left - 5, y: chartData.chart.top + (chartData.chart.height / 2), text: 0, align: "middle" },
-				{ x: chartData.chart.left - 5, y: chartData.bottomAxis.top, text: minScore, align: "baseline" }
+			opposingChart.leftAxis.text = [
+				{ x: opposingChart.chart.left - 5, y: 5, text: maxOpposingScore, align: "hanging" },
+				{ x: opposingChart.chart.left - 5, y: opposingChart.chart.top + (opposingChart.chart.height / 2), text: 0, align: "middle" },
+				{ x: opposingChart.chart.left - 5, y: opposingChart.bottomAxis.top, text: minOpposingScore, align: "baseline" }
 			];
 
-			chartData.bottomAxis.text = scores.map((score, scoreIndex) => ({ 
+			opposingChart.bottomAxis.text = scores.map((score, scoreIndex) => ({ 
 				x: (scoreIndex * pointWidth) + (pointWidth / 2),
 				y: 15,
 				text: score.name
 			}));
 
-			setScoreChart(chartData);
+			setOpposingChart(opposingChart);
+
+			const cumulativeChart = {
+				svg: { width: 350, height: 200 },
+				leftAxis: { top: 0 },
+				bottomAxis: { left: 25, top: 180 },
+				chart: { left: 25, top: 20, width: 325, height: 150 },
+				team: { },
+				opponent: { }
+			};
+			
+			const maxCumulativeScore = scores.reduce((max, score) => score.teamCumulative > max ? score.teamCumulative : score.opponentCumulative > max ? score.opponentCumulative : max, 0) || 10;
+
+			cumulativeChart.team.points = scores.map((score, scoreIndex) => ({
+				x: ((scoreIndex * pointWidth) + (pointWidth / 2)),
+				y: cumulativeChart.chart.height - ((score.teamCumulative * cumulativeChart.chart.height) / maxCumulativeScore)
+			}));
+
+			cumulativeChart.team.labels = cumulativeChart.team.points.map((point, pointIndex) => ({
+				x: point.x,
+				y: point.y - 10,
+				text: scores[pointIndex].teamCumulative
+			}));
+
+			cumulativeChart.team.path = cumulativeChart.team.points.map((point, pointIndex) =>
+				(pointIndex == 0 ? "M" : "L") + point.x + " " + point.y
+				).join(" ");
+
+			cumulativeChart.opponent.points = scores.map((score, scoreIndex) => ({
+				x: ((scoreIndex * pointWidth) + (pointWidth / 2)),
+				y: cumulativeChart.chart.height - ((score.opponentCumulative * cumulativeChart.chart.height) / maxCumulativeScore)
+			}));
+
+			cumulativeChart.opponent.labels = cumulativeChart.opponent.points.map((point, pointIndex) => ({
+				x: point.x,
+				y: point.y - 10,
+				text: scores[pointIndex].opponentCumulative
+			}));
+
+			cumulativeChart.opponent.path = cumulativeChart.opponent.points.map((point, pointIndex) =>
+				(pointIndex == 0 ? "M" : "L") + point.x + " " + point.y
+				).join(" ");
+				
+			cumulativeChart.leftAxis.text = [
+				{ x: cumulativeChart.chart.left - 5, y: 5, text: maxCumulativeScore, align: "hanging" },
+				{ x: cumulativeChart.chart.left - 5, y: cumulativeChart.chart.top + (cumulativeChart.chart.height / 2), text: Math.floor(maxCumulativeScore / 2), align: "middle" },
+				{ x: cumulativeChart.chart.left - 5, y: cumulativeChart.bottomAxis.top, text: 0, align: "baseline" }
+			];
+
+			cumulativeChart.bottomAxis.text = scores.map((score, scoreIndex) => ({ 
+				x: (scoreIndex * pointWidth) + (pointWidth / 2),
+				y: 15,
+				text: score.name
+			}));
+
+			setCumulativeChart(cumulativeChart);
+
 		}
 	}, [ weightClasses, startingWeight ]);
 
@@ -246,7 +308,6 @@ const TeamCompareMatch = props => {
 				teamScore: listWeight.name == weightClass ? score : listWeight.teamScore,
 				opponentScore: weightClass != listWeight.name ? listWeight.opponentScore
 					: score === "" ? ""
-					: listWeight.opponentScore !== "" ? listWeight.opponentScore
 					: score > 0 ? 0
 					: score === 0 || score === "0" ? 3
 					: listWeight.opponentScore
@@ -261,7 +322,6 @@ const TeamCompareMatch = props => {
 				...listWeight,
 				teamScore: weightClass != listWeight.name ? listWeight.teamScore
 					: score === "" ? ""
-					: listWeight.teamScore !== "" ? listWeight.teamScore
 					: score > 0 ? 0
 					: score === 0 || score === "0" ? 3
 					: listWeight.teamScore,
@@ -274,6 +334,165 @@ const TeamCompareMatch = props => {
 
 	return (
 <>
+
+{
+opposingChart ?
+<>
+
+<div className="panel">
+	<h3>Opposing Score</h3>
+
+	<svg viewBox={`0 0 ${ opposingChart.svg.width } ${ opposingChart.svg.height }`} className="lineChart">
+
+		<g className="chartArea" transform={`translate(${ opposingChart.chart.left }, ${ opposingChart.chart.top })`}>
+			<line className="chartLine" x1="0" y1={ opposingChart.chart.height / 2 } x2={ opposingChart.chart.width } y2={ opposingChart.chart.height / 2} />
+
+			{
+			opposingChart.opponent.path ?
+			<path className="opponentLine" d={ opposingChart.opponent.path } />
+			: ""
+			}
+
+			{
+			opposingChart.opponent.points.map((point, pointIndex) =>
+			<circle className="opponentPoint" cx={ point.x } cy={ point.y } r="3" key={ pointIndex } />
+			)
+			}
+
+			{
+			opposingChart.team.path ?
+			<path className="teamLine" d={ opposingChart.team.path } />
+			: ""
+			}
+			
+			{
+			opposingChart.team.points.map((point, pointIndex) =>
+			<circle className="teamPoint" cx={ point.x } cy={ point.y } r="3" key={ pointIndex } />
+			)
+			}
+
+			{
+			opposingChart.opponent.labels.map((label, labelIndex) =>
+			<text key={ labelIndex } className="chartLabel" x={ label.x } y={ label.y } textAnchor="middle">{ label.text }</text>
+			)
+			}
+
+			{
+			opposingChart.team.labels.map((label, labelIndex) =>
+			<text key={ labelIndex } className="chartLabel" x={ label.x } y={ label.y } textAnchor="middle">{ label.text }</text>
+			)
+			}
+
+		</g>
+
+		<g className="leftAxis" transform={`translate(0, ${ opposingChart.leftAxis.top })`}>
+			<line className="axisLine" x1={ opposingChart.chart.left } y1="0" x2={ opposingChart.chart.left } y2={ opposingChart.bottomAxis.top }></line>
+
+			{
+			opposingChart.leftAxis.text.map((text, textIndex) => 
+			<text key={ textIndex } className="chartLabel" x={ text.x } y={ text.y } textAnchor="end" alignmentBaseline={ text.align }>{ text.text }</text>
+			)
+			}
+		</g>
+
+		<g className="bottomAxis" transform={`translate(${ opposingChart.bottomAxis.left }, ${ opposingChart.bottomAxis.top })`}>
+			<line className="axisLine" x1="0" y1="0" x2={ opposingChart.chart.width } y2="0"></line>
+
+			{
+			opposingChart.bottomAxis.text.map((text, textIndex) => 
+			<text key={ textIndex } className="chartLabel" x={ text.x } y={ text.y } textAnchor="middle">{ text.text }</text>
+			)
+			}
+		</g>
+
+	</svg>
+
+	<div className="chartGrid">
+		<div className="row">
+			<input type="range" min="0" max={ weightClasses.length - 1 } value={ startingWeight } onChange={ event => setStartingWeight(event.target.value) } step="1" />
+			<div>{ weightClasses[startingWeight].name }</div>
+		</div>
+	</div>
+
+</div>
+
+<div className="panel">
+	<h3>Cumulative Score</h3>
+
+	<svg viewBox={`0 0 ${ cumulativeChart.svg.width } ${ cumulativeChart.svg.height }`} className="lineChart">
+
+		<g className="chartArea" transform={`translate(${ cumulativeChart.chart.left }, ${ cumulativeChart.chart.top })`}>
+			{
+			cumulativeChart.opponent.path ?
+			<path className="opponentLine" d={ cumulativeChart.opponent.path } />
+			: ""
+			}
+
+			{
+			cumulativeChart.opponent.points.map((point, pointIndex) =>
+			<circle className="opponentPoint" cx={ point.x } cy={ point.y } r="3" key={ pointIndex } />
+			)
+			}
+
+			{
+			cumulativeChart.opponent.labels.map((label, labelIndex) =>
+			<text key={ labelIndex } className="chartLabel" x={ label.x } y={ label.y } textAnchor="middle">{ label.text }</text>
+			)
+			}
+
+			{
+			cumulativeChart.team.path ?
+			<path className="teamLine" d={ cumulativeChart.team.path } />
+			: ""
+			}
+			
+			{
+			cumulativeChart.team.points.map((point, pointIndex) =>
+			<circle className="teamPoint" cx={ point.x } cy={ point.y } r="3" key={ pointIndex } />
+			)
+			}
+
+			{
+			cumulativeChart.team.labels.map((label, labelIndex) =>
+			<text key={ labelIndex } className="chartLabel" x={ label.x } y={ label.y } textAnchor="middle">{ label.text }</text>
+			)
+			}
+
+		</g>
+
+		<g className="leftAxis" transform={`translate(0, ${ cumulativeChart.leftAxis.top })`}>
+			<line className="axisLine" x1={ cumulativeChart.chart.left } y1="0" x2={ cumulativeChart.chart.left } y2={ cumulativeChart.bottomAxis.top }></line>
+
+			{
+			cumulativeChart.leftAxis.text.map((text, textIndex) => 
+			<text key={ textIndex } className="chartLabel" x={ text.x } y={ text.y } textAnchor="end" alignmentBaseline={ text.align }>{ text.text }</text>
+			)
+			}
+		</g>
+
+		<g className="bottomAxis" transform={`translate(${ cumulativeChart.bottomAxis.left }, ${ cumulativeChart.bottomAxis.top })`}>
+			<line className="axisLine" x1="0" y1="0" x2={ cumulativeChart.chart.width } y2="0"></line>
+
+			{
+			cumulativeChart.bottomAxis.text.map((text, textIndex) => 
+			<text key={ textIndex } className="chartLabel" x={ text.x } y={ text.y } textAnchor="middle">{ text.text }</text>
+			)
+			}
+		</g>
+
+	</svg>
+
+	<div className="chartGrid">
+		<div className="row">
+			<input type="range" min="0" max={ weightClasses.length - 1 } value={ startingWeight } onChange={ event => setStartingWeight(event.target.value) } step="1" />
+			<div>{ weightClasses[startingWeight].name }</div>
+		</div>
+	</div>
+
+</div>
+
+</>
+: "" }
 
 <div className="panel expandable">
 
@@ -402,90 +621,6 @@ const TeamCompareMatch = props => {
 	</>
 	}
 </div>
-
-{
-scoreChart ?
-
-<div className="panel">
-	<h3>Score</h3>
-
-	<svg viewBox={`0 0 ${ scoreChart.svg.width } ${ scoreChart.svg.height }`} className="lineChart">
-
-		<g className="chartArea" transform={`translate(${ scoreChart.chart.left }, ${ scoreChart.chart.top })`}>
-			<line className="chartLine" x1="0" y1={ scoreChart.chart.height / 2 } x2={ scoreChart.chart.width } y2={ scoreChart.chart.height / 2} />
-
-			{
-			scoreChart.opponent.path ?
-			<path className="opponentLine" d={ scoreChart.opponent.path } />
-			: ""
-			}
-
-			{
-			scoreChart.opponent.points.map((point, pointIndex) =>
-			<circle className="opponentPoint" cx={ point.x } cy={ point.y } r="3" key={ pointIndex } />
-			)
-			}
-
-			{
-			scoreChart.team.path ?
-			<path className="teamLine" d={ scoreChart.team.path } />
-			: ""
-			}
-			
-			{
-			scoreChart.team.points.map((point, pointIndex) =>
-			<circle className="teamPoint" cx={ point.x } cy={ point.y } r="3" key={ pointIndex } />
-			)
-			}
-
-			{
-			scoreChart.opponent.labels.map((label, labelIndex) =>
-			<text key={ labelIndex } className="chartLabel" x={ label.x } y={ label.y } textAnchor="middle">{ label.text }</text>
-			)
-			}
-
-			{
-			scoreChart.team.labels.map((label, labelIndex) =>
-			<text key={ labelIndex } className="chartLabel" x={ label.x } y={ label.y } textAnchor="middle">{ label.text }</text>
-			)
-			}
-
-		</g>
-
-		<g className="leftAxis" transform={`translate(0, ${ scoreChart.leftAxis.top })`}>
-			<line className="axisLine" x1={ scoreChart.chart.left } y1="0" x2={ scoreChart.chart.left } y2={ scoreChart.bottomAxis.top }></line>
-
-			{
-			scoreChart.leftAxis.text.map((text, textIndex) => 
-			<text key={ textIndex } className="chartLabel" x={ text.x } y={ text.y } textAnchor="end" alignmentBaseline={ text.align }>{ text.text }</text>
-			)
-			}
-		</g>
-
-		<g className="bottomAxis" transform={`translate(${ scoreChart.bottomAxis.left }, ${ scoreChart.bottomAxis.top })`}>
-			<line className="axisLine" x1="0" y1="0" x2={ scoreChart.chart.width } y2="0"></line>
-
-			{
-			scoreChart.bottomAxis.text.map((text, textIndex) => 
-			<text key={ textIndex } className="chartLabel" x={ text.x } y={ text.y } textAnchor="middle">{ text.text }</text>
-			)
-			}
-		</g>
-
-	</svg>
-
-	<div className="chartGrid">
-		<div className="row">
-			<input type="range" min="0" max={ weightClasses.length } value={ startingWeight } onChange={ event => setStartingWeight(event.target.value) } step="1" />
-			<div>{ weightClasses[startingWeight].name }</div>
-		</div>
-	</div>
-
-</div>
-:
-
-""
-}
 
 </>
 	)
