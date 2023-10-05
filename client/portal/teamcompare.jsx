@@ -1,523 +1,199 @@
 import React, { useEffect, useState, useRef } from "react";
+import ReactDOM from "react-dom/client";
+import Nav from "./nav.jsx";
+import "./include/index.css";
 import "./include/team.css";
+import TeamCompareMatch from "./teamcomparematch.jsx";
+import TeamCompareSCMat from "./teamcomparescmat.jsx";
 
-const TeamCompare = props => {
+const TeamCompare = () => {
 
-	const [ opponentId, setOpponentId ] = useState("");
-	const [ startingWeight, setStartingWeight ] = useState(0);
-	const [ isFilterExpanded, setIsFilterExpanded ] = useState(false);
-	const [ weightClasses, setWeightClasses ] = useState([]);
-	const [ dropDown, setDropDown ] = useState({});
-	const [ scoreChart, setScoreChart ] = useState();
+	const [ pageActive, setPageActive ] = useState(false);
+	const [ pageView, setPageView ] = useState("overview");
+	const [ loggedInUser, setLoggedInUser ] = useState(null);
 
-	useEffect(() => {
+	const [ divisions, setDivisions ] = useState([]);
+	const [ selectedDivision, setSelectedDivision ] = useState("");
+	const [ compareData, setCompareData ] = useState(null);
 
-		if (props.team && props.team.wrestlers) {
-			if (!props.selectedDivision || !props.divisions.some(division => division == props.selectedDivision)) {
-				props.setSelectedDivision(props.divisions
-					.sort((divisionA, divisionB) => /varsity/i.test(divisionA) ? -1 : /varsity/i.test(divisionB) ? 1 : divisionA > divisionB ? 1 : -1)
-					.find(() => true)
-				)
-			}
-		}
-
-	}, [ props.divisions ]);
+	const [ team, setTeam ] = useState(null);
+	const [ opponents, setOpponents ] = useState([]);
+	const [ selectedOpponentId, setSelectedOpponentId ] = useState("");
 
 	useEffect(() => {
-		if (!props.selectedDivision) {
-			return;
-		}
-		else if (!props.team) {
-			return;
-		}
-		else if (!props.team.wrestlers) {
-			return;
-		}
-		else if (!props.team.wrestlers.some(wrestler => wrestler.weightClass)) {
-			return;
-		}
+		if (!pageActive) {
+			
+			fetch(`/api/teamcompareload`)
+				.then(response => {
+					if (response.ok) {
+						return response.json();
+					}
+					else {
+						throw Error(response.statusText);
+					}
+				})
+				.then(data => {
+					
+					if (data.loggedInUser.session) {
+						if (data.loggedInUser.session.selectedDivision) {
+							setSelectedDivision(data.loggedInUser.session.selectedDivision);
+						}
 
-		const sessionData = props.compareData && props.compareData.division == props.selectedDivision ? props.compareData : null;
+						if (data.loggedInUser.session.selectedOpponentId) {
+							setSelectedOpponentId(data.loggedInUser.session.selectedOpponentId);
+						}
+						
+						if (data.loggedInUser.session.compare) {
+							setCompareData(data.loggedInUser.session.compare);
+						}
+					}
 
-		const currentOpponent = opponentId ? opponentId
-			: sessionData && sessionData.opponentId ? sessionData.opponentId
-			: "";
+					setTeam(data.team);
+					setOpponents(data.scmatTeams);
+
+					setDivisions([...new Set(data.team.wrestlers.map(wrestler => wrestler.division))]);
+					setLoggedInUser(data.loggedInUser);
+					setPageActive(true);
+				})
+				.catch(error => {
+					console.warn(error);
+				});
+		}
+	}, []);
+
+	const selectOpponent = newOpponentId => {
+		setSelectedOpponentId(newOpponentId);
 		
-		const weightClassNames = [...new Set(props.team.wrestlers.filter(wrestler => wrestler.division == props.selectedDivision).map(wrestler => wrestler.weightClass))]
-			.sort((weightClassA, weightClassB) => weightClassA > weightClassB ? 1 : -1);
+		fetch(`/api/usersessionsave`, { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session: { selectedOpponentId: newOpponentId } }) })
+			.then(response => {
+				if (response.ok) {
+					return response.json();
+				}
+				else {
+					throw Error(response.statusText);
+				}
+			})
+			.then(() => { })
+			.catch(error => {
+				console.warn(error);
+			});
+	};
+
+	const saveCompareData = saveCompare => {
+		const newCompareData = compareData.some(existing => existing.division == saveCompare.division && existing.opponentId == saveCompare.opponentId) ?
+				compareData.map(existing => existing.division == saveCompare.division && existing.opponentId == saveCompare.opponentId ? saveCompare : existing)
+			:
+				compareData.concat(saveCompare);
 		
-		const newWeightClassMatches = weightClassNames.map(weightClass => {
-			const sessionMatch = sessionData ? sessionData.weightClasses.find(sessionWeight => sessionWeight.name == weightClass) : null;
-
-			const teamWrestlers = props.team.wrestlers
-				.map(wrestler => ({...wrestler, name: wrestler.firstName + " " + wrestler.lastName}))
-				.sort((wrestlerA, wrestlerB) =>
-					sessionMatch && sessionMatch.teamWrestler == wrestlerA.id ? -1
-					: sessionMatch && sessionMatch.teamWrestler == wrestlerB.id ? 1
-					: wrestlerA.division == props.selectedDivision && wrestlerB.division != props.selectedDivision ? -1
-					: wrestlerA.division != props.selectedDivision && wrestlerB.division == props.selectedDivision ? 1
-					: wrestlerA.weightClass == wrestlerB.weightClass && wrestlerA.position < wrestlerB.position ? -1
-					: wrestlerA.weightClass == wrestlerB.weightClass && wrestlerA.position > wrestlerB.position ? 1
-					: wrestlerA.weightClass == weightClass && wrestlerB.weightClass != weightClass ? -1
-					: wrestlerA.weightClass != weightClass && wrestlerB.weightClass == weightClass ? 1
-					: Math.abs(wrestlerA.weightClass - weightClass) - Math.abs(wrestlerB.weightClass - weightClass)
-				),
-				selectedTeamWrestler = !sessionMatch || !sessionMatch.teamWrestler ? (teamWrestlers.find(() => true) || { name: "" }) // If no session data, then pick first wrestler
-					: teamWrestlers.some(wrestler => wrestler.id == sessionMatch.teamWrestler) ? teamWrestlers.find(wrestler => wrestler.id == sessionMatch.teamWrestler)
-					: { name: sessionMatch.teamWrestler };
-			
-			const opponentWrestlers = currentOpponent ? props.opponents.filter(opponent => opponent.id == currentOpponent)
-				.flatMap(opponent => opponent.wrestlers.map(wrestler => ({...wrestler, name: wrestler.firstName + " " + wrestler.lastName })))
-				.sort((wrestlerA, wrestlerB) =>
-					sessionMatch && sessionMatch.opponentWrestler == wrestlerA.id ? -1
-					: sessionMatch && sessionMatch.opponentWrestler == wrestlerB.id ? 1
-					: wrestlerA.division == props.selectedDivision && wrestlerB.division != props.selectedDivision ? -1
-					: wrestlerA.division != props.selectedDivision && wrestlerB.division == props.selectedDivision ? 1
-					: wrestlerA.weightClass == wrestlerB.weightClass && wrestlerA.position < wrestlerB.position ? -1
-					: wrestlerA.weightClass == wrestlerB.weightClass && wrestlerA.position > wrestlerB.position ? 1
-					: wrestlerA.weightClass == weightClass && wrestlerB.weightClass != weightClass ? -1
-					: wrestlerA.weightClass != weightClass && wrestlerB.weightClass == weightClass ? 1
-					: Math.abs(wrestlerA.weightClass - weightClass) - Math.abs(wrestlerB.weightClass - weightClass)
-				)
-				: [],
-				selectedOpponentWrestler = !sessionMatch || !sessionMatch.opponentWrestler ? (opponentWrestlers.find(() => true) || { name: "" }) // If no session data, then pick first wrestler
-					: opponentWrestlers.some(wrestler => wrestler.id == sessionMatch.opponentWrestler) ? opponentWrestlers.find(wrestler => wrestler.id == sessionMatch.opponentWrestler)
-					: { name: sessionMatch.opponentWrestler };
-			
-			return {
-				name: weightClass,
-				teamWrestlers: teamWrestlers,
-				selectedTeamWrestler: selectedTeamWrestler,
-				opponentWrestlers: opponentWrestlers,
-				selectedOpponentWrestler: selectedOpponentWrestler,
-				teamScore: !sessionMatch ? "" 
-					: sessionMatch.teamScore === 0 ? 0
-					: sessionMatch.teamScore || "",
-				opponentScore: !sessionMatch ? "" 
-					: sessionMatch.opponentScore === 0 ? 0
-					: sessionMatch.opponentScore || ""
-			}
-		});
-
-		if (currentOpponent != opponentId) {
-			setOpponentId(currentOpponent);
-		}
-
-		setWeightClasses(newWeightClassMatches);
-		saveSession(currentOpponent, newWeightClassMatches);
-	}, [ props.team, props.opponents, props.selectedDivision, props.compareData ]);
-
-	const saveSession = (opponentId, updatedWeightClasses) => {
-
-		const sessionSave = {
-			division: props.selectedDivision,
-			opponentId: opponentId,
-			weightClasses: updatedWeightClasses.map(weightClass => ({
-				name: weightClass.name,
-				teamWrestler: !weightClass.selectedTeamWrestler ? null : weightClass.selectedTeamWrestler.id ? weightClass.selectedTeamWrestler.id : weightClass.selectedTeamWrestler.name,
-				teamScore: weightClass.teamScore === "" ? null : +weightClass.teamScore,
-				opponentWrestler: !weightClass.selectedOpponentWrestler ? null : weightClass.selectedOpponentWrestler.id ? weightClass.selectedOpponentWrestler.id : weightClass.selectedOpponentWrestler.name,
-				opponentScore: weightClass.opponentScore === "" ? null : +weightClass.opponentScore,
-			}))
-		};
-
-		props.saveCompareData(sessionSave);
+		setCompareData(newCompareData);
+		
+		fetch(`/api/usersessionsave`, { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session: { compare: saveCompare } }) })
+			.then(response => {
+				if (response.ok) {
+					return response.json();
+				}
+				else {
+					throw Error(response.statusText);
+				}
+			})
+			.then(() => { })
+			.catch(error => {
+				console.warn(error);
+			});
 	};
-
-	const setOpponent = newOpponentId => {
-		const newWeightClasses = weightClasses.map(listWeight => ({
-			...listWeight,
-			teamScore: "",
-			opponentWrestlers: [],
-			selectedOpponentWrestler: { name: "" },
-			opponentScore: ""
-		}));
-
-		setWeightClasses(newWeightClasses);
-		saveSession(newOpponentId, newWeightClasses);
-		setOpponentId(newOpponentId);
-	};
-
-	const changeTeamWrestlerName = (weightClass, name) => {
-		const newWeightClasses = weightClasses.map(listWeight => ({ ...listWeight, selectedTeamWrestler: listWeight.name == weightClass ? { name: name } : listWeight.selectedTeamWrestler }));
-
-		setWeightClasses(newWeightClasses);
-		saveSession(opponentId, newWeightClasses);
-	};
-
-	const changeTeamWrestler = (weightClass, wrestler) => {
-		const newWeightClasses = weightClasses.map(listWeight => ({ ...listWeight, selectedTeamWrestler: listWeight.name == weightClass ? wrestler : listWeight.selectedTeamWrestler }));
-
-		setWeightClasses(newWeightClasses);
-		saveSession(opponentId, newWeightClasses);
-	};
-
-	const changeOpponentWrestlerName = (weightClass, name) => {
-		const newWeightClasses = weightClasses.map(listWeight => ({ ...listWeight, selectedOpponentWrestler: listWeight.name == weightClass ? { name: name } : listWeight.selectedOpponentWrestler }));
-
-		setWeightClasses(newWeightClasses);
-		saveSession(opponentId, newWeightClasses);
-	};
-
-	const changeOpponentWrestler = (weightClass, wrestler) => {
-		const newWeightClasses = weightClasses.map(listWeight => ({ ...listWeight, selectedOpponentWrestler: listWeight.name == weightClass ? wrestler : listWeight.selectedOpponentWrestler }));
-
-		setWeightClasses(newWeightClasses);
-		saveSession(opponentId, newWeightClasses);
-	};
-
-	const changeTeamScore = (weightClass, score) => {
-		const newWeightClasses = weightClasses.map(listWeight => ({
-				...listWeight,
-				teamScore: listWeight.name == weightClass ? score : listWeight.teamScore,
-				opponentScore: weightClass != listWeight.name ? listWeight.opponentScore
-					: score === "" ? ""
-					: listWeight.opponentScore !== "" ? listWeight.opponentScore
-					: score > 0 ? 0
-					: score === 0 || score === "0" ? 3
-					: listWeight.opponentScore
-			}));
-
-		setWeightClasses(newWeightClasses);
-		saveSession(opponentId, newWeightClasses);
-	};
-
-	const changeOpponentScore = (weightClass, score) => {
-		const newWeightClasses = weightClasses.map(listWeight => ({
-				...listWeight,
-				teamScore: weightClass != listWeight.name ? listWeight.teamScore
-					: score === "" ? ""
-					: listWeight.teamScore !== "" ? listWeight.teamScore
-					: score > 0 ? 0
-					: score === 0 || score === "0" ? 3
-					: listWeight.teamScore,
-				opponentScore: listWeight.name == weightClass ? score : listWeight.opponentScore
-			}));
-
-		setWeightClasses(newWeightClasses);
-		saveSession(opponentId, newWeightClasses);
-	};
-
-	useEffect(() => {
-		if (weightClasses && weightClasses.length > 0) {
-			const chartData = {
-				svg: { width: 350, height: 200 },
-				leftAxis: { top: 0 },
-				bottomAxis: { left: 25, top: 180 },
-				chart: { left: 25, top: 20, width: 325, height: 150 },
-				team: {},
-				opponent: {}
-			};
-
-			let teamRunningScore = 0,
-				opponentRunningScore = 0;
-
-			const weightClassesOrdered = [
-				...weightClasses.slice(startingWeight),
-				...weightClasses.slice(0, startingWeight)
-			]
-
-			const scores = weightClassesOrdered.map(weightClass => ({ 
-				name: weightClass.name, 
-				teamScore: weightClass.teamScore || 0, 
-				teamRunning: weightClass.teamScore > 0 ? teamRunningScore += +weightClass.teamScore
-					: weightClass.opponentScore > 0 ? teamRunningScore += (+weightClass.opponentScore * -1)
-					: teamRunningScore,
-				opponentScore: weightClass.opponentScore || 0,
-				opponentRunning: weightClass.opponentScore > 0 ? opponentRunningScore += +weightClass.opponentScore
-					: weightClass.teamScore > 0 ? opponentRunningScore += (+weightClass.teamScore * -1)
-					: opponentRunningScore
-			}));
-
-			const maxScore = scores.reduce((max, score) => score.teamRunning > max ? score.teamRunning : score.opponentRunning > max ? score.opponentRunning : max, 0) || 10,
-				minScore = scores.reduce((max, score) => score.teamRunning < max ? score.teamRunning : score.opponentRunning < max ? score.opponentRunning : max, 0) || -10,
-				range = Math.abs(maxScore) + Math.abs(minScore);
-			
-			const pointWidth = chartData.chart.width / scores.length;
-
-			chartData.team.points = scores.map((score, scoreIndex) => ({
-				x: ((scoreIndex * pointWidth) + (pointWidth / 2)),
-				y: (chartData.chart.height - ((((range / 2) + score.teamRunning) * chartData.chart.height) / range))
-			}));
-
-			chartData.team.labels = chartData.team.points.map((point, pointIndex) => ({
-				x: point.x,
-				y: point.y - 10,
-				text: scores[pointIndex].teamRunning
-			}));
-
-			chartData.team.path = chartData.team.points.map((point, pointIndex) =>
-				(pointIndex == 0 ? "M" : "L") + point.x + " " + point.y
-				).join(" ");
-
-			chartData.opponent.points = scores.map((score, scoreIndex) => ({
-				x: ((scoreIndex * pointWidth) + (pointWidth / 2)),
-				y: (chartData.chart.height - ((((range / 2) + score.opponentRunning) * chartData.chart.height) / range))
-			}));
-
-			chartData.opponent.labels = chartData.opponent.points.map((point, pointIndex) => ({
-				x: point.x,
-				y: point.y - 10,
-				text: scores[pointIndex].opponentRunning
-			}));
-
-			chartData.opponent.path = chartData.opponent.points.map((point, pointIndex) =>
-				(pointIndex == 0 ? "M" : "L") + point.x + " " + point.y
-				).join(" ");
-				
-			chartData.leftAxis.text = [
-				{ x: chartData.chart.left - 5, y: 5, text: maxScore, align: "hanging" },
-				{ x: chartData.chart.left - 5, y: chartData.chart.top + (chartData.chart.height / 2), text: 0, align: "middle" },
-				{ x: chartData.chart.left - 5, y: chartData.bottomAxis.top, text: minScore, align: "baseline" }
-			];
-
-			chartData.bottomAxis.text = scores.map((score, scoreIndex) => ({ 
-				x: (scoreIndex * pointWidth) + (pointWidth / 2),
-				y: 15,
-				text: score.name
-			}));
-
-			setScoreChart(chartData);
-		}
-	}, [ weightClasses, startingWeight ]);
 
 	return (
-<>
+<div className="page">
+	<Nav loggedInUser={ loggedInUser } />
 
-<div className="panel filter">
-	<div className="row">
-		<h3>Filter</h3>
+	<div>
+		
+		{
+		!pageActive ?
 
-		<div className="filterExpand" onClick={ () => setIsFilterExpanded(isFilterExpanded => !isFilterExpanded) }>
+		<div className="pageLoading">
+			<img src="/media/wrestlingloading.gif" />
+		</div>
+
+		: !loggedInUser || !loggedInUser.privileges || !loggedInUser.privileges.includes("teamManage") ?
+
+		<div className="noAccess">
+			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q54 0 104-17.5t92-50.5L228-676q-33 42-50.5 92T160-480q0 134 93 227t227 93Zm252-124q33-42 50.5-92T800-480q0-134-93-227t-227-93q-54 0-104 17.5T284-732l448 448Z"/></svg>
+			<a>Unauthorized</a>
+		</div>
+
+		:
+		<>
+
+		<div className={`container ${ pageActive ? "active" : "" }`}>
+			
+			<header>
+				<h1>{ team ? team.name : "" }</h1>
+			</header>
+		
 			{
-			isFilterExpanded ?
-			// Close
-			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg>
+
+			pageView == "scmat" ? 
+				<TeamCompareSCMat
+					opponents={ opponents }
+					teamId={ team.scmatTeams[0].id }
+					selectedOpponentId={ selectedOpponentId }
+					setSelectedOpponentId={ selectOpponent }
+					/>
+
+			: pageView == "flo" ? ""
+				
 			: 
-			// Tune
-			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M440-120v-240h80v80h320v80H520v80h-80Zm-320-80v-80h240v80H120Zm160-160v-80H120v-80h160v-80h80v240h-80Zm160-80v-80h400v80H440Zm160-160v-240h80v80h160v80H680v80h-80Zm-480-80v-80h400v80H120Z"/></svg>
+				<TeamCompareMatch 
+					team={ team }
+					opponents={ opponents }
+					compareData={ compareData }
+					saveCompareData={ saveCompareData }
+					selectedDivision={ selectedDivision } 
+					setSelectedDivision={ setSelectedDivision } 
+					divisions={ divisions }
+					selectedOpponentId={ selectedOpponentId }
+					setSelectedOpponentId={ selectOpponent }
+					/>
+
 			}
 		</div>
-	</div>
 
-	<div className={`filterContent ${ isFilterExpanded ? "active" : "" }`}>
-		<label>
-			Division
-			<select value={ props.selectedDivision } onChange={ event => props.setSelectedDivision(event.target.value) }>
-				{
-				props.divisions
-					.sort((divisionA, divisionB) => divisionA > divisionB ? 1 : -1)
-					.map((division, divisionIndex) =>
-				<option key={divisionIndex}>{ division }</option>
-				)
-				}
-			</select>
-		</label>
-	</div>
+		<div className="bottomNav">
 
-</div>
+			<button aria-label="Match Compare" onClick={ () => setPageView("") }>
+				{/* Wrestlers */}
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M55.077-93.847 12.924-136l143.692-143.692-46.308-123.385q-6.23-15.692-2.423-36.692 3.808-21 20.115-37.307l132-132q10.462-10.462 22.539-15.693 12.076-5.23 27.153-5.23 15.077 0 27.154 5.23 12.076 5.231 22.538 15.693l80.769 78q27.385 27 65.231 42.692 37.846 15.692 81.692 17.615v59.999q-55-1.923-103.153-20.731-48.154-18.808-81.923-52.192l-34.923-34.154L259.23-410l87.846 89.846v230.153h-59.998v-204.615l-72.002-66.463v107.233l-160 159.999Zm552.001 3.846v-265.383l85.538-81.539-30.154-166.156q-22.693 27.616-48.386 49.502-25.693 21.885-57.463 34.27-23.768-2-45.576-11.116-21.807-9.115-37.191-24.114 45.769-7.616 84.5-34.539 38.732-26.924 59.962-61.539l39.231-64q15.077-24.307 41.423-32.269 26.345-7.961 52.268 2.885l195.846 82.923v171.075h-59.998v-132.153l-95.079-38.001L904.768-90.001H840.77L767.616-396.54l-100.54 85.001v221.538h-59.998ZM447.076-614.615q-30.692 0-52.269-21.577-21.577-21.577-21.577-52.269 0-30.692 21.577-52.269 21.577-21.576 52.269-21.576 30.692 0 52.269 21.576 21.577 21.577 21.577 52.269 0 30.692-21.577 52.269-21.577 21.577-52.269 21.577ZM664-776.154q-30.692 0-52.269-21.576-21.576-21.577-21.576-52.269 0-30.692 21.576-52.269 21.577-21.577 52.269-21.577 30.693 0 52.269 21.577 21.577 21.577 21.577 52.269 0 30.692-21.577 52.269-21.576 21.576-52.269 21.576Z"></path></svg>
+				Match
+			</button>
 
-<div className="panel centered">
+			{
+			team.scmatTeams && team.scmatTeams.length > 0 ?
+			
+			<button aria-label="SC Mat Compare" onClick={ () => setPageView("scmat") }>
+				{/* World */}
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480.067-100.001q-78.836 0-148.204-29.92-69.369-29.92-120.682-81.21-51.314-51.291-81.247-120.629-29.933-69.337-29.933-148.173t29.92-148.204q29.92-69.369 81.21-120.682 51.291-51.314 120.629-81.247 69.337-29.933 148.173-29.933t148.204 29.92q69.369 29.92 120.682 81.21 51.314 51.291 81.247 120.629 29.933 69.337 29.933 148.173t-29.92 148.204q-29.92 69.369-81.21 120.682-51.291 51.314-120.629 81.247-69.337 29.933-148.173 29.933ZM440-162v-78q-33 0-56.5-23.5T360-320v-40L168-552q-3 18-5.5 36t-2.5 36q0 121 79.5 212T440-162Zm276-102q20-22 36-47.5t26.5-53q10.5-27.5 16-56.5t5.5-59q0-98.29-54.308-179.53Q691.385-740.769 600-776.769V-760q0 33-23.5 56.5T520-680h-80v80q0 17-11.5 28.5T400-560h-80v80h240q17 0 28.5 11.5T600-440v120h40q26 0 47 15.5t29 40.5Z"></path></svg>
+				SC Mat
+			</button>
 
-	<div className="compareHeader">
-		<h3>{ props.team.name }</h3>
-		<h3>
-			<select value={ opponentId } onChange={ event => setOpponent(event.target.value) }>
-				<option value="">-- Select Team --</option>
-				{
-				props.opponents.map((opponent, opponentIndex) =>
-					<option key={opponentIndex} value={ opponent.id }>{ opponent.name }</option>
-				)}
-			</select>
-		</h3>
-	</div>
+			: "" }
 
-	{
-	weightClasses.map((weightClass, weightClassIndex) =>
-	
-	<div key={ weightClassIndex } className="compareRow">
-		{
-		weightClass.selectedTeamWrestler.id ?
-		<div className={`compareSearch button ${ weightClass.teamScore === "" ? "" : weightClass.teamScore > 0 ? "win" : "lose" }`} onClick={ () => window.location = `/portal/wrestlerview.html?id=${ weightClass.selectedTeamWrestler.id }`}>
-			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M450.001-290.001h59.998V-520h-59.998v229.999ZM480-588.461q13.731 0 23.019-9.288 9.288-9.288 9.288-23.019 0-13.73-9.288-23.019-9.288-9.288-23.019-9.288-13.731 0-23.019 9.288-9.288 9.289-9.288 23.019 0 13.731 9.288 23.019 9.288 9.288 23.019 9.288Zm.067 488.46q-78.836 0-148.204-29.92-69.369-29.92-120.682-81.21-51.314-51.291-81.247-120.629-29.933-69.337-29.933-148.173t29.92-148.204q29.92-69.369 81.21-120.682 51.291-51.314 120.629-81.247 69.337-29.933 148.173-29.933t148.204 29.92q69.369 29.92 120.682 81.21 51.314 51.291 81.247 120.629 29.933 69.337 29.933 148.173t-29.92 148.204q-29.92 69.369-81.21 120.682-51.291 51.314-120.629 81.247-69.337 29.933-148.173 29.933ZM480-160q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/></svg>
+			<button aria-label="Flo Compare" onClick={ () => setPageView("flo") }>
+				{/* World */}
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M432.307-298.463H281.539q-75.338 0-128.438-53.093-53.1-53.093-53.1-128.422t53.1-128.444q53.1-53.115 128.438-53.115h150.768v59.998H281.539q-50.385 0-85.962 35.577Q160-530.385 160-480q0 50.385 35.577 85.962 35.577 35.577 85.962 35.577h150.768v59.998ZM330.001-450.001v-59.998h299.998v59.998H330.001Zm197.692 151.538v-59.998h150.768q50.385 0 85.962-35.577Q800-429.615 800-480q0-50.385-35.577-85.962-35.577-35.577-85.962-35.577H527.693v-59.998h150.768q75.338 0 128.438 53.093 53.1 53.093 53.1 128.422t-53.1 128.444q-53.1 53.115-128.438 53.115H527.693Z"/></svg>
+				Flo
+			</button>
+
 		</div>
-		:
-		<div className={ weightClass.teamScore === "" ? "" : weightClass.teamScore > 0 ? "win" : "lose" }></div>
+
+		</>
 		}
 
-		<div className={`compareTeam ${ weightClass.teamScore === "" ? "" : weightClass.teamScore > 0 ? "win" : "lose" }`}>
-			
-			<div className={ `compareDropDown ${ dropDown.id == weightClass.name && dropDown.team == "team" ? "active" : "" }` }>
-				<div>
-				{
-				weightClass.teamWrestlers.length > 0 ?
-
-				weightClass.teamWrestlers.map((wrestler, wrestlerIndex) =>
-
-				<div key={wrestlerIndex} className="compareDropDownItem" onMouseDown={ () => changeTeamWrestler(weightClass.name, wrestler) }>
-					{ wrestler.division } • { wrestler.weightClass } • { wrestler.name }
-				</div>
-
-				)
-
-				: 
-				<div className="compareDropDownItem">No Wrestlers</div>
-				}
-				</div>
-			</div>
-
-			<input type="text" placeholder="-- Select Wrestler --" value={ weightClass.selectedTeamWrestler.name } onChange={ event => changeTeamWrestlerName(weightClass.name, event.target.value) } onFocus={ () => setDropDown({ id: weightClass.name, team: "team" }) } onBlur={ () => setDropDown({}) } />
-			
-		</div>
-
-		<div className={`compareScore ${ weightClass.teamScore === "" ? "" : weightClass.teamScore > 0 ? "win" : "lose" }`}>
-			<select value={ weightClass.teamScore } onChange={ event => changeTeamScore(weightClass.name, event.target.value) }>
-				<option value="">-</option>
-				<option>0</option>
-				<option>3</option>
-				<option>4</option>
-				<option>5</option>
-				<option>6</option>
-			</select>
-		</div>
-		
-		<div className="compareWeight">{ weightClass.name }</div>
-		
-		<div className={`compareScore ${ weightClass.opponentScore === "" ? "" : weightClass.opponentScore > 0 ? "win" : "lose" }`}>
-			<select value={ weightClass.opponentScore } onChange={ event => changeOpponentScore(weightClass.name, event.target.value) }>
-				<option value="">-</option>
-				<option>0</option>
-				<option>3</option>
-				<option>4</option>
-				<option>5</option>
-				<option>6</option>
-			</select>
-		</div>
-
-		<div className={`compareTeam ${ weightClass.opponentScore === "" ? "" : weightClass.opponentScore > 0 ? "win" : "lose" }`}>
-			
-			<div className={ `compareDropDown ${ dropDown.id == weightClass.name && dropDown.team == "opponent" ? "active" : "" }` }>
-				<div>
-				{
-				weightClass.opponentWrestlers.length > 0 ?
-
-				weightClass.opponentWrestlers.map((wrestler, wrestlerIndex) =>
-
-				<div key={wrestlerIndex} className="compareDropDownItem" onMouseDown={ () => changeOpponentWrestler(weightClass.name, wrestler)}>
-					{ wrestler.division } • { wrestler.weightClass } • { wrestler.name }
-				</div>
-
-				)
-
-				: 
-				<div className="compareDropDownItem">No Wrestlers</div>
-				}
-				</div>
-			</div>
-
-			<input type="text" placeholder="-- Select Wrestler --" value={ weightClass.selectedOpponentWrestler.name } onChange={ event => changeOpponentWrestlerName(weightClass.name, event.target.value) } onFocus={ () => setDropDown({ id: weightClass.name, team: "opponent" }) } onBlur={ () => setDropDown({}) } />
-		</div>
-
-		{
-		weightClass.selectedOpponentWrestler.id ?
-		<div className={`compareSearch button ${ weightClass.opponentScore === "" ? "" : weightClass.opponentScore > 0 ? "win" : "lose" }`} onClick={ () => window.location = `/portal/wrestlerview.html?id=${ weightClass.selectedOpponentWrestler.id }` }>
-			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M450.001-290.001h59.998V-520h-59.998v229.999ZM480-588.461q13.731 0 23.019-9.288 9.288-9.288 9.288-23.019 0-13.73-9.288-23.019-9.288-9.288-23.019-9.288-13.731 0-23.019 9.288-9.288 9.289-9.288 23.019 0 13.731 9.288 23.019 9.288 9.288 23.019 9.288Zm.067 488.46q-78.836 0-148.204-29.92-69.369-29.92-120.682-81.21-51.314-51.291-81.247-120.629-29.933-69.337-29.933-148.173t29.92-148.204q29.92-69.369 81.21-120.682 51.291-51.314 120.629-81.247 69.337-29.933 148.173-29.933t148.204 29.92q69.369 29.92 120.682 81.21 51.314 51.291 81.247 120.629 29.933 69.337 29.933 148.173t-29.92 148.204q-29.92 69.369-81.21 120.682-51.291 51.314-120.629 81.247-69.337 29.933-148.173 29.933ZM480-160q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/></svg>
-		</div>
-		:
-		<div className={ weightClass.opponentScore === "" ? "" : weightClass.opponentScore > 0 ? "win" : "lose" }></div>
-		}
 	</div>
-
-	)}
-	
 </div>
-
-{
-scoreChart ?
-
-<div className="panel">
-	<h3>Score</h3>
-
-	<svg viewBox={`0 0 ${ scoreChart.svg.width } ${ scoreChart.svg.height }`} className="lineChart">
-
-		<g className="chartArea" transform={`translate(${ scoreChart.chart.left }, ${ scoreChart.chart.top })`}>
-			<line className="chartLine" x1="0" y1={ scoreChart.chart.height / 2 } x2={ scoreChart.chart.width } y2={ scoreChart.chart.height / 2} />
-
-			{
-			scoreChart.opponent.path ?
-			<path className="opponentLine" d={ scoreChart.opponent.path } />
-			: ""
-			}
-
-			{
-			scoreChart.opponent.points.map((point, pointIndex) =>
-			<circle className="opponentPoint" cx={ point.x } cy={ point.y } r="3" key={ pointIndex } />
-			)
-			}
-
-			{
-			scoreChart.team.path ?
-			<path className="teamLine" d={ scoreChart.team.path } />
-			: ""
-			}
-			
-			{
-			scoreChart.team.points.map((point, pointIndex) =>
-			<circle className="teamPoint" cx={ point.x } cy={ point.y } r="3" key={ pointIndex } />
-			)
-			}
-
-			{
-			scoreChart.opponent.labels.map((label, labelIndex) =>
-			<text key={ labelIndex } className="chartLabel" x={ label.x } y={ label.y } textAnchor="middle">{ label.text }</text>
-			)
-			}
-
-			{
-			scoreChart.team.labels.map((label, labelIndex) =>
-			<text key={ labelIndex } className="chartLabel" x={ label.x } y={ label.y } textAnchor="middle">{ label.text }</text>
-			)
-			}
-
-		</g>
-
-		<g className="leftAxis" transform={`translate(0, ${ scoreChart.leftAxis.top })`}>
-			<line className="axisLine" x1={ scoreChart.chart.left } y1="0" x2={ scoreChart.chart.left } y2={ scoreChart.bottomAxis.top }></line>
-
-			{
-			scoreChart.leftAxis.text.map((text, textIndex) => 
-			<text key={ textIndex } className="chartLabel" x={ text.x } y={ text.y } textAnchor="end" alignmentBaseline={ text.align }>{ text.text }</text>
-			)
-			}
-		</g>
-
-		<g className="bottomAxis" transform={`translate(${ scoreChart.bottomAxis.left }, ${ scoreChart.bottomAxis.top })`}>
-			<line className="axisLine" x1="0" y1="0" x2={ scoreChart.chart.width } y2="0"></line>
-
-			{
-			scoreChart.bottomAxis.text.map((text, textIndex) => 
-			<text key={ textIndex } className="chartLabel" x={ text.x } y={ text.y } textAnchor="middle">{ text.text }</text>
-			)
-			}
-		</g>
-
-	</svg>
-
-	<div className="chartGrid">
-		<div className="row">
-			<input type="range" min="0" max={ weightClasses.length } value={ startingWeight } onChange={ event => setStartingWeight(event.target.value) } step="1" />
-			<div>{ weightClasses[startingWeight].name }</div>
-		</div>
-	</div>
-
-</div>
-:
-
-""
+	);
+		
 }
 
-</>
-	)
-}
-
+ReactDOM.createRoot(document.getElementById("root") || document.createElement("div")).render(<TeamCompare />);
 export default TeamCompare;

@@ -1231,15 +1231,19 @@ export default {
 	externalWrestlerGet: async (userFilter = {}) => {
 		let filter = {},
 			output = {};
-
+		
 		if (userFilter.id) {
 			filter["_id"] = mongoose.Types.ObjectId.isValid(userFilter.id) ? userFilter.id : null;
 		}
 		if (userFilter.name) {
-			filter.name = { $regex: new RegExp(userFilter.name, "i") }
+			filter.name = { $regex: new RegExp(userFilter.name, "i") };
 		}
 		if (userFilter.ids) {
-			filter["_id"] = { $in: userFilter.ids.filter(id => mongoose.Types.ObjectId.isValid(id)) }
+			filter["_id"] = { $in: userFilter.ids.filter(id => mongoose.Types.ObjectId.isValid(id)) };
+		}
+		if (userFilter.externalTeamId) {
+			const externalTeams = await data.externalTeam.find({ _id: userFilter.externalTeamId }).lean().select({ wrestlers: 1 }).exec();
+			filter["_id"] = { $in: externalTeams[0].wrestlers.map(wrestler => wrestler["id"]) };
 		}
 
 		try {

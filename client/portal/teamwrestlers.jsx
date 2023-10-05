@@ -1,338 +1,314 @@
 import React, { useEffect, useState, useRef } from "react";
+import ReactDOM from "react-dom/client";
+import Nav from "./nav.jsx";
+import TeamDepth from "./teamdepth.jsx";
+import TeamWrestlersEdit from "./teamwrestlersedit.jsx";
+import TeamLink from "./teamlink.jsx";
+import "./include/index.css";
+import "./include/team.css";
 
-const TeamWrestlers = props => {
+const TeamWrestlers = () => {
 
-	const emptyWrestler = { firstName: "", lastName: "", division: "", weightClass: "" };
+	const [ pageActive, setPageActive ] = useState(false);
+	const [ pageView, setPageView ] = useState("overview");
+	const [ loggedInUser, setLoggedInUser ] = useState(null);
+	const [ savingError, setSavingError ] = useState("");
 
-	const [ selectedDivision, setSelectedDivision ] = useState(null);
-
-	const [ isFilterExpanded, setIsFilterExpanded ] = useState(false);
 	const [ divisions, setDivisions ] = useState([]);
+	const [ selectedDivision, setSelectedDivision ] = useState("");
 
-	const [ newWrestler, setNewWrestler ] = useState(null);
-	const [ isSaving, setIsSaving ] = useState(false);
-
-	const [ dragWrestlerId, setDragWrestlerId ] = useState(null);
-	const wrestlerRefs = useRef([]);
-	const mousePosition = useRef();
-	const boxPositionRef = useRef();
-	const boxRef = useRef(null);
-	const isSavingRef = useRef(false);
+	const [ team, setTeam ] = useState(null);
 
 	useEffect(() => {
-
-		const newDivisions = buildTeamWrestlers(props.wrestlers),
-			newSelected = selectedDivision ? 
-					newDivisions.find(division => division.name == selectedDivision.name)
-				:
-					newDivisions
-						.sort((divisionA, divisionB) => /varsity/i.test(divisionA.name) ? -1 : /varsity/i.test(divisionB.name) ? 1 : divisionA.name > divisionB.name ? 1 : -1)
-						.find(() => true);
-
-		wrestlerRefs.current = newSelected.weightClasses
-			.flatMap(weightClass => weightClass.wrestlers)
-			.map(wrestler => ({
-				id: wrestler.id,
-				weightClass: wrestler.weightClass,
-				element: wrestlerRefs.current.filter(ref => ref.id == wrestler.id).map(ref => ref.element).find(() => true)
-			}));
-		
-		setDivisions(newDivisions);
-		setSelectedDivision(newSelected);
-
-		if (isSaving) {
-			setIsSaving(false);
-			setNewWrestler(null);
-		}
-		if (isSavingRef.current) {
-			isSavingRef.current = false;
-		}
-
-	}, [ props.wrestlers ])
-
-	useEffect(() => {
-		if (selectedDivision && wrestlerRefs.current && wrestlerRefs.current.length > 0) {
-			for (let refIndex = 0; refIndex < wrestlerRefs.current.length; refIndex++) {
-				const ref = wrestlerRefs.current[refIndex];
-
-				if (ref.element) {
-					ref.element.addEventListener("touchstart", event => onDragDown(event, ref.id), { passive: false });
-					ref.element.addEventListener("touchmove", event => onDrag(event, ref.id), { passive: false });
-					ref.element.addEventListener("touchend", event => onDragUp(event, ref.weightClass, ref.id), { passive: false });
-					ref.element.addEventListener("touchcancel", event => onDragCancel(event), { passive: false });
-					
-					ref.element.addEventListener("mousedown", event => onDragDown(event, ref.id), { passive: false });
-					ref.element.addEventListener("mousemove", event => onDrag(event, ref.id), { passive: false });
-					ref.element.addEventListener("mouseup", event => onDragUp(event, ref.weightClass, ref.id), { passive: false });
-				}
-			}
-		}
-	}, [selectedDivision]);
-
-	const buildTeamWrestlers = wrestlers => {
-		const newDivisions = [...new Set(wrestlers.map(wrestler => wrestler.division))]
-			.map(division => ({
-				name: division,
-				weightClasses: [...new Set(wrestlers.filter(wrestler => wrestler.division == division).map(wrestler => wrestler.weightClass)) ]
-					.map(weightClass => ({
-						name: weightClass,
-						wrestlers: wrestlers.filter(wrestler => wrestler.division == division && wrestler.weightClass == weightClass)
-					}))
-			}));
-
-		return newDivisions;
-	};
-
-	const onDragDown = (event, wrestlerId) => {
-		event.preventDefault();
-
-		mousePosition.current = event.touches ? event.touches[0].clientY : event.clientY;
-		boxPositionRef.current = 0;
-		
-		if (event.target.tagName.toLowerCase() == "svg") {
-			boxRef.current = event.target.parentElement.parentElement;
-		}
-		else {
-			boxRef.current = event.target.parentElement.parentElement.parentElement;
-		}
-
-		boxRef.current.style.top = boxPositionRef.current + "px";
-
-		setDragWrestlerId(wrestlerId);
-	};
-
-	const onDrag = (event) => {
-		if (boxRef.current) {
-			event.preventDefault();
-
-			const newPosition = (event.touches ? event.touches[0].clientY : event.clientY) - mousePosition.current;
-			mousePosition.current = event.touches ? event.touches[0].clientY : event.clientY;
-			boxPositionRef.current = boxPositionRef.current + newPosition;
-			boxRef.current.style.top = boxPositionRef.current + "px";
+		if (!pageActive) {
 			
-			console.log(`drag: ${ boxRef.current.style.top }`);
+			fetch(`/api/teamwrestlersload`)
+				.then(response => {
+					if (response.ok) {
+						return response.json();
+					}
+					else {
+						throw Error(response.statusText);
+					}
+				})
+				.then(data => {
+					
+					if (data.loggedInUser.session) {
+						if (data.loggedInUser.session.selectedDivision) {
+							setSelectedDivision(data.loggedInUser.session.selectedDivision);
+						}
+					}
+
+					setTeam(data.team);
+					setDivisions([...new Set(data.team.wrestlers.map(wrestler => wrestler.division))]);
+					setLoggedInUser(data.loggedInUser);
+					setPageActive(true);
+				})
+				.catch(error => {
+					console.warn(error);
+				});
 		}
-	};
+	}, []);
 
-	const onDragUp = (event, weightClass, wrestlerId) => {
-		event.preventDefault();
+	const selectDivision = division => {
+		const session = {
+			selectedDivision: division
+		};
 
-		if (!isSavingRef.current) {
-			isSavingRef.current = true;
-
-			const notMovingRefs = wrestlerRefs.current.filter(ref => ref.weightClass == weightClass && ref.id != wrestlerId);
-			const movingRef = wrestlerRefs.current.find(ref => ref.id == wrestlerId);
-
-			const newPosition = notMovingRefs
-				.map(ref => ref.element.getBoundingClientRect().y)
-				.sort((refA, refB) => refA - refB)
-				.reduce((newPosition, ref, index) => movingRef.element.getBoundingClientRect().y > ref ? index + 1 : newPosition, 0);
-
-			const currentPosition = props.wrestlers.find(wrestler => wrestler.id == wrestlerId).position;
-
-			const wrestlersChanged = props.wrestlers.map(wrestler => {
-
-				if (wrestler.division == selectedDivision.name && wrestler.weightClass == weightClass) {
-					if (wrestler.id == wrestlerId) {
-						wrestler.position = newPosition;
-					}
-					else if (wrestler.position >= newPosition && wrestler.position < currentPosition) {
-						wrestler.position += 1;
-					}
-					else if (wrestler.position > currentPosition && wrestler.position <= newPosition) {
-						wrestler.position -= 1;
-					}
+		fetch(`/api/usersessionsave`, { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session: session }) })
+			.then(response => {
+				if (response.ok) {
+					return response.json();
 				}
-
-				return wrestler;
+				else {
+					throw Error(response.statusText);
+				}
+			})
+			.then(() => { })
+			.catch(error => {
+				console.warn(error);
 			});
-
-			props.updateWrestlers(wrestlersChanged);
-
-			mousePosition.current = null;
-			setDragWrestlerId(null);
-		}
-	};
-
-	const onDragCancel = (event) => {
-		event.preventDefault();
-		setDragWrestlerId(null);
-	};
-
-	const selectDivision = divisionName => {
-		const newDivision = divisions.find(division => division.name == divisionName);
 		
-		wrestlerRefs.current = newDivision.weightClasses
-			.flatMap(weightClass => weightClass.wrestlers)
-			.map(wrestler => ({
-				id: wrestler.id,
-				weightClass: wrestler.weightClass,
-				element: null
-			}));
-
-		setSelectedDivision(newDivision)
+		setSelectedDivision(division);
 	};
 
-	const setRef = (wrestlerId, element) => {
-		const ref = wrestlerRefs.current.find(ref => ref.id == wrestlerId);
+	const addWrestler = newWrestler => {
+		setSavingError("");
 
-		if (ref)
-			ref.element = element;
+		// fetch(`/api/teamwrestlerssave?teamid=${ team.id }`, { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ wrestler: newWrestler }) })
+		// 	.then(response => {
+		// 		if (response.ok) {
+		// 			return response.json();
+		// 		}
+		// 		else {
+		// 			throw Error(response.statusText);
+		// 		}
+		// 	})
+		// 	.then(data => {
+		// 		resetData({...team, wrestlers: team.wrestlers.concat(data.wrestler) }, opponents);
+		// 	})
+		// 	.catch(error => {
+		// 		console.warn(error);
+		// 		setSavingError("There was an error saving the wretler");
+		// 	});
+	};
+
+	const updateWrestlers = wrestlers => {
+		const savePacket = {teamId: team.id, saveWrestlers: wrestlers };
+
+		fetch(`/api/teamwrestlerssave`, { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ savepacket: savePacket }) })
+			.then(response => {
+				if (response.ok) {
+					return response.json();
+				}
+				else {
+					throw Error(response.statusText);
+				}
+			})
+			.then(data => {
+				setTeam(data.team);
+			})
+			.catch(error => {
+				console.warn(error);
+			});
+	};
+
+	const linkFlo = floTeamId => {
+		const savePacket = {
+			saveFloTeam: { teamId: team.id, floTeamId: floTeamId }
+		};
+
+		fetch(`/api/teamviewsave`, { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ savepacket: savePacket }) })
+			.then(response => {
+				if (response.ok) {
+					return response.json();
+				}
+				else {
+					throw Error(response.statusText);
+				}
+			})
+			.then(data => {
+				resetData(c, opponents);
+			})
+			.catch(error => {
+				console.warn(error);
+			});
+	};
+
+	const unlinkFlo = floTeamId => {
+		const savePacket = {
+			deleteFloTeam: { teamId: team.id, floTeamId: floTeamId }
+		};
+
+		fetch(`/api/teamviewsave`, { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ savepacket: savePacket }) })
+			.then(response => {
+				if (response.ok) {
+					return response.json();
+				}
+				else {
+					throw Error(response.statusText);
+				}
+			})
+			.then(data => {
+				resetData({
+					...team,
+					floTeams: data.floTeams
+				}, opponents);
+			})
+			.catch(error => {
+				console.warn(error);
+			});
+	};
+
+	const linkSCMat = scmatTeamId => {
+		const savePacket = {
+			saveSCMatTeam: { teamId: team.id, scmatTeamId: scmatTeamId }
+		};
+
+		fetch(`/api/teamviewsave`, { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ savepacket: savePacket }) })
+			.then(response => {
+				if (response.ok) {
+					return response.json();
+				}
+				else {
+					throw Error(response.statusText);
+				}
+			})
+			.then(data => {
+				resetData({
+					...team,
+					scmatTeams: data.scmatTeams
+				}, opponents);
+			})
+			.catch(error => {
+				console.warn(error);
+			});
+	};
+
+	const unlinkSCMat = scmatTeamId => {
+		const savePacket = {
+			deleteSCMatTeam: { teamId: team.id, scmatTeamId: scmatTeamId }
+		};
+
+		fetch(`/api/teamviewsave`, { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ savepacket: savePacket }) })
+			.then(response => {
+				if (response.ok) {
+					return response.json();
+				}
+				else {
+					throw Error(response.statusText);
+				}
+			})
+			.then(data => {
+				resetData({
+					...team,
+					scmatTeams: data.scmatTeams
+				}, opponents);
+			})
+			.catch(error => {
+				console.warn(error);
+			});
 	};
 
 	return (
-<>
-{
-selectedDivision ?
+<div className="page">
+	<Nav loggedInUser={ loggedInUser } />
 
-<div className="panel filter">
-	<div className="row">
-		<h3>Filter</h3>
+	<div>
+		
+		{
+		!pageActive ?
 
-		<div className="filterExpand" onClick={ () => setIsFilterExpanded(isFilterExpanded => !isFilterExpanded) }>
+		<div className="pageLoading">
+			<img src="/media/wrestlingloading.gif" />
+		</div>
+
+		: !loggedInUser || !loggedInUser.privileges || !loggedInUser.privileges.includes("teamManage") ?
+
+		<div className="noAccess">
+			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q54 0 104-17.5t92-50.5L228-676q-33 42-50.5 92T160-480q0 134 93 227t227 93Zm252-124q33-42 50.5-92T800-480q0-134-93-227t-227-93q-54 0-104 17.5T284-732l448 448Z"/></svg>
+			<a>Unauthorized</a>
+		</div>
+
+		:
+		<>
+
+		<div className={`container ${ pageActive ? "active" : "" }`}>
+			
+			<header>
+				<h1>{ team ? team.name : "" }</h1>
+				<h1 className="subTitle">
+				{ pageView == "depth" ? "Team Depth"
+					: pageView == "link" ? "External Link"
+					: ""
+				}
+				</h1>
+			</header>
+		
 			{
-			isFilterExpanded ?
-			// Close
-			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg>
+			pageView == "depth" ? 
+				<TeamDepth 
+					wrestlers={ team.wrestlers } 
+					updateWrestlers={ updateWrestlers } 
+					divisions={ divisions }
+					selectedDivision={ selectedDivision }
+					selectDivision={ selectDivision }
+				/>
+			
+			: pageView == "link" ?
+				<TeamLink 
+					scmatTeams={ (team.scmatTeams || []) } 
+					floTeams={ (team.floTeams || []) } 
+					linkFlo={ linkFlo }
+					unlinkFlo={ unlinkFlo }
+					linkSCMat={ linkSCMat }
+					unlinkSCMat={ unlinkSCMat }
+				/>
+			
 			: 
-			// Tune
-			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M440-120v-240h80v80h320v80H520v80h-80Zm-320-80v-80h240v80H120Zm160-160v-80H120v-80h160v-80h80v240h-80Zm160-80v-80h400v80H440Zm160-160v-240h80v80h160v80H680v80h-80Zm-480-80v-80h400v80H120Z"/></svg>
+				<TeamWrestlersEdit
+					addWrestler={ addWrestler }
+					savingError={ savingError }
+				/>
 			}
 		</div>
-	</div>
 
-	<div className={`filterContent ${ isFilterExpanded ? "active" : "" }`}>
-		<label>
-			Division
-			<select value={ selectedDivision.name } onChange={ event => selectDivision(event.target.value) }>
-				{
-				divisions
-				.sort((divisionA, divisionB) => divisionA.name > divisionB.name ? 1 : -1)
-				.map((division, divisionIndex) =>
-				<option key={divisionIndex}>{ division.name }</option>
-				)
-				}
-			</select>
-		</label>
-	</div>
+		<div className="bottomNav">
 
-</div>
-
-: "" }
-
-{
-selectedDivision ? 
-<>
-
-<div className="panelHeader">
-	<div>{ selectedDivision.name }</div>
-</div>
-
-{
-selectedDivision.weightClasses
-.sort((weightClassA, weightClassB) => weightClassA.name - weightClassB.name)
-.map((weightClass, weightClassIndex) =>
-
-<div className="panel" key={ weightClassIndex }>
-	<h3>{ weightClass.name }</h3>
-
-	{
-	weightClass.wrestlers
-	.sort((wrestlerA, wrestlerB) => wrestlerA.position ? wrestlerA.position - wrestlerB.position : wrestlerA.name > wrestlerB.name ? 1 : -1)
-	.map(wrestler => 
-	
-	<div className={`listItem teamWrestler ${ dragWrestlerId == wrestler.id ? "dragging": "" }`} key={wrestler.id} data-testid={ wrestler.id }>
-		<button className="wrestlerInfo" onClick={ () => window.location = `/portal/wrestlerview.html?id=${ wrestler.id }` }>
-			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M450.001-290.001h59.998V-520h-59.998v229.999ZM480-588.461q13.731 0 23.019-9.288 9.288-9.288 9.288-23.019 0-13.73-9.288-23.019-9.288-9.288-23.019-9.288-13.731 0-23.019 9.288-9.288 9.289-9.288 23.019 0 13.731 9.288 23.019 9.288 9.288 23.019 9.288Zm.067 488.46q-78.836 0-148.204-29.92-69.369-29.92-120.682-81.21-51.314-51.291-81.247-120.629-29.933-69.337-29.933-148.173t29.92-148.204q29.92-69.369 81.21-120.682 51.291-51.314 120.629-81.247 69.337-29.933 148.173-29.933t148.204 29.92q69.369 29.92 120.682 81.21 51.314 51.291 81.247 120.629 29.933 69.337 29.933 148.173t-29.92 148.204q-29.92 69.369-81.21 120.682-51.291 51.314-120.629 81.247-69.337 29.933-148.173 29.933ZM480-160q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"></path></svg>
-		</button>
-
-		<div className="listItemHeader">
-			{ wrestler.firstName } { wrestler.lastName }
-		</div>
-
-		<div className="dragBar">
-			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" ref={ element => setRef(wrestler.id, element) }>
-				<path d="M360-175.386q-26.653 0-45.634-18.98-18.98-18.981-18.98-45.634t18.98-45.634q18.981-18.98 45.634-18.98t45.634 18.98q18.98 18.981 18.98 45.634t-18.98 45.634q-18.981 18.98-45.634 18.98Zm240 0q-26.653 0-45.634-18.98-18.98-18.981-18.98-45.634t18.98-45.634q18.981-18.98 45.634-18.98t45.634 18.98q18.98 18.981 18.98 45.634t-18.98 45.634q-18.981 18.98-45.634 18.98Zm-240-240q-26.653 0-45.634-18.98-18.98-18.981-18.98-45.634t18.98-45.634q18.981-18.98 45.634-18.98t45.634 18.98q18.98 18.981 18.98 45.634t-18.98 45.634q-18.981 18.98-45.634 18.98Zm240 0q-26.653 0-45.634-18.98-18.98-18.981-18.98-45.634t18.98-45.634q18.981-18.98 45.634-18.98t45.634 18.98q18.98 18.981 18.98 45.634t-18.98 45.634q-18.981 18.98-45.634 18.98Zm-240-240q-26.653 0-45.634-18.98-18.98-18.981-18.98-45.634t18.98-45.634q18.981-18.98 45.634-18.98t45.634 18.98q18.98 18.981 18.98 45.634t-18.98 45.634q-18.981 18.98-45.634 18.98Zm240 0q-26.653 0-45.634-18.98-18.98-18.981-18.98-45.634t18.98-45.634q18.981-18.98 45.634-18.98t45.634 18.98q18.98 18.981 18.98 45.634t-18.98 45.634q-18.981 18.98-45.634 18.98Z"/>
-			</svg>
-		</div>
-
-	</div>
-	
-	)}
-
-</div>
-
-)}
-
-</>
-: "" }
-
-<div aria-label="Add Wrestler" role="button" className={ `panel ${ !newWrestler ? "button" : "" }` } onClick={ () => { if (!newWrestler) { setNewWrestler({...emptyWrestler}) } }}>
-	
-	{
-	isSaving && props.savingError ?
-
-	<div className="panelError">{ props.savingError }</div>
-
-	: isSaving ?
-
-	<div className="panelLoading">
-		<img src="/media/wrestlingloading.gif" />
-	</div>
-
-	: newWrestler ?
-	
-	<div>
-		<label>
-			<span>First Name</span>
-			<input type="text" value={ newWrestler.firstName } onChange={ event => setNewWrestler(wrestler => ({...wrestler, firstName: event.target.value })) } aria-label="First Name" />
-		</label>
-		
-		<label>
-			<span>Last Name</span>
-			<input type="text" value={ newWrestler.lastName } onChange={ event => setNewWrestler(wrestler => ({...wrestler, lastName: event.target.value })) } aria-label="Last Name" />
-		</label>
-
-		<label>
-			<span>Division</span>
-			<input type="text" value={ newWrestler.division } onChange={ event => setNewWrestler(wrestler => ({...wrestler, division: event.target.value })) } aria-label="Wrestler Division" />
-		</label>
-
-		<label>
-			<span>Weight Class</span>
-			<input type="number" value={ newWrestler.weightClass } onChange={ event => setNewWrestler(wrestler => ({...wrestler, weightClass: event.target.value })) } aria-label="Wrestler Weight Class" />
-		</label>
-
-		<div className="row">
-			<button onClick={ () => { setIsSaving(true); props.addWrestler(newWrestler) } } aria-label="Save">
-				{/* Check */}
-				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
-					<path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/>
-				</svg>
-				<div>save</div>
+			<button aria-label="Edit Team" onClick={ () => setPageView("edit") }>
+				{/* Team */}
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M0-240v-63q0-43 44-70t116-27q13 0 25 .5t23 2.5q-14 21-21 44t-7 48v65H0Zm240 0v-65q0-32 17.5-58.5T307-410q32-20 76.5-30t96.5-10q53 0 97.5 10t76.5 30q32 20 49 46.5t17 58.5v65H240Zm540 0v-65q0-26-6.5-49T754-397q11-2 22.5-2.5t23.5-.5q72 0 116 26.5t44 70.5v63H780Zm-455-80h311q-10-20-55.5-35T480-370q-55 0-100.5 15T325-320ZM160-440q-33 0-56.5-23.5T80-520q0-34 23.5-57t56.5-23q34 0 57 23t23 57q0 33-23 56.5T160-440Zm640 0q-33 0-56.5-23.5T720-520q0-34 23.5-57t56.5-23q34 0 57 23t23 57q0 33-23 56.5T800-440Zm-320-40q-50 0-85-35t-35-85q0-51 35-85.5t85-34.5q51 0 85.5 34.5T600-600q0 50-34.5 85T480-480Zm0-80q17 0 28.5-11.5T520-600q0-17-11.5-28.5T480-640q-17 0-28.5 11.5T440-600q0 17 11.5 28.5T480-560Zm1 240Zm-1-280Z"/></svg>
+				Edit Team
 			</button>
 
-			<button aria-label="Cancel" onClick={ () => setNewWrestler(null) }>
-				{/* Cancel */}
-				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
-					<path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/>
-				</svg>
-				<div>cancel</div>
+			<button aria-label="Depth Chart" onClick={ () => setPageView("depth") }>
+				{/* List */}
+				<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24"><path d="M637.398-407.693q-43.552 0-74.128-30.486-30.577-30.486-30.577-74.038 0-43.551 30.486-74.128 30.486-30.576 74.038-30.576 43.552 0 74.128 30.486 30.577 30.486 30.577 74.037 0 43.552-30.486 74.129-30.486 30.576-74.038 30.576ZM412.693-183.079v-60.614q0-17.03 8.269-32.437 8.269-15.408 22.808-24.485 43.461-25.461 91.734-38.577 48.273-13.115 101.803-13.115 53.531 0 101.804 13.115 48.273 13.116 91.734 38.577 14.539 9.077 22.808 24.485 8.269 15.407 8.269 32.437v60.614H412.693Zm63.691-66.152v6.154h321.847v-6.154q-37.308-21.154-78.039-32.116t-82.885-10.962q-42.153 0-82.884 10.962t-78.039 32.116Zm160.923-218.46q18.539 0 31.578-13.039 13.038-13.039 13.038-31.577 0-18.539-13.038-31.577-13.039-13.039-31.578-13.039-18.538 0-31.577 13.039-13.038 13.038-13.038 31.577 0 18.538 13.038 31.577 13.039 13.039 31.577 13.039Zm0-44.616Zm0 269.23ZM137.694-410.001v-59.998h299.998v59.998H137.694Zm0-320v-59.998h459.998v59.998H137.694Zm318.23 160h-318.23v-59.998h347.691q-10.538 13.153-17.692 27.961-7.154 14.807-11.769 32.037Z"/></svg>
+				Depth
 			</button>
+
+			{
+			loggedInUser.privileges && loggedInUser.privileges.includes("teamManage") ?
+
+			<button aria-label="Team Link" onClick={ () => setPageView("link") }>
+				{/* Link */}
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M432.307-298.463H281.539q-75.338 0-128.438-53.093-53.1-53.093-53.1-128.422t53.1-128.444q53.1-53.115 128.438-53.115h150.768v59.998H281.539q-50.385 0-85.962 35.577Q160-530.385 160-480q0 50.385 35.577 85.962 35.577 35.577 85.962 35.577h150.768v59.998ZM330.001-450.001v-59.998h299.998v59.998H330.001Zm197.692 151.538v-59.998h150.768q50.385 0 85.962-35.577Q800-429.615 800-480q0-50.385-35.577-85.962-35.577-35.577-85.962-35.577H527.693v-59.998h150.768q75.338 0 128.438 53.093 53.1 53.093 53.1 128.422t-53.1 128.444q-53.1 53.115-128.438 53.115H527.693Z"/></svg>
+				Link
+			</button>
+
+			:""
+			}
+
 		</div>
+
+		</>
+		}
+
 	</div>
-
-
-	:
-
-	<h3>Add Wrestler</h3>
-
-	}
-
 </div>
+			);
 
-</>
-	)
 }
 
+ReactDOM.createRoot(document.getElementById("root") || document.createElement("div")).render(<TeamWrestlers />);
 export default TeamWrestlers;

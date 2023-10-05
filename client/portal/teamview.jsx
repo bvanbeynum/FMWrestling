@@ -73,7 +73,7 @@ const TeamView = () => {
 	const resetData = (newTeam, newOpponents) => {
 		setDivisions([...new Set(newTeam.wrestlers.map(wrestler => wrestler.division))])
 		setTeam(newTeam);
-		setOpponents(newOpponents);		
+		setOpponents(newOpponents);
 	};
 
 	const addWrestler = newWrestler => {

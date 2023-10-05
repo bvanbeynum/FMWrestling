@@ -156,36 +156,66 @@ router.post("/api/userssave", authAPI, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
 });
 
-// ***************** Teams ********************
-
-router.get("/api/teamsload", authAPI, async (request, response) => {
-	const results = await api.teamsLoad(request.serverPath);
+router.post("/api/usersessionsave", authAPI, async (request, response) => {
+	const results = await api.userSessionSave(request.user, request.body.session, request.serverPath);
 
 	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64a7458c26539d4ed2775dd7", message: `${ results.status }: ${results.error}` }}).then();
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "651b68f7cf4fc75b63591ee7", message: `${ results.status }: ${results.error}` }}).then();
+	}
+
+	response.status(results.status).json(results.error ? { error: results.error } : results.data );
+});
+
+// ***************** Teams ********************
+
+router.get("/api/teamwrestlersload", authAPI, async (request, response) => {
+	const results = await api.teamWrestlersLoad(request.serverPath);
+
+	if (results.error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "651b16e3cf4fc75b63536bb4", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
 	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data } );
 });
 
-router.post("/api/teamssave", authAPI, async (request, response) => {
-	const results = await api.teamsSave(request.body, request.serverPath);
+router.get("/api/teamcompareload", authAPI, async (request, response) => {
+	const results = await api.teamCompareLoad(request.serverPath);
 
 	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64a9608826539d4ed2781abe", message: `${ results.status }: ${results.error}` }}).then();
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "651b61fccf4fc75b6358a2d4", message: `${ results.status }: ${results.error}` }}).then();
+	}
+
+	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data } );
+});
+
+router.get("/api/teamgetopponentwrestlers", authAPI, async (request, response) => {
+	const results = await api.teamGetOpponentWrestlers(request.query.opponentid, request.serverPath);
+
+	if (results.error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "651c9156cf4fc75b636c2b14", message: `${ results.status }: ${results.error}` }}).then();
+	}
+
+	response.status(results.status).json(results.error ? { error: results.error } : results.data );
+});
+
+router.get("/api/teamgetscmatcompare", authAPI, async (request, response) => {
+	const results = await api.teamGetSCMatCompare(request.query.teamid, request.query.opponentid, request.serverPath);
+
+	if (results.error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "651dfc87cf4fc75b638397c1", message: `${ results.status }: ${results.error}` }}).then();
+	}
+
+	response.status(results.status).json(results.error ? { error: results.error } : results.data );
+});
+
+router.post("/api/teamwrestlerssave", authAPI, async (request, response) => {
+	const results = await api.teamWrestlersSave(request.body.savepacket, request.serverPath);
+
+	if (results.error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "651b18a6cf4fc75b63538bc1", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
-});
-
-router.get("/api/teamviewload", authAPI, async (request, response) => {
-	const results = await api.teamViewLoad(request.query.id, request.serverPath);
-
-	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "650a118a7c6bf8ee965454ad", message: `${ results.status }: ${results.error}` }}).then();
-	}
-
-	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data } );
 });
 
 router.post("/api/teamviewsave", authAPI, async (request, response) => {

@@ -983,94 +983,12 @@ describe("API service", () => {
 
 	});
 
-	it("pulls teams", async () => {
-
+	it("saves session data", async () => {
 		// ********** Given
 
-		const output = {
-				teams: [{ id: "team1",  name: "Test Team", externalTeams: [] }]
-			};
+		const session = { selectedDivision: "Varsity", compare: { opponentId: "team2" } };
 
-		api.teamsLoad = jest.fn().mockResolvedValue({
-			status: 200,
-			data: output
-		});
-
-		// ********** When
-
-		const response = await request(app)
-			.get("/api/teamsload")
-			.expect(200);
-
-		// ********** Then
-
-		expect(response.body).toHaveProperty("teams");
-		expect(response.body.teams).toEqual(output.teams);
-
-		expect(response.body).toHaveProperty("loggedInUser");
-
-	});
-
-	it("saves team", async () => {
-		// ********** Given
-
-		const team = { name: "Test Team", confrence: "AA", externalTeams: [{ id: "externalid", name: "Test External" }] },
-			output = { team: { ...team, id: "savedteamid" }};
-
-		api.teamsSave = jest.fn().mockResolvedValue({
-			status: 200,
-			data: output
-		});
-
-		// ********** When
-
-		const response = await request(app)
-			.post("/api/teamssave")
-			.send({ saveTeam: team })
-			.expect(200);
-
-		// ********** Then
-
-		expect(response.body).toHaveProperty("team");
-		expect(response.body.team).toEqual(
-			expect.objectContaining({ id: output.team.id })
-		);
-
-	});
-
-	it("loads the team view data", async () => {
-		
-		// ********** Given
-
-		const output = {
-			team: { id: "team1",  name: "Test Team", externalTeams: [] }
-		};
-
-		api.teamViewLoad = jest.fn().mockResolvedValue({
-			status: 200,
-			data: output
-		});
-
-		// ********** When
-
-		const response = await request(app)
-			.get(`/api/teamviewload?id=${ output.team.id }`)
-			.expect(200);
-
-		// ********** Then
-
-		expect(api.teamViewLoad).toHaveBeenCalledWith(output.team.id, expect.anything());
-		expect(response.body).toHaveProperty("team", output.team);
-		expect(response.body).toHaveProperty("loggedInUser");
-
-	});
-
-	it("saves team session data", async () => {
-		// ********** Given
-
-		const packet = { teamId: "team1", selectedDivision: "Varsity", compare: { opponentId: "team2" } };
-
-		api.teamViewSave = jest.fn().mockResolvedValue({
+		api.userSessionSave = jest.fn().mockResolvedValue({
 			status: 200,
 			data: { status: "ok" }
 		});
@@ -1078,13 +996,150 @@ describe("API service", () => {
 		// ********** When
 
 		const response = await request(app)
-			.post("/api/teamviewsave")
-			.send({ savepacket: packet })
+			.post("/api/usersessionsave")
+			.send({ session: session })
 			.expect(200);
 
 		// ********** Then
 
-		expect(api.teamViewSave).toHaveBeenCalledWith(packet, expect.anything(), expect.anything());
+		expect(api.userSessionSave).toHaveBeenCalledWith(expect.anything(), session, expect.anything());
+
+	});
+
+	it("loads the team wrestlers data", async () => {
+		
+		// ********** Given
+
+		const output = {
+			team: { id: "team1",  name: "Test Team", isMyTeam: true, wrestlers: [{ id: "wrestler1" }] }
+		};
+
+		api.teamWrestlersLoad = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+
+		const response = await request(app)
+			.get(`/api/teamwrestlersload`)
+			.expect(200);
+
+		// ********** Then
+
+		expect(api.teamWrestlersLoad).toHaveBeenCalled();
+		expect(response.body).toHaveProperty("team", output.team);
+		expect(response.body).toHaveProperty("loggedInUser");
+
+	});
+
+	it("loads the team compare data", async () => {
+		
+		// ********** Given
+
+		const output = {
+			team: { id: "team1",  name: "Test Team", externalTeams: [], scmatTeams: [] },
+			scmatTeams: [{ id: "mat1", wrestlers: [], rankings: [] }]
+		};
+
+		api.teamCompareLoad = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+
+		const response = await request(app)
+			.get(`/api/teamcompareload`)
+			.expect(200);
+
+		// ********** Then
+
+		expect(api.teamCompareLoad).toHaveBeenCalled();
+		expect(response.body).toHaveProperty("team", output.team);
+		expect(response.body).toHaveProperty("scmatTeams", output.scmatTeams);
+		expect(response.body).toHaveProperty("loggedInUser");
+
+	});
+
+	it("gets the opponents wrestlers", async () => {
+		
+		// ********** Given
+
+		const opponentId = "opponent1",
+			output = {
+				wrestlers: [{ id: "wrestler1", firstName: "Test", lastName: "Wrestler", division: "Varsity", weightClass: "106" }]
+			};
+
+		api.teamGetOpponentWrestlers = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+
+		const response = await request(app)
+			.get(`/api/teamgetopponentwrestlers?opponentid=${ opponentId }`)
+			.expect(200);
+
+		// ********** Then
+
+		expect(api.teamGetOpponentWrestlers).toHaveBeenCalledWith(opponentId, expect.anything());
+		expect(response.body).toHaveProperty("wrestlers", output.wrestlers);
+
+	});
+
+	it("gets the SC mat team", async () => {
+		
+		// ********** Given
+
+		const output = {
+				team: { id: "team1", name: "Test Team", rankings: [], wrestlers: [] },
+				opponent: { id: "team2", name: "Opponent Team", rankings: [], wrestlers: [] }
+			};
+
+		api.teamGetSCMatCompare = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+
+		const response = await request(app)
+			.get(`/api/teamgetscmatcompare?teamid=${ output.team.id }&opponentid=${ output.opponent.id }`)
+			.expect(200);
+
+		// ********** Then
+
+		expect(api.teamGetSCMatCompare).toHaveBeenCalledWith(output.team.id, output.opponent.id, expect.anything());
+		expect(response.body).toHaveProperty("team", output.team);
+		expect(response.body).toHaveProperty("opponent", output.opponent);
+
+	});
+
+	it("saves wrestlers", async () => {
+		// ********** Given
+
+		const output = {
+			team: { id: "team1", name: "Test Team", wrestlers: [{ id: "wrestler1", firstName: "Test", lastName: "Wrestler", position: 0 }] }
+		};
+
+		api.teamWrestlersSave = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+
+		const response = await request(app)
+			.post("/api/teamwrestlerssave")
+			.send({ savepacket: { teamid: output.team.id, savewrestlers: output.team.wrestlers }})
+			.expect(200);
+
+		// ********** Then
+
+		expect(response.body).toHaveProperty("team");
+		expect(response.body.team).toHaveProperty("wrestlers", output.team.wrestlers);
 
 	});
 

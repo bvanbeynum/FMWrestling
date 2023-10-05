@@ -7,13 +7,12 @@ export default {
 		posts: "./client/portal/posts.jsx",
 		schedule: "./client/portal/schedule.jsx",
 		users: "./client/portal/users.jsx",
-		teams: "./client/portal/teams.jsx",
 		roles: "./client/portal/roles.jsx",
 		requests: "./client/portal/requests.jsx",
-		teamview: "./client/portal/teamview.jsx",
-		teamview: "./client/portal/wrestlerview.jsx",
 		// dual: "./client/portal/dual/dual.jsx",
 		floevent: "./client/portal/floevent.jsx",
+		teamWrestlers: "./client/portal/teamwrestlers.jsx",
+		teamCompare: "./client/portal/teamcompare.jsx",
 		noaccess: "./client/portal/noaccess.jsx"
 	},
 	plugins: [
@@ -58,16 +57,6 @@ export default {
 			templateContent: "<html><body><div id='root'></div></body></html>"
 		}),
 		new HtmlWebpackPlugin({ 
-			filename: "./portal/teams.html",
-			title: "Fort Mill Wrestling - Portal",
-			favicon: "./client/media/favicon.ico",
-			meta: {
-				viewport: "width=device-width, initial-scale=1"
-			},
-			chunks: [ "teams" ],
-			templateContent: "<html><body><div id='root'></div></body></html>"
-		}),
-		new HtmlWebpackPlugin({ 
 			filename: "./portal/roles.html",
 			title: "Fort Mill Wrestling - Portal",
 			favicon: "./client/media/favicon.ico",
@@ -108,23 +97,23 @@ export default {
 			templateContent: "<html><body><div id='root'></div></body></html>"
 		}),
 		new HtmlWebpackPlugin({ 
-			filename: "./portal/teamview.html",
-			title: "Fort Mill Wrestling - Portal",
+			filename: "./portal/teamwrestlers.html",
+			title: "Fort Mill Wrestling - Teams",
 			favicon: "./client/media/favicon.ico",
 			meta: {
 				viewport: "width=device-width, initial-scale=1"
 			},
-			chunks: [ "teamview" ],
+			chunks: [ "teamWrestlers" ],
 			templateContent: "<html><body><div id='root'></div></body></html>"
 		}),
 		new HtmlWebpackPlugin({ 
-			filename: "./portal/wrestlerview.html",
-			title: "Fort Mill Wrestling - Portal",
+			filename: "./portal/teamcompare.html",
+			title: "Fort Mill Wrestling - Teams",
 			favicon: "./client/media/favicon.ico",
 			meta: {
 				viewport: "width=device-width, initial-scale=1"
 			},
-			chunks: [ "wrestlerview" ],
+			chunks: [ "teamCompare" ],
 			templateContent: "<html><body><div id='root'></div></body></html>"
 		}),
 		// new HtmlWebpackPlugin({ 

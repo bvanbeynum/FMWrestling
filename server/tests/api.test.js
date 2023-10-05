@@ -1301,158 +1301,16 @@ describe("Users", () => {
 
 	});
 
-});
-
-describe("Teams", () => {
-
-	it("loads the data for teams", async () => {
-
-		// ********** Given
-
-		const teams = [{
-			id: "testuserid",
-			name: "Test Team",
-			state: "TS",
-			confrence: "5A",
-			externalTeams: [{
-				id: "testexternalid", 
-				name: "External Team" 
-			}]
-		}];
-		
-		client.get = jest.fn()
-			.mockResolvedValueOnce({ body: { teams: teams }}) // Get the teams
-
-		// ********** When
-
-		const results = await api.teamsLoad(serverPath);
-
-		// ********** Then
-
-		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/team`);
-
-		expect(results).toHaveProperty("status", 200);
-		expect(results).toHaveProperty("data");
-
-		expect(results.data).toHaveProperty("teams");
-		expect(results.data.teams).toEqual(teams);
-
-	});
-
-	it("saves a new team", async () => {
-
-		// ********** Given
-
-		const body = { 
-				saveTeam: { name: "Test Team", confrence: "AA", state: "TS" }
-			},
-			returnId = "saveid";
-
-		const send = jest.fn().mockResolvedValue({
-			body: { id: returnId }
-		});
-		client.post = jest.fn(() => ({
-			send: send
-		}));
-
-		client.get = jest.fn()
-			.mockResolvedValue({ body: { teams: [{ ...body.saveTeam, id: returnId, created: new Date() }] }});
-
-		// ********** When
-
-		const results = await api.teamsSave(body, serverPath);
-
-		// ********** Then
-
-		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/team`);
-		expect(send).toHaveBeenCalledWith(
-			expect.objectContaining({
-				team: expect.objectContaining({ name: body.saveTeam.name })
-			})
-		);
-
-		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/team?id=${ returnId }`);
-		
-		expect(results).toHaveProperty("status", 200);
-		expect(results).toHaveProperty("data");
-		expect(results.data).toHaveProperty("team", expect.objectContaining({ id: returnId }));
-
-	});
-
-	it("deletes team", async () => {
-
-		// ********** Given
-
-		const body = { deleteTeam: "deleteteam" };
-
-		client.delete = jest.fn()
-			.mockResolvedValue({ body: { status: "ok" }});
-
-		// ********** When
-
-		const results = await api.teamsSave(body, serverPath);
-
-		// ********** Then
-
-		expect(client.delete).toHaveBeenCalledWith(`${ serverPath }/data/team?id=${ body.deleteTeam }`);
-
-		expect(results).toHaveProperty("status", 200);
-		expect(results).toHaveProperty("data");
-		expect(results.data).toHaveProperty("status", "ok");
-
-	});
-
-	it("loads data for the team view", async () => {
-
-		// ********** Given
-
-		const teams = [
-				{
-					id: "team1",
-					name: "Test Team",
-					state: "TS",
-					confrence: "5A",
-					wrestlers: [{ id: "wrestler1", firstName: "Test", lastName: "Wrestler" }],
-					floTeams: [{ id: "flo1", name: "Team 1" }],
-					scmatTeams: [{ id: "mat1", name: "Team 1" }]
-				}, 
-				{ id: "team2", name: "Other Team", wrestlers: [{ id: "wrestler1", firstName: "Test", lastName: "Wrestler", division: "Varsity", weightClass: "106" }]}
-			],
-			floTeams = [{ id: "flo1", name: "Team 1", events: [], wrestlers: [{ id: "wrestler1" }] }],
-			scmatTeams = [{ id: "mat1", name: "Team 1", rankings: [{ id: "rank1", date: new Date(2023, 8, 29) }], wrestlers: [{ id: "wrestler1" }, { id: "wrestler2" }] }];
-		
-		client.get = jest.fn()
-			.mockResolvedValueOnce({ body: { teams: teams }}) // get the other teams
-			.mockResolvedValueOnce({ body: { externalTeams: floTeams } })
-			.mockResolvedValueOnce({ body: { scmatTeams: scmatTeams } });
-
-		// ********** When
-
-		const results = await api.teamViewLoad(teams[0].id, serverPath);
-
-		// ********** Then
-
-		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/team`);
-		expect(client.get).toHaveBeenNthCalledWith(2, `${ serverPath }/data/externalteam?ids=${ JSON.stringify([teams[0].floTeams[0].id]) }`);
-		expect(client.get).toHaveBeenNthCalledWith(3, `${ serverPath }/data/scmatteam?ids=${ JSON.stringify([teams[0].scmatTeams[0].id]) }`);
-
-		expect(results).toHaveProperty("status", 200);
-		expect(results).toHaveProperty("data");
-
-		expect(results.data).toHaveProperty("team", {...teams[0], floTeams: floTeams, scmatTeams: scmatTeams });
-		expect(results.data).toHaveProperty("teams", teams.filter(team => team.id != teams[0].id).map(team => expect.objectContaining({ id: team.id })));
-
-	});
-
-	it("saves team session data", async () => {
+	it("saves session data", async () => {
 
 		// ********** Given
 
 		const user = { id: "user1" },
-			packet = { 
-				teamId: "team1",
+			session = { 
 				selectedDivision: "Varsity",
+				selectedOpponentId: "team1",
 				compare: { 
+					division: "Varsity",
 					opponentId: "team2", 
 					weightClasses: [
 						{ name: "106", teamScore: 0, opponentScore: 6 },
@@ -1472,9 +1330,15 @@ describe("Teams", () => {
 
 		// ********** When
 
-		const results = await api.teamViewSave(packet, user, serverPath);
+		const results = await api.userSessionSave(user, session, serverPath);
+
+		if (results.status != 200) {
+			console.log(results);
+		}
 
 		// ********** Then
+
+		expect(results).toHaveProperty("status", 200);
 
 		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/user?id=${ user.id }`);
 
@@ -1483,18 +1347,241 @@ describe("Teams", () => {
 			user: expect.objectContaining({
 				id: user.id,
 				session: expect.objectContaining({ 
-					selectedDivision: packet.selectedDivision,
-					teams: [{
-						id: packet.teamId,
-						compare: expect.objectContaining({ opponentId: packet.compare.opponentId })
-					}]
+					selectedDivision: session.selectedDivision,
+					selectedOpponentId: session.selectedOpponentId,
+					compare: [expect.objectContaining({ opponentId: session.compare.opponentId })]
 				})
 			})
 		});
 
-		expect(results).toHaveProperty("status", 200);
 		expect(results).toHaveProperty("data");
 		expect(results.data).toHaveProperty("status", "ok");
+
+	});
+
+});
+
+describe("Teams", () => {
+
+	it("loads data for the team wrestlers", async () => {
+
+		// ********** Given
+
+		const teams = [
+				{
+					id: "team1",
+					name: "Test Team",
+					state: "TS",
+					confrence: "5A",
+					isMyTeam: true,
+					wrestlers: [{ id: "wrestler1", firstName: "Test", lastName: "Wrestler" }],
+					floTeams: [{ id: "flo1", name: "Team 1" }],
+					scmatTeams: [{ id: "mat1", name: "Team 1" }]
+				}, 
+				{ id: "team2", name: "Other Team", wrestlers: [{ id: "wrestler1", firstName: "Test", lastName: "Wrestler", division: "Varsity", weightClass: "106" }]}
+			];
+		
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { teams: teams }}); // get the other teams
+
+		// ********** When
+
+		const results = await api.teamWrestlersLoad(serverPath);
+
+		if (results.status != 200) {
+			console.log(results);
+		}
+
+		// ********** Then
+
+		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/team`);
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+
+		expect(results.data).toHaveProperty("team", { ...teams.filter(team => team.isMyTeam).find(() => true) });
+
+	});
+
+	it("loads data for the team compare", async () => {
+
+		// ********** Given
+
+		const teams = [
+				{
+					id: "team1",
+					name: "Test Team",
+					isMyTeam: true,
+					wrestlers: [{ id: "wrestler1", firstName: "Test", lastName: "Wrestler" }],
+					floTeams: [{ id: "flo1", name: "Team 1" }],
+					scmatTeams: [{ id: "mat1", name: "Team 1" }]
+				}, 
+				{ id: "team2", name: "Other Team", wrestlers: [{ id: "wrestler1", firstName: "Test", lastName: "Wrestler", division: "Varsity", weightClass: "106" }]}
+			],
+			floTeams = [{ id: "flo1", name: "Team 1", events: [], wrestlers: [{ id: "wrestler1" }] }],
+			scmatTeams = [
+				{ id: "mat1", name: "Team 1", rankings: [{ id: "rank1", date: new Date(2023, 8, 29) }], wrestlers: [{ id: "wrestler1" }, { id: "wrestler2" }] },
+				{ id: "mat2", name: "Team 1", rankings: [{ id: "rank1", date: new Date(2023, 8, 29) }], wrestlers: [{ id: "wrestler1" }, { id: "wrestler2" }] }
+			];
+		
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { teams: teams }}) // get the other teams
+			.mockResolvedValueOnce({ body: { scmatTeams: scmatTeams } })
+			.mockResolvedValueOnce({ body: { externalTeams: floTeams } });
+
+		// ********** When
+
+		const results = await api.teamCompareLoad(serverPath);
+		
+		if (results.status != 200) {
+			console.log(results);
+		}
+
+		// ********** Then
+		expect(results).toHaveProperty("status", 200);
+
+		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/team`);
+		expect(client.get).toHaveBeenNthCalledWith(2, `${ serverPath }/data/scmatteam`);
+		expect(client.get).toHaveBeenNthCalledWith(3, `${ serverPath }/data/externalteam?ids=${ JSON.stringify([teams[0].floTeams[0].id]) }`);
+
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("team", {...teams[0], floTeams: floTeams, scmatTeams: [scmatTeams[0]] });
+		expect(results.data).toHaveProperty("scmatTeams", [scmatTeams[1]]);
+
+	});
+
+	it("gets the opponent's wrestlers to compare", async () => {
+
+		// ********** Given
+
+		const opponentSCMat = { 
+				id: "opponent1", 
+				name: "Test Team"
+			},
+			floTeams = [{ id: "flo1", name: "Test Team", events: [], wrestlers: [{ id: "wrestler1" }] }],
+			floWrestlers = [{ 
+				id: "wrestler1", 
+				firstName: "Test", 
+				lastName: "Wrestler",  
+				events: [
+					{ date: new Date(2023, 9, 10), team: "Test Team", matches: [{ division: "JV", weightClass: "120" }] },
+					{ date: new Date(2023, 9, 20), team: "Test Team", matches: [{ division: "Varsity", weightClass: "106" }] },
+					{ date: new Date(2023, 9, 25), team: "Other Team", matches: [{ division: "JV", weightClass: "113" }] }
+				]
+			}],
+			expectedResult = [{ 
+				id: "wrestler1", 
+				firstName: "Test", 
+				lastName: "Wrestler",
+				division: "Varsity",
+				weightClass: "106"
+			}];
+		
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { scmatTeams: [opponentSCMat] }})
+			.mockResolvedValueOnce({ body: { externalTeams: floTeams } })
+			.mockResolvedValueOnce({ body: { externalWrestlers: floWrestlers } });
+
+		// ********** When
+
+		const results = await api.teamGetOpponentWrestlers(opponentSCMat.id, serverPath);
+		
+		if (results.status != 200) {
+			console.log(results);
+		}
+
+		// ********** Then
+		expect(results).toHaveProperty("status", 200);
+
+		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/scmatteam?id=${ opponentSCMat.id}`);
+		expect(client.get).toHaveBeenNthCalledWith(2, `${ serverPath }/data/externalteam?name=${ opponentSCMat.name }`);
+		expect(client.get).toHaveBeenNthCalledWith(3, `${ serverPath }/data/externalwrestler?externalteamid=${ floTeams[0].id }`);
+
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("wrestlers", expectedResult);
+
+	});
+
+	it("gets the sc mat team data to compare", async () => {
+
+		// ********** Given
+
+		const team = {
+				id: "team1", 
+				name: "Test Team",
+				rankings: [{ date: new Date(2023,9,4), ranking: 5 }],
+				wrestlers: [{ id: "wrestler1", firstName: "Test", lastName: "Wrestler", rankings: [{ date: new Date(2023, 9, 5), weightClass: 106 }, { date: new Date(2023, 8, 1), weightClass: 113 }] }]
+			},
+			opponent = {
+				id: "team2", 
+				name: "Opponent Team",
+				rankings: [{ date: new Date(2023,9,4), ranking: 5 }],
+				wrestlers: [{ id: "wrestler2", firstName: "Test", lastName: "Wrestler2", rankings: [{ date: new Date(2023, 9, 5), weightClass: 106 }, { date: new Date(2023, 8, 1), weightClass: 200 }] }]
+			},
+			expectedWeightClasses = [
+				{ date: new Date(2023,9,5), weightClasses: [106] },
+				{ date: new Date(2023,8,1), weightClasses: [113, 200] }
+			];
+		
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { scmatTeams: [team, opponent] }});
+
+		// ********** When
+
+		const results = await api.teamGetSCMatCompare(team.id, opponent.id, serverPath);
+		
+		if (results.status != 200) {
+			console.log(results);
+		}
+
+		// ********** Then
+		expect(results).toHaveProperty("status", 200);
+
+		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/scmatteam`);
+
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("team", team);
+		expect(results.data).toHaveProperty("opponent", opponent);
+		expect(results.data).toHaveProperty("weightClasses", expectedWeightClasses);
+
+	});
+
+	it("saves data from the team wrestlers page", async () => {
+		
+		// ********** Given
+
+		const user = { id: "user1" },
+			team = { id: "team1", name: "Test Team", wrestlers: [] },
+			saveWrestlers = [{ id: "wrestler1", firstName: "Test", lastName: "Wrestler", position: 0 }];
+
+		const send = jest.fn().mockResolvedValue({
+			body: { id: team.id }
+		});
+		client.post = jest.fn(() => ({
+			send: send
+		}));
+
+		client.get = jest.fn()
+			.mockResolvedValue({ body: { teams: [team] }});
+
+		// ********** When
+
+		const results = await api.teamWrestlersSave({ teamId: team.id, saveWrestlers: saveWrestlers }, serverPath);
+
+		// ********** Then
+
+		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/team`);
+		expect(send).toHaveBeenCalledWith({
+			team: expect.objectContaining({ 
+				wrestlers: saveWrestlers
+			})
+		});
+
+		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/team?id=${ team.id }`);
+		
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("team", expect.objectContaining({ id: team.id, wrestlers: saveWrestlers }));
 
 	});
 

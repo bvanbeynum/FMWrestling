@@ -499,6 +499,30 @@ table.sectionTable {
 	justify-content: space-between;
 }
 
+.selectorContainer {
+	margin: 1rem 0;
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	background-color: rgb(99 99 99);
+	border-radius: 4px;
+	padding: 3px;
+	cursor: pointer;
+	user-select: none;
+	outline: none;
+}
+
+.selector {
+	padding: .25rem 0;
+	text-align: center;
+	color: rgb(255 255 255);
+}
+
+.selector.selected {
+	border-radius: 2px;
+	background-color: rgb(161 161 161);
+	cursor: initial;
+}
+
 @media (min-width: 1024px) {
 	.container {
 		grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
