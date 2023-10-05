@@ -228,23 +228,32 @@ const TeamCompareSCMat = props => {
 		const teamWrestlerRankings = team.wrestlers.flatMap(wrestler => 
 			wrestler.rankings
 				.filter(ranking => +(new Date(ranking.date)) == +weightClasses[selectedDateIndex].date)
-				.map(ranking => ({ weightClass: ranking.weightClass, ranking: ranking.ranking }) )
+				.map(ranking => ({ weightClass: ranking.weightClass, ranking: ranking.ranking, name: wrestler.firstName + " " + wrestler.lastName }) )
 			),
 			opponentWrestlerRankings = opponent.wrestlers.flatMap(wrestler => 
 				wrestler.rankings
 					.filter(ranking => +(new Date(ranking.date)) == +weightClasses[selectedDateIndex].date)
-					.map(ranking => ({ weightClass: ranking.weightClass, ranking: ranking.ranking }) )
+					.map(ranking => ({ weightClass: ranking.weightClass, ranking: ranking.ranking, name: wrestler.firstName + " " + wrestler.lastName }) )
 				);
 
 		individualChart.team.ranked.bars = currentWeights.map((weightClass, weightIndex) => {
 			const rankedWrestler = teamWrestlerRankings
 				.filter(ranking => ranking.weightClass == weightClass)
 				.find(() => true);
+			const x = (((individualMax - 1) - (rankedWrestler ? rankedWrestler.ranking - 1 : individualMax - 1)) * pointWidth) + (pointWidth / 2);
 
 			return {
-				x: (((individualMax - 1) - (rankedWrestler ? rankedWrestler.ranking - 1 : individualMax - 1)) * pointWidth) + (pointWidth / 2),
+				x: x,
 				y: weightIndex * pointHeight,
-				height: pointHeight / 2
+				height: pointHeight / 2,
+				label: {
+					x: !rankedWrestler || rankedWrestler.ranking > (individualMax / 2) ? x + 4
+						: x - 4,
+					y: (weightIndex * pointHeight) + (pointHeight * .25),
+					text: rankedWrestler ? rankedWrestler.name : "",
+					align: !rankedWrestler || rankedWrestler.ranking > (individualMax / 2) ? "start"
+						: "end"
+				}
 			};
 		});
 
@@ -252,34 +261,52 @@ const TeamCompareSCMat = props => {
 			const rankedWrestler = opponentWrestlerRankings
 				.filter(ranking => ranking.weightClass == weightClass)
 				.find(() => true);
+			const x = (((individualMax - 1) - (rankedWrestler ? rankedWrestler.ranking - 1 : individualMax - 1)) * pointWidth) + (pointWidth / 2);
 
 			return {
 				x: (((individualMax - 1) - (rankedWrestler ? rankedWrestler.ranking - 1 : individualMax - 1)) * pointWidth) + (pointWidth / 2),
 				y: (pointHeight / 2) + (weightIndex * pointHeight),
-				height: pointHeight / 2
+				height: pointHeight / 2,
+				label: {
+					x: !rankedWrestler || rankedWrestler.ranking > (individualMax / 2) ? x + 4
+						: x - 4,
+					y: (weightIndex * pointHeight) + (pointHeight / 2) + (pointHeight * .25),
+					text: rankedWrestler ? rankedWrestler.name : "",
+					align: !rankedWrestler || rankedWrestler.ranking > (individualMax / 2) ? "start"
+						: "end"
+				}
 			};
 		});
 
 		const teamWrestlerReturning = team.wrestlers.flatMap(wrestler => 
 			wrestler.rankings
 				.filter(ranking => +(new Date(ranking.date)) == +weightClasses[selectedDateIndex].date && !/^sr$/i.test(ranking.grade))
-				.map(ranking => ({ weightClass: ranking.weightClass, ranking: ranking.ranking }) )
+				.map(ranking => ({ weightClass: ranking.weightClass, ranking: ranking.ranking, name: wrestler.firstName + " " + wrestler.lastName }) )
 			),
 			opponentWrestlerReturning = opponent.wrestlers.flatMap(wrestler => 
 				wrestler.rankings
 					.filter(ranking => +(new Date(ranking.date)) == +weightClasses[selectedDateIndex].date && !/^sr$/i.test(ranking.grade))
-					.map(ranking => ({ weightClass: ranking.weightClass, ranking: ranking.ranking }) )
+					.map(ranking => ({ weightClass: ranking.weightClass, ranking: ranking.ranking, name: wrestler.firstName + " " + wrestler.lastName }) )
 				);
 
 		individualChart.team.returning.bars = currentWeights.map((weightClass, weightIndex) => {
 			const rankedWrestler = teamWrestlerReturning
 				.filter(ranking => ranking.weightClass == weightClass)
 				.find(() => true);
+			const x = (((individualMax - 1) - (rankedWrestler ? rankedWrestler.ranking - 1 : individualMax - 1)) * pointWidth) + (pointWidth / 2);
 
 			return {
 				x: (((individualMax - 1) - (rankedWrestler ? rankedWrestler.ranking - 1 : individualMax - 1)) * pointWidth) + (pointWidth / 2),
 				y: weightIndex * pointHeight,
-				height: pointHeight / 2
+				height: pointHeight / 2,
+				label: {
+					x: !rankedWrestler || rankedWrestler.ranking > (individualMax / 2) ? x + 4
+						: x - 4,
+					y: (weightIndex * pointHeight) + (pointHeight * .25),
+					text: rankedWrestler ? rankedWrestler.name : "",
+					align: !rankedWrestler || rankedWrestler.ranking > (individualMax / 2) ? "start"
+						: "end"
+				}
 			};
 		});
 
@@ -287,11 +314,20 @@ const TeamCompareSCMat = props => {
 			const rankedWrestler = opponentWrestlerReturning
 				.filter(ranking => ranking.weightClass == weightClass)
 				.find(() => true);
+			const x = (((individualMax - 1) - (rankedWrestler ? rankedWrestler.ranking - 1 : individualMax - 1)) * pointWidth) + (pointWidth / 2);
 
 			return {
 				x: (((individualMax - 1) - (rankedWrestler ? rankedWrestler.ranking - 1 : individualMax - 1)) * pointWidth) + (pointWidth / 2),
 				y: (pointHeight / 2) + (weightIndex * pointHeight),
-				height: pointHeight / 2
+				height: pointHeight / 2,
+				label: {
+					x: !rankedWrestler || rankedWrestler.ranking > (individualMax / 2) ? x + 4
+						: x - 4,
+					y: (weightIndex * pointHeight) + (pointHeight / 2) + (pointHeight * .25),
+					text: rankedWrestler ? rankedWrestler.name : "",
+					align: !rankedWrestler || rankedWrestler.ranking > (individualMax / 2) ? "start"
+						: "end"
+				}
 			};
 		});
 
@@ -360,23 +396,19 @@ teamChart ?
 
 			{
 			teamChart.opponent.bars.map((bar, barIndex) => 
-			<line key={barIndex} className="opponentLine" x1={bar.x} y1={bar.y} x2={bar.x + bar.width} y2={bar.y}></line>
-			)
-			}
-			{
-			teamChart.opponent.bars.map((bar, barIndex) =>
-			<text key={barIndex} className="chartLabel" x={ bar.label.x } y={ bar.label.y } textAnchor="middle" alignmentBaseline={ bar.label.align }>{ bar.label.text }</text>
+			<g key={barIndex}>
+			<line className="opponentLine" x1={bar.x} y1={bar.y} x2={bar.x + bar.width} y2={bar.y}></line>
+			<text className="chartLabel" x={ bar.label.x } y={ bar.label.y } textAnchor="middle" alignmentBaseline={ bar.label.align }>{ bar.label.text }</text>
+			</g>
 			)
 			}
 			
 			{
 			teamChart.team.bars.map((bar, barIndex) => 
-			<line key={barIndex} className="teamLine" x1={bar.x} y1={bar.y} x2={bar.x + bar.width} y2={bar.y}></line>
-			)
-			}
-			{
-			teamChart.team.bars.map((bar, barIndex) =>
-			<text key={barIndex} className="chartLabel" x={ bar.label.x } y={ bar.label.y } textAnchor="middle" alignmentBaseline={ bar.label.align }>{ bar.label.text }</text>
+			<g key={barIndex}>
+			<line className="teamLine" x1={bar.x} y1={bar.y} x2={bar.x + bar.width} y2={bar.y}></line>
+			<text className="chartLabel" x={ bar.label.x } y={ bar.label.y } textAnchor="middle" alignmentBaseline={ bar.label.align }>{ bar.label.text }</text>
+			</g>
 			)
 			}
 		</g>
@@ -452,12 +484,19 @@ individualChart ?
 
 			{
 			individualChart.opponent.ranked.bars.map((bar, barIndex) => 
-			<line key={barIndex} className="opponentLine" x1={bar.x} y1={bar.y} x2={bar.x} y2={bar.y + bar.height}></line>
+			<g key={barIndex}>
+			<line className="opponentLine" x1={bar.x} y1={bar.y} x2={bar.x} y2={bar.y + bar.height}></line>
+			<text className="chartLabel" x={ bar.label.x } y={ bar.label.y } textAnchor={ bar.label.align } alignmentBaseline="middle">{ bar.label.text }</text>
+			</g>
 			)
 			}
+
 			{
 			individualChart.team.ranked.bars.map((bar, barIndex) => 
-			<line key={barIndex} className="teamLine" x1={bar.x} y1={bar.y} x2={bar.x} y2={bar.y + bar.height}></line>
+			<g key={barIndex}>
+			<line className="teamLine" x1={bar.x} y1={bar.y} x2={bar.x} y2={bar.y + bar.height}></line>
+			<text className="chartLabel" x={ bar.label.x } y={ bar.label.y } textAnchor={ bar.label.align } alignmentBaseline="middle">{ bar.label.text }</text>
+			</g>
 			)
 			}
 		</g>
@@ -512,12 +551,18 @@ individualChart ?
 
 			{
 			individualChart.opponent.returning.bars.map((bar, barIndex) => 
-			<line key={barIndex} className="opponentLine" x1={bar.x} y1={bar.y} x2={bar.x} y2={bar.y + bar.height}></line>
+			<g key={barIndex}>
+			<line className="opponentLine" x1={bar.x} y1={bar.y} x2={bar.x} y2={bar.y + bar.height}></line>
+			<text className="chartLabel" x={ bar.label.x } y={ bar.label.y } textAnchor={ bar.label.align } alignmentBaseline="middle">{ bar.label.text }</text>
+			</g>
 			)
 			}
 			{
 			individualChart.team.returning.bars.map((bar, barIndex) => 
-			<line key={barIndex} className="teamLine" x1={bar.x} y1={bar.y} x2={bar.x} y2={bar.y + bar.height}></line>
+			<g key={barIndex}>
+			<line className="teamLine" x1={bar.x} y1={bar.y} x2={bar.x} y2={bar.y + bar.height}></line>
+			<text className="chartLabel" x={ bar.label.x } y={ bar.label.y } textAnchor={ bar.label.align } alignmentBaseline="middle">{ bar.label.text }</text>
+			</g>
 			)
 			}
 		</g>
