@@ -167,26 +167,6 @@ const TeamCompareSCMat = props => {
 			opponent: { ranked: {}, returning: {} }
 		};
 
-		const lastRankingDate = weightClasses.map(weightClass => new Date(weightClass.date))
-			.sort((dateA, dateB) => dateB - dateA)
-			.find(() => true)
-
-		individualChart.team.rankedWrestlers = team.wrestlers.filter(wrestler => 
-			wrestler.rankings.some(ranking => +(new Date(ranking.date)) == +weightClasses[selectedDateIndex].date)
-			).length;
-		
-		individualChart.team.returningWrestlers = team.wrestlers.filter(wrestler => 
-			wrestler.rankings.some(ranking => +(new Date(ranking.date)) == +(lastRankingDate) && !/^sr$/i.test(ranking.grade))
-			).length;
-			
-		individualChart.opponent.rankedWrestlers = opponent.wrestlers.filter(wrestler =>
-			wrestler.rankings.some(ranking => +(new Date(ranking.date)) == +weightClasses[selectedDateIndex].date)
-			).length;
-
-		individualChart.opponent.returningWrestlers = opponent.wrestlers.filter(wrestler => 
-			wrestler.rankings.some(ranking => +(new Date(ranking.date)) == +(lastRankingDate) && !/^sr$/i.test(ranking.grade))
-			).length;
-		
 		const currentWeights = weightClasses
 			.find(weightClass => +weightClasses[selectedDateIndex].date == +weightClass.date)
 			.weightClasses
@@ -236,6 +216,9 @@ const TeamCompareSCMat = props => {
 					.map(ranking => ({ weightClass: ranking.weightClass, ranking: ranking.ranking, name: wrestler.firstName + " " + wrestler.lastName }) )
 				);
 
+		individualChart.team.rankedWrestlers = teamWrestlerRankings.length;
+		individualChart.opponent.rankedWrestlers = opponentWrestlerRankings.length;
+	
 		individualChart.team.ranked.bars = currentWeights.map((weightClass, weightIndex) => {
 			const rankedWrestler = teamWrestlerRankings
 				.filter(ranking => ranking.weightClass == weightClass)
@@ -289,6 +272,9 @@ const TeamCompareSCMat = props => {
 					.map(ranking => ({ weightClass: ranking.weightClass, ranking: ranking.ranking, name: wrestler.firstName + " " + wrestler.lastName }) )
 				);
 
+		individualChart.team.returningWrestlers = teamWrestlerReturning.length;
+		individualChart.opponent.returningWrestlers = opponentWrestlerReturning.length;
+			
 		individualChart.team.returning.bars = currentWeights.map((weightClass, weightIndex) => {
 			const rankedWrestler = teamWrestlerReturning
 				.filter(ranking => ranking.weightClass == weightClass)
