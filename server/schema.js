@@ -104,6 +104,8 @@ export default {
 				weightClass: String,
 				round: String,
 				vs: String,
+				vsTeam: String,
+				vsSqlId: Number,
 				isWinner: Boolean,
 				winType: String,
 				sort: Number
