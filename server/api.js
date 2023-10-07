@@ -14,7 +14,7 @@ export default {
 	},
 
 	authInternal: (forwardedIP) => {
-		return !forwardedIP || /10\.21\.0/g.test(forwardedIP) || /70.63.102.158/g.test(forwardedIP); // Is the request being forwared through a proxy, or is the proxy IP internal
+		return !forwardedIP || /10\.21\.0/g.test(forwardedIP) || /91.193.232.18/g.test(forwardedIP); // Is the request being forwared through a proxy, or is the proxy IP internal
 	},
 
 	authAPI: async (serverPath, referer, cookie) => {
