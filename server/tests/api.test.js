@@ -1546,6 +1546,52 @@ describe("Teams", () => {
 
 	});
 
+	it("loads opponent's wrestlers for compare", async () => {
+
+		const opponent = {id: "team2", name: "Opponent Team" },
+			team = { id: "team1", name: "Team Name"},
+			opponentWrestlers = [{ 
+				id: "wrestler1", 
+				sqlId: 1234, 
+				name: "Test Wrestler", 
+				events: [{
+					id: "event1",
+					date: new Date(2023,4,2),
+					name: "Test Event",
+					matches: [{ weightClass: "111"}]
+				}, {
+					id: "event2",
+					date: new Date(2022,8,22),
+					name: "Test Event 2",
+					matches: [{ weightClass: "120" }]
+				}]
+			}];
+		
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { externalWrestlers: opponentWrestlers } });
+		
+		const results = await api.teamGetCompareWrestlers(team.id, opponent.id, serverPath);
+
+		if (results.status != 200) {
+			console.log(results);
+		}
+
+		expect(results).toHaveProperty("status", 200);
+
+		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/externalwrestler?externalteamid=${ opponent.id }`);
+
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("wrestlers", [
+			expect.objectContaining({
+				weightClasses: [
+					{ weightClass: "111", lastDate: new Date(2023,4,2), lastEvent: "Test Event" },
+					{ weightClass: "120", lastDate: new Date(2022,8,22), lastEvent: "Test Event 2" }
+				]
+			})
+		]);
+
+	});
+
 	it("saves data from the team wrestlers page", async () => {
 		
 		// ********** Given

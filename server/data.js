@@ -1243,7 +1243,10 @@ export default {
 		}
 		if (userFilter.externalTeamId) {
 			const externalTeams = await data.externalTeam.find({ _id: userFilter.externalTeamId }).lean().select({ wrestlers: 1 }).exec();
-			filter["_id"] = { $in: externalTeams[0].wrestlers.map(wrestler => wrestler["id"]) };
+			filter["_id"] = { $in: externalTeams.flatMap(team => (team.wrestlers || []).map(wrestler => wrestler["id"])) };
+		}
+		if (userFilter.sqlId) {
+			filter.sqlId = userFilter.sqlId;
 		}
 
 		try {

@@ -14,8 +14,7 @@ export default {
 	},
 
 	authInternal: (forwardedIP) => {
-		console.log(forwardedIP);
-		return !forwardedIP || /10\.21\.0/g.test(forwardedIP) || /91.193.232.18/g.test(forwardedIP); // Is the request being forwared through a proxy, or is the proxy IP internal
+		return !forwardedIP || /10\.21\.0/g.test(forwardedIP) || /91\.193\.232/g.test(forwardedIP); // Is the request being forwared through a proxy, or is the proxy IP internal
 	},
 
 	authAPI: async (serverPath, referer, cookie) => {
@@ -1361,6 +1360,71 @@ export default {
 			return output;
 		}
 
+		output.status = 200;
+		return output;
+	},
+
+	teamGetCompareWrestlers: async (teamId, opponentId, serverPath) => {
+		const output = { data: {} };
+
+		let wrestlers = [];
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/externalwrestler?externalteamid=${ opponentId }`);
+			wrestlers = clientResponse.body.externalWrestlers;
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+
+		try {
+			const wrestlerMatches = wrestlers
+				.flatMap(wrestler => wrestler.events.flatMap(event => event.matches.map(match => ({
+					id: wrestler.id,
+					sqlId: wrestler.sqlId,
+					weightClass: match.weightClass,
+					event: event.name,
+					date: new Date(event.date),
+					name: wrestler.name,
+					team: wrestler.team,
+					isWinner: match.isWinner,
+					opponentName: match.vs,
+					opponentSqlId: match.vsSqlId,
+					opponentTeam: match.vsTeam
+				}))));
+
+			output.data.wrestlers = wrestlers
+				.map(wrestler => {
+					const matches = wrestlerMatches.filter(match => match.id == wrestler.id);
+
+					const weightClasses = [...new Set(matches.map(match => match.weightClass))]
+						.map(weightClass => {
+							const lastMatch = matches
+								.filter(match => match.weightClass == weightClass)
+								.sort((matchA, matchB) => matchB.date - matchA.date)
+								.find(() => true);
+							
+							return {
+								weightClass: weightClass,
+								lastDate: lastMatch.date,
+								lastEvent: lastMatch.event
+							};
+						});
+
+					return {
+						id: wrestler.id,
+						name: wrestler.name,
+						weightClasses: weightClasses
+					};
+				});
+		}
+		catch (error) {
+			output.status = 562;
+			output.error = error.message;
+			return output;
+		}
+		
 		output.status = 200;
 		return output;
 	},
