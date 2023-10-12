@@ -572,8 +572,4 @@ table.sectionTable {
 		grid-column-gap: 1rem;
 	}
 
-	.filterContent input, .filterContent select {
-		max-width: 110px;
-	}
-
 }

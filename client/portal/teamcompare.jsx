@@ -5,6 +5,7 @@ import "./include/index.css";
 import "./include/team.css";
 import TeamCompareMatch from "./teamcomparematch.jsx";
 import TeamCompareSCMat from "./teamcomparescmat.jsx";
+import TeamCompareWrestlers from "./teamcomparewrestlers.jsx";
 
 const TeamCompare = () => {
 
@@ -128,7 +129,7 @@ const TeamCompare = () => {
 		<div className={`container ${ pageActive ? "active" : "" }`}>
 			
 			<header>
-				<h1>{ team ? team.name : "" }</h1>
+				<h1>Compare Teams</h1>
 			</header>
 		
 			{
@@ -140,10 +141,9 @@ const TeamCompare = () => {
 					selectedOpponentId={ selectedOpponentId }
 					setSelectedOpponentId={ selectOpponent }
 					/>
+			
+			: pageView == "match" ?
 
-			: pageView == "flo" ? ""
-				
-			: 
 				<TeamCompareMatch 
 					team={ team }
 					opponents={ opponents }
@@ -156,15 +156,24 @@ const TeamCompare = () => {
 					setSelectedOpponentId={ selectOpponent }
 					/>
 
+			: 
+
+				<TeamCompareWrestlers
+					opponents={ opponents }
+					teamId={ team.scmatTeams[0].id }
+					selectedOpponentId={ selectedOpponentId }
+					setSelectedOpponentId={ selectOpponent }
+					/>
+				
 			}
 		</div>
 
 		<div className="bottomNav">
 
-			<button aria-label="Match Compare" onClick={ () => setPageView("") }>
+			<button aria-label="Wrestlers" onClick={ () => setPageView("wrestlers") }>
 				{/* Wrestlers */}
 				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M55.077-93.847 12.924-136l143.692-143.692-46.308-123.385q-6.23-15.692-2.423-36.692 3.808-21 20.115-37.307l132-132q10.462-10.462 22.539-15.693 12.076-5.23 27.153-5.23 15.077 0 27.154 5.23 12.076 5.231 22.538 15.693l80.769 78q27.385 27 65.231 42.692 37.846 15.692 81.692 17.615v59.999q-55-1.923-103.153-20.731-48.154-18.808-81.923-52.192l-34.923-34.154L259.23-410l87.846 89.846v230.153h-59.998v-204.615l-72.002-66.463v107.233l-160 159.999Zm552.001 3.846v-265.383l85.538-81.539-30.154-166.156q-22.693 27.616-48.386 49.502-25.693 21.885-57.463 34.27-23.768-2-45.576-11.116-21.807-9.115-37.191-24.114 45.769-7.616 84.5-34.539 38.732-26.924 59.962-61.539l39.231-64q15.077-24.307 41.423-32.269 26.345-7.961 52.268 2.885l195.846 82.923v171.075h-59.998v-132.153l-95.079-38.001L904.768-90.001H840.77L767.616-396.54l-100.54 85.001v221.538h-59.998ZM447.076-614.615q-30.692 0-52.269-21.577-21.577-21.577-21.577-52.269 0-30.692 21.577-52.269 21.577-21.576 52.269-21.576 30.692 0 52.269 21.576 21.577 21.577 21.577 52.269 0 30.692-21.577 52.269-21.577 21.577-52.269 21.577ZM664-776.154q-30.692 0-52.269-21.576-21.576-21.577-21.576-52.269 0-30.692 21.576-52.269 21.577-21.577 52.269-21.577 30.693 0 52.269 21.577 21.577 21.577 21.577 52.269 0 30.692-21.577 52.269-21.576 21.576-52.269 21.576Z"></path></svg>
-				Match
+				Wrestlers
 			</button>
 
 			{
@@ -178,10 +187,10 @@ const TeamCompare = () => {
 
 			: "" }
 
-			<button aria-label="Flo Compare" onClick={ () => setPageView("flo") }>
-				{/* World */}
-				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M432.307-298.463H281.539q-75.338 0-128.438-53.093-53.1-53.093-53.1-128.422t53.1-128.444q53.1-53.115 128.438-53.115h150.768v59.998H281.539q-50.385 0-85.962 35.577Q160-530.385 160-480q0 50.385 35.577 85.962 35.577 35.577 85.962 35.577h150.768v59.998ZM330.001-450.001v-59.998h299.998v59.998H330.001Zm197.692 151.538v-59.998h150.768q50.385 0 85.962-35.577Q800-429.615 800-480q0-50.385-35.577-85.962-35.577-35.577-85.962-35.577H527.693v-59.998h150.768q75.338 0 128.438 53.093 53.1 53.093 53.1 128.422t-53.1 128.444q-53.1 53.115-128.438 53.115H527.693Z"/></svg>
-				Flo
+			<button aria-label="Match Compare" onClick={ () => setPageView("match") }>
+				{/* Compare */}
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M420.001-55.386V-140H212.309q-30.308 0-51.308-21t-21-51.308v-535.382q0-30.308 21-51.308t51.308-21h207.692v-84.615H480v849.228h-59.999ZM200-240h220.001v-263.848L200-240Zm360 99.999V-480l200 240v-507.691q0-4.616-3.846-8.463-3.847-3.846-8.463-3.846H560v-59.999h187.691q30.308 0 51.308 21t21 51.308v535.382q0 30.308-21 51.308t-51.308 21H560Z"/></svg>
+				Match
 			</button>
 
 		</div>

@@ -209,7 +209,7 @@ router.get("/api/teamgetscmatcompare", authAPI, async (request, response) => {
 });
 
 router.get("/api/teamgetcomparewrestlers", authAPI, async (request, response) => {
-	const results = await api.teamGetCompareWrestlers(request.query.teamid, request.query.opponentid, request.serverPath);
+	const results = await api.teamGetCompareWrestlers(request.query.teamid, request.query.opponentscmatid, request.serverPath);
 
 	if (results.error) {
 		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "65244b66cf4fc75b63fb1244", message: `${ results.status }: ${results.error}` }}).then();

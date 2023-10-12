@@ -1062,6 +1062,34 @@ describe("API service", () => {
 
 	});
 
+	it("loads the team compare wrestler data", async () => {
+		
+		// ********** Given
+
+		const teamId = "team1",
+			opponentId = "team2",
+			output = {
+				wrestlers: [{ id: "wrestler1", name: "Test Wrestler", weightClasses: [{ weightClass: "106", lastEvent: "Test Event"}] }]
+			};
+
+		api.teamGetCompareWrestlers = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+
+		const response = await request(app)
+			.get(`/api/teamgetcomparewrestlers?teamid=${ teamId }&opponentscmatid=${ opponentId }`)
+			.expect(200);
+
+		// ********** Then
+
+		expect(api.teamGetCompareWrestlers).toHaveBeenCalledWith(teamId, opponentId, expect.anything());
+		expect(response.body).toHaveProperty("wrestlers", output.wrestlers);
+
+	});
+
 	it("gets the opponents wrestlers", async () => {
 		
 		// ********** Given

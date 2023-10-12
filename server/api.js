@@ -1364,8 +1364,39 @@ export default {
 		return output;
 	},
 
-	teamGetCompareWrestlers: async (teamId, opponentId, serverPath) => {
+	teamGetCompareWrestlers: async (teamId, opponentSCMatId, serverPath) => {
 		const output = { data: {} };
+
+		let opponentName = null;
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/scmatteam?id=${ opponentSCMatId }`);
+
+			opponentName = clientResponse.body.scmatTeams[0].name;
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+
+		let opponentId = null;
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/externalteam?name=${ opponentName }`);
+
+			if (clientResponse.body.externalTeams.length == 0) {
+				output.status = 200;
+				output.data.wrestlers = [];
+				return output;
+			}
+			else {
+				opponentId = clientResponse.body.externalTeams[0].id;
+			}
+		}
+		catch (error) {
+			output.status = 562;
+			output.error = error.message;
+			return output;
+		}
 
 		let wrestlers = [];
 		try {
@@ -1373,7 +1404,7 @@ export default {
 			wrestlers = clientResponse.body.externalWrestlers;
 		}
 		catch (error) {
-			output.status = 561;
+			output.status = 563;
 			output.error = error.message;
 			return output;
 		}
@@ -1384,6 +1415,7 @@ export default {
 					id: wrestler.id,
 					sqlId: wrestler.sqlId,
 					weightClass: match.weightClass,
+					division: match.division,
 					event: event.name,
 					date: new Date(event.date),
 					name: wrestler.name,
@@ -1407,6 +1439,7 @@ export default {
 							
 							return {
 								weightClass: weightClass,
+								division: lastMatch.division,
 								lastDate: lastMatch.date,
 								lastEvent: lastMatch.event
 							};
@@ -1420,7 +1453,7 @@ export default {
 				});
 		}
 		catch (error) {
-			output.status = 562;
+			output.status = 564;
 			output.error = error.message;
 			return output;
 		}

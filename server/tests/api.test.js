@@ -1548,7 +1548,9 @@ describe("Teams", () => {
 
 	it("loads opponent's wrestlers for compare", async () => {
 
-		const opponent = {id: "team2", name: "Opponent Team" },
+		const opponentSCMatID = "teammatid",
+			opponentSCMat = { id: "team2", name: "Opponent Team" },
+			opponent = { id: "teamid" },
 			team = { id: "team1", name: "Team Name"},
 			opponentWrestlers = [{ 
 				id: "wrestler1", 
@@ -1568,9 +1570,11 @@ describe("Teams", () => {
 			}];
 		
 		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { scmatTeams: [ opponentSCMat ] } })
+			.mockResolvedValueOnce({ body: { externalTeams: [ opponent ] } })
 			.mockResolvedValueOnce({ body: { externalWrestlers: opponentWrestlers } });
 		
-		const results = await api.teamGetCompareWrestlers(team.id, opponent.id, serverPath);
+		const results = await api.teamGetCompareWrestlers(team.id, opponentSCMatID, serverPath);
 
 		if (results.status != 200) {
 			console.log(results);
@@ -1578,7 +1582,9 @@ describe("Teams", () => {
 
 		expect(results).toHaveProperty("status", 200);
 
-		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/externalwrestler?externalteamid=${ opponent.id }`);
+		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/scmatteam?id=${ opponentSCMatID }`);
+		expect(client.get).toHaveBeenNthCalledWith(2, `${ serverPath }/data/externalteam?name=${ opponentSCMat.name }`);
+		expect(client.get).toHaveBeenNthCalledWith(3, `${ serverPath }/data/externalwrestler?externalteamid=${ opponent.id }`);
 
 		expect(results).toHaveProperty("data");
 		expect(results.data).toHaveProperty("wrestlers", [
