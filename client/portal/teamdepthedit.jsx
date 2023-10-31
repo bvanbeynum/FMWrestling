@@ -20,7 +20,7 @@ const TeamDepthEdit = props => {
 		if (isPositionUpdate) {
 			if (dragStatus && dragStatus.selectWeightIndex >= 0 && dragStatus.selectPillIndex >= 0 && dragPosition >= 0) {
 				const wrestlerId = weightClasses[dragStatus.dragWeightIndex].wrestlers[dragStatus.dragPillIndex].id;
-				props.updatePosition(weightClasses[dragStatus.selectWeightIndex].name, wrestlerId, dragPosition);
+				props.updatePosition(props.isTeam, weightClasses[dragStatus.selectWeightIndex].name, wrestlerId, dragPosition);
 			}
 
 			setIsPositionUpdate(false);
@@ -237,7 +237,7 @@ const TeamDepthEdit = props => {
 			: "" }
 
 			<div className="pill" ref={ element => setWrestlerRef(element) }>
-				<button aria-label="Select Wrestler" onClick={ () => selectWrestler(wrestler) }>
+				<button aria-label="Select Wrestler" onClick={ () => { if (!props.isTeam) selectWrestler(wrestler) }}>
 					{ wrestler.name }
 				</button>
 			</div>

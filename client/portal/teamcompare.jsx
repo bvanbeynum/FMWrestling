@@ -128,7 +128,11 @@ const TeamCompare = () => {
 					}
 				})
 				.then(data => {
-					const sessionWrestlers = sessionData.filter(record => record.division == selectedDivision && record.opponentId == selectedOpponentId)
+					const teamSession = sessionData.filter(record => record.division == selectedDivision && record.opponentId == selectedOpponentId)
+							.flatMap(record => record.weightClasses.flatMap(weightClass => weightClass.teamWrestlers))
+							.map(wrestler => ({ id: wrestler.id, weightClass: wrestler.weightClass, position: wrestler.position }));
+					
+					const opponentSession = sessionData.filter(record => record.division == selectedDivision && record.opponentId == selectedOpponentId)
 						.flatMap(record => record.weightClasses.flatMap(weightClass => weightClass.opponentWrestlers))
 						.map(wrestler => ({ id: wrestler.id, weightClass: wrestler.weightClass, position: wrestler.position }));
 					
@@ -143,8 +147,8 @@ const TeamCompare = () => {
 								.sort((weightClassA, weightClassB) => +weightClassB.lastDate - +weightClassA.lastDate)
 								.find(() => true);
 		
-							const closestWeightClass = sessionWrestlers.some(sessionWrestler => wrestler.id == sessionWrestler.id) ?
-									sessionWrestlers.filter(sessionWrestler => wrestler.id == sessionWrestler.id).map(sessionWrestler => sessionWrestler.weightClass).find(() => true)
+							const closestWeightClass = opponentSession.some(sessionWrestler => wrestler.id == sessionWrestler.id) ?
+							opponentSession.filter(sessionWrestler => wrestler.id == sessionWrestler.id).map(sessionWrestler => sessionWrestler.weightClass).find(() => true)
 								: lastWeightClass ? weightClasses
 									.map(weightClass => weightClass.name)
 									.filter(weightClass => !isNaN(weightClass))
@@ -161,7 +165,7 @@ const TeamCompare = () => {
 								...wrestler,
 								weightClasses: wrestler.weightClasses.map(weightClass => ({...weightClass, lastDate: new Date(weightClass.lastDate)})),
 								weightClass: closestWeightClass,
-								position: sessionWrestlers.filter(sessionWrestler => wrestler.id == sessionWrestler.id).map(sessionWrestler => sessionWrestler.position).find(() => true),
+								position: opponentSession.filter(sessionWrestler => wrestler.id == sessionWrestler.id).map(sessionWrestler => sessionWrestler.position).find(() => true),
 								lastDate: lastWeightClass ? lastWeightClass.lastDate : null
 							}
 						});
@@ -181,6 +185,11 @@ const TeamCompare = () => {
 								: [...new Set(weightClass.divisions.concat(
 									opponentWeightClasses.filter(opponentWeightClass => opponentWeightClass.weightClass == weightClass.name).map(filterWeightClass => filterWeightClass.division)
 								)) ], // Use all divisions if this is for other
+							teamWrestlers: weightClass.teamWrestlers.map((teamWrestler, teamWrestlerIndex) => ({
+									...teamWrestler,
+									position: teamSession.filter(sessionWrestler => sessionWrestler.id == teamWrestler.id).map(sessionWrestler => sessionWrestler.position).find(() => true) ?? teamWrestlerIndex
+								}))
+								.sort((wrestlerA, wrestlerB) => wrestlerA.position - wrestlerB.position),
 							opponentWrestlers: wrestlers
 								.filter(wrestler => wrestler.weightClass == weightClass.name)
 								.sort((wrestlerA, wrestlerB) => 
@@ -209,20 +218,26 @@ const TeamCompare = () => {
 		}
 	}, [ selectedOpponentId ]);
 
-	const updatePosition = (weightClassChange, wrestlerId, newPosition) => {
+	const updatePosition = (isTeam, weightClassChange, wrestlerId, newPosition) => {
 		const changedWrestler = weightClasses
-			.flatMap(weightClass => weightClass.opponentWrestlers)
+			.flatMap(weightClass => isTeam ? weightClass.teamWrestlers : weightClass.opponentWrestlers)
 			.filter(wrestler => wrestler.id == wrestlerId)
 			.find(() => true);
 		
 		changedWrestler.weightClass = weightClassChange;
 
 		const newWeightClasses = weightClasses.map(weightClass => {
-			const filteredWrestlers = weightClass.opponentWrestlers.filter(wrestler => wrestler.id != wrestlerId);
+			const filteredWrestlers = (isTeam ? weightClass.teamWrestlers : weightClass.opponentWrestlers).filter(wrestler => wrestler.id != wrestlerId);
 			
 			return {
 				...weightClass,
-				opponentWrestlers: weightClass.name != weightClassChange ? filteredWrestlers
+				teamWrestlers: !isTeam || weightClass.name != weightClassChange ? filteredWrestlers
+					: [
+						...filteredWrestlers.slice(0, newPosition),
+						changedWrestler,
+						...filteredWrestlers.slice(newPosition)
+					].map((wrestler, wrestlerIndex) => ({...wrestler, position: wrestlerIndex })),
+				opponentWrestlers: isTeam || weightClass.name != weightClassChange ? filteredWrestlers
 					: [
 						...filteredWrestlers.slice(0, newPosition),
 						changedWrestler,
@@ -263,6 +278,7 @@ const TeamCompare = () => {
 				opponentId: selectedOpponentId,
 				weightClasses: newWeightClasses.map(weightClass => ({
 					name: weightClass.name,
+					teamWrestlers: weightClass.teamWrestlers.map(wrestler => ({ id: wrestler.id, weightClass: wrestler.weightClass, position: wrestler.position })),
 					opponentWrestlers: weightClass.opponentWrestlers.map(wrestler => ({ id: wrestler.id, weightClass: wrestler.weightClass, position: wrestler.position })),
 					teamScore: weightClass.teamScore,
 					opponentScore: weightClass.opponentScore
@@ -367,14 +383,24 @@ const TeamCompare = () => {
 
 			{
 
-			pageView == "scmat" ? 
-				<TeamCompareSCMat
-					opponents={ opponents }
-					teamId={ team.scmatTeams[0].id }
-					selectedOpponentId={ selectedOpponentId }
-					setSelectedOpponentId={ setSelectedOpponentId }
-					/>
+			pageView == "opponentdepth" ? 
 			
+				<TeamDepthEdit
+					weightClasses={ weightClasses.map(weightClass => ({...weightClass, wrestlers: weightClass.opponentWrestlers })) }
+					selectedDivision={ selectedDivision }
+					updatePosition={ updatePosition }
+					isTeam={ false }
+					/>
+
+			: pageView == "teamdepth" ? 
+	
+				<TeamDepthEdit
+					weightClasses={ weightClasses.map(weightClass => ({...weightClass, wrestlers: weightClass.teamWrestlers })) }
+					selectedDivision={ selectedDivision }
+					updatePosition={ updatePosition }
+					isTeam={ true }
+					/>
+	
 			: pageView == "match" ?
 
 				<TeamCompareMatch 
@@ -384,28 +410,18 @@ const TeamCompare = () => {
 					/>
 
 			: 
-
-				<TeamDepthEdit
-					opponents={ opponents }
-					weightClasses={ weightClasses.map(weightClass => ({...weightClass, wrestlers: weightClass.opponentWrestlers })) }
-					selectedOpponentId={ selectedOpponentId }
-					selectOpponent={ setSelectedOpponentId }
-					divisions={ divisions }
-					selectedDivision={ selectedDivision }
-					setSelectedDivision={ setSelectedDivision }
-					updatePosition={ updatePosition }
-					/>
 				
+				<TeamCompareSCMat
+					opponents={ opponents }
+					teamId={ team.scmatTeams[0].id }
+					selectedOpponentId={ selectedOpponentId }
+					setSelectedOpponentId={ setSelectedOpponentId }
+					/>
+
 			}
 		</div>
 
 		<div className="bottomNav">
-
-			<button aria-label="Wrestlers" onClick={ () => setPageView("wrestlers") }>
-				{/* Wrestlers */}
-				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M55.077-93.847 12.924-136l143.692-143.692-46.308-123.385q-6.23-15.692-2.423-36.692 3.808-21 20.115-37.307l132-132q10.462-10.462 22.539-15.693 12.076-5.23 27.153-5.23 15.077 0 27.154 5.23 12.076 5.231 22.538 15.693l80.769 78q27.385 27 65.231 42.692 37.846 15.692 81.692 17.615v59.999q-55-1.923-103.153-20.731-48.154-18.808-81.923-52.192l-34.923-34.154L259.23-410l87.846 89.846v230.153h-59.998v-204.615l-72.002-66.463v107.233l-160 159.999Zm552.001 3.846v-265.383l85.538-81.539-30.154-166.156q-22.693 27.616-48.386 49.502-25.693 21.885-57.463 34.27-23.768-2-45.576-11.116-21.807-9.115-37.191-24.114 45.769-7.616 84.5-34.539 38.732-26.924 59.962-61.539l39.231-64q15.077-24.307 41.423-32.269 26.345-7.961 52.268 2.885l195.846 82.923v171.075h-59.998v-132.153l-95.079-38.001L904.768-90.001H840.77L767.616-396.54l-100.54 85.001v221.538h-59.998ZM447.076-614.615q-30.692 0-52.269-21.577-21.577-21.577-21.577-52.269 0-30.692 21.577-52.269 21.577-21.576 52.269-21.576 30.692 0 52.269 21.576 21.577 21.577 21.577 52.269 0 30.692-21.577 52.269-21.577 21.577-52.269 21.577ZM664-776.154q-30.692 0-52.269-21.576-21.576-21.577-21.576-52.269 0-30.692 21.576-52.269 21.577-21.577 52.269-21.577 30.693 0 52.269 21.577 21.577 21.577 21.577 52.269 0 30.692-21.577 52.269-21.576 21.576-52.269 21.576Z"></path></svg>
-				Wrestlers
-			</button>
 
 			{
 			team.scmatTeams && team.scmatTeams.length > 0 ?
@@ -416,7 +432,20 @@ const TeamCompare = () => {
 				SC Mat
 			</button>
 
-			: "" }
+			: ""
+			}
+
+			<button aria-label="Opponent Wrestlers" onClick={ () => setPageView("opponentdepth") }>
+				{/* Wrestlers */}
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M55.077-93.847 12.924-136l143.692-143.692-46.308-123.385q-6.23-15.692-2.423-36.692 3.808-21 20.115-37.307l132-132q10.462-10.462 22.539-15.693 12.076-5.23 27.153-5.23 15.077 0 27.154 5.23 12.076 5.231 22.538 15.693l80.769 78q27.385 27 65.231 42.692 37.846 15.692 81.692 17.615v59.999q-55-1.923-103.153-20.731-48.154-18.808-81.923-52.192l-34.923-34.154L259.23-410l87.846 89.846v230.153h-59.998v-204.615l-72.002-66.463v107.233l-160 159.999Zm552.001 3.846v-265.383l85.538-81.539-30.154-166.156q-22.693 27.616-48.386 49.502-25.693 21.885-57.463 34.27-23.768-2-45.576-11.116-21.807-9.115-37.191-24.114 45.769-7.616 84.5-34.539 38.732-26.924 59.962-61.539l39.231-64q15.077-24.307 41.423-32.269 26.345-7.961 52.268 2.885l195.846 82.923v171.075h-59.998v-132.153l-95.079-38.001L904.768-90.001H840.77L767.616-396.54l-100.54 85.001v221.538h-59.998ZM447.076-614.615q-30.692 0-52.269-21.577-21.577-21.577-21.577-52.269 0-30.692 21.577-52.269 21.577-21.576 52.269-21.576 30.692 0 52.269 21.576 21.577 21.577 21.577 52.269 0 30.692-21.577 52.269-21.577 21.577-52.269 21.577ZM664-776.154q-30.692 0-52.269-21.576-21.576-21.577-21.576-52.269 0-30.692 21.576-52.269 21.577-21.577 52.269-21.577 30.693 0 52.269 21.577 21.577 21.577 21.577 52.269 0 30.692-21.577 52.269-21.576 21.576-52.269 21.576Z"></path></svg>
+				Opponent
+			</button>
+
+			<button aria-label="Team Wrestlers" onClick={ () => setPageView("teamdepth") }>
+				{/* Group */}
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M0-240v-63q0-43 44-70t116-27q13 0 25 .5t23 2.5q-14 21-21 44t-7 48v65H0Zm240 0v-65q0-32 17.5-58.5T307-410q32-20 76.5-30t96.5-10q53 0 97.5 10t76.5 30q32 20 49 46.5t17 58.5v65H240Zm540 0v-65q0-26-6.5-49T754-397q11-2 22.5-2.5t23.5-.5q72 0 116 26.5t44 70.5v63H780Zm-455-80h311q-10-20-55.5-35T480-370q-55 0-100.5 15T325-320ZM160-440q-33 0-56.5-23.5T80-520q0-34 23.5-57t56.5-23q34 0 57 23t23 57q0 33-23 56.5T160-440Zm640 0q-33 0-56.5-23.5T720-520q0-34 23.5-57t56.5-23q34 0 57 23t23 57q0 33-23 56.5T800-440Zm-320-40q-50 0-85-35t-35-85q0-51 35-85.5t85-34.5q51 0 85.5 34.5T600-600q0 50-34.5 85T480-480Zm0-80q17 0 28.5-11.5T520-600q0-17-11.5-28.5T480-640q-17 0-28.5 11.5T440-600q0 17 11.5 28.5T480-560Zm1 240Zm-1-280Z"/></svg>
+				Team
+			</button>
 
 			<button aria-label="Match Compare" onClick={ () => setPageView("match") }>
 				{/* Compare */}
