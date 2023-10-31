@@ -336,6 +336,11 @@ button svg, .button svg {
 	overflow-y: auto;
 }
 
+td.sectionList.selected {
+	border-color: rgb(81 179 81);
+	border-width: 3px;
+}
+
 .sectionHeading {
 	color: rgb(87 87 87);
 	font-size: 14px;

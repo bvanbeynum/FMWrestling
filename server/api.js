@@ -1127,34 +1127,15 @@ export default {
 			}
 
 			if (session.compare) {
+
 				if (saveUser.session.compare && saveUser.session.compare.some(userSession => userSession.opponentId == session.compare.opponentId && userSession.division == session.compare.division)) {
 					saveUser.session.compare = saveUser.session.compare.map(userSession =>
-						userSession.opponentId != session.compare.opponentId || userSession.division != session.compare.division ? userSession
-						: {
-							division: session.compare.division,
-							opponentId: session.compare.opponentId,
-							weightClasses: (session.compare.weightClasses || []).map(weightClass => ({
-								name: weightClass.name,
-								teamWrestler: weightClass.teamWrestler,
-								teamScore: weightClass.teamScore,
-								opponentWrestler: weightClass.opponentWrestler,
-								opponentScore: weightClass.opponentScore
-							}))
-						}
+						userSession.opponentId == session.compare.opponentId && userSession.division == session.compare.division ? session.compare
+							: userSession
 						);
 				}
 				else {
-					saveUser.session.compare = (saveUser.session.compare || []).concat({
-						division: session.compare.division,
-						opponentId: session.compare.opponentId,
-						weightClasses: (session.compare.weightClasses || []).map(weightClass => ({
-							name: weightClass.name,
-							teamWrestler: weightClass.teamWrestler,
-							teamScore: weightClass.teamScore,
-							opponentWrestler: weightClass.opponentWrestler,
-							opponentScore: weightClass.opponentScore
-						}))
-					});
+					saveUser.session.compare = (saveUser.session.compare || []).concat(session.compare);
 				}
 			}
 		}
@@ -1298,12 +1279,33 @@ export default {
 					}))
 					.find(() => true);
 				
+				const weightClasses = [...new Set(wrestler.events.filter(event => event.team == scmatTeam.name).flatMap(event => event.matches.map(match => match.weightClass)))]
+					.map(weightClass => {
+						const lastMatch = wrestler.events.flatMap(event => event.matches.map(match => ({ 
+								weightClass: match.weightClass, 
+								division: /^(hs|high school)$/i.test(match.division) ? "Varsity"
+									: match.division.trim(), 
+								date: new Date(event.date), 
+								event: event.name 
+							})))
+							.filter(match => match.weightClass == weightClass)
+							.sort((matchA, matchB) => +matchB.date - +matchA.date)
+							.find(() => true);
+						
+						return {
+							weightClass: weightClass,
+							division: lastMatch.division,
+							lastDate: lastMatch.date,
+							lastEvent: lastMatch.event
+						};
+					});
+
 				return {
 					id: wrestler.id,
-					firstName: wrestler.firstName,
-					lastName: wrestler.lastName,
+					name: wrestler.name,
 					division: lastTeamEvent ? lastTeamEvent.division : null,
-					weightClass: lastTeamEvent ? lastTeamEvent.weightClass : null
+					weightClass: lastTeamEvent ? lastTeamEvent.weightClass : null,
+					weightClasses: weightClasses
 				};
 			});
 		}

@@ -1,14 +1,11 @@
-import React, { useEffect, useState, useRef, createRef } from "react";
-import "./include/team.css";
+import React, { useState, useEffect, useRef } from "react";
 
-const TeamCompareWrestlers = props => {
+const TeamDepthEdit = props => {
 
-	const [ isFilterExpanded, setIsFilterExpanded ] = useState(false);
 	const [ selectedWrestlers, setSelectedWrestlers ] = useState([]);
+	const [ weightClasses, setWeightClasses ] = useState([]);
 
-	const [ dragIndex, setDragIndex ] = useState(null);
-	const [ dragWeight, setDragWeight ] = useState(null);
-	const [ dragSelectWeight, setDragSelectWeight ] = useState(null);
+	const [ dragStatus, setDragStatus ] = useState(null);
 	const [ dragPosition, setDragPosition ] = useState(null);
 	const [ isPositionUpdate, setIsPositionUpdate ] = useState(false);
 
@@ -16,27 +13,24 @@ const TeamCompareWrestlers = props => {
 	const dragRef = useRef(null);
 	const mouseRef = useRef(null);
 
+	useEffect(() => setWeightClasses(props.weightClasses), [ props.weightClasses ]);
+
 	// Wait until position is triggered so that all attributes are up-to-date
 	useEffect(() => {
 		if (isPositionUpdate) {
-			if (dragSelectWeight && dragWeight && dragIndex && (dragPosition || dragPosition === 0)) {
-				const wrestlerId = props.weightClasses.filter(w => w.name == dragWeight).flatMap(w => w.opponentWrestlers[dragIndex].id).find(() => true);
-				props.updatePosition(dragSelectWeight, wrestlerId, dragPosition);
+			if (dragStatus && dragStatus.selectWeightIndex >= 0 && dragStatus.selectPillIndex >= 0 && dragPosition >= 0) {
+				const wrestlerId = weightClasses[dragStatus.dragWeightIndex].wrestlers[dragStatus.dragPillIndex].id;
+				props.updatePosition(weightClasses[dragStatus.selectWeightIndex].name, wrestlerId, dragPosition);
 			}
 
 			setIsPositionUpdate(false);
-			setDragSelectWeight(null);
-			setDragWeight(null);
 			setDragPosition(null);
-			setDragIndex(null);
+			setDragStatus(null);
 		}
 	}, [ isPositionUpdate ]);
-	
-	const selectDivision = newDivision => {
-		setSelectedWrestlers([]);
-		props.setSelectedDivision(newDivision);
-	};
 
+	useEffect(() => setSelectedWrestlers([]), [ props.selectedDivision ]);
+	
 	const selectWrestler = wrestler => {
 		if (!selectedWrestlers.some(selected => selected.id == wrestler.id)) {
 			setSelectedWrestlers(selectedWrestlers.concat(wrestler));
@@ -90,9 +84,10 @@ const TeamCompareWrestlers = props => {
 		eventElement.style.left = eventElement.left + "px";
 
 		dragRef.current = {
-			wrestlerId: props.weightClasses[dragWeightIndex].opponentWrestlers[elementIndex].id,
-			weightClass: props.weightClasses[dragWeightIndex].name,
-			dragIndex: elementIndex,
+			wrestlerId: weightClasses[dragWeightIndex].wrestlers[elementIndex].id,
+			weightClass: weightClasses[dragWeightIndex].name,
+			weightIndex: dragWeightIndex,
+			pillIndex: elementIndex,
 			element: eventElement,
 			isDragging: false
 		};
@@ -106,8 +101,7 @@ const TeamCompareWrestlers = props => {
 			if (!dragRef.current.isDragging) {
 				dragRef.current.element.classList.add("dragging");
 				dragRef.current.isDragging = true;
-				setDragIndex(dragRef.current.dragIndex);
-				setDragWeight(dragRef.current.weightClass);
+				setDragStatus({ dragPillIndex: dragRef.current.pillIndex, dragWeightIndex: dragRef.current.weightIndex });
 			}
 
 			// Get the element that's dragging
@@ -135,10 +129,8 @@ const TeamCompareWrestlers = props => {
 			});
 
 			if (overWeightIndex >= 0) {
-				const overWeight = props.weightClasses.filter(weightClass => weightClass.divisions.includes(props.selectedDivision))[overWeightIndex].name;
-
 				// Get the wrestler Index
-				const position = [...weightRefs.current[overWeightIndex].element.querySelectorAll(".pill")]
+				const pillIndex = [...weightRefs.current[overWeightIndex].element.querySelectorAll(".pill")]
 					.filter(pill => pill != eventElement)
 					.map(ref => {
 						const box = ref.getBoundingClientRect();
@@ -156,11 +148,11 @@ const TeamCompareWrestlers = props => {
 							: output
 					, null);
 
-				setDragSelectWeight(overWeight);
-				setDragPosition(position);
+				setDragStatus(dragStatus => ({ ...dragStatus, selectWeightIndex: overWeightIndex, selectPillIndex: pillIndex }))
+				setDragPosition(pillIndex);
 			}
 			else {
-				setDragSelectWeight(null);
+				setDragStatus(dragStatus => ({ ...dragStatus, selectWeightIndex: null, selectPillIndex: null }))
 				setDragPosition(null);
 			}
 		}
@@ -169,9 +161,7 @@ const TeamCompareWrestlers = props => {
 			mouseRef.current = null;
 	
 			setDragPosition(null);
-			setDragSelectWeight(null);
-			setDragWeight(null);
-			setDragIndex(null);
+			setDragStatus(null);
 		}
 	};
 	
@@ -201,59 +191,11 @@ const TeamCompareWrestlers = props => {
 		mouseRef.current = null;
 
 		setDragPosition(null);
-		setDragSelectWeight(null);
-		setDragWeight(null);
-		setDragIndex(null);
+		setDragStatus(null);
 	};
 
 	return (
 <>
-
-<div className="panel filter">
-	<div className="row">
-		<h3>Filter</h3>
-
-		<div className="filterExpand" onClick={ () => setIsFilterExpanded(isFilterExpanded => !isFilterExpanded) }>
-			{
-			isFilterExpanded ?
-			// Close
-			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg>
-			: 
-			// Tune
-			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M440-120v-240h80v80h320v80H520v80h-80Zm-320-80v-80h240v80H120Zm160-160v-80H120v-80h160v-80h80v240h-80Zm160-80v-80h400v80H440Zm160-160v-240h80v80h160v80H680v80h-80Zm-480-80v-80h400v80H120Z"/></svg>
-			}
-		</div>
-	</div>
-
-	<div className={`filterContent ${ isFilterExpanded ? "active" : "" }`}>
-		<label>
-			Opponent
-			<select value={ props.selectedOpponentId } onChange={ event => props.selectOpponent(event.target.value) }>
-				{
-				props.opponents
-					.sort((opponentA, opponentB) => opponentA.name > opponentB.name ? 1 : -1)
-					.map((opponent, opponentIndex) =>
-				<option key={opponentIndex} value={ opponent.id }>{ opponent.name }</option>
-				)
-				}
-			</select>
-		</label>
-		
-		<label>
-			Division
-			<select value={ props.selectedDivision } onChange={ event => selectDivision(event.target.value) }>
-				{
-				props.divisions
-				.sort((divisionA, divisionB) => divisionA > divisionB ? 1 : -1)
-				.map((division, divisionIndex) =>
-				<option key={divisionIndex}>{ division }</option>
-				)
-				}
-			</select>
-		</label>
-	</div>
-
-</div>
 
 <div className="panel expandable">
 	<h3>Depth Chart</h3>
@@ -267,29 +209,30 @@ const TeamCompareWrestlers = props => {
 	</thead>
 	<tbody>
 	{
-	props.weightClasses
+	weightClasses
 	.filter(weightClass => weightClass.divisions.includes(props.selectedDivision))
 	.map((weightClass, weightClassIndex) => 
 	<tr key={ weightClassIndex }>
 		<td>
 			{ weightClass.name }
 		</td>
-		<td className={`sectionList ${ dragSelectWeight == weightClass.name ? "selected" : "" }`} ref={ element => setWeightClassRef(element, weightClass) }>
+		<td className={`sectionList ${ dragStatus?.selectWeightIndex == weightClassIndex ? "selected" : "" }`} ref={ element => setWeightClassRef(element, weightClass) }>
 		{
-			weightClass.opponentWrestlers.length == 0 ?
+			weightClass.wrestlers.length == 0 ?
 			<div className="emptyTable">No Wrestlers Assigned</div>
 			
 			:
 			<>
 			{
-			weightClass.opponentWrestlers
+			weightClass.wrestlers
 			.map((wrestler, wrestlerIndex) =>
 			<React.Fragment key={wrestlerIndex}>
 
 			{
-			!dragRef.current || dragRef.current.weightClass != weightClass.name || dragIndex != wrestlerIndex ?
+			// If the pill is not the current pill (on the current weight class)
+			dragStatus?.dragWeightIndex != weightClassIndex || dragStatus?.dragPillIndex != wrestlerIndex ?
 			// If the selected is on current weight and before current index, then look for index - 1, else look for index
-			<div index={ dragRef.current && dragRef.current.weightClass == weightClass.name && dragIndex < wrestlerIndex ? wrestlerIndex - 1 : wrestlerIndex } className={`dragPosition ${ dragSelectWeight == weightClass.name && dragPosition == (dragRef.current && dragRef.current.weightClass == weightClass.name && dragIndex < wrestlerIndex ? wrestlerIndex - 1 : wrestlerIndex) ? "selected" : "" }` }></div>
+			<div index={ dragStatus?.dragWeightIndex == weightClassIndex && dragStatus?.dragPillIndex < wrestlerIndex ? wrestlerIndex - 1 : wrestlerIndex } className={`dragPosition ${ dragStatus?.selectWeightIndex == weightClassIndex && dragPosition == (dragStatus?.dragWeightIndex == weightClassIndex && dragStatus?.dragPillIndex < wrestlerIndex ? wrestlerIndex - 1 : wrestlerIndex) ? "selected" : "" }` }></div>
 	
 			: "" }
 
@@ -303,7 +246,7 @@ const TeamCompareWrestlers = props => {
 			)}
 
 			{/* If the item is on the current weight, then look for length - 1 else length */}
-			<div index={ dragRef.current && dragRef.current.weightClass == weightClass.name ? weightClass.opponentWrestlers.length - 1 : weightClass.opponentWrestlers.length } className={`dragPosition ${ dragSelectWeight == weightClass.name && dragPosition == (dragRef.current && dragRef.current.weightClass == weightClass.name ? weightClass.opponentWrestlers.length - 1 : weightClass.opponentWrestlers.length) ? "selected" : "" }` }></div>
+			<div index={ dragStatus?.dragWeightIndex == weightClassIndex ? weightClass.wrestlers.length - 1 : weightClass.wrestlers.length } className={`dragPosition ${ dragStatus?.selectWeightIndex == weightClassIndex && dragPosition == (dragStatus?.dragWeightIndex == weightClassIndex ? weightClass.wrestlers.length - 1 : weightClass.wrestlers.length) ? "selected" : "" }` }></div>
 			</>
 		}
 		</td>
@@ -351,7 +294,8 @@ selectedWrestlers.map((wrestler, wrestlerIndex) =>
 )}
 
 </>
-	)		
-};
+	);
 
-export default TeamCompareWrestlers;
+}
+
+export default TeamDepthEdit;

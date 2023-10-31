@@ -3,7 +3,6 @@ import "./include/team.css";
 
 const TeamCompareSCMat = props => {
 
-	const [ isFilterExpanded, setIsFilterExpanded ] = useState(false);
 	const [ isLoading, setIsLoading ] = useState(false);
 
 	const [ team, setTeam ] = useState(null);
@@ -322,39 +321,6 @@ const TeamCompareSCMat = props => {
 
 	return (
 <>
-
-<div className="panel filter">
-	<div className="row">
-		<h3>Filter</h3>
-
-		<div className="filterExpand" onClick={ () => setIsFilterExpanded(isFilterExpanded => !isFilterExpanded) }>
-			{
-			isFilterExpanded ?
-			// Close
-			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg>
-			: 
-			// Tune
-			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M440-120v-240h80v80h320v80H520v80h-80Zm-320-80v-80h240v80H120Zm160-160v-80H120v-80h160v-80h80v240h-80Zm160-80v-80h400v80H440Zm160-160v-240h80v80h160v80H680v80h-80Zm-480-80v-80h400v80H120Z"/></svg>
-			}
-		</div>
-	</div>
-
-	<div className={`filterContent ${ isFilterExpanded ? "active" : "" }`}>
-		<label>
-			Opponent
-			<select value={ props.selectedOpponentId } onChange={ event => props.setSelectedOpponentId(event.target.value) }>
-				{
-				props.opponents
-					.sort((opponentA, opponentB) => opponentA.name > opponentB.name ? 1 : -1)
-					.map((opponent, opponentIndex) =>
-				<option key={opponentIndex} value={ opponent.id }>{ opponent.name }</option>
-				)
-				}
-			</select>
-		</label>
-	</div>
-
-</div>
 
 {
 teamChart ? 

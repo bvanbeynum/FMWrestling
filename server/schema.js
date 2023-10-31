@@ -35,9 +35,17 @@ export default {
 				opponentId: String,
 				weightClasses: [{
 					name: String,
-					teamWrestler: String,
+					teamWrestlers: [{
+						id: String,
+						weightClass: String,
+						position: Number
+					}],
+					opponentWrestlers: [{
+						id: String,
+						weightClass: String,
+						position: Number
+					}],
 					teamScore: Number,
-					opponentWrestler: String,
 					opponentScore: Number
 				}]
 			}]

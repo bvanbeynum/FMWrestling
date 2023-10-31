@@ -1462,19 +1462,23 @@ describe("Teams", () => {
 			floWrestlers = [{ 
 				id: "wrestler1", 
 				firstName: "Test", 
-				lastName: "Wrestler",  
+				lastName: "Wrestler",
+				name: "Test Wrestler",
 				events: [
-					{ date: new Date(2023, 9, 10), team: "Test Team", matches: [{ division: "JV", weightClass: "120" }] },
-					{ date: new Date(2023, 9, 20), team: "Test Team", matches: [{ division: "Varsity", weightClass: "106" }] },
-					{ date: new Date(2023, 9, 25), team: "Other Team", matches: [{ division: "JV", weightClass: "113" }] }
+					{ date: new Date(2023, 9, 10), team: "Test Team", name: "Test Event", matches: [{ division: "JV", weightClass: "120" }] },
+					{ date: new Date(2023, 9, 20), team: "Test Team", name: "Test Event 1", matches: [{ division: "Varsity", weightClass: "106" }] },
+					{ date: new Date(2023, 9, 25), team: "Other Team", name: "Test Event 2", matches: [{ division: "JV", weightClass: "113" }] }
 				]
 			}],
 			expectedResult = [{ 
 				id: "wrestler1", 
-				firstName: "Test", 
-				lastName: "Wrestler",
+				name: "Test Wrestler",
 				division: "Varsity",
-				weightClass: "106"
+				weightClass: "106",
+				weightClasses: [
+					{ lastDate: new Date(2023,9,10), weightClass: "120", division: "JV", lastEvent: "Test Event" },
+					{ lastDate: new Date(2023,9,20), weightClass: "106", division: "Varsity", lastEvent: "Test Event 1" }
+				]
 			}];
 		
 		client.get = jest.fn()
@@ -1543,58 +1547,6 @@ describe("Teams", () => {
 		expect(results.data).toHaveProperty("team", team);
 		expect(results.data).toHaveProperty("opponent", opponent);
 		expect(results.data).toHaveProperty("weightClasses", expectedWeightClasses);
-
-	});
-
-	it("loads opponent's wrestlers for compare", async () => {
-
-		const opponentSCMatID = "teammatid",
-			opponentSCMat = { id: "team2", name: "Opponent Team" },
-			opponent = { id: "teamid" },
-			team = { id: "team1", name: "Team Name"},
-			opponentWrestlers = [{ 
-				id: "wrestler1", 
-				sqlId: 1234, 
-				name: "Test Wrestler", 
-				events: [{
-					id: "event1",
-					date: new Date(2023,4,2),
-					name: "Test Event",
-					matches: [{ weightClass: "111"}]
-				}, {
-					id: "event2",
-					date: new Date(2022,8,22),
-					name: "Test Event 2",
-					matches: [{ weightClass: "120" }]
-				}]
-			}];
-		
-		client.get = jest.fn()
-			.mockResolvedValueOnce({ body: { scmatTeams: [ opponentSCMat ] } })
-			.mockResolvedValueOnce({ body: { externalTeams: [ opponent ] } })
-			.mockResolvedValueOnce({ body: { externalWrestlers: opponentWrestlers } });
-		
-		const results = await api.teamGetCompareWrestlers(team.id, opponentSCMatID, serverPath);
-
-		if (results.status != 200) {
-			console.log(results);
-		}
-
-		expect(results).toHaveProperty("status", 200);
-
-		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/scmatteam?id=${ opponentSCMatID }`);
-		expect(client.get).toHaveBeenNthCalledWith(2, `${ serverPath }/data/externalteam?name=${ opponentSCMat.name }`);
-		expect(client.get).toHaveBeenNthCalledWith(3, `${ serverPath }/data/externalwrestler?externalteamid=${ opponent.id }`);
-
-		expect(results).toHaveProperty("data");
-		expect(results.data).toHaveProperty("wrestlers", [
-			expect.objectContaining({
-				weightClasses: [
-					{ weightClass: "111", lastDate: new Date(2023,4,2), lastEvent: "Test Event" },
-					{ weightClass: "120", lastDate: new Date(2022,8,22), lastEvent: "Test Event 2" }
-				]
-			})
-		]);
 
 	});
 
