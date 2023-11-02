@@ -66,7 +66,7 @@ const TeamDepthEdit = props => {
 	const onDragDown = (event) => {
 		event.preventDefault();
 		
-		const eventElement = event.target.tagName == "BUTTON" ? event.target.parentNode : event.target;
+		const eventElement = event.target.parentNode;
 		const elementBox = eventElement.getBoundingClientRect();
 
 		// Get the weight class index
@@ -105,8 +105,7 @@ const TeamDepthEdit = props => {
 			}
 
 			// Get the element that's dragging
-			const eventElement = event.target.tagName == "BUTTON" ? event.target.parentNode : event.target;
-			const elementBox = eventElement.getBoundingClientRect();
+			const elementBox = dragRef.current.element.getBoundingClientRect();
 
 			mouseRef.current = { 
 				adjustX: (window.screen.availWidth >= 1024 ? -300 : 0) + (event.touches ? event.touches[0].clientX : event.clientX),
@@ -114,8 +113,8 @@ const TeamDepthEdit = props => {
 				y: event.touches ? event.touches[0].clientY : event.clientY
 			};
 			
-			eventElement.style.top = (window.scrollY + (mouseRef.current.y - (elementBox.height / 2))) + "px";
-			eventElement.style.left = (mouseRef.current.adjustX - (elementBox.width / 2)) + "px";
+			dragRef.current.element.style.top = (window.scrollY + (mouseRef.current.y - (elementBox.height / 2))) + "px";
+			dragRef.current.element.style.left = (mouseRef.current.adjustX - (elementBox.width / 2)) + "px";
 
 			// ************** Get the position and update UI with position information 
 			
@@ -131,7 +130,7 @@ const TeamDepthEdit = props => {
 			if (overWeightIndex >= 0) {
 				// Get the wrestler Index
 				const pillIndex = [...weightRefs.current[overWeightIndex].element.querySelectorAll(".pill")]
-					.filter(pill => pill != eventElement)
+					.filter(pill => pill != dragRef.current.element)
 					.map(ref => {
 						const box = ref.getBoundingClientRect();
 						
@@ -236,10 +235,9 @@ const TeamDepthEdit = props => {
 	
 			: "" }
 
-			<div className="pill" ref={ element => setWrestlerRef(element) }>
-				<button aria-label="Select Wrestler" onClick={ () => { if (!props.isTeam) selectWrestler(wrestler) }}>
-					{ wrestler.name }
-				</button>
+			<div className="pill wrestlerPill">
+				<button aria-label="Select Wrestler" onClick={ () => { if (!props.isTeam) selectWrestler(wrestler) }}>{ wrestler.name }</button>
+				<svg ref={ element => setWrestlerRef(element) } xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-189.233q-24.749 0-42.374-17.624-17.625-17.625-17.625-42.374 0-24.75 17.625-42.374Q455.251-309.23 480-309.23q24.749 0 42.374 17.625 17.625 17.624 17.625 42.374 0 24.749-17.625 42.374-17.625 17.624-42.374 17.624Zm0-230.768q-24.749 0-42.374-17.625-17.625-17.625-17.625-42.374 0-24.749 17.625-42.374 17.625-17.625 42.374-17.625 24.749 0 42.374 17.625 17.625 17.625 17.625 42.374 0 24.749-17.625 42.374-17.625 17.625-42.374 17.625Zm0-230.769q-24.749 0-42.374-17.625-17.625-17.624-17.625-42.374 0-24.749 17.625-42.374 17.625-17.624 42.374-17.624 24.749 0 42.374 17.624 17.625 17.625 17.625 42.374 0 24.75-17.625 42.374Q504.749-650.77 480-650.77Z"/></svg>
 			</div>
 
 			</React.Fragment>
