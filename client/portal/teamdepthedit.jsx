@@ -66,7 +66,8 @@ const TeamDepthEdit = props => {
 	const onDragDown = (event) => {
 		event.preventDefault();
 		
-		const eventElement = event.target.parentNode;
+		const eventElement = event.target.tagName.toLowerCase() == "path" ? event.target.parentNode.parentNode
+			: event.target.parentNode;
 		const elementBox = eventElement.getBoundingClientRect();
 
 		// Get the weight class index
@@ -114,7 +115,7 @@ const TeamDepthEdit = props => {
 			};
 			
 			dragRef.current.element.style.top = (window.scrollY + (mouseRef.current.y - (elementBox.height / 2))) + "px";
-			dragRef.current.element.style.left = (mouseRef.current.adjustX - (elementBox.width / 2)) + "px";
+			dragRef.current.element.style.left = (mouseRef.current.adjustX - (elementBox.width * .8)) + "px";
 
 			// ************** Get the position and update UI with position information 
 			
