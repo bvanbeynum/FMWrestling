@@ -18,7 +18,7 @@ const TeamDepthEdit = props => {
 	// Wait until position is triggered so that all attributes are up-to-date
 	useEffect(() => {
 		if (isPositionUpdate) {
-			if (dragStatus && dragStatus.selectWeightIndex >= 0 && dragStatus.selectPillIndex >= 0 && dragPosition >= 0) {
+			if (dragStatus && (dragStatus.selectWeightIndex ?? -1) >= 0 && (dragStatus.selectPillIndex ?? -1) >= 0 && (dragPosition ?? -1) >= 0) {
 				const wrestlerId = weightClasses[dragStatus.dragWeightIndex].wrestlers[dragStatus.dragPillIndex].id;
 				props.updatePosition(props.isTeam, weightClasses[dragStatus.selectWeightIndex].name, wrestlerId, dragPosition);
 			}
