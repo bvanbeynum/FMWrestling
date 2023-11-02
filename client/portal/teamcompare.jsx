@@ -224,30 +224,32 @@ const TeamCompare = () => {
 			.filter(wrestler => wrestler.id == wrestlerId)
 			.find(() => true);
 		
-		changedWrestler.weightClass = weightClassChange;
+		if (changedWrestler.weightClass != weightClassChange || changedWrestler.position !== newPosition) {
+			changedWrestler.weightClass = weightClassChange;
 
-		const newWeightClasses = weightClasses.map(weightClass => {
-			const filteredWrestlers = (isTeam ? weightClass.teamWrestlers : weightClass.opponentWrestlers).filter(wrestler => wrestler.id != wrestlerId);
-			
-			return {
-				...weightClass,
-				teamWrestlers: !isTeam || weightClass.name != weightClassChange ? filteredWrestlers
-					: [
-						...filteredWrestlers.slice(0, newPosition),
-						changedWrestler,
-						...filteredWrestlers.slice(newPosition)
-					].map((wrestler, wrestlerIndex) => ({...wrestler, position: wrestlerIndex })),
-				opponentWrestlers: isTeam || weightClass.name != weightClassChange ? filteredWrestlers
-					: [
-						...filteredWrestlers.slice(0, newPosition),
-						changedWrestler,
-						...filteredWrestlers.slice(newPosition)
-					].map((wrestler, wrestlerIndex) => ({...wrestler, position: wrestlerIndex }))
-			};
-		});
+			const newWeightClasses = weightClasses.map(weightClass => {
+				const filteredWrestlers = (isTeam ? weightClass.teamWrestlers : weightClass.opponentWrestlers).filter(wrestler => wrestler.id != wrestlerId);
+				
+				return {
+					...weightClass,
+					teamWrestlers: !isTeam || weightClass.name != weightClassChange ? filteredWrestlers
+						: [
+							...filteredWrestlers.slice(0, newPosition),
+							changedWrestler,
+							...filteredWrestlers.slice(newPosition)
+						].map((wrestler, wrestlerIndex) => ({...wrestler, position: wrestlerIndex })),
+					opponentWrestlers: isTeam || weightClass.name != weightClassChange ? filteredWrestlers
+						: [
+							...filteredWrestlers.slice(0, newPosition),
+							changedWrestler,
+							...filteredWrestlers.slice(newPosition)
+						].map((wrestler, wrestlerIndex) => ({...wrestler, position: wrestlerIndex }))
+				};
+			});
 
-		setWeightClasses(newWeightClasses);
-		saveCompareSession(newWeightClasses);
+			setWeightClasses(newWeightClasses);
+			saveCompareSession(newWeightClasses);
+		}
 	};
 
 	const updateScore = (weightClassUpdate, isTeam, score) => {
