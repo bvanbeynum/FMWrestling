@@ -232,13 +232,15 @@ const TeamCompare = () => {
 				
 				return {
 					...weightClass,
-					teamWrestlers: !isTeam || weightClass.name != weightClassChange ? filteredWrestlers
+					teamWrestlers: !isTeam ? weightClass.teamWrestlers
+						: weightClass.name != weightClassChange ? filteredWrestlers
 						: [
 							...filteredWrestlers.slice(0, newPosition),
 							changedWrestler,
 							...filteredWrestlers.slice(newPosition)
 						].map((wrestler, wrestlerIndex) => ({...wrestler, position: wrestlerIndex })),
-					opponentWrestlers: isTeam || weightClass.name != weightClassChange ? filteredWrestlers
+					opponentWrestlers: isTeam ? weightClass.opponentWrestlers
+						: weightClass.name != weightClassChange ? filteredWrestlers
 						: [
 							...filteredWrestlers.slice(0, newPosition),
 							changedWrestler,
@@ -329,7 +331,18 @@ const TeamCompare = () => {
 		<div className={`container ${ pageActive ? "active" : "" }`}>
 			
 			<header>
-				<h1>Compare Teams</h1>
+				<h1>
+					Compare { selectedOpponentId ? opponents.filter(opponent => opponent.id == selectedOpponentId).map(opponent => opponent.name).find(() => true) : "Teams" }
+				</h1>
+
+				<h1 className="subTitle">
+					{
+					pageView == "opponentdepth" ? "Opponent Depth"
+					: pageView == "teamdepth" ? "Team Depth"
+					: pageView == "match" ? "Simulated Match"
+					: "SC Mat Rankings"
+					}
+				</h1>
 			</header>
 		
 			<div className="panel filter">
