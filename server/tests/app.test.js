@@ -1276,6 +1276,30 @@ describe("API service", () => {
 
 	});
 
+	it("gets external wrestler details", async () => {
+
+		// ********** Given
+
+		const output = { wrestler: [{ id: "wrestler1", name: "Test Wrestler", events: [] }] };
+
+		api.externalWrestlerDetails = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+
+		const response = await request(app)
+			.get(`/api/externalwrestlerdetails`)
+			.expect(200);
+
+		// ********** Then
+
+		expect(api.externalWrestlerDetails).toHaveBeenCalledWith(output.wrestler.id, expect.anything());
+		expect(response.body).toHaveProperty("wrestler", output.wrestler);
+
+	});
+
 	it("loads bulk external wrestlers", async () => {
 
 		// ********** Given

@@ -1895,6 +1895,44 @@ export default {
 		return output;
 	},
 
+	externalWrestlerDetails: async (wrestlerId, serverPath) => {
+		const output = { data: {} };
+
+		let wrestler = null;
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/externalwrestler?id=${ wrestlerId }`);
+			wrestler = clientResponse.body.externalWrestlers[0];
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+
+		try {
+			wrestler = {
+				...wrestler,
+				name: wrestler.name ? wrestler.name : wrestler.firstName + " " + wrestler.lastName,
+				events: wrestler.events.map(event => ({
+					...event,
+					division: event.matches[0]?.division || "",
+					weightClass: event.matches[0]?.weightClass || "",
+					matches: event.matches.map(({ division, weightClass, ...match}) => match)
+				}))
+			};
+
+			output.wrestler = wrestler;
+		}
+		catch (error) {
+			output.status = 562;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		return output;
+	},
+
 	externalWrestlersBulk: async (serverPath) => {
 		const output = { data: {} };
 

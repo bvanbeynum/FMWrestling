@@ -1942,6 +1942,52 @@ describe("External Teams", () => {
 
 });
 
+describe("External Wrestler", () => {
+
+	it.only("gets full details for a wrestler", async () => {
+
+		const externalWrestler = {
+				id: "wrestler1",
+				name: "Test Wrestler",
+				events: [{
+					date: new Date(2023,10,3),
+					name: "Test Event",
+					matches: [
+						{ division: "Varsity", weightClass: "106", round: "Finals", vs: "Wrestler 2", vsTeam: "Team Name", isWinner: false, sort: 99, winType: "F" }
+					]
+				}]
+			},
+			expected = {
+				id: "wrestler1",
+				name: "Test Wrestler",
+				events: [{
+					date: new Date(2023,10,3),
+					name: "Test Event",
+					division: "Varsity",
+					weightClass: "106",
+					matches: [
+						{ round: "Finals", vs: "Wrestler 2", vsTeam: "Team Name", isWinner: false, sort: 99, winType: "F" }
+					]
+				}]
+			};
+
+		client.get = jest.fn()
+			.mockResolvedValue({ body: { externalWrestlers: [externalWrestler] }});
+
+		const results = await api.externalWrestlerDetails(externalWrestler.id, serverPath);
+
+		if (results.status != 200) {
+			console.log(results);
+		}
+
+		expect(results).toHaveProperty("status", 200);
+		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/externalwrestler?id=${ externalWrestler.id }`);
+		expect(results).toHaveProperty("wrestler", expected);
+	
+	});
+
+});
+
 describe("External Links", () => {
 
 	it("gets all external wrestlers", async () => {
