@@ -121,7 +121,7 @@ const TeamDepthEdit = props => {
 			};
 			
 			dragRef.current.element.style.top = (window.scrollY + (mouseRef.current.y - (elementBox.height / 2))) + "px";
-			dragRef.current.element.style.left = (mouseRef.current.adjustX - (elementBox.width - (window.innerWidth >= 1024 ? 40 : 20))) + "px";
+			dragRef.current.element.style.left = (mouseRef.current.adjustX - (elementBox.width - (window.innerWidth >= 1024 ? 50 : 30))) + "px";
 
 			// ************** Get the position and update UI with position information 
 			

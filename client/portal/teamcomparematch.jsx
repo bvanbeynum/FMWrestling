@@ -320,7 +320,7 @@ opposingChart ?
 	
 	<div key={ weightClassIndex } className="compareRow">
 		<div className={`compareTeam ${ weightClass.teamScore === "" ? "" : weightClass.teamScore > 0 ? "win" : "lose" }`}>
-			{ weightClass.teamWrestlers[0]?.division } • { weightClass.teamWrestlers[0]?.name }
+			{ weightClass.teamWrestlers[0]?.name }
 		</div>
 
 		<div className={`compareScore ${ weightClass.teamScore === "" ? "" : weightClass.teamScore > 0 ? "win" : "lose" }`}>
@@ -348,7 +348,7 @@ opposingChart ?
 		</div>
 
 		<div className={`compareTeam ${ weightClass.opponentScore === "" ? "" : weightClass.opponentScore > 0 ? "win" : "lose" }`}>
-			{ weightClass.opponentWrestlers[0]?.name } • { weightClass.opponentWrestlers[0]?.division }
+			{ weightClass.opponentWrestlers[0]?.name }
 		</div>
 	</div>
 

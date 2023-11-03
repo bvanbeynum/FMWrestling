@@ -4,12 +4,6 @@
 	grid-template-columns: 1fr max-content;
 }
 
-.dragBar {
-	cursor: pointer;
-	outline: none;
-	user-select: none;
-}
-
 .compareHeader {
 	display: grid;
 	grid-template-columns: 1fr 1fr;
@@ -179,5 +173,15 @@ line.axisLine {
 }
 
 .dragTable .pill {
-	font-size: 13px;
+	font-size: 12px;
+}
+
+.dragBar {
+	cursor: pointer;
+	outline: none;
+	user-select: none;
+}
+
+.sectionTable .dragBar {
+	padding: 0px 10px;
 }
