@@ -649,6 +649,74 @@ describe("Data service", () => {
 		expect(response.body).toHaveProperty("status", "ok");
 	});
 
+	it("gets flo Match", async () => {
+
+		// ********** Given
+
+		const output = { floMatches: [{ id: "testid" }]};
+
+		data.floMatchGet = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+		
+		const response = await request(app)
+			.get("/data/flomatch")
+			.expect(200);
+		
+		// ********** Then
+
+		expect(response.body).toHaveProperty("floMatches");
+		expect(response.body.floMatches).toHaveLength(1);
+	});
+
+	it("saves flo Match", async () => {
+		// ********** Given
+
+		const save = { name: "Test Team" },
+			output = { id: "testid" };
+
+		data.floMatchSave = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		// ********** When
+		
+		const response = await request(app)
+			.post("/data/flomatch")
+			.send({ flomatch: save })
+			.expect(200);
+		
+		// ********** Then
+
+		expect(data.floMatchSave).toHaveBeenCalledWith(save);
+		expect(response.body).toHaveProperty("id", output.id);
+	});
+
+	it("deletes floMatch", async () => {
+		// ********** Given
+
+		const floMatchId = "testid";
+
+		data.floMatchDelete = jest.fn().mockResolvedValue({
+			status: 200,
+			data: { status: "ok" }
+		});
+
+		// ********** When
+		
+		const response = await request(app)
+			.delete(`/data/flomatch?id=${ floMatchId }`)
+			.expect(200);
+		
+		// ********** Then
+
+		expect(response.body).toHaveProperty("status", "ok");
+	});
+
 });
 
 describe("API service", () => {

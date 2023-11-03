@@ -258,6 +258,17 @@ export default {
 		}]
 	}),
 
+	floMatch: mongoose.model("flomatch", {
+		sqlId: Number,
+		winnerSqlId: Number,
+		winner: String,
+		loserSqlId: Number,
+		loser: String,
+		winType: String,
+		date: Date,
+		event: String
+	}),
+
 	trackEvent: mongoose.model("trackevent", {
 		sqlId: Number,
 		trackId: String,

@@ -685,4 +685,55 @@ router.delete("/data/scmatteam", authInternal, async (request, response) => {
 	}
 });
 
+router.get("/data/flomatch", authInternal, async (request, response) => {
+	try {
+		const results = await data.floMatchGet({ id: request.query.id, matchId: request.query.matchid, wrestlerId: request.query.wrestlerId });
+
+		if (results.error) {
+			client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "654547bbcf4fc75b6372e1a0", message: `${ results.status }: ${results.error}` }}).then();
+		}
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "654547bbcf4fc75b6372e1a0", message: `570: ${error.message}` }}).then();
+		response.status(570).json({ error: error.message });
+	}
+});
+
+router.post("/data/flomatch", authInternal, async (request, response) => {
+	try {
+		const results = await data.floMatchSave(request.body.flomatch);
+
+		if (results.error) {
+			client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "654547d7cf4fc75b6372e360", message: `${ results.status }: ${results.error}` }}).then();
+		}
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "654547d7cf4fc75b6372e360", message: `570: ${error.message}` }}).then();
+		response.status(570).json({ error: error.message });
+	}
+});
+
+router.delete("/data/flomatch", authInternal, async (request, response) => {
+	try {
+		const results = await data.floMatchDelete(request.query.id);
+
+		if (results.error) {
+			client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "654547f2cf4fc75b6372e524", message: `${ results.status }: ${results.error}` }}).then();
+		}
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "654547f2cf4fc75b6372e524", message: `570: ${error.message}` }}).then();
+		response.status(570).json({ error: error.message });
+	}
+});
+
 export default router;

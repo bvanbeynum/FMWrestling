@@ -1322,3 +1322,95 @@ describe("SC Mat Team Data", () => {
 	});
 
 });
+
+describe("Flo Match Data", () => {
+	let createdId,
+		newData = {
+			sqlId: 1111,
+			winnerSqlId: 2222,
+			winner: "Test Wrestler",
+			loserSqlId: 3333,
+			loser: "Test Wrestler 2",
+			winType: "test"
+		};
+
+	it("should return return an array of items", async () => {
+		// ********** Given
+
+		// ********** When
+		const response = await data.floMatchGet();
+
+		// ********** Then
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("floMatches");
+	});
+
+	it("should create a new object", async () => {
+		// ********** Given
+
+		// ********** When
+		const response = await data.floMatchSave(newData);
+
+		// ********** Then
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("id");
+
+		createdId = response.data.id;
+	});
+
+	it("should get the new object by id", async () => {
+		// ********** Given
+
+		// ********** When
+		const response = await data.floMatchGet({ id: createdId });
+
+		// ********** Then
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("floMatches");
+		expect(response.data.floMatches).toHaveLength(1);
+
+		expect(response.data.floMatches).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining(newData)
+			])
+		);
+	});
+
+	it("should return an empty array for non-existant object", async () => {
+		// ********** Given
+
+		// ********** When
+		const response = await data.floMatchGet({ id: "abcd" });
+
+		// ********** Then
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("floMatches");
+		expect(response.data.floMatches).toHaveLength(0);
+	});
+
+	it("should delete the new object", async () => {
+		// ********** Given
+
+		// ********** When
+		const response = await data.floMatchDelete(createdId);
+		
+		// ********** Then
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("status", "ok");
+	});
+
+	it("should return an empty array after deleting the new object", async () => {
+		const response = await data.floMatchGet({ id: createdId });
+		
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("floMatches");
+		expect(response.data.floMatches).not.toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					id: createdId
+				})
+			])
+		);
+	});
+
+});
