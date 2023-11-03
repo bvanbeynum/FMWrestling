@@ -1944,22 +1944,37 @@ describe("External Teams", () => {
 
 describe("External Wrestler", () => {
 
-	it.only("gets full details for a wrestler", async () => {
+	it("gets full details for a wrestler", async () => {
 
 		const externalWrestler = {
 				id: "wrestler1",
 				name: "Test Wrestler",
-				events: [{
+				events: [
+				{
 					date: new Date(2023,10,3),
 					name: "Test Event",
 					matches: [
 						{ division: "Varsity", weightClass: "106", round: "Finals", vs: "Wrestler 2", vsTeam: "Team Name", isWinner: false, sort: 99, winType: "F" }
 					]
-				}]
+				},
+				{ 
+					date: new Date(2023, 9, 10), 
+					name: "Test Event 1", 
+					matches: [
+						{ division: "JV", weightClass: "120", round: "1", vs: "Wrestler 3", vsTeam: "Team 2", isWinner: true, sort: 99, winType: "Dec" }
+					] 
+				}
+				]
 			},
 			expected = {
 				id: "wrestler1",
 				name: "Test Wrestler",
+				division: "Varsity",
+				weightClass: "106",
+				weightClasses: [
+					{ lastDate: new Date(2023,10,3), weightClass: "106", division: "Varsity", lastEvent: "Test Event" },
+					{ lastDate: new Date(2023,9,10), weightClass: "120", division: "JV", lastEvent: "Test Event 1" }
+				],
 				events: [{
 					date: new Date(2023,10,3),
 					name: "Test Event",
@@ -1968,7 +1983,17 @@ describe("External Wrestler", () => {
 					matches: [
 						{ round: "Finals", vs: "Wrestler 2", vsTeam: "Team Name", isWinner: false, sort: 99, winType: "F" }
 					]
-				}]
+				},
+				{
+					date: new Date(2023,9,10),
+					name: "Test Event 1",
+					division: "JV",
+					weightClass: "120",
+					matches: [
+						{ round: "1", vs: "Wrestler 3", vsTeam: "Team 2", isWinner: true, sort: 99, winType: "Dec" }
+					]
+				}
+				]
 			};
 
 		client.get = jest.fn()
@@ -1982,6 +2007,7 @@ describe("External Wrestler", () => {
 
 		expect(results).toHaveProperty("status", 200);
 		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/externalwrestler?id=${ externalWrestler.id }`);
+		expect(results).toHaveProperty("data");
 		expect(results).toHaveProperty("wrestler", expected);
 	
 	});
