@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import WrestlerDetails from "./wrestlerdetails";
 
 const TeamDepthEdit = props => {
 
@@ -8,7 +9,6 @@ const TeamDepthEdit = props => {
 	const [ dragStatus, setDragStatus ] = useState(null);
 	const [ dragPosition, setDragPosition ] = useState(null);
 	const [ isPositionUpdate, setIsPositionUpdate ] = useState(false);
-	const [ tablePosition, setTablePosition ] = useState(null);
 
 	const weightRefs = useRef([]);
 	const dragRef = useRef(null);
@@ -89,9 +89,6 @@ const TeamDepthEdit = props => {
 		// Get the wrestler Index
 		const elementIndex = [...weightRefs.current[dragWeightIndex].element.querySelectorAll(".pill")]
 			.findIndex(pill => pill == eventElement);
-
-		// eventElement.style.top = eventElement.top + "px";
-		// eventElement.style.left = eventElement.left + "px";
 
 		dragRef.current = {
 			wrestlerId: weightClasses[dragWeightIndex].wrestlers[elementIndex].id,
@@ -268,36 +265,12 @@ const TeamDepthEdit = props => {
 {
 selectedWrestlers.map((wrestler, wrestlerIndex) =>
 
-<div key={wrestlerIndex} className="panel">
-	<h3>
-		{ wrestler.name }
-		<button aria-label="Remove User" onClick={ () => setSelectedWrestlers(selectedWrestlers.filter(selected => selected.id != wrestler.id)) }>
-			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"></path></svg>
-		</button>
-	</h3>
-
-	<table className="sectionTable">
-	<thead>
-	<tr>
-		<th>Weight</th>
-		<th>Last Date</th>
-		<th>Last Event</th>
-	</tr>
-	</thead>
-	<tbody>
-	{
-	wrestler.weightClasses
-	.sort((weightClassA, weightClassB) => +weightClassA.lastDate - +weightClassB.lastDate)
-	.map((weightClass, weightClassIndex) =>
-	<tr key={weightClassIndex}>
-		<td>{ weightClass.weightClass }</td>
-		<td>{ weightClass.lastDate.toLocaleDateString() }</td>
-		<td>{ weightClass.lastEvent }</td>
-	</tr>
-	)}
-	</tbody>
-	</table>
-</div>
+	<WrestlerDetails 
+		key={wrestlerIndex} 
+		wrestlerId={ wrestler.id } 
+		wrestlerName={ wrestler.name }
+		closeWrestler={ wrestlerId => setSelectedWrestlers(selectedWrestlers.filter(selected => selected.id != wrestlerId)) }
+		/>
 
 )}
 
