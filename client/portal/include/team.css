@@ -177,3 +177,7 @@ line.axisLine {
 	background-color: rgb(45 68 215);
 	width: 3px;
 }
+
+.dragTable .pill {
+	font-size: 13px;
+}

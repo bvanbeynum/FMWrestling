@@ -8,10 +8,12 @@ const TeamDepthEdit = props => {
 	const [ dragStatus, setDragStatus ] = useState(null);
 	const [ dragPosition, setDragPosition ] = useState(null);
 	const [ isPositionUpdate, setIsPositionUpdate ] = useState(false);
+	const [ tablePosition, setTablePosition ] = useState(null);
 
 	const weightRefs = useRef([]);
 	const dragRef = useRef(null);
 	const mouseRef = useRef(null);
+	const tableRef = useRef(null);
 
 	useEffect(() => setWeightClasses(props.weightClasses), [ props.weightClasses ]);
 
@@ -35,6 +37,13 @@ const TeamDepthEdit = props => {
 		if (!selectedWrestlers.some(selected => selected.id == wrestler.id)) {
 			setSelectedWrestlers(selectedWrestlers.concat(wrestler));
 		} 
+	};
+
+	const setTableRef = element => {
+		if (element) {
+			const elementBox = element.getBoundingClientRect();
+			tableRef.current = { top: elementBox.top, left: elementBox.left };
+		}
 	};
 
 	const setWeightClassRef = (element, weightClass) => {
@@ -81,8 +90,8 @@ const TeamDepthEdit = props => {
 		const elementIndex = [...weightRefs.current[dragWeightIndex].element.querySelectorAll(".pill")]
 			.findIndex(pill => pill == eventElement);
 
-		eventElement.style.top = eventElement.top + "px";
-		eventElement.style.left = eventElement.left + "px";
+		// eventElement.style.top = eventElement.top + "px";
+		// eventElement.style.left = eventElement.left + "px";
 
 		dragRef.current = {
 			wrestlerId: weightClasses[dragWeightIndex].wrestlers[elementIndex].id,
@@ -109,13 +118,13 @@ const TeamDepthEdit = props => {
 			const elementBox = dragRef.current.element.getBoundingClientRect();
 
 			mouseRef.current = { 
-				adjustX: (window.screen.availWidth >= 1024 ? -300 : 0) + (event.touches ? event.touches[0].clientX : event.clientX),
+				adjustX: (event.touches ? event.touches[0].clientX : event.clientX) - (window.innerWidth >= 1024 ? tableRef.current.left : 0),
 				x: event.touches ? event.touches[0].clientX : event.clientX,
 				y: event.touches ? event.touches[0].clientY : event.clientY
 			};
 			
 			dragRef.current.element.style.top = (window.scrollY + (mouseRef.current.y - (elementBox.height / 2))) + "px";
-			dragRef.current.element.style.left = (mouseRef.current.adjustX - (elementBox.width * .8)) + "px";
+			dragRef.current.element.style.left = (mouseRef.current.adjustX - (elementBox.width - (window.innerWidth >= 1024 ? 40 : 20))) + "px";
 
 			// ************** Get the position and update UI with position information 
 			
@@ -200,7 +209,7 @@ const TeamDepthEdit = props => {
 <div className="panel expandable">
 	<h3>Depth Chart</h3>
 
-	<table className="sectionTable">
+	<table className="sectionTable dragTable" ref={ element => setTableRef(element)}>
 	<thead>
 	<tr>
 		<th>Weight</th>
@@ -238,7 +247,7 @@ const TeamDepthEdit = props => {
 
 			<div className="pill wrestlerPill">
 				<button aria-label="Select Wrestler" onClick={ () => { if (!props.isTeam) selectWrestler(wrestler) }}>{ wrestler.name }</button>
-				<svg ref={ element => setWrestlerRef(element) } xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-189.233q-24.749 0-42.374-17.624-17.625-17.625-17.625-42.374 0-24.75 17.625-42.374Q455.251-309.23 480-309.23q24.749 0 42.374 17.625 17.625 17.624 17.625 42.374 0 24.749-17.625 42.374-17.625 17.624-42.374 17.624Zm0-230.768q-24.749 0-42.374-17.625-17.625-17.625-17.625-42.374 0-24.749 17.625-42.374 17.625-17.625 42.374-17.625 24.749 0 42.374 17.625 17.625 17.625 17.625 42.374 0 24.749-17.625 42.374-17.625 17.625-42.374 17.625Zm0-230.769q-24.749 0-42.374-17.625-17.625-17.624-17.625-42.374 0-24.749 17.625-42.374 17.625-17.624 42.374-17.624 24.749 0 42.374 17.624 17.625 17.625 17.625 42.374 0 24.75-17.625 42.374Q504.749-650.77 480-650.77Z"/></svg>
+				<svg className="dragBar" ref={ element => setWrestlerRef(element) } xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-189.233q-24.749 0-42.374-17.624-17.625-17.625-17.625-42.374 0-24.75 17.625-42.374Q455.251-309.23 480-309.23q24.749 0 42.374 17.625 17.625 17.624 17.625 42.374 0 24.749-17.625 42.374-17.625 17.624-42.374 17.624Zm0-230.768q-24.749 0-42.374-17.625-17.625-17.625-17.625-42.374 0-24.749 17.625-42.374 17.625-17.625 42.374-17.625 24.749 0 42.374 17.625 17.625 17.625 17.625 42.374 0 24.749-17.625 42.374-17.625 17.625-42.374 17.625Zm0-230.769q-24.749 0-42.374-17.625-17.625-17.624-17.625-42.374 0-24.749 17.625-42.374 17.625-17.624 42.374-17.624 24.749 0 42.374 17.624 17.625 17.625 17.625 42.374 0 24.75-17.625 42.374Q504.749-650.77 480-650.77Z"/></svg>
 			</div>
 
 			</React.Fragment>
