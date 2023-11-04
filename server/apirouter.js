@@ -376,4 +376,26 @@ router.get("/api/scmatteamsearch", authAPI, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 });
 
+// ***************** flo Matches ********************
+
+router.get("/api/flomatchgetbulk", authAPI, async (request, response) => {
+	const results = await api.floMatchGetBulk(request.serverPath);
+
+	if (results.error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "65466be4cf4fc75b63820d1c", message: `${ results.status }: ${results.error}` }}).then();
+	}
+
+	response.status(results.status).json(results.error ? { error: results.error } : results.data);
+});
+
+router.post("/api/flomatchsavebulk", authAPI, async (request, response) => {
+	const results = await api.floMatchSaveBulk(request.body.matchessave, request.serverPath);
+
+	if (results.error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "65466f81cf4fc75b638244b6", message: `${ results.status }: ${results.error}` }}).then();
+	}
+
+	response.status(results.status).json(results.error ? { error: results.error } : results.data);
+});
+
 export default router;

@@ -1548,4 +1548,60 @@ describe("API service", () => {
 
 	});
 
+	it("Gets all flo Matches", async () => {
+
+		const output = [{ 
+			id: "match1", 
+			sqlId: 111,
+			winnerSqlId: 222,
+			loserSqlId: 333
+		}];
+
+		api.floMatchGetBulk = jest.fn()
+			.mockResolvedValueOnce({ status: 200, data: { floMatches: output }});
+
+		const response = await request(app)
+			.get(`/api/flomatchgetbulk`)
+			.expect(200);
+
+		expect(api.floMatchGetBulk).toHaveBeenCalledWith(expect.anything());
+		expect(response.body).toHaveProperty("floMatches", output);
+
+	});
+
+	it("saves bulk flo Matches", async () => {
+
+		// ********** Given
+
+		const matches = [{ 
+				id: "match1", 
+				sqlId: 111,
+				winnerSqlId: 222,
+				loserSqlId: 333
+			}, { 
+				id: "match2", 
+				sqlId: 999,
+				winnerSqlId: 888,
+				loserSqlId: 777
+			}],
+			output = [{ index: 0, id: matches[0].id }, { index: 1, id: matches[1].id }];
+
+		api.floMatchSaveBulk = jest.fn().mockResolvedValue({
+			status: 200,
+			data: { floMatches: output }
+		});
+
+		// ********** When
+
+		const response = await request(app)
+			.post("/api/flomatchsavebulk")
+			.send({ matchessave: matches })
+			.expect(200);
+
+		// ********** Then
+
+		expect(response.body).toHaveProperty("floMatches", output);
+
+	});
+
 });

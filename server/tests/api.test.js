@@ -2008,7 +2008,7 @@ describe("External Wrestler", () => {
 		expect(results).toHaveProperty("status", 200);
 		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/externalwrestler?id=${ externalWrestler.id }`);
 		expect(results).toHaveProperty("data");
-		expect(results).toHaveProperty("wrestler", expected);
+		expect(results.data).toHaveProperty("wrestler", expected);
 	
 	});
 
@@ -2333,6 +2333,67 @@ describe("SC Mat Teams", () => {
 		expect(results).toHaveProperty("status", 200);
 		expect(results).toHaveProperty("data");
 		expect(results.data).toHaveProperty("scmatTeams", expect.arrayContaining([expect.objectContaining({ id: scmatTeams[0].id })]));
+
+	});
+
+});
+
+describe("Flo Matches", () => {
+	
+	it("Gets all flo Matches", async () => {
+
+		const floMatches = [{ 
+				id: "match1", 
+				sqlId: 111,
+				winnerSqlId: 222,
+				loserSqlId: 333
+			}];
+		
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { floMatches: floMatches } })
+		
+		const results = await api.floMatchGetBulk(serverPath);
+
+		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/flomatch`);
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("floMatches", floMatches);
+
+	});
+
+	it("saves bulk flo Matches", async () => {
+
+		const matches = [{ 
+			id: "match1", 
+			sqlId: 111,
+			winnerSqlId: 222,
+			loserSqlId: 333
+		}, { 
+			id: "match2", 
+			sqlId: 999,
+			winnerSqlId: 888,
+			loserSqlId: 777
+		}];
+
+		const send = jest.fn()
+			.mockResolvedValueOnce({ body: { id: matches[0].id } })
+			.mockResolvedValueOnce({ body: { id: matches[1].id } });
+
+		client.post = jest.fn(() => ({
+			send: send
+		}));
+		
+		const results = await api.floMatchSaveBulk(matches, serverPath);
+
+		expect(client.post).toHaveBeenCalledTimes(2);
+		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/flomatch`);
+		expect(send).toHaveBeenNthCalledWith(1, { flomatch: matches[0] });
+		expect(send).toHaveBeenNthCalledWith(2, { flomatch: matches[1] });
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("floMatches", [{ index: 0, id: matches[0].id }, { index: 1, id: matches[1].id }]);
 
 	});
 
