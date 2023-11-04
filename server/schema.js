@@ -262,8 +262,10 @@ export default {
 		sqlId: Number,
 		winnerSqlId: Number,
 		winner: String,
+		winnerTeam: String,
 		loserSqlId: Number,
 		loser: String,
+		loserTeam: String,
 		winType: String,
 		date: Date,
 		event: String
