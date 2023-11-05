@@ -1262,6 +1262,99 @@ export default {
 		return output;
 	},
 
+	externalWrestlerChainGet: async (wrestlerSqlId, lookupTeam, maxReturned = 10) => {
+		const output = { data: {} };
+
+		const matchLoad = async (lookupMatch, matchesRemaining) => {
+			try {
+				const matchData = await data.floMatch.find({ $or: [{ winnerSqlId: lookupMatch.lookup }, { loserSqlId: lookupMatch.lookup } ] }).lean().exec();
+
+				const matches = matchData
+					.filter(match => new Date(match.date) > new Date(new Date().setMonth(new Date().getMonth() - 24)) && match.winType != "FOR")
+					.filter(newMatch => !lookupMatch.existing.includes(newMatch.winnerSqlId) && !lookupMatch.existing.includes(newMatch.loserSqlId))
+					.map(newMatch => ({
+						...newMatch, 
+						iteration: lookupMatch.iteration + 1,
+						date: new Date(newMatch.date), 
+						wrestlers: [newMatch.winnerSqlId, newMatch.loserSqlId],
+						data: `${ (new Date(newMatch.date)).toLocaleDateString() }: ${ newMatch.winner } (${ newMatch.winnerTeam }) beat ${ newMatch.loser } (${ newMatch.loserTeam }) by ${ newMatch.winType }`,
+						lookup: newMatch.winnerSqlId == lookupMatch.lookup ? newMatch.loserSqlId: newMatch.winnerSqlId,
+						existing: lookupMatch.existing.concat([lookupMatch.lookup])
+					}));
+
+				const distinctMatches = [...new Set(matches.map(newMatch => newMatch.wrestlers.sort().join(","))) ]
+					.flatMap(distinct => 
+						matches
+							.filter(lookup => lookup.wrestlers.includes(+distinct.split(",")[0]) && lookup.wrestlers.includes(+distinct.split(",")[1]) )
+							.sort((matchA, matchB) => +matchA.date != +matchB.date ? +matchB.date - +matchA.date : matchB.sqlId - matchA.sqlId)
+							.find(() => true)
+					);
+				
+				const matchesFound = distinctMatches.filter(newMatch => newMatch.winnerTeam == lookupTeam || newMatch.loserTeam == lookupTeam).length;
+
+				const treeData = (await Promise.all(distinctMatches.flatMap(async newMatch => {
+					return newMatch.winnerTeam == lookupTeam || newMatch.loserTeam == lookupTeam ? [newMatch.data]
+						: matchesFound >= matchesRemaining ? [newMatch.data]
+						: newMatch.iteration >= 3 ? [newMatch.data]
+						: await matchLoad(newMatch)
+				}))).flatMap(newMatch => newMatch);
+
+				return treeData.map(newMatch => lookupMatch.data + "\r\n" + newMatch);
+			}
+			catch (error) {
+				return error.message;
+			}
+		};
+
+		try {
+			const wrestler = await data.externalWrestler.findOne({ sqlId: wrestlerSqlId }).lean().exec();
+			output.data.wrestler = { id: wrestler.id, sqlId: wrestler.sqlId, tree: [] };
+
+			const matchData = await data.floMatch.find({ $or: [{ winnerSqlId: output.data.wrestler.sqlId }, { loserSqlId: output.data.wrestler.sqlId } ] }).lean().exec();
+			
+			const matches = matchData
+				.filter(match => new Date(match.date) > new Date(new Date().setMonth(new Date().getMonth() - 24)) && match.winType != "FOR")
+				.map(match => ({
+					...match, 
+					iteration: 0,
+					date: new Date(match.date), 
+					wrestlers: [match.winnerSqlId, match.loserSqlId],
+					data: `${ (new Date(match.date)).toLocaleDateString() }: ${ match.winner } (${ match.winnerTeam }) beat ${ match.loser } (${ match.loserTeam }) by ${ match.winType }`,
+					lookup: match.winnerSqlId == wrestlerSqlId ? match.loserSqlId: match.winnerSqlId,
+					existing: [+wrestlerSqlId]
+				}));
+
+			const distinctMatches = [...new Set(matches.map(match => match.wrestlers.sort().join(","))) ].flatMap(distinct => 
+				matches
+					.filter(lookup => lookup.wrestlers.includes(+distinct.split(",")[0]) && lookup.wrestlers.includes(+distinct.split(",")[1]) )
+					.sort((matchA, matchB) => +matchA.date != +matchB.date ? +matchB.date - +matchA.date : matchB.sqlId - matchA.sqlId)
+					.find(() => true)
+				)
+				.sort((matchA, matchB) => +matchB.date - +matchA.date);
+			
+			const matchesFound = distinctMatches.filter(match => match.winnerTeam == lookupTeam || match.loserTeam == lookupTeam).length;
+
+			const treeData = (await Promise.all(distinctMatches.flatMap(async match => {
+					return match.winnerTeam == lookupTeam || match.loserTeam == lookupTeam ? [match.data]
+						: matchesFound >= maxReturned ? [match.data]
+						: await matchLoad(match, maxReturned - matchesFound)
+				})))
+				.flatMap(match => match)
+				.filter(tree => tree.indexOf(lookupTeam) >= 0)
+				.sort((treeA, treeB) => treeA.length - treeB.length)
+				.slice(0, maxReturned);
+			output.data.wrestler.tree = treeData;
+
+			output.status = 200;
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+		}
+
+		return output;
+	},
+
 	externalWrestlerSave: async (saveObject) => {
 		const output = {};
 

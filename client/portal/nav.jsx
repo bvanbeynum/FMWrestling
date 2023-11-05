@@ -83,9 +83,9 @@ const Nav = props => {
 				<span>Team</span>
 			</li>
 			
-			<li role="button" onClick={ () => window.location = "/portal/teamwrestlers.html" } className={`button sub ${ subExpanded === "team" ? "active" : "" }`} aria-label="Team Wrestlers">
+			{/* <li role="button" onClick={ () => window.location = "/portal/teamwrestlers.html" } className={`button sub ${ subExpanded === "team" ? "active" : "" }`} aria-label="Team Wrestlers">
 			<span>Wrestlers</span>
-			</li>
+			</li> */}
 
 			<li role="button" onClick={ () => window.location = "/portal/teamcompare.html" } className={`button sub ${ subExpanded === "team" ? "active" : "" }`} aria-label="Team Comparison">
 			<span>Compare</span>

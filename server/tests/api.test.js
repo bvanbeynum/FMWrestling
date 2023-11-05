@@ -1999,7 +1999,7 @@ describe("External Wrestler", () => {
 		client.get = jest.fn()
 			.mockResolvedValue({ body: { externalWrestlers: [externalWrestler] }});
 
-		const results = await api.externalWrestlerDetails(externalWrestler.id, serverPath);
+		const results = await api.externalWrestlerDetails(externalWrestler.id, null, serverPath);
 
 		if (results.status != 200) {
 			console.log(results);

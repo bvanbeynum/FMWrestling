@@ -1895,7 +1895,7 @@ export default {
 		return output;
 	},
 
-	externalWrestlerDetails: async (wrestlerId, serverPath) => {
+	externalWrestlerDetails: async (wrestlerId, homeTeam, serverPath) => {
 		const output = { data: {} };
 
 		let wrestler = null;
@@ -1968,6 +1968,16 @@ export default {
 			output.status = 562;
 			output.error = error.message;
 			return output;
+		}
+
+		if (homeTeam) {
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/externalwrestlerchainget?wrestlerid=${ output.data.wrestler.sqlId }&team=${ homeTeam }`);
+				output.data.wrestler.tree = clientResponse.body.wrestler?.tree;
+			}
+			catch (error) {
+				output.error = error.message;
+			}
 		}
 
 		output.status = 200;

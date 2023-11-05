@@ -404,6 +404,7 @@ const TeamCompare = () => {
 					weightClasses={ weightClasses.map(weightClass => ({...weightClass, wrestlers: weightClass.opponentWrestlers })) }
 					selectedDivision={ selectedDivision }
 					updatePosition={ updatePosition }
+					homeTeam={ team.name }
 					isTeam={ false }
 					/>
 

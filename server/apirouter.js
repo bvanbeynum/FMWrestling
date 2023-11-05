@@ -255,7 +255,7 @@ router.post("/api/teamswrestlersave", authAPI, async (request, response) => {
 
 
 router.get("/api/externalwrestlerdetails", authAPI, async (request, response) => {
-	const results = await api.externalWrestlerDetails(request.query.id, request.serverPath);
+	const results = await api.externalWrestlerDetails(request.query.id, request.query.hometeam, request.serverPath);
 
 	if (results.error) {
 		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "65450955cf4fc75b636f85bd", message: `${ results.status }: ${results.error}` }}).then();

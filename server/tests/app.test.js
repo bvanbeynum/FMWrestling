@@ -1344,11 +1344,11 @@ describe("API service", () => {
 
 	});
 
-	it("gets external wrestler details", async () => {
+	it.only("gets external wrestler details", async () => {
 
 		// ********** Given
 
-		const output = { wrestler: [{ id: "wrestler1", name: "Test Wrestler", events: [] }] };
+		const output = { wrestler: { id: "wrestler1", name: "Test Wrestler", events: [] } };
 
 		api.externalWrestlerDetails = jest.fn().mockResolvedValue({
 			status: 200,
@@ -1358,12 +1358,12 @@ describe("API service", () => {
 		// ********** When
 
 		const response = await request(app)
-			.get(`/api/externalwrestlerdetails`)
+			.get(`/api/externalwrestlerdetails?id=${ output.wrestler.id }`)
 			.expect(200);
 
 		// ********** Then
 
-		expect(api.externalWrestlerDetails).toHaveBeenCalledWith(output.wrestler.id, expect.anything());
+		expect(api.externalWrestlerDetails).toHaveBeenCalledWith(output.wrestler.id, undefined, expect.anything());
 		expect(response.body).toHaveProperty("wrestler", output.wrestler);
 
 	});

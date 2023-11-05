@@ -417,6 +417,14 @@ table.sectionTable {
 	padding: 20px 0px;
 }
 
+.sectionTable td:last-child {
+	padding-right: 0;
+}
+
+.sectionTable .predata {
+	white-space: pre-line;
+}
+
 .textList {
 	margin: 15px 10px;
 	padding-bottom: 5px;

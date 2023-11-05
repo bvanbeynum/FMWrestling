@@ -269,6 +269,7 @@ selectedWrestlers.map((wrestler, wrestlerIndex) =>
 		key={wrestlerIndex} 
 		wrestlerId={ wrestler.id } 
 		wrestlerName={ wrestler.name }
+		homeTeam={ props.homeTeam }
 		closeWrestler={ wrestlerId => setSelectedWrestlers(selectedWrestlers.filter(selected => selected.id != wrestlerId)) }
 		/>
 

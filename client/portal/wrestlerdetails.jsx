@@ -14,7 +14,7 @@ const WrestlerDetails = props => {
 		}
 
 		if (props.wrestlerId) {
-			fetch(`/api/externalwrestlerdetails?id=${ props.wrestlerId }`)
+			fetch(`/api/externalwrestlerdetails?id=${ props.wrestlerId }&hometeam=${ props.homeTeam }`)
 				.then(response => {
 					if (response.ok) {
 						return response.json();
@@ -130,6 +130,27 @@ const WrestlerDetails = props => {
 	}
 	</tbody>
 	</table>
+
+	{
+	wrestler.tree && wrestler.tree.length > 0 ?
+	<>
+	<div className="sectionHeading">vs { props.homeTeam }</div>
+	
+	<div className="tableContainer">
+		<table className="sectionTable">
+		<tbody>
+		{
+		wrestler.tree
+		.map((treeDetails, treeIndex) =>
+		<tr key={treeIndex}>
+			<td className="predata">{ treeDetails }</td>
+		</tr>
+		)}
+		</tbody>
+		</table>
+	</div>
+	</>
+	: ""}
 
 	</>
 	}

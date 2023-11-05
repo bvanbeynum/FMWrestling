@@ -496,6 +496,23 @@ router.get("/data/externalwrestler", authInternal, async (request, response) => 
 	}
 });
 
+router.get("/data/externalwrestlerchainget", authInternal, async (request, response) => {
+	try {
+		const results = await data.externalWrestlerChainGet(request.query.wrestlerid, request.query.team, request.query.max);
+
+		if (results.error) {
+			client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6547e1b1cf4fc75b63986f3d", message: `${ results.status }: ${results.error}` }}).then();
+		}
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6547e1b1cf4fc75b63986f3d", message: `570: ${error.message}` }}).then();
+		response.status(570).json({ error: error.message });
+	}
+});
+
 router.post("/data/externalwrestler", authInternal, async (request, response) => {
 	try {
 		const results = await data.externalWrestlerSave(request.body.externalwrestler);
