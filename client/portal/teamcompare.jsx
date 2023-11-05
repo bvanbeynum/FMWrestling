@@ -128,15 +128,15 @@ const TeamCompare = () => {
 					}
 				})
 				.then(data => {
-					const teamSession = sessionData.filter(record => record.division == selectedDivision && record.opponentId == selectedOpponentId)
+					const teamSession = (sessionData || []).filter(record => record.division == selectedDivision && record.opponentId == selectedOpponentId)
 							.flatMap(record => record.weightClasses.flatMap(weightClass => weightClass.teamWrestlers))
 							.map(wrestler => ({ id: wrestler.id, weightClass: wrestler.weightClass, position: wrestler.position }));
 					
-					const opponentSession = sessionData.filter(record => record.division == selectedDivision && record.opponentId == selectedOpponentId)
+					const opponentSession = (sessionData || []).filter(record => record.division == selectedDivision && record.opponentId == selectedOpponentId)
 						.flatMap(record => record.weightClasses.flatMap(weightClass => weightClass.opponentWrestlers))
 						.map(wrestler => ({ id: wrestler.id, weightClass: wrestler.weightClass, position: wrestler.position }));
 					
-					const sessionWeightClasses = sessionData.filter(record => record.division == selectedDivision && record.opponentId == selectedOpponentId)
+					const sessionWeightClasses = (sessionData || []).filter(record => record.division == selectedDivision && record.opponentId == selectedOpponentId)
 						.flatMap(record => record.weightClasses);
 
 					// Set the data for the weight classes they've wrestled before
@@ -148,7 +148,7 @@ const TeamCompare = () => {
 								.find(() => true);
 		
 							const closestWeightClass = opponentSession.some(sessionWrestler => wrestler.id == sessionWrestler.id) ?
-							opponentSession.filter(sessionWrestler => wrestler.id == sessionWrestler.id).map(sessionWrestler => sessionWrestler.weightClass).find(() => true)
+									opponentSession.filter(sessionWrestler => wrestler.id == sessionWrestler.id).map(sessionWrestler => sessionWrestler.weightClass).find(() => true)
 								: lastWeightClass ? weightClasses
 									.map(weightClass => weightClass.name)
 									.filter(weightClass => !isNaN(weightClass))
