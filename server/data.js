@@ -1270,7 +1270,7 @@ export default {
 				const matchData = await data.floMatch.find({ $or: [{ winnerSqlId: lookupMatch.lookup }, { loserSqlId: lookupMatch.lookup } ] }).lean().exec();
 
 				const matches = matchData
-					.filter(match => new Date(match.date) > new Date(new Date().setMonth(new Date().getMonth() - 24)) && match.winType != "FOR")
+					.filter(match => new Date(match.date) > new Date(new Date().setMonth(new Date().getMonth() - 18)) && match.winType != "FOR")
 					.filter(newMatch => !lookupMatch.existing.includes(newMatch.winnerSqlId) && !lookupMatch.existing.includes(newMatch.loserSqlId))
 					.map(newMatch => ({
 						...newMatch, 
@@ -1313,7 +1313,7 @@ export default {
 			const matchData = await data.floMatch.find({ $or: [{ winnerSqlId: output.data.wrestler.sqlId }, { loserSqlId: output.data.wrestler.sqlId } ] }).lean().exec();
 			
 			const matches = matchData
-				.filter(match => new Date(match.date) > new Date(new Date().setMonth(new Date().getMonth() - 24)) && match.winType != "FOR")
+				.filter(match => new Date(match.date) > new Date(new Date().setMonth(new Date().getMonth() - 18)) && match.winType != "FOR")
 				.map(match => ({
 					...match, 
 					iteration: 0,
