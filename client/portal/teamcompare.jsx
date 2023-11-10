@@ -6,6 +6,7 @@ import "./include/team.css";
 import TeamCompareMatch from "./teamcomparematch.jsx";
 import TeamCompareSCMat from "./teamcomparescmat.jsx";
 import TeamDepthEdit from "./teamdepthedit.jsx";
+import WrestlerDetails from "./wrestlerdetails.jsx";
 
 const TeamCompare = () => {
 
@@ -22,6 +23,8 @@ const TeamCompare = () => {
 	const [ opponents, setOpponents ] = useState([]);
 	const [ selectedOpponentId, setSelectedOpponentId ] = useState("");
 	const [ weightClasses, setWeightClasses ] = useState([]);
+
+	const [ selectedWrestlers, setSelectedWrestlers ] = useState([]);
 
 	useEffect(() => {
 		if (!pageActive) {
@@ -305,6 +308,12 @@ const TeamCompare = () => {
 			});
 	};
 
+	const selectWrestler = wrestler => {
+		if (!selectedWrestlers.some(selected => selected.id == wrestler.id)) {
+			setSelectedWrestlers(selectedWrestlers.concat(wrestler));
+		} 
+	};
+
 	return (
 <div className="page">
 	<Nav loggedInUser={ loggedInUser } />
@@ -406,6 +415,7 @@ const TeamCompare = () => {
 					updatePosition={ updatePosition }
 					homeTeam={ team.name }
 					isTeam={ false }
+					selectWrestler={ selectWrestler }
 					/>
 
 			: pageView == "teamdepth" ? 
@@ -423,6 +433,7 @@ const TeamCompare = () => {
 					team={ team }
 					weightClasses={ weightClasses }
 					updateScore={ updateScore }
+					selectWrestler={ () => {} }
 					/>
 
 			: 
@@ -434,6 +445,22 @@ const TeamCompare = () => {
 					setSelectedOpponentId={ setSelectedOpponentId }
 					/>
 
+			}
+
+			{
+			pageView == "opponentdepth" && selectedWrestlers.length > 0 ?
+				selectedWrestlers.map((wrestler, wrestlerIndex) =>
+				
+				<WrestlerDetails 
+					key={wrestlerIndex} 
+					wrestlerId={ wrestler.id } 
+					wrestlerName={ wrestler.name }
+					homeTeam={ team.name }
+					closeWrestler={ wrestlerId => setSelectedWrestlers(selectedWrestlers.filter(selected => selected.id != wrestlerId)) }
+					/>
+
+				)
+			: ""
 			}
 		</div>
 

@@ -14,6 +14,8 @@ const WrestlerDetails = props => {
 		}
 
 		if (props.wrestlerId) {
+			setIsLoading(true);
+
 			fetch(`/api/externalwrestlerdetails?id=${ props.wrestlerId }&hometeam=${ props.homeTeam }`)
 				.then(response => {
 					if (response.ok) {

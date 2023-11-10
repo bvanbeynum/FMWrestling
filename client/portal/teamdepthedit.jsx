@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
-import WrestlerDetails from "./wrestlerdetails";
 
 const TeamDepthEdit = props => {
 
-	const [ selectedWrestlers, setSelectedWrestlers ] = useState([]);
 	const [ weightClasses, setWeightClasses ] = useState([]);
 
 	const [ dragStatus, setDragStatus ] = useState(null);
@@ -30,14 +28,6 @@ const TeamDepthEdit = props => {
 			setDragStatus(null);
 		}
 	}, [ isPositionUpdate ]);
-
-	useEffect(() => setSelectedWrestlers([]), [ props.selectedDivision ]);
-	
-	const selectWrestler = wrestler => {
-		if (!selectedWrestlers.some(selected => selected.id == wrestler.id)) {
-			setSelectedWrestlers(selectedWrestlers.concat(wrestler));
-		} 
-	};
 
 	const setTableRef = element => {
 		if (element) {
@@ -243,7 +233,7 @@ const TeamDepthEdit = props => {
 			: "" }
 
 			<div className="pill wrestlerPill">
-				<button aria-label="Select Wrestler" onClick={ () => { if (!props.isTeam) selectWrestler(wrestler) }}>{ wrestler.name }</button>
+				<button aria-label="Select Wrestler" onClick={ () => props.selectWrestler(wrestler) }>{ wrestler.name }</button>
 				<svg className="dragBar" ref={ element => setWrestlerRef(element) } xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-189.233q-24.749 0-42.374-17.624-17.625-17.625-17.625-42.374 0-24.75 17.625-42.374Q455.251-309.23 480-309.23q24.749 0 42.374 17.625 17.625 17.624 17.625 42.374 0 24.749-17.625 42.374-17.625 17.624-42.374 17.624Zm0-230.768q-24.749 0-42.374-17.625-17.625-17.625-17.625-42.374 0-24.749 17.625-42.374 17.625-17.625 42.374-17.625 24.749 0 42.374 17.625 17.625 17.625 17.625 42.374 0 24.749-17.625 42.374-17.625 17.625-42.374 17.625Zm0-230.769q-24.749 0-42.374-17.625-17.625-17.624-17.625-42.374 0-24.749 17.625-42.374 17.625-17.624 42.374-17.624 24.749 0 42.374 17.624 17.625 17.625 17.625 42.374 0 24.75-17.625 42.374Q504.749-650.77 480-650.77Z"/></svg>
 			</div>
 
@@ -261,19 +251,6 @@ const TeamDepthEdit = props => {
 	</tbody>
 	</table>
 </div>
-
-{
-selectedWrestlers.map((wrestler, wrestlerIndex) =>
-
-	<WrestlerDetails 
-		key={wrestlerIndex} 
-		wrestlerId={ wrestler.id } 
-		wrestlerName={ wrestler.name }
-		homeTeam={ props.homeTeam }
-		closeWrestler={ wrestlerId => setSelectedWrestlers(selectedWrestlers.filter(selected => selected.id != wrestlerId)) }
-		/>
-
-)}
 
 </>
 	);

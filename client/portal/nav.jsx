@@ -74,7 +74,7 @@ const Nav = props => {
 			}
 			
 			{
-			privileges.includes("teamManage") ?
+			privileges.includes("teamManage") || privileges.includes("myteam") ?
 			<>
 
 			<li role="button" className="button" onClick={ () => setSubExpanded(subExpanded => subExpanded === "team" ? null : "team") } aria-label="Team">
@@ -83,13 +83,21 @@ const Nav = props => {
 				<span>Team</span>
 			</li>
 			
-			{/* <li role="button" onClick={ () => window.location = "/portal/teamwrestlers.html" } className={`button sub ${ subExpanded === "team" ? "active" : "" }`} aria-label="Team Wrestlers">
-			<span>Wrestlers</span>
-			</li> */}
+			{
+			privileges.includes("myteam") ?
+			<li role="button" onClick={ () => window.location = "/portal/teamwrestlers.html" } className={`button sub ${ subExpanded === "team" ? "active" : "" }`} aria-label="Team Wrestlers">
+			<span>My Team</span>
+			</li>
+			: ""
+			}
 
+			{
+			privileges.includes("teamManage") ?
 			<li role="button" onClick={ () => window.location = "/portal/teamcompare.html" } className={`button sub ${ subExpanded === "team" ? "active" : "" }`} aria-label="Team Comparison">
 			<span>Compare</span>
 			</li>
+			: ""
+			}
 
 			</>
 			: ""
