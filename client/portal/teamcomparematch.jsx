@@ -155,8 +155,7 @@ const TeamCompareMatch = props => {
 <>
 
 {
-opposingChart ?
-<>
+opposingChart && opposingChart.chart ?
 
 <div className="panel">
 	<h3>Opposing Score</h3>
@@ -234,7 +233,11 @@ opposingChart ?
 	</div>
 
 </div>
+ : ""
+}
 
+{
+cumulativeChart && cumulativeChart.svg ?
 <div className="panel">
 	<h3>Cumulative Score</h3>
 
@@ -310,7 +313,6 @@ opposingChart ?
 
 </div>
 
-</>
 : "" }
 
 <div className="panel expandable">
