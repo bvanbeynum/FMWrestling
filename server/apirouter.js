@@ -208,16 +208,6 @@ router.get("/api/teamgetscmatcompare", authAPI, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : results.data );
 });
 
-router.get("/api/teamgetcomparewrestlers", authAPI, async (request, response) => {
-	const results = await api.teamGetCompareWrestlers(request.query.teamid, request.query.opponentscmatid, request.serverPath);
-
-	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "65244b66cf4fc75b63fb1244", message: `${ results.status }: ${results.error}` }}).then();
-	}
-
-	response.status(results.status).json(results.error ? { error: results.error } : results.data );
-});
-
 router.post("/api/teamwrestlerssave", authAPI, async (request, response) => {
 	const results = await api.teamWrestlersSave(request.body.savepacket, request.serverPath);
 
@@ -227,32 +217,6 @@ router.post("/api/teamwrestlerssave", authAPI, async (request, response) => {
 
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 });
-
-router.post("/api/teamviewsave", authAPI, async (request, response) => {
-	if (!request.user) {
-		response.status(200).json({});
-		return;
-	}
-
-	const results = await api.teamViewSave(request.body.savepacket, request.user, request.serverPath);
-
-	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "65134c08547ce02736864de8", message: `${ results.status }: ${results.error}` }}).then();
-	}
-
-	response.status(results.status).json(results.error ? { error: results.error } : results.data);
-});
-
-router.post("/api/teamswrestlersave", authAPI, async (request, response) => {
-	const results = await api.teamsWrestlerSave(request.query.teamid, request.body.wrestler, request.serverPath);
-
-	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "650c8f44547ce0273641269c", message: `${ results.status }: ${results.error}` }}).then();
-	}
-
-	response.status(results.status).json(results.error ? { error: results.error } : results.data);
-});
-
 
 router.get("/api/externalwrestlerdetails", authAPI, async (request, response) => {
 	const results = await api.externalWrestlerDetails(request.query.id, request.query.hometeam, request.serverPath);
@@ -265,36 +229,6 @@ router.get("/api/externalwrestlerdetails", authAPI, async (request, response) =>
 });
 
 // ***************** External Teams ********************
-
-router.get("/api/externalteamsget", authAPI, async (request, response) => {
-	const results = await api.externalTeamsGet(request.serverPath);
-
-	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64cab8c726539d4ed283b773", message: `${ results.status }: ${results.error}` }}).then();
-	}
-
-	response.status(results.status).json(results.error ? { error: results.error } : results.data);
-});
-
-router.post("/api/externalteamssave", authAPI, async (request, response) => {
-	const results = await api.externalTeamsSave(request.body, request.serverPath);
-
-	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64d7dd6c26539d4ed28830ae", message: `${ results.status }: ${results.error}` }}).then();
-	}
-
-	response.status(results.status).json(results.error ? { error: results.error } : results.data);
-});
-
-router.get("/api/externalteamssearch", authAPI, async (request, response) => {
-	const results = await api.externalTeamsSearch(request.query.name, request.serverPath);
-
-	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64d9140326539d4ed28899aa", message: `${ results.status }: ${results.error}` }}).then();
-	}
-
-	response.status(results.status).json(results.error ? { error: results.error } : results.data);
-});
 
 router.get("/api/externalwrestlersbulk", authAPI, async (request, response) => {
 	const results = await api.externalWrestlersBulk(request.serverPath);
