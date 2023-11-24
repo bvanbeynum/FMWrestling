@@ -126,7 +126,7 @@ const TeamDepthEdit = props => {
 
 			if (overWeightIndex >= 0) {
 				// Get the wrestler Index
-				const pillIndex = [...weightRefs.current[overWeightIndex].element.querySelectorAll(".pill")]
+				let pillIndex = [...weightRefs.current[overWeightIndex].element.querySelectorAll(".pill")]
 					.filter(pill => pill != dragRef.current.element)
 					.map(ref => {
 						const box = ref.getBoundingClientRect();
@@ -143,6 +143,9 @@ const TeamDepthEdit = props => {
 							: zoneIndex == zoneArray.length -1 && mouseRef.current.y > zone.top && mouseRef.current.y < zone.bottom && mouseRef.current.x > zone.left ? zoneIndex + 1
 							: output
 					, null);
+				
+				// If there are no pills in the weight class, then set the index to 0
+				pillIndex = pillIndex || 0;
 
 				setDragStatus(dragStatus => ({ ...dragStatus, selectWeightIndex: overWeightIndex, selectPillIndex: pillIndex }))
 				setDragPosition(pillIndex);
