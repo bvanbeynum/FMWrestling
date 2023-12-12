@@ -102,6 +102,8 @@ export default {
 		lastName: String,
 		name: String,
 		eventCount: Number,
+		gRating: Number,
+		gDeviation: Number,
 		events: [{
 			sqlId: Number,
 			date: Date,
@@ -189,6 +191,7 @@ export default {
 		endDate: Date,
 		name: String,
 		location: String,
+		opponents: [String],
 		created: Date,
 		modified: Date
 	}),
