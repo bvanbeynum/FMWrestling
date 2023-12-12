@@ -56,7 +56,7 @@ const WrestlerSearchComponent = () => {
 				.then(data => {
 					setWrestlerResults(data.wrestlers.map(wrestler => ({
 						...wrestler,
-						lastEvent: {...wrestler.lastEvent, date: new Date(wrestler.lastEvent.date)}
+						lastEvent: wrestler.lastEvent ? {...wrestler.lastEvent, date: new Date(wrestler.lastEvent.date)} : null
 					})));
 				})
 				.catch(error => {
