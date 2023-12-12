@@ -1442,7 +1442,7 @@ export default {
 					const lastMatch = wrestler.events.flatMap(event => event.matches.map(match => ({ 
 							weightClass: match.weightClass, 
 							division: /^(hs|high school)$/i.test(match.division) ? "Varsity"
-								: match.division.trim(), 
+								: (match.division || "").trim(), 
 							date: new Date(event.date), 
 							event: event.name 
 						})))
