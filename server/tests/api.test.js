@@ -2047,3 +2047,85 @@ describe("Flo Matches", () => {
 	});
 
 });
+
+describe("Duals", () => {
+
+	it.skip("loads the data for the dual event", async () => {
+
+		const event = {
+			date: new Date(2023,10,21),
+			name: "Test Dual",
+			location: "Test location",
+			opponents: ["Team 1", "Team 2"]
+		};
+
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { events: [event] } });
+		
+		const results = await api.dualLoad(event.id, serverPath);
+		
+		if (results.status != 200) {
+			console.log(results);
+		}
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data", event);
+
+		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/event?id=${ event.id }`);
+		
+	});
+
+});
+
+describe("Wrestlers", () => {
+
+	it("loads the data for the wrestler search", async () => {
+
+		const teams = [{ id: "team1", name: "Test Team" }];
+
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { scmatTeams: teams } });
+		
+		const results = await api.wrestlerSearchLoad(serverPath);
+		
+		if (results.status != 200) {
+			console.log(results);
+		}
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data", { scmatTeams: teams });
+
+		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/scmatteam`);
+		
+	});
+
+	it("searches for external wrestlers by wrestler name", async () => {
+
+		const search = "test",
+			searchType = "wrestler",
+			wrestlers = [
+				{ id: "wrestler1", name: "Test Wrestler", events: [{ team: "team 1", division: "JV", weightClass: "106", name: "test event", date: new Date(2023,11,7) }] }, 
+				{ id: "wrestler2", name: "Test Wrestler 2" }
+			],
+			expected = [
+				{ id: "wrestler1", name: "Test Wrestler", team: "team 1", division: "JV", weightClass: "106", lastEvent: { name: "test event", date: new Date(2023,11,7) } }, 
+				{ id: "wrestler2", name: "Test Wrestler 2", team: null, division: null, weightClass: null, lastEvent: null }
+			];
+
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { externalWrestlers: wrestlers } });
+		
+		const results = await api.wrestlerSearch(search, searchType, serverPath);
+		
+		if (results.status != 200) {
+			console.log(results);
+		}
+
+		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/externalwrestler?name=${ search }`);
+		
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data", { wrestlers: expected });
+
+	});
+
+});

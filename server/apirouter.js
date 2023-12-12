@@ -332,4 +332,26 @@ router.post("/api/flomatchsavebulk", authAPI, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 });
 
+// ***************** Wrestler ********************
+
+router.get("/api/wrestlersearchload", authAPI, async (request, response) => {
+	const results = await api.wrestlerSearchLoad(request.serverPath);
+
+	if (results.error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "65723e6ccf4fc75b63a0e3dd", message: `${ results.status }: ${results.error}` }}).then();
+	}
+
+	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
+});
+
+router.get("/api/wrestlersearch", authAPI, async (request, response) => {
+	const results = await api.wrestlerSearch(request.query.search, request.query.searchtype, request.serverPath);
+
+	if (results.error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "65724918cf4fc75b63a15acd", message: `${ results.status }: ${results.error}` }}).then();
+	}
+
+	response.status(results.status).json(results.error ? { error: results.error } : results.data);
+});
+
 export default router;

@@ -1211,7 +1211,7 @@ describe("API service", () => {
 
 	});
 
-	it.only("gets external wrestler details", async () => {
+	it("gets external wrestler details", async () => {
 
 		// ********** Given
 
@@ -1468,6 +1468,47 @@ describe("API service", () => {
 		// ********** Then
 
 		expect(response.body).toHaveProperty("floMatches", output);
+
+	});
+
+	it("loads the data for the wrestler search", async () => {
+
+		const output = [{ 
+			id: "team1",
+			name: "test test"
+		}];
+
+		api.wrestlerSearchLoad = jest.fn()
+			.mockResolvedValueOnce({ status: 200, data: { scmatTeams: output }});
+
+		const response = await request(app)
+			.get(`/api/wrestlersearchload`)
+			.expect(200);
+
+		expect(api.wrestlerSearchLoad).toHaveBeenCalledWith(expect.anything());
+		expect(response.body).toHaveProperty("scmatTeams", output);
+
+	});
+
+	it("searches for external wrestlers", async () => {
+
+		const search = "test",
+			searchType = "wrestler",
+			output = [{ 
+				id: "wrestler1",
+				name: "test wrestler",
+				teams: []
+			}];
+
+		api.wrestlerSearch = jest.fn()
+			.mockResolvedValueOnce({ status: 200, data: { wrestlers: output }});
+
+		const response = await request(app)
+			.get(`/api/wrestlersearch?search=${ search }&searchtype=${ searchType }`)
+			.expect(200);
+
+		expect(api.wrestlerSearch).toHaveBeenCalledWith(search, searchType, expect.anything());
+		expect(response.body).toHaveProperty("wrestlers", output);
 
 	});
 

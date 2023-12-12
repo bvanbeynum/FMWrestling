@@ -76,6 +76,12 @@ const WrestlerDetails = props => {
 	:
 	<>
 
+	{
+	wrestler.gRating ?
+	<div className="sectionHeading">{ wrestler.gRating.toFixed(2) } • { wrestler.gDeviation.toFixed(2) }</div>
+	: ""
+	}
+
 	<div className="sectionHeading">Weight Classes</div>
 	<table className="sectionTable">
 	<thead>

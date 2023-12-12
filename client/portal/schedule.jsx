@@ -520,7 +520,7 @@ const Schedule = props => {
 
 					: ""
 					}
-										
+					
 					{
 					loggedInUser && loggedInUser.privileges && loggedInUser.privileges.includes("scheduleManage") ?
 					<button aria-label="Favorite" className={ event.isFavorite ? "isFavorite" : "notFavorite" } onClick={ () => markFavorite(event) }>
@@ -541,13 +541,24 @@ const Schedule = props => {
 					</button>
 					
 					: event.type === "mill" ?
-
+					<>
 					<button aria-label="Edit" onClick={ () => setEditItem(event.id) }>
 						{/* Pencil */}
 						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M200-200h56l345-345-56-56-345 345v56Zm572-403L602-771l56-56q23-23 56.5-23t56.5 23l56 56q23 23 24 55.5T829-660l-57 57Zm-58 59L290-120H120v-170l424-424 170 170Zm-141-29-28-28 56 56-28-28Z"/></svg>
 						<div>edit</div>
 					</button>
 					
+					{
+					loggedInUser && loggedInUser.privileges && loggedInUser.privileges.includes("scheduleManage") && false ?
+
+					<button aria-label="Edit" onClick={ () => window.location = `/portal/dual.html?id=${ event.id }` }>
+						{/* scoreboard */}
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M611.538-366.154q-14.308 0-24.077-9.769-9.769-9.77-9.769-24.077v-160q0-14.307 9.769-24.077 9.769-9.769 24.077-9.769h100q14.307 0 24.076 9.769 9.77 9.77 9.77 24.077v160q0 14.307-9.77 24.077-9.769 9.769-24.076 9.769h-100Zm13.846-47.692h72.308v-132.308h-72.308v132.308Zm-410.768 47.692v-96.154q0-14.307 10.539-24.846 10.538-10.538 24.846-10.538h84.615v-48.462h-120v-47.692h133.846q14.308 0 24.077 9.769 9.769 9.77 9.769 24.077v62.308q0 14.307-10.539 24.846-10.538 10.538-24.845 10.538h-84.616v48.462h120v47.692H214.616Zm241.538-156.539v-47.691h47.692v47.691h-47.692Zm0 135.385V-435h47.692v47.692h-47.692ZM171.539-184.233q-30.307 0-51.307-20.999-21-21-21-51.308v-444.612q0-30.308 21-51.308t51.307-21h118.462v-80h59.998v80h260.002v-80h59.998v80h118.462q30.307 0 51.307 21 21 21 21 51.308v444.612q0 30.308-21 51.308-21 20.999-51.307 20.999H171.539Zm0-59.998h284.615v-55.384h47.692v55.384h284.615q4.615 0 8.462-3.847 3.846-3.846 3.846-8.462v-444.612q0-4.616-3.846-8.463-3.847-3.846-8.462-3.846H503.846v55.384h-47.692v-55.384H171.539q-4.615 0-8.462 3.846-3.846 3.847-3.846 8.463v444.612q0 4.616 3.846 8.462 3.847 3.847 8.462 3.847Zm-12.308 0v-469.23 469.23Z"/></svg>
+						<div>manage</div>
+					</button>
+					: "" }
+
+					</>
 					: ""
 					}
 				</div>

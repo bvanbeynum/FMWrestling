@@ -1238,6 +1238,9 @@ export default {
 		if (userFilter.name) {
 			filter.name = { $regex: new RegExp(userFilter.name, "i") };
 		}
+		if (userFilter.teamName) {
+			filter["events.team"] = { $regex: new RegExp(userFilter.teamName, "i") };
+		}
 		if (userFilter.ids) {
 			filter["_id"] = { $in: userFilter.ids.filter(id => mongoose.Types.ObjectId.isValid(id)) };
 		}

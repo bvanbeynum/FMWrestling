@@ -481,7 +481,7 @@ router.get("/data/externalwrestler", authInternal, async (request, response) => 
 	try {
 		const idsList = request.query.ids ? JSON.parse(request.query.ids) : null;
 
-		const results = await data.externalWrestlerGet({ id: request.query.id, ids: idsList, name: request.query.name, max: request.query.max, externalTeamId: request.query.externalteamid, sqlId: request.query.sqlid });
+		const results = await data.externalWrestlerGet({ id: request.query.id, ids: idsList, name: request.query.name, max: request.query.max, teamName: request.query.teamname, externalTeamId: request.query.externalteamid, sqlId: request.query.sqlid });
 
 		if (results.error) {
 			client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "650e124d547ce02736559461", message: `${ results.status }: ${results.error}` }}).then();

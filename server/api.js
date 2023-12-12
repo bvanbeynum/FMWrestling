@@ -1982,6 +1982,84 @@ export default {
 
 		output.status = output.status || 200;
 		return output;
+	},
+
+	wrestlerSearchLoad: async (serverPath) => {
+		const output = { data: {} }
+
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/scmatteam`);
+			output.data.scmatTeams = clientResponse.body.scmatTeams;
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		return output;
+	},
+
+	wrestlerSearch: async (search, searchType, serverPath) => {
+		const output = { data: {} }
+
+		let query = "";
+		if (searchType == "wrestler") {
+			query = `name=${ search }`;
+		}
+		else if (searchType == "team") {
+			query = `team=${ search }`;
+		}
+		else {
+			output.status = 562;
+			output.error = "Missing search type";
+			return output;
+		}
+
+		let wrestlers = null;
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/externalwrestler?${ query }`);
+			wrestlers = clientResponse.body.externalWrestlers;
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+
+		try {
+			output.data.wrestlers = wrestlers.map(wrestler => {
+				const lastEvent = (wrestler.events || [])
+					.map(event => ({...event, date: new Date(event.date)}))
+					.sort((eventA, eventB) => +eventB.date - +eventA.date)
+					.map(event => ({ 
+						name: event.name, 
+						date: event.date,
+						team: event.team,
+						division: event.matches.map(match => match.division).find(() => true),
+						weightClass: event.matches.map(match => match.weightClass).find(() => true)
+					}))
+					.find(() => true);
+
+				return {
+					id: wrestler.id,
+					name: wrestler.name,
+					team: lastEvent ? lastEvent.team : null,
+					division: lastEvent ? lastEvent.division : null,
+					weightClass: lastEvent ? lastEvent.weightClass : null,
+					lastEvent: lastEvent ? { name: lastEvent.name, date: lastEvent.date } : null
+				};
+			});
+		}
+		catch (error) {
+			output.status = 562;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		return output;
 	}
 
 };
