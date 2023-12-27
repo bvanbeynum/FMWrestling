@@ -371,6 +371,7 @@ td.sectionList.selected {
 	box-shadow: inset rgb(205 205 205) 0px 0px 4px 0px;
 	padding: 2px 7px;
 	border-radius: 9px;
+	display: flex;
 }
 
 table.sectionTable {

@@ -314,6 +314,10 @@ const TeamCompare = () => {
 		} 
 	};
 
+	const updateWrestler = updatedWrestler => {
+		setSelectedWrestlers(selectedWrestlers.map(wrestler => wrestler.id == updatedWrestler.id ? updatedWrestler : wrestler));
+	};
+
 	return (
 <div className="page">
 	<Nav loggedInUser={ loggedInUser } />
@@ -455,6 +459,8 @@ const TeamCompare = () => {
 					key={wrestlerIndex} 
 					wrestlerId={ wrestler.id } 
 					wrestlerName={ wrestler.name }
+					updateWrestler={ updateWrestler }
+					wrestler={ wrestler }
 					homeTeam={ team.name }
 					closeWrestler={ wrestlerId => setSelectedWrestlers(selectedWrestlers.filter(selected => selected.id != wrestlerId)) }
 					/>

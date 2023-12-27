@@ -1480,7 +1480,7 @@ export default {
 			return output;
 		}
 
-		if (homeTeam) {
+		if (homeTeam && homeTeam.length > 0) {
 			try {
 				const clientResponse = await client.get(`${ serverPath }/data/externalwrestlerchainget?wrestlerid=${ output.data.wrestler.sqlId }&team=${ homeTeam }`);
 				output.data.wrestler.tree = clientResponse.body.wrestler?.tree;
