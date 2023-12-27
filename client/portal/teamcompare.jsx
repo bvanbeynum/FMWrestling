@@ -44,7 +44,7 @@ const TeamCompare = () => {
 							/(hs|high school|high)/i.test(wrestler.division) ? "Varsity"
 							: /(jv|junior varsity)/i.test(wrestler.division) ? "JV"
 							: /(ms|middle school)/i.test(wrestler.division) ? "MS"
-							: wrestler.division.trim()
+							: (wrestler.division || "").trim()
 						))];
 		
 					const newSelectedDivision = newDivisions.includes(data.loggedInUser.session.selectedDivision) ? data.loggedInUser.session.selectedDivision // If the session has a selected division (and it exists)
@@ -177,7 +177,7 @@ const TeamCompare = () => {
 						/(hs|high school|high)/i.test(wrestler.division) ? "Varsity"
 						: /(jv|junior varsity)/i.test(wrestler.division) ? "JV"
 						: /(ms|middle school)/i.test(wrestler.division) ? "MS"
-						: wrestler.division.trim());
+						: (wrestler.division || "").trim());
 					
 					const newDivisions = [...new Set(divisions.concat(opponentDivisions))];
 					const opponentWeightClasses = wrestlers.flatMap(wrestler => ({ weightClass: wrestler.weightClass, division: wrestler.division }));
