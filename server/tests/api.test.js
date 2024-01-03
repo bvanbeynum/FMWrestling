@@ -1733,7 +1733,13 @@ describe("External Links", () => {
 
 	it("deletes external wrestlers in bulk", async () => {
 
-		const wrestlerIds = [ 1,2,3 ];
+		const sqlIds = [ 1,2,3 ],
+			wrestlerIds = [ "a", "b", "c" ];
+
+		client.get = jest.fn()
+			.mockResolvedValueOnce({ body: { externalWrestlers: [{ id: wrestlerIds[0] }] } })
+			.mockResolvedValueOnce({ body: { externalWrestlers: [{ id: wrestlerIds[1] }] } })
+			.mockResolvedValueOnce({ body: { externalWrestlers: [{ id: wrestlerIds[2] }] } });
 
 		client.delete = jest.fn(() => ({
 			status: "ok"
@@ -1741,12 +1747,17 @@ describe("External Links", () => {
 
 		// ********** When
 
-		const results = await api.externalWrestlersBulkDelete(wrestlerIds, serverPath);
+		const results = await api.externalWrestlersBulkDelete(sqlIds, serverPath);
 
 		// ********** Then
 
+		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/externalwrestler?sqlid=${ sqlIds[0] }`);
 		expect(client.delete).toHaveBeenNthCalledWith(1, `${ serverPath }/data/externalwrestler?id=${ wrestlerIds[0] }`);
+
+		expect(client.get).toHaveBeenNthCalledWith(2, `${ serverPath }/data/externalwrestler?sqlid=${ sqlIds[1] }`);
 		expect(client.delete).toHaveBeenNthCalledWith(2, `${ serverPath }/data/externalwrestler?id=${ wrestlerIds[1] }`);
+		
+		expect(client.get).toHaveBeenNthCalledWith(3, `${ serverPath }/data/externalwrestler?sqlid=${ sqlIds[2] }`);
 		expect(client.delete).toHaveBeenNthCalledWith(3, `${ serverPath }/data/externalwrestler?id=${ wrestlerIds[2] }`);
 
 		expect(results).toHaveProperty("status", 200);

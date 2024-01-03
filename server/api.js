@@ -1646,8 +1646,12 @@ export default {
 
 		try {
 			for (let wrestlerIndex = 0; wrestlerIndex < wrestlerIds.length; wrestlerIndex++) {
+				// Get the wrestler ID
+				const clientResponse = await client.get(`${ serverPath }/data/externalwrestler?sqlid=${ wrestlerIds[wrestlerIndex] }`);
+				const wrestler = clientResponse.body.externalWrestlers[0]
+
 				// Delete each wrestler
-				await client.delete(`${ serverPath }/data/externalwrestler?id=${ wrestlerIds[wrestlerIndex] }`);
+				await client.delete(`${ serverPath }/data/externalwrestler?id=${ wrestler.id }`);
 			}
 			
 			output.status = 200;
