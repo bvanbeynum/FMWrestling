@@ -250,6 +250,16 @@ router.post("/api/externalwrestlersbulksave", authAPI, async (request, response)
 	response.status(results.status).json(results.error ? { error: results.data } : results.data);
 });
 
+router.post("/api/externalwrestlersbulkdelete", authAPI, async (request, response) => {
+	const results = await api.externalWrestlersBulkDelete(request.body.wrestlerids, request.serverPath);
+
+	if (results.error) {
+		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6595c5b1f8173963fdc6b261", message: `${ results.status }: ${results.error}` }}).then();
+	}
+
+	response.status(results.status).json(results.error ? { error: results.data } : results.data);
+});
+
 router.get("/api/floeventload", authAPI, async (request, response) => {
 	const results = await api.floEventLoad(request.query.id, request.serverPath);
 

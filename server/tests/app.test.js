@@ -1285,6 +1285,31 @@ describe("API service", () => {
 
 	});
 
+	it("deletes external wrestlers in bulk", async () => {
+		
+		// ********** Given
+
+		const wrestlerIds = [ 1,2,3 ];
+
+		api.externalWrestlersBulkDelete = jest.fn().mockResolvedValue({
+			status: 200,
+			data: { status: "ok" }
+		});
+
+		// ********** When
+
+		const response = await request(app)
+			.post(`/api/externalwrestlersbulkdelete`)
+			.send({ wrestlerids: wrestlerIds })
+			.expect(200);
+
+		// ********** Then
+
+		expect(api.externalWrestlersBulkDelete).toHaveBeenCalledWith(wrestlerIds, expect.anything());
+		expect(response.body).toHaveProperty("status", "ok");
+
+	});
+
 	it("gets flo event", async () => {
 		// ********** Given
 

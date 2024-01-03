@@ -1641,6 +1641,27 @@ export default {
 		return output;
 	},
 
+	externalWrestlersBulkDelete: async (wrestlerIds, serverPath) => {
+		const output = {};
+
+		try {
+			for (let wrestlerIndex = 0; wrestlerIndex < wrestlerIds.length; wrestlerIndex++) {
+				// Delete each wrestler
+				await client.delete(`${ serverPath }/data/externalwrestler?id=${ wrestlerIds[wrestlerIndex] }`);
+			}
+			
+			output.status = 200;
+			output.data = { status: "ok" };
+			return output;
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+
+	},
+
 	floEventLoad: async (floId, serverPath) => {
 		const output = { data: {} };
 
@@ -2037,8 +2058,8 @@ export default {
 						name: event.name, 
 						date: event.date,
 						team: event.team,
-						division: event.matches.map(match => match.division).find(() => true),
-						weightClass: event.matches.map(match => match.weightClass).find(() => true)
+						division: (event.matches || []).map(match => match.division).find(() => true),
+						weightClass: (event.matches || []).map(match => match.weightClass).find(() => true)
 					}))
 					.find(() => true);
 

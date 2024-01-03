@@ -1731,6 +1731,30 @@ describe("External Links", () => {
 
 	});
 
+	it("deletes external wrestlers in bulk", async () => {
+
+		const wrestlerIds = [ 1,2,3 ];
+
+		client.delete = jest.fn(() => ({
+			status: "ok"
+		}));
+
+		// ********** When
+
+		const results = await api.externalWrestlersBulkDelete(wrestlerIds, serverPath);
+
+		// ********** Then
+
+		expect(client.delete).toHaveBeenNthCalledWith(1, `${ serverPath }/data/externalwrestler?id=${ wrestlerIds[0] }`);
+		expect(client.delete).toHaveBeenNthCalledWith(2, `${ serverPath }/data/externalwrestler?id=${ wrestlerIds[1] }`);
+		expect(client.delete).toHaveBeenNthCalledWith(3, `${ serverPath }/data/externalwrestler?id=${ wrestlerIds[2] }`);
+
+		expect(results).toHaveProperty("status", 200);
+		expect(results).toHaveProperty("data");
+		expect(results.data).toHaveProperty("status", "ok");
+
+	});
+
 });
 
 describe("Flo Events", () => {
@@ -2104,7 +2128,7 @@ describe("Wrestlers", () => {
 		const search = "test",
 			searchType = "wrestler",
 			wrestlers = [
-				{ id: "wrestler1", name: "Test Wrestler", events: [{ team: "team 1", division: "JV", weightClass: "106", name: "test event", date: new Date(2023,11,7) }] }, 
+				{ id: "wrestler1", name: "Test Wrestler", events: [{ team: "team 1", name: "test event", date: new Date(2023,11,7), matches: [{ division: "JV", weightClass: "106" }] }] }, 
 				{ id: "wrestler2", name: "Test Wrestler 2" }
 			],
 			expected = [
