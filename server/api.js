@@ -1272,7 +1272,7 @@ export default {
 					.sort((eventA, eventB) => +(new Date(eventB.date)) - +(new Date(eventA.date)))
 					.map(event => ({ 
 						division: event.matches ? 
-							/^(hs|high school)$/i.test(event.matches[0].division) ? "Varsity"
+							/^(hs|high school|hs girls)$/i.test(event.matches[0].division) ? "Varsity"
 							: event.matches[0].division
 						: null, 
 						weightClass: event.matches ? event.matches[0].weightClass : null 
@@ -1283,7 +1283,7 @@ export default {
 					.map(weightClass => {
 						const lastMatch = wrestler.events.flatMap(event => event.matches.map(match => ({ 
 								weightClass: match.weightClass, 
-								division: /^(hs|high school)$/i.test(match.division) ? "Varsity"
+								division: /^(hs|high school|hs girls)$/i.test(match.division) ? "Varsity"
 									: (match.division || "").trim(), 
 								date: new Date(event.date), 
 								event: event.name 
@@ -1475,7 +1475,7 @@ export default {
 			output.data.wrestler = wrestler;
 		}
 		catch (error) {
-			output.status = 562;
+			output.status = 563;
 			output.error = error.message;
 			return output;
 		}
