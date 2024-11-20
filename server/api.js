@@ -176,27 +176,27 @@ export default {
 		// 	oauth.setCredentials({ refresh_token: config.email.refreshToken });
 		// 	const gmailToken = oauth.getAccessToken();
 			
-			const service = nodemailer.createTransport({
-				service: "gmail",
-				auth: {
-					type: "OAuth2",
-					user: config.email.user,
-					clientId: config.email.clientId,
-					clientSecret: config.email.clientSecret,
-					refreshToken: config.email.refreshToken,
-					accessToken: gmailToken
-				}
-			});
+		// 	const service = nodemailer.createTransport({
+		// 		service: "gmail",
+		// 		auth: {
+		// 			type: "OAuth2",
+		// 			user: config.email.user,
+		// 			clientId: config.email.clientId,
+		// 			clientSecret: config.email.clientSecret,
+		// 			refreshToken: config.email.refreshToken,
+		// 			accessToken: gmailToken
+		// 		}
+		// 	});
 
-			const sendMailAsync = (email) => new Promise(resolve => service.sendMail(email, (error) => resolve(error)));
-			const error = await sendMailAsync(email);
-			service.close();
+		// 	const sendMailAsync = (email) => new Promise(resolve => service.sendMail(email, (error) => resolve(error)));
+		// 	const error = await sendMailAsync(email);
+		// 	service.close();
 			
-			if (error) {
-				output.error = error.message;
-			}
-		}
-		catch { }
+		// 	if (error) {
+		// 		output.error = error.message;
+		// 	}
+		// }
+		// catch { }
 
 		output.status = 200;
 		output.cookie = encryptedToken;
