@@ -8,7 +8,7 @@ export default {
 
 	setRequestVars: (protocol, host) => {
 		return {
-			serverPath: `${ protocol }://${ host }`,
+			serverPath: config.apiUrl,
 			logUrl: `${ protocol }://beynum.com/sys/api/addlog`
 		};
 	},
