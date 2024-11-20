@@ -42,7 +42,7 @@ router.post("/api/requestaccess", [authAPI, browser.express()], async (request, 
 	const results = await api.requestAccess(ipAddress, domain, request.body.name, request.body.email, request.useragent, request.serverPath);
 
 	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "642202d038baa8f160a2c6bb", message: `${ results.status }: ${results.error}` }}).then();
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "642202d038baa8f160a2c6bb", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
 	response.cookie("wm", results.cookie, { maxAge: 999999999999 });
@@ -54,7 +54,7 @@ router.get("/api/postload", authAPI, async (request, response) => {
 	const results = await api.postLoad(request.serverPath);
 
 	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "647b4c2ef18254fde708ec96", message: `${ results.status }: ${results.error}` }}).then();
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "647b4c2ef18254fde708ec96", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
 	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
@@ -64,7 +64,7 @@ router.post("/api/postsave", authAPI, async (request, response) => {
 	const results = await api.postSave(request.body, request.serverPath);
 
 	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6477f531f18254fde707c125", message: `${ results.status }: ${results.error}` }}).then();
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6477f531f18254fde707c125", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
@@ -74,7 +74,7 @@ router.get("/api/scheduleload", authAPI, async (request, response) => {
 	const results = await api.scheduleLoad(request.serverPath, request.query.startdate, request.query.enddate);
 
 	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6480db2b4d7f52ba05e8180d", message: `${ results.status }: ${results.error}` }}).then();
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6480db2b4d7f52ba05e8180d", message: `${ results.status }: ${results.error}` }}).then();
 	}
 	
 	const output = { loggedInUser: request.user, ...results.data };
@@ -86,7 +86,7 @@ router.post("/api/schedulesave", authAPI, async (request, response) => {
 	const results = await api.scheduleSave(request.body, request.serverPath);
 
 	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6480dd414d7f52ba05e8187b", message: `${ results.status }: ${results.error}` }}).then();
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6480dd414d7f52ba05e8187b", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
@@ -96,7 +96,7 @@ router.get("/api/requestsload", authAPI, async (request, response) => {
 	const results = await api.requestsLoad(request.serverPath);
 
 	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64836fdc4d7f52ba05e8fd63", message: `${ results.status }: ${results.error}` }}).then();
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64836fdc4d7f52ba05e8fd63", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
 	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
@@ -106,7 +106,7 @@ router.post("/api/requestssave", authAPI, async (request, response) => {
 	const results = await api.requestsSave(request.body, request.serverPath);
 
 	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64836ff14d7f52ba05e8fd66", message: `${ results.status }: ${results.error}` }}).then();
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64836ff14d7f52ba05e8fd66", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
@@ -118,7 +118,7 @@ router.get("/api/roleload", authAPI, async (request, response) => {
 	const results = await api.roleLoad(request.serverPath);
 
 	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "648aa4534d7f52ba05eb7d64", message: `${ results.status }: ${results.error}` }}).then();
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "648aa4534d7f52ba05eb7d64", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
 	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
@@ -128,7 +128,7 @@ router.post("/api/rolesave", authAPI, async (request, response) => {
 	const results = await api.roleSave(request.body, request.serverPath);
 
 	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "648aa47a4d7f52ba05eb7d67", message: `${ results.status }: ${results.error}` }}).then();
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "648aa47a4d7f52ba05eb7d67", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
 	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
@@ -140,7 +140,7 @@ router.get("/api/usersload", authAPI, async (request, response) => {
 	const results = await api.usersLoad(request.serverPath);
 
 	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64a3276626539d4ed275e8e3", message: `${ results.status }: ${results.error}` }}).then();
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64a3276626539d4ed275e8e3", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
 	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
@@ -150,7 +150,7 @@ router.post("/api/userssave", authAPI, async (request, response) => {
 	const results = await api.usersSave(request.body, request.serverPath);
 
 	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64a32ad326539d4ed275ea1c", message: `${ results.status }: ${results.error}` }}).then();
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64a32ad326539d4ed275ea1c", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
 	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
@@ -160,7 +160,7 @@ router.post("/api/usersessionsave", authAPI, async (request, response) => {
 	const results = await api.userSessionSave(request.user, request.body.session, request.serverPath);
 
 	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "651b68f7cf4fc75b63591ee7", message: `${ results.status }: ${results.error}` }}).then();
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "651b68f7cf4fc75b63591ee7", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
 	response.status(results.status).json(results.error ? { error: results.error } : results.data );
@@ -172,7 +172,7 @@ router.get("/api/teamwrestlersload", authAPI, async (request, response) => {
 	const results = await api.teamWrestlersLoad(request.serverPath);
 
 	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "651b16e3cf4fc75b63536bb4", message: `${ results.status }: ${results.error}` }}).then();
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "651b16e3cf4fc75b63536bb4", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
 	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data } );
@@ -182,7 +182,7 @@ router.get("/api/teamcompareload", authAPI, async (request, response) => {
 	const results = await api.teamCompareLoad(request.serverPath);
 
 	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "651b61fccf4fc75b6358a2d4", message: `${ results.status }: ${results.error}` }}).then();
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "651b61fccf4fc75b6358a2d4", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
 	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data } );
@@ -192,7 +192,7 @@ router.get("/api/teamgetopponentwrestlers", authAPI, async (request, response) =
 	const results = await api.teamGetOpponentWrestlers(request.query.opponentid, request.serverPath);
 
 	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "651c9156cf4fc75b636c2b14", message: `${ results.status }: ${results.error}` }}).then();
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "651c9156cf4fc75b636c2b14", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
 	response.status(results.status).json(results.error ? { error: results.error } : results.data );
@@ -202,7 +202,7 @@ router.get("/api/teamgetscmatcompare", authAPI, async (request, response) => {
 	const results = await api.teamGetSCMatCompare(request.query.teamid, request.query.opponentid, request.serverPath);
 
 	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "651dfc87cf4fc75b638397c1", message: `${ results.status }: ${results.error}` }}).then();
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "651dfc87cf4fc75b638397c1", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
 	response.status(results.status).json(results.error ? { error: results.error } : results.data );
@@ -212,7 +212,7 @@ router.post("/api/teamwrestlerssave", authAPI, async (request, response) => {
 	const results = await api.teamWrestlersSave(request.body.savepacket, request.serverPath);
 
 	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "651b18a6cf4fc75b63538bc1", message: `${ results.status }: ${results.error}` }}).then();
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "651b18a6cf4fc75b63538bc1", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
@@ -222,7 +222,7 @@ router.get("/api/externalwrestlerdetails", authAPI, async (request, response) =>
 	const results = await api.externalWrestlerDetails(request.query.id, request.query.hometeam, request.serverPath);
 
 	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "65450955cf4fc75b636f85bd", message: `${ results.status }: ${results.error}` }}).then();
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "65450955cf4fc75b636f85bd", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
@@ -234,7 +234,7 @@ router.get("/api/externalwrestlersbulk", authAPI, async (request, response) => {
 	const results = await api.externalWrestlersBulk(request.serverPath);
 
 	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "650e12ac547ce02736559930", message: `${ results.status }: ${results.error}` }}).then();
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "650e12ac547ce02736559930", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
@@ -244,7 +244,7 @@ router.post("/api/externalwrestlersbulksave", authAPI, async (request, response)
 	const results = await api.externalWrestlersBulkSave(request.body.externalwrestlers, request.serverPath);
 
 	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "650f23c7547ce0273661ab8d", message: `${ results.status }: ${results.error}` }}).then();
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "650f23c7547ce0273661ab8d", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
 	response.status(results.status).json(results.error ? { error: results.data } : results.data);
@@ -254,7 +254,7 @@ router.post("/api/externalwrestlersbulkdelete", authAPI, async (request, respons
 	const results = await api.externalWrestlersBulkDelete(request.body.wrestlerids, request.serverPath);
 
 	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6595c5b1f8173963fdc6b261", message: `${ results.status }: ${results.error}` }}).then();
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6595c5b1f8173963fdc6b261", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
 	response.status(results.status).json(results.error ? { error: results.data } : results.data);
@@ -264,7 +264,7 @@ router.get("/api/floeventload", authAPI, async (request, response) => {
 	const results = await api.floEventLoad(request.query.id, request.serverPath);
 
 	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64f90a99834ebe5ef64faa77", message: `${ results.status }: ${results.error}` }}).then();
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64f90a99834ebe5ef64faa77", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
 	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
@@ -274,7 +274,7 @@ router.get("/api/floeventfavorites", authAPI, async (request, response) => {
 	const results = await api.floEventFavorites(request.serverPath);
 
 	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64f79111bd62e8c8b53ccd20", message: `${ results.status }: ${results.error}` }}).then();
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64f79111bd62e8c8b53ccd20", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
@@ -284,7 +284,7 @@ router.post("/api/floeventsave", authAPI, async (request, response) => {
 	const results = await api.floEventSave(request.body.floEvent, request.serverPath);
 
 	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64ed25e226539d4ed2916e6e", message: `${ results.status }: ${results.error}` }}).then();
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64ed25e226539d4ed2916e6e", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
@@ -294,7 +294,7 @@ router.post("/api/trackeventsave", authAPI, async (request, response) => {
 	const results = await api.trackEventSave(request.body.trackEvent, request.serverPath);
 
 	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64efa04c26539d4ed297e773", message: `${ results.status }: ${results.error}` }}).then();
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64efa04c26539d4ed297e773", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
@@ -304,7 +304,7 @@ router.post("/api/scmatteambulksave", authAPI, async (request, response) => {
 	const results = await api.scmatTeamBulkSave(request.body.teamssave, request.serverPath);
 
 	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6516f5c0cf4fc75b63100c9d", message: `${ results.status }: ${results.error}` }}).then();
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6516f5c0cf4fc75b63100c9d", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
@@ -314,7 +314,7 @@ router.get("/api/scmatteamsearch", authAPI, async (request, response) => {
 	const results = await api.scmatTeamSearch(request.query.name, request.serverPath);
 
 	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "651977a5cf4fc75b63376404", message: `${ results.status }: ${results.error}` }}).then();
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "651977a5cf4fc75b63376404", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
@@ -326,7 +326,7 @@ router.get("/api/flomatchgetbulk", authAPI, async (request, response) => {
 	const results = await api.floMatchGetBulk(request.serverPath);
 
 	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "65466be4cf4fc75b63820d1c", message: `${ results.status }: ${results.error}` }}).then();
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "65466be4cf4fc75b63820d1c", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
@@ -336,7 +336,7 @@ router.post("/api/flomatchsavebulk", authAPI, async (request, response) => {
 	const results = await api.floMatchSaveBulk(request.body.matchessave, request.serverPath);
 
 	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "65466f81cf4fc75b638244b6", message: `${ results.status }: ${results.error}` }}).then();
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "65466f81cf4fc75b638244b6", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
@@ -348,7 +348,7 @@ router.get("/api/wrestlersearchload", authAPI, async (request, response) => {
 	const results = await api.wrestlerSearchLoad(request.serverPath);
 
 	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "65723e6ccf4fc75b63a0e3dd", message: `${ results.status }: ${results.error}` }}).then();
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "65723e6ccf4fc75b63a0e3dd", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
 	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
@@ -358,7 +358,7 @@ router.get("/api/wrestlersearch", authAPI, async (request, response) => {
 	const results = await api.wrestlerSearch(request.query.search, request.query.searchtype, request.serverPath);
 
 	if (results.error) {
-		client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "65724918cf4fc75b63a15acd", message: `${ results.status }: ${results.error}` }}).then();
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "65724918cf4fc75b63a15acd", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
