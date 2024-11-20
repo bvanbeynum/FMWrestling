@@ -171,10 +171,10 @@ export default {
 			return output;
 		}
 
-		try {
-			const oauth = new google.auth.OAuth2(config.email.clientId, config.email.clientSecret, config.email.redirectURL);
-			oauth.setCredentials({ refresh_token: config.email.refreshToken });
-			const gmailToken = oauth.getAccessToken();
+		// try {
+		// 	const oauth = new google.auth.OAuth2(config.email.clientId, config.email.clientSecret, config.email.redirectURL);
+		// 	oauth.setCredentials({ refresh_token: config.email.refreshToken });
+		// 	const gmailToken = oauth.getAccessToken();
 			
 			const service = nodemailer.createTransport({
 				service: "gmail",
