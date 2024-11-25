@@ -2023,7 +2023,7 @@ export default {
 
 		try {
 			const clientResponse = await client.get(`${ serverPath }/data/flomatch`);
-			output.data.floMatches = clientResponse.body.floMatches;
+			output.data.floMatches = clientResponse.body.floMatches.map(match => match.sqlId);
 		}
 		catch (error) {
 			output.status = 561;
