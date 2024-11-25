@@ -1265,6 +1265,34 @@ export default {
 		return output;
 	},
 
+	externalWrestlerMatchesGet: async (wrestlerId) => {
+		const output = { data: {} };
+
+		try {
+			const wrestler = await data.externalWrestler.findOne({ _id: mongoose.Types.ObjectId.isValid(wrestlerId) ? wrestlerId : null }).lean().exec();
+			output.data.wrestler = { id: wrestlerId, sqlId: wrestler.sqlId, name: wrestler.name, matches: [] };
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+
+		console.log(output.data.wrestler)
+		try {
+			const matches = await data.floMatch.find({ $or: [{ winnerSqlId: output.data.wrestler.sqlId }, { loserSqlId: output.data.wrestler.sqlId }] }).lean().exec();
+			output.data.wrestler.matches = matches;
+		}
+		catch (error) {
+			output.status = 562;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		return output;
+	},
+
 	externalWrestlerChainGet: async (wrestlerSqlId, lookupTeam, maxReturned = 10) => {
 		const output = { data: {} };
 
