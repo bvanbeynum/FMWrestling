@@ -1057,6 +1057,15 @@ describe("External wrestler data", () => {
 		);
 	});
 
+	it("should get the matches for a wrestler", async () => {
+		const wrestlerId = 999;
+
+		const response = await data.externalWrestlerMatchesGet(wrestlerId);
+
+		expect(response.status).toEqual(200);
+		expect(response.data).toHaveProperty("matches", []);
+	})
+
 });
 
 describe("Flo Event Data", () => {

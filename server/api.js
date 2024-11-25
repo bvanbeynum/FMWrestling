@@ -1278,6 +1278,18 @@ export default {
 						weightClass: event.matches ? event.matches[0].weightClass : null 
 					}))
 					.find(() => true);
+
+				const lastEvent = wrestler.events.map(event => ({
+						event: event.name,
+						date: new Date(event.date),
+						division: event.matches ? 
+							/^(hs|high school|hs girls)$/i.test(event.matches[0].division) ? "Varsity"
+							: event.matches[0].division
+						: null, 
+						weightClass: event.matches ? event.matches[0].weightClass : null
+					}))
+					.sort((eventA, eventB) => +eventB.date - +eventA.date)
+					.find(() => true);
 				
 				const weightClasses = [...new Set(wrestler.events.filter(event => event.team == scmatTeam.name).flatMap(event => event.matches.map(match => match.weightClass)))]
 					.map(weightClass => {
@@ -1305,7 +1317,14 @@ export default {
 					name: wrestler.name,
 					division: lastTeamEvent ? lastTeamEvent.division : null,
 					weightClass: lastTeamEvent ? lastTeamEvent.weightClass : null,
-					weightClasses: weightClasses
+					weightClasses: weightClasses,
+					lastEvent: lastEvent,
+					wins: wrestler.events
+						.filter(event => +Date.now() - (new Date(event.date)) < 1000 * 60 * 60 * 24 * 365)
+						.reduce((sum, event) => sum + event.matches.filter(match => match.isWinner).length, 0),
+					losses: wrestler.events
+						.filter(event => +Date.now() - (new Date(event.date)) < 1000 * 60 * 60 * 24 * 365)
+						.reduce((sum, event) => sum + event.matches.filter(match => !match.isWinner).length, 0)
 				};
 			});
 		}
@@ -1418,6 +1437,16 @@ export default {
 			output.error = error.message;
 			return output;
 		}
+		
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/externalwrestlermatches?id=${ wrestlerId }`);
+			wrestler.matches = clientResponse.body.wrestler ? clientResponse.body.wrestler.matches : [];
+		}
+		catch (error) {
+			output.status = 562;
+			output.error = error.message;
+			return output;
+		}
 
 		try {
 			
@@ -1488,6 +1517,23 @@ export default {
 			catch (error) {
 				output.error = error.message;
 			}
+		}
+
+		output.status = 200;
+		return output;
+	},
+	
+	externalWrestlerMatches: async (wrestlerId, serverPath) => {
+		const output = { data: {} };
+
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/externalwrestlermatches?id=${ wrestlerId }`);
+			output.data.matches = clientResponse.body.wrestler ? clientResponse.body.wrestler.matches : [];
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
 		}
 
 		output.status = 200;
