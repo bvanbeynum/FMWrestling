@@ -1255,7 +1255,6 @@ export default {
 		if (userFilter.select) {
 			select = userFilter.select.reduce((output, current) => ({...output, [current]: 1 }), {});
 		}
-		console.log(select)
 
 		try {
 			const records = await data.externalWrestler.find(filter).select(select).lean().limit(userFilter.max).exec();
