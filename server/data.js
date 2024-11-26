@@ -1230,6 +1230,7 @@ export default {
 
 	externalWrestlerGet: async (userFilter = {}) => {
 		let filter = {},
+			select = {},
 			output = {};
 		
 		if (userFilter.id) {
@@ -1251,9 +1252,13 @@ export default {
 		if (userFilter.sqlId) {
 			filter.sqlId = userFilter.sqlId;
 		}
+		if (userFilter.select) {
+			select = userFilter.select.reduce((output, current) => ({...output, [current]: 1 }), {});
+		}
+		console.log(select)
 
 		try {
-			const records = await data.externalWrestler.find(filter).lean().limit(userFilter.max).exec();
+			const records = await data.externalWrestler.find(filter).select(select).lean().limit(userFilter.max).exec();
 			output.status = 200;
 			output.data = { externalWrestlers: records.map(({ _id, __v, ...data }) => ({ id: _id, ...data })) };
 		}

@@ -1544,7 +1544,7 @@ export default {
 		const output = { data: {} };
 
 		try {
-			const clientResponse = await client.get(`${ serverPath }/data/externalwrestler`);
+			const clientResponse = await client.get(`${ serverPath }/data/externalwrestler?select=sqlId`);
 			output.data.externalWrestlers = clientResponse.body.externalWrestlers;
 		}
 		catch (error) {
