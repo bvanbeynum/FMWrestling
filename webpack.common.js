@@ -17,16 +17,6 @@ export default {
 		noaccess: "./client/portal/noaccess.jsx"
 	},
 	plugins: [
-		// new HtmlWebpackPlugin({ 
-		// 	filename: "index.html",
-		// 	title: "Fort Mill Wrestling",
-		// 	favicon: "./client/media/favicon.ico",
-		// 	meta: {
-		// 		viewport: "width=device-width, initial-scale=1"
-		// 	},
-		// 	chunks: [ "index" ],
-		// 	templateContent: "<html><body><div id='root'></div></body></html>"
-		// }),
 		new HtmlWebpackPlugin({ 
 			filename: "./portal/index.html",
 			title: "Fort Mill Wrestling - Portal",
