@@ -28,25 +28,14 @@ export default {
 		created: Date,
 		modified: Date,
 		session: {
-			selectedDivision: String,
-			selectedOpponentId: String,
-			compare: [{
-				division: String,
-				opponentId: String,
+			opponents: [{
+				id: String,
 				weightClasses: [{
 					name: String,
-					teamWrestlers: [{
-						id: String,
-						weightClass: String,
-						position: Number
-					}],
-					opponentWrestlers: [{
-						id: String,
-						weightClass: String,
-						position: Number
-					}],
 					teamScore: Number,
-					opponentScore: Number
+					opponentScore: Number,
+					opponentWrestlerId: String,
+					teamWrestlerId: String
 				}]
 			}]
 		}

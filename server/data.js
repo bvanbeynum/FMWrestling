@@ -1282,7 +1282,6 @@ export default {
 			return output;
 		}
 
-		console.log(output.data.wrestler)
 		try {
 			const matches = await data.floMatch.find({ $or: [{ winnerSqlId: output.data.wrestler.sqlId }, { loserSqlId: output.data.wrestler.sqlId }] }).lean().exec();
 			output.data.wrestler.matches = matches;

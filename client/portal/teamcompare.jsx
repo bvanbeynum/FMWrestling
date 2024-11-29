@@ -5,8 +5,7 @@ import "./include/index.css";
 import "./include/team.css";
 import TeamCompareMatch from "./teamcomparematch.jsx";
 import TeamCompareSCMat from "./teamcomparescmat.jsx";
-import TeamDepthEdit from "./teamdepthedit.jsx";
-import WrestlerDetails from "./wrestlerdetails.jsx";
+import TeamLineup from "./teamlineup.jsx";
 
 const TeamCompare = () => {
 
@@ -15,16 +14,10 @@ const TeamCompare = () => {
 	const [ loggedInUser, setLoggedInUser ] = useState(null);
 	const [ isFilterExpanded, setIsFilterExpanded ] = useState(false);
 
-	const [ divisions, setDivisions ] = useState([]);
-	const [ selectedDivision, setSelectedDivision ] = useState("");
-	const [ sessionData, setSessionData ] = useState(null);
-
 	const [ team, setTeam ] = useState(null);
 	const [ opponents, setOpponents ] = useState([]);
 	const [ selectedOpponentId, setSelectedOpponentId ] = useState("");
 	const [ weightClasses, setWeightClasses ] = useState([]);
-
-	const [ selectedWrestlers, setSelectedWrestlers ] = useState([]);
 
 	useEffect(() => {
 		if (!pageActive) {
@@ -39,28 +32,19 @@ const TeamCompare = () => {
 					}
 				})
 				.then(data => {
-					const newDivisions = [...new Set(
-						data.team.wrestlers.flatMap(wrestler => 
-							/(hs|high school|high)/i.test(wrestler.division) ? "Varsity"
-							: /(jv|junior varsity)/i.test(wrestler.division) ? "JV"
-							: /(ms|middle school)/i.test(wrestler.division) ? "MS"
-							: (wrestler.division || "").trim()
-						))];
-		
-					const newSelectedDivision = newDivisions.includes(data.loggedInUser.session.selectedDivision) ? data.loggedInUser.session.selectedDivision // If the session has a selected division (and it exists)
-						: newDivisions
-							.sort((divisionA, divisionB) => 
-								/varsity/i.test(divisionA) ? -1 
-								: /varsity/i.test(divisionB) ? 1 
-								: /jv/i.test(divisionA) ? -1
-								: /jv/i.test(divisionB) ? 1
-								: /ms/i.test(divisionA) ? -1
-								: /ms/i.test(divisionB) ? 1
-								: divisionA > divisionB ? 1 : -1
-							) // Prioritize by type of division
-							.find(() => true);
-		
-					const teamWeightClasses = data.team.wrestlers.flatMap(wrestler => ({ weightClass: wrestler.weightClass, division: wrestler.division }));
+					const dataTeam = {
+						...data.team,
+						wrestlers: data.team.wrestlers.map(wrestler => ({
+							...wrestler,
+							name: wrestler.firstName + " " + wrestler.lastName,
+							division: /(hs|high school|high)/i.test(wrestler.division) ? "Varsity"
+								: /(jv|junior varsity)/i.test(wrestler.division) ? "JV"
+								: /(ms|middle school)/i.test(wrestler.division) ? "MS"
+								: (wrestler.division || "").trim(),
+						}))
+					};
+
+					const teamWeightClasses = dataTeam.wrestlers.flatMap(wrestler => ({ weightClass: wrestler.weightClass, division: wrestler.division }));
 							
 					// get the distinct list of weight classes from the team's weigh classes
 					const newWeightClassNames = [...new Set(teamWeightClasses.map(weightClass => weightClass.weightClass))]
@@ -73,41 +57,18 @@ const TeamCompare = () => {
 
 					const newWeightClasses = newWeightClassNames.map(weightClassName => ({
 							name: weightClassName,
-							divisions: weightClassName == "Other" ? divisions // Use all divisions if this is for other
-								: [...new Set(teamWeightClasses.filter(weightClass => weightClass.weightClass == weightClassName).map(weightClass => weightClass.division)) ], 
-							teamWrestlers: data.team.wrestlers
+							teamWrestlers: dataTeam.wrestlers
 								.filter(wrestler => wrestler.weightClass == weightClassName)
-								.sort((wrestlerA, wrestlerB) =>
-									wrestlerA.division == selectedDivision && wrestlerB.division != selectedDivision ? -1
-									: wrestlerA.division != selectedDivision && wrestlerB.division == selectedDivision ? 1
-									: wrestlerA.position - wrestlerB.position
-								)
+								.sort((wrestlerA, wrestlerB) => wrestlerA.position - wrestlerB.position)
 								.map((wrestler, wrestlerIndex) => ({
 									...wrestler,
-									name: wrestler.firstName + " " + wrestler.lastName,
 									position: wrestlerIndex
 								})),
 							opponentWrestlers: []
 						}));
 					
-					if (data.loggedInUser.session) {
-						if (data.loggedInUser.session.selectedDivision) {
-							setSelectedDivision(data.loggedInUser.session.selectedDivision);
-						}
-
-						if (data.loggedInUser.session.selectedOpponentId) {
-							setSelectedOpponentId(data.loggedInUser.session.selectedOpponentId);
-						}
-						
-						if (data.loggedInUser.session.compare) {
-							setSessionData(data.loggedInUser.session.compare);
-						}
-					}
-
-					setTeam(data.team);
+					setTeam(dataTeam);
 					setOpponents(data.scmatTeams);
-					setDivisions(newDivisions);
-					setSelectedDivision(newSelectedDivision);
 					setWeightClasses(newWeightClasses);
 
 					setLoggedInUser(data.loggedInUser);
@@ -131,16 +92,6 @@ const TeamCompare = () => {
 					}
 				})
 				.then(data => {
-					const teamSession = (sessionData || []).filter(record => record.division == selectedDivision && record.opponentId == selectedOpponentId)
-							.flatMap(record => record.weightClasses.flatMap(weightClass => weightClass.teamWrestlers))
-							.map(wrestler => ({ id: wrestler.id, weightClass: wrestler.weightClass, position: wrestler.position }));
-					
-					const opponentSession = (sessionData || []).filter(record => record.division == selectedDivision && record.opponentId == selectedOpponentId)
-						.flatMap(record => record.weightClasses.flatMap(weightClass => weightClass.opponentWrestlers))
-						.map(wrestler => ({ id: wrestler.id, weightClass: wrestler.weightClass, position: wrestler.position }));
-					
-					const sessionWeightClasses = (sessionData || []).filter(record => record.division == selectedDivision && record.opponentId == selectedOpponentId)
-						.flatMap(record => record.weightClasses);
 
 					// Set the data for the weight classes they've wrestled before
 					const wrestlers = data.wrestlers.map(wrestler => {
@@ -150,9 +101,7 @@ const TeamCompare = () => {
 								.sort((weightClassA, weightClassB) => +weightClassB.lastDate - +weightClassA.lastDate)
 								.find(() => true);
 		
-							const closestWeightClass = opponentSession.some(sessionWrestler => wrestler.id == sessionWrestler.id) ?
-									opponentSession.filter(sessionWrestler => wrestler.id == sessionWrestler.id).map(sessionWrestler => sessionWrestler.weightClass).find(() => true)
-								: lastWeightClass ? weightClasses
+							const closestWeightClass = lastWeightClass ? weightClasses
 									.map(weightClass => weightClass.name)
 									.filter(weightClass => !isNaN(weightClass))
 									.sort((weightClassA, weightClassB) =>
@@ -166,134 +115,129 @@ const TeamCompare = () => {
 							
 							return {
 								...wrestler,
+								division: /(hs|high school|high)/i.test(wrestler.division) ? "Varsity"
+									: /(jv|junior varsity)/i.test(wrestler.division) ? "JV"
+									: /(ms|middle school)/i.test(wrestler.division) ? "MS"
+									: (wrestler.division || "").trim(),
+								lastEvent: {...wrestler.lastEvent, date: new Date(wrestler.lastEvent?.date) },
 								weightClasses: wrestler.weightClasses.map(weightClass => ({...weightClass, lastDate: new Date(weightClass.lastDate)})),
 								weightClass: closestWeightClass,
-								position: opponentSession.filter(sessionWrestler => wrestler.id == sessionWrestler.id).map(sessionWrestler => sessionWrestler.position).find(() => true),
 								lastDate: lastWeightClass ? lastWeightClass.lastDate : null
 							}
 						});
-					
-					const opponentDivisions = wrestlers.flatMap(wrestler => 
-						/(hs|high school|high)/i.test(wrestler.division) ? "Varsity"
-						: /(jv|junior varsity)/i.test(wrestler.division) ? "JV"
-						: /(ms|middle school)/i.test(wrestler.division) ? "MS"
-						: (wrestler.division || "").trim());
-					
-					const newDivisions = [...new Set(divisions.concat(opponentDivisions))];
-					const opponentWeightClasses = wrestlers.flatMap(wrestler => ({ weightClass: wrestler.weightClass, division: wrestler.division }));
-					
-					const newWeightClasses = weightClasses.map(weightClass => ({
-							...weightClass,
-							divisions: weightClass.name == "Other" ? divisions 
-								: [...new Set(weightClass.divisions.concat(
-									opponentWeightClasses.filter(opponentWeightClass => opponentWeightClass.weightClass == weightClass.name).map(filterWeightClass => filterWeightClass.division)
-								)) ], // Use all divisions if this is for other
-							teamWrestlers: weightClass.teamWrestlers.map((teamWrestler, teamWrestlerIndex) => ({
-									...teamWrestler,
-									position: teamSession.filter(sessionWrestler => sessionWrestler.id == teamWrestler.id).map(sessionWrestler => sessionWrestler.position).find(() => true) ?? teamWrestlerIndex
+
+					const sessionOpponent = loggedInUser.session && loggedInUser.session?.opponents ? loggedInUser.session.opponents.find(opponent => opponent.id == selectedOpponentId) : null,
+						sessionWeights = sessionOpponent ? 
+							sessionOpponent.weightClasses
+								.map(sessionWeight => ({ 
+									name: sessionWeight.name, 
+									opponentWrestler: wrestlers.find(wrestler => sessionWeight.opponentWrestlerId == wrestler.id),
+									opponentScore: sessionWeight.opponentScore,
+
+									teamWrestler: team.wrestlers.find(wrestler => sessionWeight.teamWrestlerId == wrestler.id),
+									teamScore: sessionWeight.teamScore
 								}))
-								.sort((wrestlerA, wrestlerB) => wrestlerA.position - wrestlerB.position),
-							opponentWrestlers: wrestlers
+								: [];
+					
+					const weightClassSorted = weightClasses.map(weightClass => ({
+							name: weightClass.name,
+							wrestlers: wrestlers
 								.filter(wrestler => wrestler.weightClass == weightClass.name)
 								.sort((wrestlerA, wrestlerB) => 
-									(wrestlerA.position || wrestlerA.position === 0) && (wrestlerB.position || wrestlerB.position === 0) ? wrestlerA.position - wrestlerB.position
-									: (wrestlerA.position || wrestlerA.position === 0) && (!wrestlerB.position && wrestlerB.position !== 0) ? -1
-									: (!wrestlerA.position && wrestlerA.position !== 0) && (wrestlerB.position || wrestlerB.position === 0) ? 1
-									: wrestlerA.division == selectedDivision && wrestlerB.division != selectedDivision ? -1
-									: wrestlerA.division != selectedDivision && wrestlerB.division == selectedDivision ? 1
-									: +wrestlerB.lastDate - +wrestlerA.lastDate
+									wrestlerA.division != wrestlerB.division ?
+										/varsity/i.test(wrestlerA.division) ? -1 
+										: /varsity/i.test(wrestlerB.division) ? 1 
+										: /jv/i.test(wrestlerA.division) ? -1
+										: /jv/i.test(wrestlerB.division) ? 1
+										: /ms/i.test(wrestlerA.division) ? -1
+										: /ms/i.test(wrestlerB.division) ? 1
+										: -1
+									: +wrestlerA.weightClass < +wrestlerB.weightClass ? -1
+									: +wrestlerA.weightClass > +wrestlerB.weightClass ? 1
+									: +wrestlerA.lastDate > +wrestlerB.lastDate ? -1
+									: +wrestlerA.lastDate < +wrestlerB.lastDate ? 1
+									: +wrestlerA.lastDate - +wrestlerB.lastDate
 								)
 								.map((wrestler, wrestlerIndex) => ({
 									...wrestler,
 									position: wrestlerIndex
-								})),
-							teamScore: sessionWeightClasses.filter(sessionWeightClass => sessionWeightClass.name == weightClass.name).map(sessionWeightClass => sessionWeightClass.teamScore).find(() => true) ?? "",
-							opponentScore: sessionWeightClasses.filter(sessionWeightClass => sessionWeightClass.name == weightClass.name).map(sessionWeightClass => sessionWeightClass.opponentScore).find(() => true) ?? ""
+								}))
+						})
+					);
+					
+					const newWeightClasses = weightClasses.map(weightClass => ({
+							...weightClass,
+
+							opponentWrestler: sessionWeights.some(sessionWeight => sessionWeight.name == weightClass.name && sessionWeight.opponentWrestler) ? 
+								sessionWeights.filter(sessionWeight => sessionWeight.name == weightClass.name).map(sessionWeight => sessionWeight.opponentWrestler).find(() => true)
+								: weightClassSorted.filter(sorted => sorted.name == weightClass.name).map(sorted => sorted.wrestlers.find(() => true)).find(() => true),
+							opponentWrestlers: weightClassSorted.filter(sorted => sorted.name == weightClass.name).map(sorted => sorted.wrestlers).find(() => true),
+
+							teamWrestler: sessionWeights.some(sessionWeight => sessionWeight.name == weightClass.name && sessionWeight.teamWrestler) ? 
+								sessionWeights.filter(sessionWeight => sessionWeight.name == weightClass.name).map(sessionWeight => sessionWeight.teamWrestler).find(() => true)
+								: weightClass.teamWrestlers.find(() => true),
+
+							teamScore: sessionWeights
+								.filter(sessionWeight => sessionWeight.name == weightClass.name && sessionWeight.teamScore)
+								.map(sessionWeight => sessionWeight.teamScore).find(() => true) 
+								|| 0,
+							opponentScore: sessionWeights
+								.filter(sessionWeight => sessionWeight.name == weightClass.name && sessionWeight.opponentScore)
+								.map(sessionWeight => sessionWeight.opponentScore).find(() => true) 
+								|| 0
 						}));
 					
-					setDivisions(newDivisions);
 					setWeightClasses(newWeightClasses);
-					saveCompareSession(newWeightClasses);
+
 				})
 				.catch(error => {
 					console.warn(error);
 				});
 		}
+		else {
+			setWeightClasses(weightClasses => weightClasses.map(weightClass => ({
+				...weightClass,
+				opponentWrestlers: []
+			})));
+		}
 	}, [ selectedOpponentId ]);
 
-	const updatePosition = (isTeam, weightClassChange, wrestlerId, newPosition) => {
-		const changedWrestler = weightClasses
-			.flatMap(weightClass => isTeam ? weightClass.teamWrestlers : weightClass.opponentWrestlers)
-			.filter(wrestler => wrestler.id == wrestlerId)
-			.find(() => true);
-		
-		if (changedWrestler.weightClass != weightClassChange || changedWrestler.position !== newPosition) {
-			changedWrestler.weightClass = weightClassChange;
+	const updateScore = (weightClassSave, isTeamScore, scoreSave) => {
+		console.log(`Save - s: ${ loggedInUser.session ? "yes" : "no" }, o: ${ loggedInUser.session && loggedInUser.session.opponents ? "yes" : "no" }, o#: ${ loggedInUser.session && loggedInUser.session.opponents ? loggedInUser.session.opponents.length : "-" }`);
+		let sessionOpponents = loggedInUser.session?.opponents || [];
 
-			const newWeightClasses = weightClasses.map(weightClass => {
-				const filteredWrestlers = (isTeam ? weightClass.teamWrestlers : weightClass.opponentWrestlers).filter(wrestler => wrestler.id != wrestlerId);
-				
-				return {
-					...weightClass,
-					teamWrestlers: !isTeam ? weightClass.teamWrestlers
-						: weightClass.name != weightClassChange ? filteredWrestlers
-						: [
-							...filteredWrestlers.slice(0, newPosition),
-							changedWrestler,
-							...filteredWrestlers.slice(newPosition)
-						].map((wrestler, wrestlerIndex) => ({...wrestler, position: wrestlerIndex })),
-					opponentWrestlers: isTeam ? weightClass.opponentWrestlers
-						: weightClass.name != weightClassChange ? filteredWrestlers
-						: [
-							...filteredWrestlers.slice(0, newPosition),
-							changedWrestler,
-							...filteredWrestlers.slice(newPosition)
-						].map((wrestler, wrestlerIndex) => ({...wrestler, position: wrestlerIndex }))
-				};
+		if (!sessionOpponents.some(opponent => opponent.id == selectedOpponentId)) {
+			sessionOpponents.push({
+				id: selectedOpponentId,
+				weightClasses: []
 			});
-
-			setWeightClasses(newWeightClasses);
-			saveCompareSession(newWeightClasses);
 		}
-	};
 
-	const updateScore = (weightClassUpdate, isTeam, score) => {
-		const newWeightClasses = weightClasses.map(weightClass => ({
-			...weightClass,
-			teamScore: weightClass.name != weightClassUpdate ? weightClass.teamScore
-				: isTeam ? score 
-				: score === "" ? ""
-				: +score === 0 ? 3
+		const teamScore = isTeamScore ? +scoreSave
+				: scoreSave === "" ? ""
+				: +scoreSave === 0 ? 3
 				: 0,
-			opponentScore: weightClass.name != weightClassUpdate ? weightClass.opponentScore
-				: !isTeam ? score 
-				: score === "" ? ""
-				: +score === 0 ? 3
-				: 0
-		}));
+			opponentScore = !isTeamScore ? +scoreSave 
+				: scoreSave === "" ? ""
+				: +scoreSave === 0 ? 3
+				: 0;
 		
-		setWeightClasses(newWeightClasses);
-		saveCompareSession(newWeightClasses);
-	};
-
-	const saveCompareSession = newWeightClasses => {
-		const saveSession = {
-			selectedDivision: selectedDivision,
-			selectedOpponentId: selectedOpponentId,
-			compare: {
-				division: selectedDivision,
-				opponentId: selectedOpponentId,
-				weightClasses: newWeightClasses.map(weightClass => ({
-					name: weightClass.name,
-					teamWrestlers: weightClass.teamWrestlers.map(wrestler => ({ id: wrestler.id, weightClass: wrestler.weightClass, position: wrestler.position })),
-					opponentWrestlers: weightClass.opponentWrestlers.map(wrestler => ({ id: wrestler.id, weightClass: wrestler.weightClass, position: wrestler.position })),
-					teamScore: weightClass.teamScore,
-					opponentScore: weightClass.opponentScore
+		sessionOpponents = sessionOpponents.map(opponent => ({
+			...opponent,
+			weightClasses: opponent.weightClasses.some(weightClass => weightClass.name == weightClassSave) ?
+				opponent.weightClasses.map(weightClass => ({
+					...weightClass, 
+					opponentScore: weightClass.name == weightClassSave ? opponentScore : weightClass.opponentScore,
+					teamScore: weightClass.name == weightClassSave ? teamScore : weightClass.teamScore
 				}))
-			}
-		};
+				: opponent.weightClasses.concat([{
+					name: weightClassSave,
+					opponentScore: opponentScore,
+					teamScore: teamScore
+				}])
+		}));
 
-		fetch(`/api/usersessionsave`, { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session: saveSession }) })
+		fetch(`/api/usersessionsave`, { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session: { opponents: sessionOpponents } }) })
 			.then(response => {
 				if (response.ok) {
 					return response.json();
@@ -306,16 +250,75 @@ const TeamCompare = () => {
 			.catch(error => {
 				console.warn(error);
 			});
+		
+		setWeightClasses(weightClasses => weightClasses.map(weightClass => ({
+			...weightClass,
+			opponentScore: weightClass.name == weightClassSave ? opponentScore : weightClass.opponentScore,
+			teamScore: weightClass.name == weightClassSave ? teamScore : weightClass.teamScore
+		})));
+		
+		setLoggedInUser(loggedInUser => ({
+			...loggedInUser,
+			session: {
+				...loggedInUser.session,
+				opponents: sessionOpponents
+			}
+		}));
 	};
 
-	const selectWrestler = wrestler => {
-		if (!selectedWrestlers.some(selected => selected.id == wrestler.id)) {
-			setSelectedWrestlers(selectedWrestlers.concat(wrestler));
-		} 
-	};
+	const saveWrestler = (weightClassSave, isTeam, wrestlerSave) => {
+		
+		let sessionOpponents = loggedInUser.session?.opponents || [];
 
-	const updateWrestler = updatedWrestler => {
-		setSelectedWrestlers(selectedWrestlers.map(wrestler => wrestler.id == updatedWrestler.id ? updatedWrestler : wrestler));
+		if (!sessionOpponents.some(opponent => opponent.id == selectedOpponentId)) {
+			sessionOpponents.push({
+				id: selectedOpponentId,
+				weightClasses: []
+			});
+		}
+
+		sessionOpponents = sessionOpponents.map(opponent => ({
+			...opponent,
+			weightClasses: opponent.weightClasses.some(weightClass => weightClass.name == weightClassSave) ? // Do we already have the weight class in the session
+				opponent.weightClasses.map(weightClass => ({
+					...weightClass, 
+					opponentWrestlerId: !isTeam && weightClass.name == weightClassSave ? wrestlerSave.id : weightClass.opponentWrestlerId, 
+					teamWrestlerId: isTeam && weightClass.name == weightClassSave ? wrestlerSave.id : weightClass.teamWrestlerId
+				}))
+				: opponent.weightClasses.concat([{
+					name: weightClassSave,
+					opponentWrestlerId: !isTeam ? wrestlerSave.id : null,
+					teamWrestlerId: isTeam ? wrestlerSave.id : null
+				}])
+		}));
+
+		fetch(`/api/usersessionsave`, { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ session: { opponents: sessionOpponents } }) })
+			.then(response => {
+				if (response.ok) {
+					return response.json();
+				}
+				else {
+					throw Error(response.statusText);
+				}
+			})
+			.then(() => { })
+			.catch(error => {
+				console.warn(error);
+			});
+		
+		setWeightClasses(weightClasses => weightClasses.map(weightClass => ({
+			...weightClass,
+			opponentWrestler: !isTeam && weightClass.name == weightClassSave ? wrestlerSave : weightClass.opponentWrestler,
+			teamWrestler: isTeam && weightClass.name == weightClassSave ? wrestlerSave : weightClass.teamWrestler
+		})));
+		
+		setLoggedInUser(loggedInUser => ({
+			...loggedInUser,
+			session: {
+				...loggedInUser.session,
+				opponents: sessionOpponents
+			}
+		}));
 	};
 
 	return (
@@ -378,6 +381,7 @@ const TeamCompare = () => {
 					<label>
 						Opponent
 						<select value={ selectedOpponentId } onChange={ event => setSelectedOpponentId(event.target.value) }>
+							<option value="">-- Select Opponent --</option>
 							{
 							opponents
 								.sort((opponentA, opponentB) => opponentA.name > opponentB.name ? 1 : -1)
@@ -387,24 +391,6 @@ const TeamCompare = () => {
 							}
 						</select>
 					</label>
-					
-					{
-					pageView != "scmat" ?
-
-					<label>
-						Division
-						<select value={ selectedDivision } onChange={ event => setSelectedDivision(event.target.value) }>
-							{
-							divisions
-							.sort((divisionA, divisionB) => divisionA > divisionB ? 1 : -1)
-							.map((division, divisionIndex) =>
-							<option key={divisionIndex}>{ division }</option>
-							)
-							}
-						</select>
-					</label>
-
-					: "" }
 				</div>
 
 			</div>
@@ -413,31 +399,18 @@ const TeamCompare = () => {
 
 			pageView == "opponentdepth" ? 
 			
-				<TeamDepthEdit
-					weightClasses={ weightClasses.map(weightClass => ({...weightClass, wrestlers: weightClass.opponentWrestlers })) }
-					selectedDivision={ selectedDivision }
-					updatePosition={ updatePosition }
-					homeTeam={ team.name }
-					isTeam={ false }
-					selectWrestler={ selectWrestler }
+				<TeamLineup
+					weightClasses={ weightClasses }
+					saveWrestler={ saveWrestler }
 					/>
 
-			: pageView == "teamdepth" ? 
-	
-				<TeamDepthEdit
-					weightClasses={ weightClasses.map(weightClass => ({...weightClass, wrestlers: weightClass.teamWrestlers })) }
-					selectedDivision={ selectedDivision }
-					updatePosition={ updatePosition }
-					isTeam={ true }
-					/>
-	
 			: pageView == "match" ?
 
 				<TeamCompareMatch 
 					team={ team }
 					weightClasses={ weightClasses }
 					updateScore={ updateScore }
-					selectWrestler={ () => {} }
+					saveWrestler={ saveWrestler }
 					/>
 
 			: 
@@ -451,23 +424,6 @@ const TeamCompare = () => {
 
 			}
 
-			{
-			pageView == "opponentdepth" && selectedWrestlers.length > 0 ?
-				selectedWrestlers.map((wrestler, wrestlerIndex) =>
-				
-				<WrestlerDetails 
-					key={wrestlerIndex} 
-					wrestlerId={ wrestler.id } 
-					wrestlerName={ wrestler.name }
-					updateWrestler={ updateWrestler }
-					wrestler={ wrestler }
-					homeTeam={ team.name }
-					closeWrestler={ wrestlerId => setSelectedWrestlers(selectedWrestlers.filter(selected => selected.id != wrestlerId)) }
-					/>
-
-				)
-			: ""
-			}
 		</div>
 
 		<div className="bottomNav">
@@ -488,12 +444,6 @@ const TeamCompare = () => {
 				{/* Wrestlers */}
 				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M55.077-93.847 12.924-136l143.692-143.692-46.308-123.385q-6.23-15.692-2.423-36.692 3.808-21 20.115-37.307l132-132q10.462-10.462 22.539-15.693 12.076-5.23 27.153-5.23 15.077 0 27.154 5.23 12.076 5.231 22.538 15.693l80.769 78q27.385 27 65.231 42.692 37.846 15.692 81.692 17.615v59.999q-55-1.923-103.153-20.731-48.154-18.808-81.923-52.192l-34.923-34.154L259.23-410l87.846 89.846v230.153h-59.998v-204.615l-72.002-66.463v107.233l-160 159.999Zm552.001 3.846v-265.383l85.538-81.539-30.154-166.156q-22.693 27.616-48.386 49.502-25.693 21.885-57.463 34.27-23.768-2-45.576-11.116-21.807-9.115-37.191-24.114 45.769-7.616 84.5-34.539 38.732-26.924 59.962-61.539l39.231-64q15.077-24.307 41.423-32.269 26.345-7.961 52.268 2.885l195.846 82.923v171.075h-59.998v-132.153l-95.079-38.001L904.768-90.001H840.77L767.616-396.54l-100.54 85.001v221.538h-59.998ZM447.076-614.615q-30.692 0-52.269-21.577-21.577-21.577-21.577-52.269 0-30.692 21.577-52.269 21.577-21.576 52.269-21.576 30.692 0 52.269 21.576 21.577 21.577 21.577 52.269 0 30.692-21.577 52.269-21.577 21.577-52.269 21.577ZM664-776.154q-30.692 0-52.269-21.576-21.576-21.577-21.576-52.269 0-30.692 21.576-52.269 21.577-21.577 52.269-21.577 30.693 0 52.269 21.577 21.577 21.577 21.577 52.269 0 30.692-21.577 52.269-21.576 21.576-52.269 21.576Z"></path></svg>
 				Opponent
-			</button>
-
-			<button aria-label="Team Wrestlers" onClick={ () => setPageView("teamdepth") }>
-				{/* Group */}
-				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M0-240v-63q0-43 44-70t116-27q13 0 25 .5t23 2.5q-14 21-21 44t-7 48v65H0Zm240 0v-65q0-32 17.5-58.5T307-410q32-20 76.5-30t96.5-10q53 0 97.5 10t76.5 30q32 20 49 46.5t17 58.5v65H240Zm540 0v-65q0-26-6.5-49T754-397q11-2 22.5-2.5t23.5-.5q72 0 116 26.5t44 70.5v63H780Zm-455-80h311q-10-20-55.5-35T480-370q-55 0-100.5 15T325-320ZM160-440q-33 0-56.5-23.5T80-520q0-34 23.5-57t56.5-23q34 0 57 23t23 57q0 33-23 56.5T160-440Zm640 0q-33 0-56.5-23.5T720-520q0-34 23.5-57t56.5-23q34 0 57 23t23 57q0 33-23 56.5T800-440Zm-320-40q-50 0-85-35t-35-85q0-51 35-85.5t85-34.5q51 0 85.5 34.5T600-600q0 50-34.5 85T480-480Zm0-80q17 0 28.5-11.5T520-600q0-17-11.5-28.5T480-640q-17 0-28.5 11.5T440-600q0 17 11.5 28.5T480-560Zm1 240Zm-1-280Z"/></svg>
-				Team
 			</button>
 
 			<button aria-label="Match Compare" onClick={ () => setPageView("match") }>

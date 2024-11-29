@@ -1126,17 +1126,8 @@ export default {
 				saveUser.session.selectedOpponentId = session.selectedOpponentId;
 			}
 
-			if (session.compare) {
-
-				if (saveUser.session.compare && saveUser.session.compare.some(userSession => userSession.opponentId == session.compare.opponentId && userSession.division == session.compare.division)) {
-					saveUser.session.compare = saveUser.session.compare.map(userSession =>
-						userSession.opponentId == session.compare.opponentId && userSession.division == session.compare.division ? session.compare
-							: userSession
-						);
-				}
-				else {
-					saveUser.session.compare = (saveUser.session.compare || []).concat(session.compare);
-				}
+			if (session.opponents) {
+				saveUser.session.opponents = session.opponents;
 			}
 		}
 		catch (error) {
@@ -1639,7 +1630,7 @@ export default {
 			}
 			catch (error) {
 				output.status = 563;
-				output.data.externalTeams.push({ index: teamIndex, error: error.message });
+				output.data.externalTeams.push({ index: teamIndex, status: output.status, error: error.message });
 			}
 
 			try {
@@ -1654,7 +1645,7 @@ export default {
 			}
 			catch (error) {
 				output.status = 564;
-				output.data.externalTeams.push({ index: teamIndex, error: error.message });
+				output.data.externalTeams.push({ index: teamIndex, status: output.status, error: error.message });
 			}
 			
 			try {
@@ -1669,7 +1660,7 @@ export default {
 			}
 			catch (error) {
 				output.status = 566;
-				output.data.externalTeams.push({ index: teamIndex, error: error.message });
+				output.data.externalTeams.push({ index: teamIndex, status: output.status, error: error.message });
 			}
 
 			// Save the team
@@ -1679,7 +1670,7 @@ export default {
 			}
 			catch (error) {
 				output.status = 568;
-				output.data.externalTeams.push({ index: teamIndex, error: error.message });
+				output.data.externalTeams.push({ index: teamIndex, status: output.status, error: error.message });
 			}
 		}
 

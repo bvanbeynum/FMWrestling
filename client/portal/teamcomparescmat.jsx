@@ -41,6 +41,10 @@ const TeamCompareSCMat = props => {
 					console.warn(error);
 				});
 		}
+		else {
+			setTeam(null);
+			setOpponent(null);
+		}
 	}, [ props.selectedOpponentId, props.teamId ]);
 
 	useEffect(() => {
@@ -322,7 +326,7 @@ const TeamCompareSCMat = props => {
 <>
 
 {
-teamChart ? 
+teamChart && opponent ? 
 <div className="panel">
 	{
 	isLoading ?
@@ -394,7 +398,7 @@ teamChart ?
 : "" }
 
 {
-individualChart ?
+individualChart && opponent ?
 
 <div className="panel">
 

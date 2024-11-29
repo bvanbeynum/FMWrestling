@@ -62,9 +62,14 @@
 .compareWeight {
 	font-weight: bold;
 	background-color: rgb(227 227 227);
+	justify-content: center;
 }
 
-.compareRow select {
+.teamSelect {
+	text-align: right;
+}
+
+.scoreSelect {
 	text-align: center;
 }
 
@@ -184,6 +189,101 @@ line.axisLine {
 
 .sectionTable .dragBar {
 	padding: 0px 10px;
+}
+
+.weightContainer {
+	border-bottom: 2px solid rgb(161 161 161);
+	display: flex;
+	flex-direction: column;
+}
+
+.weightContainer:last-child {
+	border-bottom: none;
+}
+
+.weightHeader {
+	display: flex;
+	align-items: center;
+	padding: 15px 0px;
+}
+
+.weightContainer table td {
+	padding: 12px 0px;
+	border-bottom: solid 1px rgb(237 237 237);
+}
+
+.overflowInset {
+	width: 100%;
+	height: 40vh;
+	border: 1px solid rgb(145 145 145);
+	border-radius: 4px;
+	box-shadow: inset rgba(50, 50, 93, 0.25) 0px 0px 14px -3px, rgba(0, 0, 0, 0.3) 0px 1px 3px -1px;
+	overflow: auto;
+	background-color: rgb(249 249 249);
+}
+
+.selectOpponentContainer {
+	display: flex;
+	margin-bottom: 20px;
+}
+
+.weightSidebar>div {
+	padding: 10px 10px;
+	border-bottom: 1px solid rgb(221 221 221);
+	text-align: center;
+	border-right: 1px solid rgb(221 221 221);
+	background: rgb(255 255 255);
+	cursor: pointer;
+	user-select: none;
+	outline: none;
+}
+.weightSidebar>div.selected {
+	background-color: rgb(223 170 3);
+	color: white;
+}
+
+.weightContent {
+	flex: 1;
+}
+
+.selectWrestlerItem {
+	display: flex;
+	align-items: center;
+	font-size: 0.8em;
+	padding: 10px 0px;
+}
+.selectWrestlerItem:nth-child(2n) {
+	background-color: rgb(247 237 203);
+}
+
+.selectWrestlerDivision {
+	margin: 0px 10px 0px 10px;
+	background-color: rgb(107 135 159);
+	padding: 5px 9px;
+	border-radius: 3px;
+	font-weight: bold;
+	color: white;
+	width: 18px;
+	text-align: center;
+}
+
+.selectedWrestlerContainer {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	width: 100%;
+	margin: 0px 17px 0px 0px;
+}
+.selectedWrestlerContainer>:nth-child(2) {
+	text-align: right;
+}
+.selectedWrestlerContainer>:nth-child(3) {
+	grid-column: 1 / -1;
+}
+
+@media (min-width: 1024px) {
+	.selectedWrestlerContainer {
+		width: 400px;
+	}
 }
 
 @media print {

@@ -4,12 +4,30 @@ import "./include/team.css";
 const TeamCompareMatch = props => {
 
 	const [ startingWeight, setStartingWeight ] = useState(0);
+	const [ teamWrestlers, setTeamWrestlers ] = useState([]);
 	
 	const [ opposingChart, setOpposingChart ] = useState(null);
 	const [ cumulativeChart, setCumulativeChart ] = useState(null);
 
 	useEffect(() => {
-		if (props.weightClasses && props.weightClasses.length > 0) {
+		if (props.weightClasses && props.weightClasses.length > 0 && props.weightClasses.some(weightClass => weightClass.opponentWrestlers?.length > 0)) {
+			setTeamWrestlers([].concat(props.team.wrestlers).sort((wrestlerA, wrestlerB) => 
+					wrestlerA.division != wrestlerB.division ?
+						/varsity/i.test(wrestlerA.division) ? -1 
+						: /varsity/i.test(wrestlerB.division) ? 1 
+						: /jv/i.test(wrestlerA.division) ? -1
+						: /jv/i.test(wrestlerB.division) ? 1
+						: /ms/i.test(wrestlerA.division) ? -1
+						: /ms/i.test(wrestlerB.division) ? 1
+						: -1
+					: +wrestlerA.weightClass < +wrestlerB.weightClass ? -1
+					: +wrestlerA.weightClass > +wrestlerB.weightClass ? 1
+					: +wrestlerA.lastDate > +wrestlerB.lastDate ? -1
+					: +wrestlerA.lastDate < +wrestlerB.lastDate ? 1
+					: wrestlerA.name > wrestlerB.name ? -1
+					: 1
+				));
+
 			const opposingChart = {
 				svg: { width: 350, height: 200 },
 				leftAxis: { top: 0 },
@@ -150,6 +168,11 @@ const TeamCompareMatch = props => {
 
 		}
 	}, [ props.weightClasses, startingWeight ]);
+
+	const selectTeamWrestler = (weightClass, wrestlerId) => {
+		const teamWrestler = teamWrestlers.find(wrestler => wrestler.id == wrestlerId);
+		props.saveWrestler(weightClass, true, teamWrestler);
+	};
 
 	return (
 <>
@@ -315,18 +338,33 @@ cumulativeChart && cumulativeChart.svg ?
 
 : "" }
 
+{
+props.weightClasses && props.weightClasses.some(weightClass => weightClass.opponentWrestlers && weightClass.opponentWrestlers.length > 0) > 0 ?
+
 <div className="panel expandable">
 	{
 	props.weightClasses
 	.map((weightClass, weightClassIndex) =>
 	
 	<div key={ weightClassIndex } className="compareRow">
-		<div className={`compareTeam ${ weightClass.teamScore === "" ? "" : weightClass.teamScore > 0 ? "win" : "lose" }`}>
-			{ weightClass.teamWrestlers[0]?.name }
+		<div className={`compareTeam ${ weightClass.teamScore > 0 ? "win" : weightClass.opponentScore > 0 ? "lose" : "" }`}>
+			<select className="teamSelect" onChange={ event => selectTeamWrestler(weightClass.name, event.target.value) }>
+
+				{weightClass.teamWrestler ?
+				<option value={weightClass.teamWrestler.id}>{ weightClass.teamWrestler.name }</option>
+				: ""}
+
+				{
+				teamWrestlers
+				.filter(allWrestler => allWrestler.id != weightClass.teamWrestler?.id)
+				.map(wrestler =>
+				<option key={wrestler.id} value={ wrestler.id }>{ (wrestler.division || "") + " " + wrestler.weightClass + ": " + wrestler.name }</option>
+				)}
+			</select>
 		</div>
 
-		<div className={`compareScore ${ weightClass.teamScore === "" ? "" : weightClass.teamScore > 0 ? "win" : "lose" }`}>
-			<select value={ weightClass.teamScore } onChange={ event => props.updateScore(weightClass.name, true, event.target.value) }>
+		<div className={`compareScore ${ weightClass.teamScore > 0 ? "win" : weightClass.opponentScore > 0 ? "lose" : "" }`}>
+			<select className="scoreSelect" value={ weightClass.teamScore } onChange={ event => props.updateScore(weightClass.name, true, event.target.value) }>
 				<option value="">-</option>
 				<option>0</option>
 				<option>3</option>
@@ -338,8 +376,8 @@ cumulativeChart && cumulativeChart.svg ?
 		
 		<div className="compareWeight">{ weightClass.name }</div>
 		
-		<div className={`compareScore ${ weightClass.opponentScore === "" ? "" : weightClass.opponentScore > 0 ? "win" : "lose" }`}>
-			<select value={ weightClass.opponentScore } onChange={ event => props.updateScore(weightClass.name, false, event.target.value) }>
+		<div className={`compareScore ${ weightClass.opponentScore > 0 ? "win" : weightClass.teamScore > 0 ? "lose" : "" }`}>
+			<select className="scoreSelect" value={ weightClass.opponentScore } onChange={ event => props.updateScore(weightClass.name, false, event.target.value) }>
 				<option value="">-</option>
 				<option>0</option>
 				<option>3</option>
@@ -349,14 +387,16 @@ cumulativeChart && cumulativeChart.svg ?
 			</select>
 		</div>
 
-		<div className={`compareTeam ${ weightClass.opponentScore === "" ? "" : weightClass.opponentScore > 0 ? "win" : "lose" }`}>
-			{ weightClass.opponentWrestlers[0]?.name }
+		<div className={`compareTeam ${ weightClass.opponentScore > 0 ? "win" : weightClass.teamScore > 0 ? "lose" : "" }`}>
+			{ weightClass.opponentWrestler?.name }
 		</div>
 	</div>
 
 	)
 	}
 </div>
+: ""
+}
 
 </>
 	)
