@@ -251,6 +251,9 @@ line.axisLine {
 	align-items: center;
 	font-size: 0.8em;
 	padding: 10px 0px;
+	cursor: pointer;
+	user-select: none;
+	outline: none;
 }
 .selectWrestlerItem:nth-child(2n) {
 	background-color: rgb(247 237 203);
