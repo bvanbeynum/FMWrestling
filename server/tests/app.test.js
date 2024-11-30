@@ -672,74 +672,6 @@ describe("Data service", () => {
 		expect(response.body).toHaveProperty("status", "ok");
 	});
 
-	it("gets flo Match", async () => {
-
-		// ********** Given
-
-		const output = { floMatches: [{ id: "testid" }]};
-
-		data.floMatchGet = jest.fn().mockResolvedValue({
-			status: 200,
-			data: output
-		});
-
-		// ********** When
-		
-		const response = await request(app)
-			.get("/data/flomatch")
-			.expect(200);
-		
-		// ********** Then
-
-		expect(response.body).toHaveProperty("floMatches");
-		expect(response.body.floMatches).toHaveLength(1);
-	});
-
-	it("saves flo Match", async () => {
-		// ********** Given
-
-		const save = { name: "Test Team" },
-			output = { id: "testid" };
-
-		data.floMatchSave = jest.fn().mockResolvedValue({
-			status: 200,
-			data: output
-		});
-
-		// ********** When
-		
-		const response = await request(app)
-			.post("/data/flomatch")
-			.send({ flomatch: save })
-			.expect(200);
-		
-		// ********** Then
-
-		expect(data.floMatchSave).toHaveBeenCalledWith(save);
-		expect(response.body).toHaveProperty("id", output.id);
-	});
-
-	it("deletes floMatch", async () => {
-		// ********** Given
-
-		const floMatchId = "testid";
-
-		data.floMatchDelete = jest.fn().mockResolvedValue({
-			status: 200,
-			data: { status: "ok" }
-		});
-
-		// ********** When
-		
-		const response = await request(app)
-			.delete(`/data/flomatch?id=${ floMatchId }`)
-			.expect(200);
-		
-		// ********** Then
-
-		expect(response.body).toHaveProperty("status", "ok");
-	});
-
 });
 
 describe("API service", () => {
@@ -1460,62 +1392,6 @@ describe("API service", () => {
 			.expect(200);
 
 		expect(response.body).toHaveProperty("scmatTeams", output);
-
-	});
-
-	it("Gets all flo Matches", async () => {
-
-		const output = [{ 
-			id: "match1", 
-			sqlId: 111,
-			winnerSqlId: 222,
-			loserSqlId: 333
-		}];
-
-		api.floMatchGetBulk = jest.fn()
-			.mockResolvedValueOnce({ status: 200, data: { floMatches: output }});
-
-		const response = await request(app)
-			.get(`/api/flomatchgetbulk`)
-			.expect(200);
-
-		expect(api.floMatchGetBulk).toHaveBeenCalledWith(expect.anything());
-		expect(response.body).toHaveProperty("floMatches", output);
-
-	});
-
-	it("saves bulk flo Matches", async () => {
-
-		// ********** Given
-
-		const matches = [{ 
-				id: "match1", 
-				sqlId: 111,
-				winnerSqlId: 222,
-				loserSqlId: 333
-			}, { 
-				id: "match2", 
-				sqlId: 999,
-				winnerSqlId: 888,
-				loserSqlId: 777
-			}],
-			output = [{ index: 0, id: matches[0].id }, { index: 1, id: matches[1].id }];
-
-		api.floMatchSaveBulk = jest.fn().mockResolvedValue({
-			status: 200,
-			data: { floMatches: output }
-		});
-
-		// ********** When
-
-		const response = await request(app)
-			.post("/api/flomatchsavebulk")
-			.send({ matchessave: matches })
-			.expect(200);
-
-		// ********** Then
-
-		expect(response.body).toHaveProperty("floMatches", output);
 
 	});
 

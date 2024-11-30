@@ -1998,43 +1998,6 @@ export default {
 		return output;
 	},
 
-	floMatchGetBulk: async (serverPath) => {
-		const output = { data: {} };
-
-		try {
-			const clientResponse = await client.get(`${ serverPath }/data/flomatch`);
-			output.data.floMatches = clientResponse.body.floMatches.map(match => match.sqlId);
-		}
-		catch (error) {
-			output.status = 561;
-			output.error = error.message;
-			return output;
-		}
-
-		output.status = 200;
-		return output;
-	},
-
-	floMatchSaveBulk: async (matchesSave, serverPath) => {
-		const output = { data: { floMatches: [] } };
-
-		for (let matchIndex = 0; matchIndex < matchesSave.length; matchIndex++) {
-
-			try {
-				const clientResponse = await client.post(`${ serverPath }/data/flomatch`).send({ flomatch: matchesSave[matchIndex] }).then();
-				output.data.floMatches.push({ index: matchIndex, id: clientResponse.body.id });
-			}
-			catch (error) {
-				output.status = 562
-				output.data.floMatches.push({ index: matchIndex, error: error.message });
-			}
-
-		}
-
-		output.status = output.status || 200;
-		return output;
-	},
-
 	wrestlerSearchLoad: async (serverPath) => {
 		const output = { data: {} }
 
