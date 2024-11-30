@@ -206,6 +206,9 @@ line.axisLine {
 	align-items: center;
 	padding: 15px 0px;
 }
+.weightHeader>:nth-child(1) {
+	flex: 1;
+}
 
 .weightContainer table td {
 	padding: 12px 0px;
@@ -251,9 +254,6 @@ line.axisLine {
 	align-items: center;
 	font-size: 0.8em;
 	padding: 10px 0px;
-	cursor: pointer;
-	user-select: none;
-	outline: none;
 }
 .selectWrestlerItem:nth-child(2n) {
 	background-color: rgb(247 237 203);
@@ -271,22 +271,8 @@ line.axisLine {
 }
 
 .selectedWrestlerContainer {
-	display: grid;
-	grid-template-columns: 1fr 1fr;
-	width: 100%;
+	flex: 1;
 	margin: 0px 17px 0px 0px;
-}
-.selectedWrestlerContainer>:nth-child(2) {
-	text-align: right;
-}
-.selectedWrestlerContainer>:nth-child(3) {
-	grid-column: 1 / -1;
-}
-
-@media (min-width: 1024px) {
-	.selectedWrestlerContainer {
-		width: 400px;
-	}
 }
 
 @media print {

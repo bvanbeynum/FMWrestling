@@ -1252,9 +1252,13 @@ export default {
 		if (userFilter.sqlId) {
 			filter.sqlId = userFilter.sqlId;
 		}
+		if (userFilter.sqlIds) {
+			filter.sqlId = { $in: userFilter.sqlIds };
+		}
 		if (userFilter.select) {
 			select = userFilter.select.reduce((output, current) => ({...output, [current]: 1 }), {});
 		}
+		console.log(filter);
 
 		try {
 			const records = await data.externalWrestler.find(filter).select(select).lean().limit(userFilter.max).exec();

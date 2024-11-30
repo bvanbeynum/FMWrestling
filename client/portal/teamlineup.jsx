@@ -78,16 +78,25 @@ weightClasses.some(weightClass => weightClass.opponentWrestlers && weightClass.o
 	
 	<div key={weightClassIndex} className="weightContainer">
 
-		<div className="weightHeader button" onClick={ () => changeSelectedWeightClass(weightClass.name) }>
+		<div className="weightHeader">
 
-			<div className="subTitle">{ weightClass.name }&nbsp;</div>
-			<div>
+			<div className="subTitle">
+				{ weightClass.name + (weightClass.opponentWrestler ? " • " + weightClass.opponentWrestler.name : "") }
+			</div>
+
 			{
 			weightClass.opponentWrestler ?
-				`	• ${weightClass.opponentWrestler.name}`
-			: ""
-			}
-			</div>
+			<button onClick={ () => window.open(`/portal/wrestler.html?id=${ weightClass.opponentWrestler.id }`, "_blank") }>
+				{/* Eye View */}
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-320q75 0 127.5-52.5T660-500q0-75-52.5-127.5T480-680q-75 0-127.5 52.5T300-500q0 75 52.5 127.5T480-320Zm0-72q-45 0-76.5-31.5T372-500q0-45 31.5-76.5T480-608q45 0 76.5 31.5T588-500q0 45-31.5 76.5T480-392Zm0 192q-146 0-266-81.5T40-500q54-137 174-218.5T480-800q146 0 266 81.5T920-500q-54 137-174 218.5T480-200Zm0-300Zm0 220q113 0 207.5-59.5T832-500q-50-101-144.5-160.5T480-720q-113 0-207.5 59.5T128-500q50 101 144.5 160.5T480-280Z"/></svg>
+			</button>
+			: ""}
+
+			<button onClick={ () => changeSelectedWeightClass(weightClass.name) }>
+				{/* pencil */}
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M200-200h56l345-345-56-56-345 345v56Zm572-403L602-771l56-56q23-23 56.5-23t56.5 23l56 56q23 23 24 55.5T829-660l-57 57Zm-58 59L290-120H120v-170l424-424 170 170Zm-141-29-28-28 56 56-28-28Z"/></svg>
+			</button>
+
 		</div>
 		
 		{
@@ -110,15 +119,27 @@ weightClasses.some(weightClass => weightClass.opponentWrestlers && weightClass.o
 			.find(() => true)
 			.map(wrestler => 
 			
-			<div key={wrestler.id} className={`selectWrestlerItem ${ wrestler.division }`} onClick={ () => { props.saveWrestler(weightClass.name, false, wrestler); setSelectedWeightClass(""); } }>
+			<div key={wrestler.id} className={`selectWrestlerItem ${ wrestler.division }`}>
 				<div className="selectWrestlerDivision">{ wrestler.division }</div>
 
 				<div className="selectedWrestlerContainer">
-					<div>{ wrestler.name }</div>
-					<div>
-						{ wrestler.wins ? wrestler.wins + " - " + wrestler.losses + " (" + (wrestler.wins / (wrestler.wins + wrestler.losses)).toFixed(3) + ")" : "" }
-					</div>
+					<div>{ 
+						wrestler.name +
+						(wrestler.wins ? " • " + wrestler.wins + " - " + wrestler.losses + " (" + (wrestler.wins / (wrestler.wins + wrestler.losses)).toFixed(3) + ")" : "")
+					}</div>
 					<div>{ (wrestler.lastDate ? wrestler.lastDate.toLocaleDateString() + ": ": "") + wrestler.lastEvent.event }</div>
+				</div>
+
+				<div>
+					<button onClick={ () => window.open(`/portal/wrestler.html?id=${ wrestler.id }`, "_blank") }>
+						{/* Eye View */}
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-320q75 0 127.5-52.5T660-500q0-75-52.5-127.5T480-680q-75 0-127.5 52.5T300-500q0 75 52.5 127.5T480-320Zm0-72q-45 0-76.5-31.5T372-500q0-45 31.5-76.5T480-608q45 0 76.5 31.5T588-500q0 45-31.5 76.5T480-392Zm0 192q-146 0-266-81.5T40-500q54-137 174-218.5T480-800q146 0 266 81.5T920-500q-54 137-174 218.5T480-200Zm0-300Zm0 220q113 0 207.5-59.5T832-500q-50-101-144.5-160.5T480-720q-113 0-207.5 59.5T128-500q50 101 144.5 160.5T480-280Z"/></svg>
+					</button>
+
+					<button onClick={ () => { props.saveWrestler(weightClass.name, false, wrestler); setSelectedWeightClass(""); } }>
+						{/* Check */}
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/></svg>
+					</button>
 				</div>
 			</div>
 

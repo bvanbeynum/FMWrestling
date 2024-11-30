@@ -1,3 +1,9 @@
+.wrestlerEvent {
+	min-width: 500px;
+}
+.wrestlerEvent .selected {
+	background-color: rgb(253 239 193);
+}
 
 .lineChart {
 	width: 100%;

@@ -480,6 +480,7 @@ router.delete("/data/externalteam", authInternal, async (request, response) => {
 router.get("/data/externalwrestler", authInternal, async (request, response) => {
 	try {
 		const idsList = request.query.ids ? JSON.parse(request.query.ids) : null;
+		const sqlIdList = request.query.sqlids ? JSON.parse(request.query.sqlids) : null;
 		const filter = { 
 			id: request.query.id, 
 			ids: idsList, 
@@ -488,6 +489,7 @@ router.get("/data/externalwrestler", authInternal, async (request, response) => 
 			teamName: request.query.teamname, 
 			externalTeamId: request.query.externalteamid, 
 			sqlId: request.query.sqlid,
+			sqlIds: sqlIdList,
 			select: request.query.select ? request.query.select.split(",") : null
 		};
 

@@ -1428,27 +1428,45 @@ export default {
 			output.error = error.message;
 			return output;
 		}
-		
+
+		let opponentIdXref = [];
 		try {
-			const clientResponse = await client.get(`${ serverPath }/data/externalwrestlermatches?id=${ wrestlerId }`);
-			wrestler.matches = clientResponse.body.wrestler ? clientResponse.body.wrestler.matches : [];
+			const opponentSqlIds = [...new Set(wrestler.events.flatMap(event => event.matches.map(match => match.vsSqlId )))];
+			const clientResponse = await client.get(`${ serverPath }/data/externalwrestler?sqlids=${ JSON.stringify(opponentSqlIds) }&select=sqlId`);
+			opponentIdXref = clientResponse.body.externalWrestlers;
 		}
 		catch (error) {
-			output.status = 562;
+			output.status = 564;
 			output.error = error.message;
 			return output;
 		}
-
+		
 		try {
 			
+			wrestler = {
+				...wrestler,
+				name: wrestler.name ? wrestler.name : wrestler.firstName + " " + wrestler.lastName,
+				events: wrestler.events.map(event => ({
+					...event,
+					division: event.matches[0] ?
+						/(hs|high school|high)/i.test(event.matches[0].division) ? "Varsity"
+						: /(jv|junior varsity)/i.test(event.matches[0].division) ? "JV"
+						: /(ms|middle school)/i.test(event.matches[0].division) ? "MS"
+						: (event.matches[0].division || "").trim()
+						: "",
+					weightClass: event.matches[0]?.weightClass || "",
+					matches: event.matches.map(({ division, weightClass, ...match}) => ({
+						...match,
+						vsId: opponentIdXref.filter(xref => xref.sqlId == match.vsSqlId).map(xref => xref.id).find(() => true)
+					}))
+				}))
+			};
+		
 			const lastEvent = wrestler.events
 				.map(event => ({ 
-					division: event.matches ? 
-						/^(hs|high school)$/i.test(event.matches[0].division) ? "Varsity"
-						: event.matches[0].division
-					: null, 
+					division: event.division, 
 					date: new Date(event.date),
-					weightClass: event.matches ? event.matches[0].weightClass : null 
+					weightClass: event.weightClass
 				}))
 				.sort((eventA, eventB) => 
 					!isNaN(eventA.weightClass) && isNaN(eventB.weightClass) ? -1
@@ -1456,40 +1474,11 @@ export default {
 					: +eventB.date - +eventA.date
 				)
 				.find(() => true);
-		
-			const weightClasses = [...new Set(wrestler.events.flatMap(event => event.matches.map(match => match.weightClass)))]
-				.map(weightClass => {
-					const lastMatch = wrestler.events.flatMap(event => event.matches.map(match => ({ 
-							weightClass: match.weightClass, 
-							division: /^(hs|high school)$/i.test(match.division) ? "Varsity"
-								: (match.division || "").trim(), 
-							date: new Date(event.date), 
-							event: event.name 
-						})))
-						.filter(match => match.weightClass == weightClass)
-						.sort((matchA, matchB) => +matchB.date - +matchA.date)
-						.find(() => true);
-					
-					return {
-						weightClass: weightClass,
-						division: lastMatch.division,
-						lastDate: lastMatch.date,
-						lastEvent: lastMatch.event
-					};
-				});
-
+			
 			wrestler = {
 				...wrestler,
-				name: wrestler.name ? wrestler.name : wrestler.firstName + " " + wrestler.lastName,
-				division: lastEvent ? lastEvent.division : null,
-				weightClass: lastEvent ? lastEvent.weightClass : null,
-				weightClasses: weightClasses,
-				events: wrestler.events.map(event => ({
-					...event,
-					division: event.matches[0]?.division || "",
-					weightClass: event.matches[0]?.weightClass || "",
-					matches: event.matches.map(({ division, weightClass, ...match}) => match)
-				}))
+				division: lastEvent?.division,
+				weightClass: lastEvent?.weightClass
 			};
 
 			output.data.wrestler = wrestler;

@@ -14,6 +14,7 @@ export default {
 		teamWrestlers: "./client/portal/teamwrestlers.jsx",
 		teamCompare: "./client/portal/teamcompare.jsx",
 		wrestlerSearch: "./client/portal/wrestlersearch.jsx",
+		wrestler: "./client/portal/wrestler.jsx",
 		noaccess: "./client/portal/noaccess.jsx"
 	},
 	plugins: [
@@ -125,6 +126,16 @@ export default {
 				viewport: "width=device-width, initial-scale=1"
 			},
 			chunks: [ "wrestlerSearch" ],
+			templateContent: "<html><body><div id='root'></div></body></html>"
+		}),
+		new HtmlWebpackPlugin({ 
+			filename: "./portal/wrestler.html",
+			title: "Fort Mill Wrestling - Wrestler Details",
+			favicon: "./client/media/favicon.ico",
+			meta: {
+				viewport: "width=device-width, initial-scale=1"
+			},
+			chunks: [ "wrestler" ],
 			templateContent: "<html><body><div id='root'></div></body></html>"
 		}),
 		new HtmlWebpackPlugin({ 

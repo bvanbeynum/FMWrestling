@@ -225,7 +225,7 @@ router.get("/api/externalwrestlerdetails", authAPI, async (request, response) =>
 		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "65450955cf4fc75b636f85bd", message: `${ results.status }: ${results.error}` }}).then();
 	}
 
-	response.status(results.status).json(results.error ? { error: results.error } : results.data);
+	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
 });
 
 // ***************** External Teams ********************
