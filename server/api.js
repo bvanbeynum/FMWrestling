@@ -1567,7 +1567,7 @@ export default {
 		let teams = null;
 		try {
 			// Build the distinct list of teams
-			teams = [...new Set( externalWrestlers.flatMap(wrestler => wrestler.events.map(event => event.team)) )];
+			teams = [...new Set( externalWrestlers.flatMap(wrestler => wrestler.events.map(event => event.team)).filter(team => team) )];
 		}
 		catch (error) {
 			output.status = 565;
@@ -1609,26 +1609,26 @@ export default {
 				
 				if (clientResponse.body.externalTeams.length == 1) {
 					team = clientResponse.body.externalTeams[0];
-				}
-				else {
-					// if the team doesn't exist, we'll create it
-					team = {
-						name: teams[teamIndex],
-						events: [],
-						wrestlers: []
-					};
+					if (!team.wrestlers) {
+						team.wrestlers = [];
+					}
+					if (!team.events) {
+						team.events = [];
+					}
 				}
 			}
 			catch (error) {
 				output.status = 563;
 				output.data.externalTeams.push({ index: teamIndex, status: output.status, error: error.message });
 			}
-			
-			if (!team.wrestlers) {
-				team.wrestlers = [];
-			}
-			if (!team.events) {
-				team.events = [];
+
+			if (!team) {
+				// if the team doesn't exist, we'll create it
+				team = {
+					name: teams[teamIndex],
+					events: [],
+					wrestlers: []
+				};
 			}
 
 			try {

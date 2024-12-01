@@ -1123,7 +1123,8 @@ export default {
 			filter.name = { $regex: new RegExp(userFilter.name, "i") }
 		}
 		if (userFilter.exactName) {
-			filter.name = { $regex: new RegExp("^" + userFilter.exactName + "$", "i") }
+			// filter.name = { $regex: new RegExp("^" + userFilter.exactName + "$", "i") }
+			filter.name = userFilter.exactName;
 		}
 		if (userFilter.ids) {
 			filter["_id"] = { $in: userFilter.ids.filter(id => mongoose.Types.ObjectId.isValid(id)) }
