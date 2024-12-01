@@ -1609,12 +1609,6 @@ export default {
 				
 				if (clientResponse.body.externalTeams.length == 1) {
 					team = clientResponse.body.externalTeams[0];
-					if (!team.wrestlers) {
-						team.wrestlers = [];
-					}
-					if (!team.events) {
-						team.events = [];
-					}
 				}
 				else {
 					// if the team doesn't exist, we'll create it
@@ -1628,6 +1622,13 @@ export default {
 			catch (error) {
 				output.status = 563;
 				output.data.externalTeams.push({ index: teamIndex, status: output.status, error: error.message });
+			}
+			
+			if (!team.wrestlers) {
+				team.wrestlers = [];
+			}
+			if (!team.events) {
+				team.events = [];
 			}
 
 			try {
