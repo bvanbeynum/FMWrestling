@@ -263,7 +263,6 @@ export default {
 				return output;
 			}
 			catch (error) {
-				console.log(error);
 				output.status = 563;
 				output.error = error.message;
 				return output;
@@ -546,7 +545,6 @@ export default {
 				return output;
 			}
 			catch (error) {
-				console.log(error);
 				output.status = 567;
 				output.error = error.message;
 				return output;
