@@ -41,10 +41,10 @@ const WrestlerComponent = props => {
 								: (event.division || "").trim(),
 							wins: event.matches?.filter(match => match.isWinner && match.vs).length,
 							losses: event.matches?.filter(match => !match.isWinner && match.vs).length,
-							place: event.matches?.some(match => match.winType && /^finals$/i.test(match.round) && match.isWinner) ? "1st"
-								: event.matches?.some(match => match.winType && /^finals$/i.test(match.round) && !match.isWinner) ? "2nd"
-								: event.matches?.some(match => match.winType && /^3rd place$/i.test(match.round) && match.isWinner) ? "3rd"
-								: event.matches?.some(match => match.winType && /^3rd place$/i.test(match.round) && !match.isWinner) ? "4th"
+							place: event.matches?.some(match => match.winType && /^(finals|1st place)/i.test(match.round) && match.isWinner) ? "1st"
+								: event.matches?.some(match => match.winType && /^(finals|1st place)/i.test(match.round) && !match.isWinner) ? "2nd"
+								: event.matches?.some(match => match.winType && /^3rd place/i.test(match.round) && match.isWinner) ? "3rd"
+								: event.matches?.some(match => match.winType && /^3rd place/i.test(match.round) && !match.isWinner) ? "4th"
 								: ""
 						}))
 					};
@@ -207,7 +207,7 @@ isLoading || !wrestler ?
 			<tr key={eventIndex} onClick={ () => setSelectedEvent(event) } className={ selectedEvent?.sqlId == event.sqlId ? "selected" : "" }>
 				<td>{ event.date.toLocaleDateString() }</td>
 				<td>{ event.name }</td>
-				<td>{ (event.place ? event.place + " " : "") + event.wins + " - " + event.losses + " (" + (event.wins / (event.wins + event.losses)).toFixed(3) + ")" }</td>
+				<td>{ event.wins + " - " + event.losses + " (" + (event.wins / (event.wins + event.losses)).toFixed(3) + ")" + (event.place ? " " + event.place : "") }</td>
 				<td>{ event.team }</td>
 				<td>{ event.division }</td>
 				<td>{ event.weightClass }</td>
@@ -233,7 +233,7 @@ isLoading || !wrestler ?
 			selectedEvent ?
 
 			selectedEvent.matches
-			.sort((matchA,matchB) => matchB.sort - matchA.sort)
+			.sort((matchA,matchB) => matchA.sort - matchB.sort)
 			.map((match, matchIndex) =>
 			<tr key={matchIndex}>
 				<td>{ match.round }</td>

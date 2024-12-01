@@ -95,19 +95,14 @@ const TeamCompare = () => {
 
 					// Set the data for the weight classes they've wrestled before
 					const wrestlers = data.wrestlers.map(wrestler => {
-							const lastWeightClass = wrestler.weightClasses
-								.map(weightClass => ({...weightClass, lastDate: new Date(weightClass.lastDate) }))
-								.filter(weightClass => !isNaN(weightClass.weightClass))
-								.sort((weightClassA, weightClassB) => +weightClassB.lastDate - +weightClassA.lastDate)
-								.find(() => true);
-		
-							const closestWeightClass = lastWeightClass ? weightClasses
+						
+							const closestWeightClass = wrestler.weightClass && !isNaN(wrestler.weightClass) ? weightClasses
 									.map(weightClass => weightClass.name)
 									.filter(weightClass => !isNaN(weightClass))
 									.sort((weightClassA, weightClassB) =>
-										weightClassA == lastWeightClass.weightClass && weightClassB != lastWeightClass.weightClass ? -1
-										: weightClassA != lastWeightClass.weightClass && weightClassB == lastWeightClass.weightClass ? 1
-										: Math.abs(+lastWeightClass.weightClass - +weightClassA) >= Math.abs(+lastWeightClass.weightClass - +weightClassB) ? 1
+										weightClassA == wrestler.weightClass && weightClassB != wrestler.weightClass ? -1
+										: weightClassA != wrestler.weightClass && weightClassB == wrestler.weightClass ? 1
+										: Math.abs(+wrestler.weightClass - +weightClassA) >= Math.abs(+wrestler.weightClass - +weightClassB) ? 1
 										: -1
 									)
 									.find(() => true)
@@ -122,7 +117,7 @@ const TeamCompare = () => {
 								lastEvent: {...wrestler.lastEvent, date: new Date(wrestler.lastEvent?.date) },
 								weightClasses: wrestler.weightClasses.map(weightClass => ({...weightClass, lastDate: new Date(weightClass.lastDate)})),
 								weightClass: closestWeightClass,
-								lastDate: lastWeightClass ? lastWeightClass.lastDate : null
+								lastDate: wrestler.lastEvent && wrestler.lastEvent.date ? new Date(wrestler.lastEvent.date) : null
 							}
 						});
 

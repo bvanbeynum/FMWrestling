@@ -45,7 +45,8 @@ const TeamCompareMatch = props => {
 			const weightClassesOrdered = [
 				...props.weightClasses.slice(startingWeight),
 				...props.weightClasses.slice(0, startingWeight)
-			]
+				]
+				.filter(weightClass => !isNaN(weightClass.name))
 
 			const scores = weightClassesOrdered.map(weightClass => ({ 
 				name: weightClass.name, 
@@ -344,6 +345,7 @@ props.weightClasses && props.weightClasses.some(weightClass => weightClass.oppon
 <div className="panel expandable">
 	{
 	props.weightClasses
+	.filter(weightClass => !isNaN(weightClass.name))
 	.map((weightClass, weightClassIndex) =>
 	
 	<div key={ weightClassIndex } className="compareRow">
