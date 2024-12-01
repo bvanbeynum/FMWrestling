@@ -1546,6 +1546,10 @@ export default {
 		for (let wrestlerIndex = 0; wrestlerIndex < externalWrestlers.length; wrestlerIndex++) {
 			// Save each wrestler
 			try {
+				if (!externalWrestlers[wrestlerIndex].events) {
+					externalWrestlers[wrestlerIndex].events = [];
+				}
+
 				const clientResponse = await client.post(`${ serverPath }/data/externalwrestler`).send({ externalwrestler: externalWrestlers[wrestlerIndex] }).then();
 				output.data.externalWrestlers.push({ index: wrestlerIndex, id: clientResponse.body.id });
 				externalWrestlers[wrestlerIndex].id = clientResponse.body.id;
@@ -1605,6 +1609,12 @@ export default {
 				
 				if (clientResponse.body.externalTeams.length == 1) {
 					team = clientResponse.body.externalTeams[0];
+					if (!team.wrestlers) {
+						team.wrestlers = [];
+					}
+					if (!team.events) {
+						team.events = [];
+					}
 				}
 				else {
 					// if the team doesn't exist, we'll create it
