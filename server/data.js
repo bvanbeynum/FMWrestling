@@ -1120,11 +1120,11 @@ export default {
 			filter["_id"] = mongoose.Types.ObjectId.isValid(userFilter.id) ? userFilter.id : null;
 		}
 		if (userFilter.name) {
-			filter.name = { $regex: new RegExp(userFilter.name, "i") }
+			filter.searchName = userFilter.exactName?.toLowerCase();
 		}
 		if (userFilter.exactName) {
 			// filter.name = { $regex: new RegExp("^" + userFilter.exactName + "$", "i") }
-			filter.name = userFilter.exactName;
+			filter.searchName = userFilter.exactName?.toLowerCase();
 		}
 		if (userFilter.ids) {
 			filter["_id"] = { $in: userFilter.ids.filter(id => mongoose.Types.ObjectId.isValid(id)) }
@@ -1175,6 +1175,8 @@ export default {
 						record[field] = saveObject[field];
 					}
 				});
+				
+				record.searchName = record.name?.toLowerCase();
 				record.modified = new Date();
 
 				record = await record.save();
@@ -1191,7 +1193,7 @@ export default {
 		else {
 			let record = null;
 			try {
-				record = await (new data.externalTeam({ ...saveObject, created: new Date(), modified: new Date() })).save();
+				record = await (new data.externalTeam({ ...saveObject, searchName: saveObject.name?.toLowerCase(), created: new Date(), modified: new Date() })).save();
 			}
 			catch (error) {
 				output.status = 563;
@@ -1241,7 +1243,7 @@ export default {
 			filter.name = { $regex: new RegExp(userFilter.name, "i") };
 		}
 		if (userFilter.teamName) {
-			filter["events.team"] = { $regex: new RegExp(userFilter.teamName, "i") };
+			filter["events.team"] = { $regex: new RegExp("^" + userFilter.teamName + "$", "i") };
 		}
 		if (userFilter.ids) {
 			filter["_id"] = { $in: userFilter.ids.filter(id => mongoose.Types.ObjectId.isValid(id)) };
@@ -1305,6 +1307,11 @@ export default {
 						record[field] = saveObject[field];
 					}
 				});
+
+				if (record.firstName && record.lastName) {
+					record.name = record.firstName + " " + record.lastName;
+					record.searchName = record.name.toLowerCase()
+				}
 				record.modified = new Date();
 
 				record = await record.save();
@@ -1321,7 +1328,13 @@ export default {
 		else {
 			let record = null;
 			try {
-				record = await (new data.externalWrestler({ ...saveObject, created: new Date(), modified: new Date() })).save();
+				record = await (new data.externalWrestler({ 
+					...saveObject, 
+					name: saveObject.firstName + " " + saveObject.lastName, 
+					searchName: saveObject.firstName.toLowerCase() + " " + saveObject.lastName.toLowerCase(), 
+					created: new Date(), 
+					modified: new Date() 
+				})).save();
 			}
 			catch (error) {
 				output.status = 563;

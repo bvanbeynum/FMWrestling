@@ -1230,23 +1230,10 @@ export default {
 			return output;
 		}
 
-		let floWrestlerIds = [];
-		let floTeams = [];
-		try {
-			const clientResponse = await client.get(`${ serverPath }/data/externalteam?name=${ scmatTeam.name }`);
-			floTeams = clientResponse.body.externalTeams;
-			floWrestlerIds = floTeams.flatMap(team => team.wrestlers.map(wrestler => wrestler.id));
-		}
-		catch (error) {
-			output.status = 562;
-			output.error = error.message;
-			return output;
-		}
-
 		let externalWrestlers = [];
 		try {
-			const clientResponse = await client.get(`${ serverPath }/data/externalwrestler${ floTeams && floTeams.length > 0 ? "?externalteamid=" + floTeams[0].id : "" }`);
-			externalWrestlers = clientResponse.body.externalWrestlers.filter(wrestler => floWrestlerIds.includes(wrestler.id));
+			const clientResponse = await client.get(`${ serverPath }/data/externalwrestler?teamname=${ scmatTeam.name }`);
+			externalWrestlers = clientResponse.body.externalWrestlers;
 		}
 		catch (error) {
 			output.status = 563;
@@ -1256,24 +1243,30 @@ export default {
 
 		try {
 			output.data.wrestlers = externalWrestlers.map(wrestler => {
-				const lastTeamEvent = wrestler.events
-					.filter(event => event.team == scmatTeam.name)
+				const lastTeamDivision = wrestler.events
+					.filter(event => event.team == scmatTeam.name && event.matches.some(match => match.division))
 					.sort((eventA, eventB) => +(new Date(eventB.date)) - +(new Date(eventA.date)))
-					.map(event => ({ 
-						division: event.matches ? 
-							/^(hs|high school|hs girls)$/i.test(event.matches[0].division) ? "Varsity"
-							: event.matches[0].division
-						: null, 
-						weightClass: event.matches ? event.matches[0].weightClass : null 
-					}))
+					.map(event => /(hs|high school|hs girls)/i.test(event.matches[0].division) ? "Varsity"
+							: /(jv|junior varsity)/i.test(event.matches[0]).division ? "JV"
+							: /(ms|middle school)/i.test(event.matches[0].division) ? "MS"
+							: (event.matches[0].division || "").trim()
+					)
+					.find(() => true);
+				
+				const lastTeamWeight = wrestler.events
+					.filter(event => event.matches.some(match => match.weightClass && !isNaN(match.weightClass)))
+					.sort((eventA, eventB) => +(new Date(eventB.date)) - +(new Date(eventA.date)))
+					.map(event => event.matches[0].weightClass)
 					.find(() => true);
 
 				const lastEvent = wrestler.events.map(event => ({
 						event: event.name,
 						date: new Date(event.date),
 						division: event.matches ? 
-							/^(hs|high school|hs girls)$/i.test(event.matches[0].division) ? "Varsity"
-							: event.matches[0].division
+							/(hs|high school|hs girls)/i.test(event.matches[0].division) ? "Varsity"
+							: /(jv|junior varsity)/i.test(event.matches[0].division) ? "JV"
+							: /(ms|middle school)/i.test(event.matches[0].division) ? "MS"
+							: (event.matches[0].division || "").trim()
 						: null, 
 						weightClass: event.matches ? event.matches[0].weightClass : null
 					}))
@@ -1284,8 +1277,10 @@ export default {
 					.map(weightClass => {
 						const lastMatch = wrestler.events.flatMap(event => event.matches.map(match => ({ 
 								weightClass: match.weightClass, 
-								division: /^(hs|high school|hs girls)$/i.test(match.division) ? "Varsity"
-									: (match.division || "").trim(), 
+								division: /(hs|high school|hs girls)/i.test(event.matches[0].division) ? "Varsity"
+									: /(jv|junior varsity)/i.test(event.matches[0].division) ? "JV"
+									: /(ms|middle school)/i.test(event.matches[0].division) ? "MS"
+									: (event.matches[0].division || "").trim(), 
 								date: new Date(event.date), 
 								event: event.name 
 							})))
@@ -1304,8 +1299,8 @@ export default {
 				return {
 					id: wrestler.id,
 					name: wrestler.name,
-					division: lastTeamEvent ? lastTeamEvent.division : null,
-					weightClass: lastTeamEvent ? lastTeamEvent.weightClass : null,
+					division: lastTeamDivision,
+					weightClass: lastTeamWeight,
 					weightClasses: weightClasses,
 					lastEvent: lastEvent,
 					wins: wrestler.events

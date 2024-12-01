@@ -5,6 +5,8 @@ export default {
 	user: mongoose.model("user", {
 		firstName: String,
 		lastName: String,
+		name: String,
+		searchName: String,
 		email: String,
 		phone: String,
 		tokens: [String],
@@ -74,6 +76,7 @@ export default {
 
 	team: mongoose.model("team", {
 		name: String,
+		searchName: String,
 		state: String,
 		confrence: String,
 		section: String,
