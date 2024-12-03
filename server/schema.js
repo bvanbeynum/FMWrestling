@@ -101,6 +101,7 @@ export default {
 			date: Date,
 			name: String,
 			team: String,
+			locationState: String,
 			matches: [{
 				division: String,
 				weightClass: String,

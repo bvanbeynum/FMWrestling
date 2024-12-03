@@ -48,7 +48,6 @@ const WrestlerComponent = props => {
 								: ""
 						}))
 					};
-					console.log(wrestlerData);
 					setWrestler(wrestlerData);
 
 					const matchesData = wrestlerData.events.flatMap(event => event.matches.map(match => ({
@@ -185,6 +184,7 @@ isLoading || !wrestler ?
 			<thead>
 			<tr>
 				<th>Date</th>
+				<th>State</th>
 				<th>Event</th>
 				<th>Restuls</th>
 				<th>Team</th>
@@ -206,6 +206,7 @@ isLoading || !wrestler ?
 			.map((event, eventIndex) =>
 			<tr key={eventIndex} onClick={ () => setSelectedEvent(event) } className={ selectedEvent?.sqlId == event.sqlId ? "selected" : "" }>
 				<td>{ event.date.toLocaleDateString() }</td>
+				<td>{ event.locationState }</td>
 				<td>{ event.name }</td>
 				<td>{ event.wins + " - " + event.losses + " (" + (event.wins / (event.wins + event.losses)).toFixed(3) + ")" + (event.place ? " " + event.place : "") }</td>
 				<td>{ event.team }</td>
