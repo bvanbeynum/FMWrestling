@@ -210,6 +210,11 @@ line.axisLine {
 	flex: 1;
 }
 
+.weightHeader .subTitle {
+	display: flex;
+	align-items: center;
+}
+
 .weightContainer table td {
 	padding: 12px 0px;
 	border-bottom: solid 1px rgb(237 237 237);
@@ -255,8 +260,16 @@ line.axisLine {
 	font-size: 0.8em;
 	padding: 10px 0px;
 }
-.selectWrestlerItem:nth-child(2n) {
+
+.selectWrestlerItem.alternate {
 	background-color: rgb(247 237 203);
+}
+
+.allWeightDivision {
+	text-align: center;
+	padding: 6px 0px;
+	font-weight: bold;
+	font-size: 1.2em;
 }
 
 .selectWrestlerDivision {

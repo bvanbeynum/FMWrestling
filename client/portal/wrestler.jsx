@@ -2,7 +2,6 @@ import React, { useEffect, useState, useRef } from "react";
 import ReactDOM from "react-dom/client";
 import "./include/index.css";
 import "./include/wrestler.css";
-import * as d3 from "d3";
 
 const WrestlerComponent = props => {
 
@@ -50,89 +49,22 @@ const WrestlerComponent = props => {
 					};
 					setWrestler(wrestlerData);
 
-					const matchesData = wrestlerData.events.flatMap(event => event.matches.map(match => ({
-						date: new Date(match.date),
-						sqlId: match.winnerSqlId == data.wrestler.sqlId ? match.loserSqlId : match.winnerSqlId,
-						vs: match.winnerSqlId == data.wrestler.sqlId ? match.loser : match.winner,
-					})));
-
-					const relationships = [...new Set(matchesData.map(match => match.sqlId))]
-							.map(group => 
-								matchesData
-									.filter(match => match.sqlId == group)
-									.sort((matchA, matchB) => +matchB.date - +matchA.date)
-									.map(match => ({
-										source: wrestlerData.sqlId,
-										target: match.sqlId,
-										vs: match.vs,
-										shade: (((Date.now() - match.date) / 1000 / 60 / 60 / 24 / 365) * 255) / 2
-									}))
-									.find(() => true)
-							)
-							.sort((opponentA, opponentB) => opponentA.age - opponentB.age),
-
-						nodes = relationships.map(relationship => ({ id: relationship.target, name: relationship.vs })).concat([{ id: wrestlerData.sqlId, name: wrestlerData.name }]);
+					const matches = wrestlerData.events.flatMap(event => event.matches.map(match => ({...match, eventDate: event.date }))),
+						opponents = [...new Set(matches.map(match => match.vsSqlId))]
+							.map(wrestlerId => 
+								matches.filter(match => match.vsSqlId == wrestlerId)
+									.reduce((output, current) => ({
+										...output,
+										name: current.vs,
+										teams: [...new Set(output.teams.concat(current.vsTeam))],
+										wins: output.wins + (current.isWinner ? 1 : 0),
+										losses: output.losses + (current.isWinner ? 0 : 1),
+										dates: output.dates.concat(current.eventDate),
+										lastDate: !output.lastDate || +output.lastDate < current.eventDate ? current.eventDate : output.lastDate
+									}), { sqlId: wrestlerId, wins: 0, losses: 0, teams: [], dates: [] })
+							);
 					
-					const svg = d3.select(svgRef.current);
-
-					const lines = svg.selectAll("line")
-						.data(relationships)
-						.enter()
-						.append("line")
-						.attr("stroke", d => `rgb(${ d.shade } ${ d.shade } ${ d.shade })`);
-					
-					const nodeSVG = svg.selectAll(".node")
-						.data(nodes)
-						.enter()
-						.append("g")
-						.attr("class", "node")
-						.each(function (parent) {
-							const node = d3.select(this);
-							
-							const textNode = document.createElementNS("http://www.w3.org/2000/svg", "text");
-							textNode.appendChild(document.createTextNode(parent.name));
-							console.log(textNode.getBBox())
-
-							// const bBox = node
-							// 	.append("text")
-							// 	.text(d => d.name)
-							// 	.node()
-							// 	.getBBox();
-							
-							node.append("rect")
-								.attr("width", 100) // Math.ceil(bBox.width) + 10
-								.attr("height", 30)
-								.attr("x", -5)
-								.attr("y", -20)
-								.attr("rx", "5");
-							
-							node.node().appendChild(textNode);
-						});
-					
-					// nodeSVG.append("rect")
-					// 	.attr("width", 100)
-					// 	.attr("height", 30)
-					// 	.attr("x", -5)
-					// 	.attr("y", -20)
-					// 	.attr("rx", "5");
-
-					// nodeSVG.append("text")
-					// 	.text(d => d.name);
-					
-					const simulation = d3.forceSimulation(nodes)
-						.force("link", d3.forceLink(relationships).id(d => d.id))
-						.force("collide", d3.forceCollide().radius(100))
-						.force("charge", d3.forceManyBody().strength(-300))
-						.force("center", d3.forceCenter(500, 500));
-					
-					simulation.on("tick", () => {
-						lines.attr("x1", d => d.source.x)
-							.attr("y1", d => d.source.y)
-							.attr("x2", d => d.target.x)
-							.attr("y2", d => d.target.y);
-						
-						nodeSVG.attr("transform", d => `translate(${d.x}, ${d.y})`);
-					});
+					console.log(opponents)
 
 					setIsLoading(false);
 					setLoggedInUser(data.loggedInUser);
