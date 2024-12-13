@@ -101,7 +101,8 @@ line.axisLine {
 	stroke-width: 2px;
 }
 .opponentNetwork .wrestlerContainer.selected {
-	background-color: green;
+	fill: rgb(223 255 223);
+	stroke: rgb(9 171 9);
 }
 
 .opponentNetwork .wrestlerLetter {
