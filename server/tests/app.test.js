@@ -400,29 +400,6 @@ describe("Data service", () => {
 		expect(response.body.externalWrestlers).toHaveLength(1);
 	});
 
-	it("gets external wrestler matches", async () => {
-
-		// ********** Given
-
-		const output = { wrestler: { id: "testid", sqlId: 1234, name: "Test Wrestler", matches: [] }};
-
-		data.externalWrestlerMatchesGet = jest.fn().mockResolvedValue({
-			status: 200,
-			data: output
-		});
-
-		// ********** When
-		
-		const response = await request(app)
-			.get(`/data/externalwrestlermatches?id=${ output.wrestler.id }`)
-			.expect(200);
-		
-		// ********** Then
-
-		expect(response.body).toHaveProperty("wrestler");
-		// expect(response.body.wrestler).toHaveProperty("matches", []);
-	});
-
 	it("saves external wrestler", async () => {
 		// ********** Given
 

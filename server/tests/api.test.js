@@ -1670,56 +1670,9 @@ describe("External Wrestler", () => {
 
 		expect(results).toHaveProperty("status", 200);
 		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/externalwrestler?id=${ externalWrestler.id }`);
-		expect(client.get).toHaveBeenNthCalledWith(2, `${ serverPath }/data/externalwrestlermatches?id=${ externalWrestler.id }`);
 		expect(results).toHaveProperty("data");
 		expect(results.data).toHaveProperty("wrestler", expected);
 	
-	});
-
-	it("gets the matches for a wrestler", async () => {
-
-		const wrestlerId = "wrestlerid",
-			matches = [
-				{
-					"sqlId": 123,
-					"winnerSqlId": 111,
-					"winner": "Wrestler 1",
-					"winnerTeam": "Team A",
-					"loserSqlId": 222,
-					"loser": "Wrestler 2",
-					"loserTeam": "Team B",
-					"winType": "F",
-					"date": new Date(2024, 4, 30),
-					"event": "Test Event"
-				},
-				{
-					"sqlId": 456,
-					"winnerSqlId": 111,
-					"winner": "Wrestler 1",
-					"winnerTeam": "Team A",
-					"loserSqlId": 444,
-					"loser": "Wrestler 3",
-					"loserTeam": "Team C",
-					"winType": "F",
-					"date": new Date(2024, 2, 15),
-					"event": "Test Event 2"
-				}
-			];
-
-		client.get = jest.fn()
-			.mockResolvedValueOnce({ body: { matches: matches } });
-
-		const results = await api.externalWrestlerMatches(wrestlerId, serverPath);
-
-		if (results.status != 200) {
-			console.log(results);
-		}
-
-		expect(results).toHaveProperty("status", 200);
-		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/externalwrestlermatches?id=${ wrestlerId }`);
-		expect(results).toHaveProperty("data");
-		expect(results.data).toHaveProperty("matches", matches);
-
 	});
 
 });

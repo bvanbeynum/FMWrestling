@@ -85,7 +85,7 @@ line.axisLine {
 	color: rgb(173 43 43);
 }
 
-.network {
+.opponentNetwork {
 	width: 100%;
 	height: 60vh;
 	border: 1px solid rgb(145 145 145);
@@ -95,7 +95,54 @@ line.axisLine {
 	background-color: rgb(245 246 250);
 }
 
-.network .node rect {
-	fill: rgb(231 231 231);
-	stroke: rgb(167 167 167);
+.opponentNetwork .wrestlerContainer {
+	fill: rgb(255 255 255);
+	stroke: rgb(133 133 133);
+	stroke-width: 2px;
+}
+.opponentNetwork .wrestlerContainer.selected {
+	background-color: green;
+}
+
+.opponentNetwork .wrestlerLetter {
+	font-size: 1.2em;
+	font-weight: bold;
+}
+
+.opponentNetwork text {
+	fill: rgb(119 119 119);
+	font-size: .7em;
+}
+
+.opponentNetwork .opponentName {
+	font-size: .9em;
+}
+
+.opponentNetwork .opponentRecordBox {
+	fill: rgb(133 133 133);
+}
+
+.opponentNetwork .record {
+	fill: white;
+	font-size: 1em;
+}
+
+.opponentNetwork path {
+	stroke: gray;
+	fill: none;
+	stroke-width: 2px;
+}
+
+.opponentNetwork .networkIcon {
+	cursor: pointer;
+	user-select: none;
+	outline: none;	
+}
+
+.opponentNetwork .networkIcon path {
+	fill: gray;
+}
+
+.opponentNetwork rect.networkIcon {
+	fill: transparent;
 }

@@ -1496,23 +1496,6 @@ export default {
 		return output;
 	},
 	
-	externalWrestlerMatches: async (wrestlerId, serverPath) => {
-		const output = { data: {} };
-
-		try {
-			const clientResponse = await client.get(`${ serverPath }/data/externalwrestlermatches?id=${ wrestlerId }`);
-			output.data.matches = clientResponse.body.wrestler ? clientResponse.body.wrestler.matches : [];
-		}
-		catch (error) {
-			output.status = 561;
-			output.error = error.message;
-			return output;
-		}
-
-		output.status = 200;
-		return output;
-	},
-
 	externalWrestlersBulk: async (serverPath) => {
 		const output = { data: {} };
 

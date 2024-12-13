@@ -508,23 +508,6 @@ router.get("/data/externalwrestler", authInternal, async (request, response) => 
 	}
 });
 
-router.get("/data/externalwrestlermatches", authInternal, async (request, response) => {
-	try {
-		const results = await data.externalWrestlerMatchesGet(request.query.id);
-
-		if (results.error) {
-			// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6604899b0627803dec0ec28f", message: `${ results.status }: ${results.error}` }}).then();
-		}
-
-		response.status(results.status).json(results.error ? { error: results.error } : results.data);
-		response.end();
-	}
-	catch (error) {
-		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6604899b0627803dec0ec28f", message: `570: ${error.message}` }}).then();
-		response.status(570).json({ error: error.message });
-	}
-});
-
 router.get("/data/externalwrestlerchainget", authInternal, async (request, response) => {
 	try {
 		const results = await data.externalWrestlerChainGet(request.query.wrestlerid, request.query.team, request.query.max);
