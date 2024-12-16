@@ -18,8 +18,7 @@ const WrestlerComponent = props => {
 		boxHeight: 40,
 		boxWidth: 230,
 		boxPadHeight: 20,
-		boxPadWidth: 60,
-		wrestlerRadius: 15
+		boxPadWidth: 60
 	};
 
 	useEffect(() => {
@@ -77,11 +76,13 @@ const WrestlerComponent = props => {
 							.sort((opponentA, opponentB) => +opponentB.lastDate - +opponentA.lastDate);
 					
 					const tiers = [{
-						x: chartConstants.boxPadWidth + chartConstants.padding.left + (chartConstants.wrestlerRadius * 2),
-						originY: chartConstants.padding.top + chartConstants.wrestlerRadius,
+						x: chartConstants.padding.left,
+						originY: chartConstants.padding.top,
 						opponents: opponents.map((opponent, opponentIndex) => ({
 							y: (opponentIndex * (chartConstants.boxHeight + chartConstants.boxPadHeight)) + chartConstants.padding.top,
 							record: opponent.wins + "-" + opponent.losses,
+							wins: opponent.wins,
+							losses: opponent.losses,
 							name: opponent.name,
 							teams: opponent.teams.join(", ").substring(0, 25),
 							date: opponent.lastDate,
@@ -90,7 +91,7 @@ const WrestlerComponent = props => {
 					}];
 					
 					setOpponentChart({
-						width: (1 * (chartConstants.boxPadWidth + chartConstants.boxWidth)) + chartConstants.padding.left + (chartConstants.wrestlerRadius * 2) + 30,
+						width: (1 * (chartConstants.boxPadWidth + chartConstants.boxWidth)),
 						height: tiers.reduce((height, tier) => height > (tier.opponents.length * (chartConstants.boxHeight + chartConstants.boxPadHeight)) + chartConstants.padding.top ? height : (tier.opponents.length * (chartConstants.boxHeight + chartConstants.boxPadHeight)) + chartConstants.padding.top, 0),
 						tiers: tiers
 					});
@@ -107,7 +108,7 @@ const WrestlerComponent = props => {
 	}, []);
 
 	const selectOpponent = (tierIndex, opponent) => {
-		setIsOpponentLoading(true);
+		setIsOpponentLoading(opponent.id);
 
 		fetch(`/api/externalwrestlerdetails?id=${ opponent.id }`)
 			.then(response => {
@@ -120,8 +121,7 @@ const WrestlerComponent = props => {
 			})
 			.then(data => {
 				
-				const tierPadding = chartConstants.boxPadWidth + chartConstants.padding.left + (chartConstants.wrestlerRadius * 2),
-					tierWidth =(chartConstants.boxPadWidth + chartConstants.boxWidth),
+				const tierWidth = chartConstants.boxPadWidth + chartConstants.boxWidth,
 					matches = data.wrestler.events.flatMap(event => event.matches.map(match => ({...match, eventDate: new Date(event.date) }))),
 					opponents = [...new Set(matches.map(match => match.vsSqlId))]
 						.map(wrestlerId => 
@@ -142,11 +142,13 @@ const WrestlerComponent = props => {
 				const tiers = [
 					...opponentChart.tiers.slice(0, tierIndex + 1),
 					{
-						x: tierPadding + ((tierIndex + 1) * tierWidth),
+						x: ((tierIndex + 1) * tierWidth) + chartConstants.padding.left,
 						originY: opponent.y + (chartConstants.boxHeight / 2),
 						opponents: opponents.map((opponent, opponentIndex) => ({
 							y: (opponentIndex * (chartConstants.boxHeight + chartConstants.boxPadHeight)) + chartConstants.padding.top,
 							record: opponent.wins + "-" + opponent.losses,
+							wins: opponent.wins,
+							losses: opponent.losses,
 							name: opponent.name,
 							teams: opponent.teams.join(", ").substring(0, 25),
 							date: opponent.lastDate,
@@ -156,13 +158,13 @@ const WrestlerComponent = props => {
 				];
 				
 				setOpponentChart({
-					width: tierPadding + ((tierIndex + 2) * tierWidth),
+					width: (tierIndex + 2) * tierWidth,
 					height: tiers.reduce((height, tier) => height > (tier.opponents.length * (chartConstants.boxHeight + chartConstants.boxPadHeight)) + chartConstants.padding.top ? height : (tier.opponents.length * (chartConstants.boxHeight + chartConstants.boxPadHeight)) + chartConstants.padding.top, 0),
 					tiers: tiers
 				});
 
 				setSelectedOpponent(opponent.id);
-				setIsOpponentLoading(false);
+				setIsOpponentLoading(null);
 			})
 			.catch(error => {
 				console.warn(error);
@@ -293,17 +295,7 @@ isLoading || !wrestler ?
 		<div className="sectionHeading">Opponents</div>
 
 		<div className="opponentNetwork">
-			{
-			isOpponentLoading ?
-			<div className="pageLoading">
-				<img src="/media/wrestlingloading.gif" />
-			</div>
-			:
-
 			<svg style={{ height: `${ opponentChart.height }px`, width: `${ opponentChart.width }px` }}>
-
-				<circle className="wrestlerContainer" cx={ chartConstants.padding.left + chartConstants.wrestlerRadius } cy={ chartConstants.padding.top + chartConstants.wrestlerRadius } r={ chartConstants.wrestlerRadius } />
-				<text className="wrestlerLetter" x={ chartConstants.padding.left + chartConstants.wrestlerRadius } y={ chartConstants.padding.top + chartConstants.wrestlerRadius  } r={ chartConstants.wrestlerRadius } textAnchor="middle" alignmentBaseline="middle">{ wrestler.name.substring(0, 1).toUpperCase() }</text>
 
 				{
 				opponentChart.tiers.map((tier, tierIndex) =>
@@ -313,12 +305,17 @@ isLoading || !wrestler ?
 					{
 					tier.opponents.map((opponent, opponentIndex) =>
 					<g key={ opponentIndex }>
+
+						{
+						tierIndex > 0 ?
 						<path d={ `M${ chartConstants.boxPadWidth * -1 } ${ tier.originY } C0 ${ tier.originY }, ${ chartConstants.boxPadWidth * -1 } ${ opponent.y + (chartConstants.boxHeight / 2) }, 0 ${ opponent.y + (chartConstants.boxHeight / 2) }` } />
+						: ""
+						}
 						
 						<g transform={`translate(0, ${ opponent.y })`}>
-							<rect x="0" y="0" width={ chartConstants.boxWidth } height={ chartConstants.boxHeight } rx="5" className={`wrestlerContainer ${ selectedOpponent == opponent.id ? "selected" : "" }`} />
+							<rect x="0" y="0" width={ chartConstants.boxWidth } height={ chartConstants.boxHeight } rx="5" className={`wrestlerContainer ${ opponent.id && selectedOpponent == opponent.id ? "selected" : "" }`} />
 
-							<rect x="5" y="5" width="30" height={ chartConstants.boxHeight - 10 } rx="5" className="opponentRecordBox" />
+							<rect x="5" y="5" width="30" height={ chartConstants.boxHeight - 10 } rx="5" className={`opponentRecordBox ${ opponent.wins > opponent.losses ? "better" : "worse" }`} />
 							<text x="19" y={ chartConstants.boxHeight / 2 } className="record" textAnchor="middle" alignmentBaseline="middle">{ opponent.record }</text>
 
 							<text x="40" y="5" alignmentBaseline="hanging">{ opponent.date ? opponent.date.toLocaleDateString() : "" }</text>
@@ -332,10 +329,10 @@ isLoading || !wrestler ?
 							<svg x={ chartConstants.boxWidth - 30 } y={ (chartConstants.boxHeight / 2) - 12 } width="24" height="24" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" className="networkIcon"><path d="M480-320q75 0 127.5-52.5T660-500q0-75-52.5-127.5T480-680q-75 0-127.5 52.5T300-500q0 75 52.5 127.5T480-320Zm0-72q-45 0-76.5-31.5T372-500q0-45 31.5-76.5T480-608q45 0 76.5 31.5T588-500q0 45-31.5 76.5T480-392Zm0 192q-146 0-266-81.5T40-500q54-137 174-218.5T480-800q146 0 266 81.5T920-500q-54 137-174 218.5T480-200Zm0-300Zm0 220q113 0 207.5-59.5T832-500q-50-101-144.5-160.5T480-720q-113 0-207.5 59.5T128-500q50 101 144.5 160.5T480-280Z"/></svg>
 							
 							{
-							selectedOpponent != opponent.id ?
+							opponent.id && selectedOpponent != opponent.id && !isOpponentLoading ?
 							<>
 							<rect x={ chartConstants.boxWidth } y={ (chartConstants.boxHeight / 2) - 12 } width="24" height="24" onClick={ () => selectOpponent(tierIndex, opponent) } className="networkIcon" />
-							<svg x={ chartConstants.boxWidth } y={ (chartConstants.boxHeight / 2) - 12 } width="24px" height="24px" viewBox="0 -960 960 960" xmlns="http://www.w3.org/2000/svg" className="networkIcon"><path d="M440-440H200v-80h240v-240h80v240h240v80H520v240h-80v-240Z"/></svg>
+							<svg x={ chartConstants.boxWidth } y={ (chartConstants.boxHeight / 2) - 12 } width="24px" height="24px" onClick={ () => selectOpponent(tierIndex, opponent) } viewBox="0 -960 960 960" xmlns="http://www.w3.org/2000/svg" className="networkIcon"><path d="M440-440H200v-80h240v-240h80v240h240v80H520v240h-80v-240Z"/></svg>
 							</>
 							: ""
 							}
@@ -353,7 +350,6 @@ isLoading || !wrestler ?
 
 			</svg>
 
-			}
 		</div>
 
 	</div>

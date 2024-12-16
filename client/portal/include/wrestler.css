@@ -105,11 +105,6 @@ line.axisLine {
 	stroke: rgb(9 171 9);
 }
 
-.opponentNetwork .wrestlerLetter {
-	font-size: 1.2em;
-	font-weight: bold;
-}
-
 .opponentNetwork text {
 	fill: rgb(119 119 119);
 	font-size: .7em;
@@ -121,6 +116,12 @@ line.axisLine {
 
 .opponentNetwork .opponentRecordBox {
 	fill: rgb(133 133 133);
+}
+.opponentNetwork .opponentRecordBox.worse {
+	fill: rgb(239 170 170);
+}
+.opponentNetwork .opponentRecordBox.better {
+	fill: rgb(175 215 175);
 }
 
 .opponentNetwork .record {
