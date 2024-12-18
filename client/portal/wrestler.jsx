@@ -3,15 +3,19 @@ import ReactDOM from "react-dom/client";
 import "./include/index.css";
 import "./include/wrestler.css";
 
-const WrestlerComponent = props => {
+const WrestlerComponent = () => {
 
 	const [ isLoading, setIsLoading ] = useState(false);
 	const [ wrestler, setWrestler ] = useState(null);
 	const [ loggedInUser, setLoggedInUser ] = useState(null);
+
 	const [ selectedEvent, setSelectedEvent ] = useState(null);
+
 	const [ opponentChart, setOpponentChart ] = useState({ width: 0, height: 0 });
 	const [ isOpponentLoading, setIsOpponentLoading ] = useState(false);
 	const [ selectedOpponent, setSelectedOpponent ] = useState(null);
+
+	const [ winTypeChart, setWinTypeChart ] = useState({});
 
 	const chartConstants = {
 		padding: { left: 10, top: 15 },
@@ -58,23 +62,55 @@ const WrestlerComponent = props => {
 					};
 					setWrestler(wrestlerData);
 
-					const matches = wrestlerData.events.flatMap(event => event.matches.map(match => ({...match, eventDate: event.date }))),
-						opponents = [...new Set(matches.map(match => match.vsSqlId))]
-							.map(wrestlerId => 
-								matches.filter(match => match.vsSqlId == wrestlerId)
-									.reduce((output, current) => ({
-										...output,
-										id: current.vsId,
-										name: current.vs,
-										teams: [...new Set(output.teams.concat(current.vsTeam))].sort((teamA, teamB) => teamA > teamB ? 1 : -1),
-										wins: output.wins + (current.isWinner ? 1 : 0),
-										losses: output.losses + (current.isWinner ? 0 : 1),
-										dates: output.dates.concat(current.eventDate),
-										lastDate: !output.lastDate || +output.lastDate < current.eventDate ? current.eventDate : output.lastDate
-									}), { sqlId: wrestlerId, wins: 0, losses: 0, teams: [], dates: [] })
-							)
-							.sort((opponentA, opponentB) => +opponentB.lastDate - +opponentA.lastDate);
+					const matchResults = data.wrestler.events.flatMap(event => event.matches.map(match => ({
+								isWinner: match.isWinner,
+								winType: /fall/i.test(match.winType) ? "F" 
+									: /tf/i.test(match.winType) ? "TF" 
+									: /dec/i.test(match.winType) ? "DEC" 
+									: /sv/i.test(match.winType) ? "DEC"
+									: /md/i.test(match.winType) ? "MD" 
+									: /maj/i.test(match.winType) ? "MD" 
+									: match.winType
+							})))
+							.filter(match => ["F", "TF", "MD", "DEC"].includes(match.winType)),
+						winTypes = {
+							types: [
+								matchResults.filter(match => match.winType == "F" && match.isWinner).length,
+								matchResults.filter(match => match.winType == "DEC" && match.isWinner).length,
+								matchResults.filter(match => match.winType == "TF" && match.isWinner).length,
+								matchResults.filter(match => match.winType == "MD" && match.isWinner).length
+							]},
+						loseTypes = {
+							types: [
+								matchResults.filter(match => match.winType == "F" && !match.isWinner).length,
+								matchResults.filter(match => match.winType == "DEC" && !match.isWinner).length,
+								matchResults.filter(match => match.winType == "TF" && !match.isWinner).length,
+								matchResults.filter(match => match.winType == "MD" && !match.isWinner).length
+							]};
 					
+					winTypes.max = winTypes.types.reduce((output, current) => output > current ? output : current, 0);
+					loseTypes.max = loseTypes.types.reduce((output, current) => output > current ? output : current, 0);
+
+					winTypes.points = winTypes.types.map((winType, typeIndex) => ([0,3].includes(typeIndex) ? -1 : 1) * (winType * 80) / winTypes.max);
+					loseTypes.points = loseTypes.types.map((winType, typeIndex) => ([0,3].includes(typeIndex) ? -1 : 1) * (winType * 80) / loseTypes.max);
+
+					winTypes.labels = winTypes.points.map((point, pointIndex) => ({ x: pointIndex % 2 == 0 ? 5 : point, y: pointIndex % 2 == 0 ? point : -5, text: winTypes.types[pointIndex] }));
+					loseTypes.labels = loseTypes.points.map((point, pointIndex) => ({ x: pointIndex % 2 == 0 ? 5 : point, y: pointIndex % 2 == 0 ? point : -5, text: loseTypes.types[pointIndex] }));
+
+					winTypes.path = "M" + winTypes.points.map((point,pointIndex) => pointIndex % 2 == 0 ? "0 " + point : point + " 0").join(",L") + 
+						",L0 " + winTypes.points[0];
+
+					loseTypes.path = "M" + loseTypes.points.map((point,pointIndex) => pointIndex % 2 == 0 ? "0 " + point : point + " 0").join(",L") + 
+						",L0 " + loseTypes.points[0];
+
+					console.log(winTypes);
+
+					setWinTypeChart({
+						win: winTypes,
+						lose: loseTypes
+					});
+
+					const opponents = getOpponents(data.wrestler);
 					const tiers = [{
 						x: chartConstants.padding.left,
 						originY: chartConstants.padding.top,
@@ -95,7 +131,7 @@ const WrestlerComponent = props => {
 						height: tiers.reduce((height, tier) => height > (tier.opponents.length * (chartConstants.boxHeight + chartConstants.boxPadHeight)) + chartConstants.padding.top ? height : (tier.opponents.length * (chartConstants.boxHeight + chartConstants.boxPadHeight)) + chartConstants.padding.top, 0),
 						tiers: tiers
 					});
-					
+
 					setIsLoading(false);
 					setLoggedInUser(data.loggedInUser);
 				})
@@ -120,24 +156,8 @@ const WrestlerComponent = props => {
 				}
 			})
 			.then(data => {
-				
-				const tierWidth = chartConstants.boxPadWidth + chartConstants.boxWidth,
-					matches = data.wrestler.events.flatMap(event => event.matches.map(match => ({...match, eventDate: new Date(event.date) }))),
-					opponents = [...new Set(matches.map(match => match.vsSqlId))]
-						.map(wrestlerId => 
-							matches.filter(match => match.vsSqlId == wrestlerId)
-								.reduce((output, current) => ({
-									...output,
-									id: current.vsId,
-									name: current.vs,
-									teams: [...new Set(output.teams.concat(current.vsTeam))].sort((teamA, teamB) => teamA > teamB ? 1 : -1),
-									wins: output.wins + (current.isWinner ? 1 : 0),
-									losses: output.losses + (current.isWinner ? 0 : 1),
-									dates: output.dates.concat(current.eventDate),
-									lastDate: !output.lastDate || +output.lastDate < current.eventDate ? current.eventDate : output.lastDate
-								}), { sqlId: wrestlerId, wins: 0, losses: 0, teams: [], dates: [] })
-						)
-						.sort((opponentA, opponentB) => +opponentB.lastDate - +opponentA.lastDate);
+				const opponents = getOpponents(data.wrestler);
+				const tierWidth = chartConstants.boxPadWidth + chartConstants.boxWidth;
 				
 				const tiers = [
 					...opponentChart.tiers.slice(0, tierIndex + 1),
@@ -171,6 +191,27 @@ const WrestlerComponent = props => {
 				setIsLoading(false);
 				setErrorMessage("There was an error loading the wrestler details");
 			});
+	};
+
+	const getOpponents = wrestler => {
+		const matches = wrestler.events.flatMap(event => event.matches.map(match => ({...match, eventDate: new Date(event.date) }))),
+			opponents = [...new Set(matches.map(match => match.vsSqlId))]
+				.map(wrestlerId => 
+					matches.filter(match => match.vsSqlId == wrestlerId)
+						.reduce((output, current) => ({
+							...output,
+							id: current.vsId,
+							name: current.vs,
+							teams: [...new Set(output.teams.concat(current.vsTeam))].sort((teamA, teamB) => teamA > teamB ? 1 : -1),
+							wins: output.wins + (current.isWinner ? 1 : 0),
+							losses: output.losses + (current.isWinner ? 0 : 1),
+							dates: output.dates.concat(new Date(current.eventDate)),
+							lastDate: !output.lastDate || +output.lastDate < current.eventDate ? current.eventDate : output.lastDate
+						}), { sqlId: wrestlerId, wins: 0, losses: 0, teams: [], dates: [] })
+				)
+				.sort((opponentA, opponentB) => +opponentB.lastDate - +opponentA.lastDate);
+		
+		return opponents;
 	};
 
 	return (
@@ -247,7 +288,10 @@ isLoading || !wrestler ?
 			</table>
 		</div>
 
-		<div className="sectionHeading">{ selectedEvent ? selectedEvent.name : "Select Event" }</div>
+		{
+		selectedEvent ?
+		<>
+		<div className="sectionHeading">{ selectedEvent.name }</div>
 		<div className="tableContainer">
 			<table className="sectionTable wrestlerMatches">
 			<thead>
@@ -259,8 +303,6 @@ isLoading || !wrestler ?
 			</thead>
 			<tbody>
 			{
-			selectedEvent ?
-
 			selectedEvent.matches
 			.sort((matchA,matchB) => matchA.sort - matchB.sort)
 			.map((match, matchIndex) =>
@@ -280,21 +322,21 @@ isLoading || !wrestler ?
 				<td>{ match.winType }</td>
 			</tr>
 			)
-			
-			:
-			
-			<tr>
-				<td colSpan="3" className="emptyTable">No Matches</td>
-			</tr>
-
 			}
 			</tbody>
 			</table>
 		</div>
+		</>
+		: ""
+		}
+	</div>
 
-		<div className="sectionHeading">Opponents</div>
+	<div className="panel expandable">
+		<h3>
+			Opponents
+		</h3>
 
-		<div className="opponentNetwork">
+		<div className="inlay opponentNetwork">
 			<svg style={{ height: `${ opponentChart.height }px`, width: `${ opponentChart.width }px` }}>
 
 				{
@@ -351,8 +393,76 @@ isLoading || !wrestler ?
 			</svg>
 
 		</div>
+	</div>
+
+	{
+	winTypeChart.win ?
+
+	<div className="panel">
+		<h3>
+			Win By
+		</h3>
+
+		<div className="inlay winByChart">
+			<svg style={{width: "225px", height: "200px"}}>
+				<line x1="105" y1="20" x2="105" y2="180" />
+				<line x1="25" y1="100" x2="185" y2="100" />
+
+				<text x="105" y="0" textAnchor="middle" alignmentBaseline="hanging">F</text>
+				<text x="105" y="185" textAnchor="middle" alignmentBaseline="hanging">TF</text>
+				<text x="190" y="100" textAnchor="start" alignmentBaseline="middle">DEC</text>
+				<text x="0" y="100" textAnchor="start" alignmentBaseline="middle">MD</text>
+
+				<g transform="translate(105,100)">
+					<path className="winPath" d={ winTypeChart.win.path } />
+					
+					{
+					winTypeChart.win.labels.map((label, labelIndex) =>
+					<text className="winTypeText" x={ label.x } y={ label.y } key={labelIndex}>{ label.text }</text>
+					)
+					}
+				</g>
+			</svg>
+		</div>
 
 	</div>
+	: ""
+	}
+
+	{
+	winTypeChart.lose ?
+
+	<div className="panel">
+		<h3>
+			Lost By
+		</h3>
+
+		<div className="inlay winByChart">
+			<svg style={{width: "225px", height: "200px"}}>
+				<line x1="105" y1="20" x2="105" y2="180" />
+				<line x1="25" y1="100" x2="185" y2="100" />
+
+				<text x="105" y="0" textAnchor="middle" alignmentBaseline="hanging">F</text>
+				<text x="105" y="185" textAnchor="middle" alignmentBaseline="hanging">TF</text>
+				<text x="190" y="100" textAnchor="start" alignmentBaseline="middle">DEC</text>
+				<text x="0" y="100" textAnchor="start" alignmentBaseline="middle">MD</text>
+
+				<g transform="translate(105,100)">
+					<path className="losePath" d={ winTypeChart.lose.path } />
+					
+					{
+					winTypeChart.lose.labels.map((label, labelIndex) =>
+					<text className="winTypeText" x={ label.x } y={ label.y } key={labelIndex}>{ label.text }</text>
+					)
+					}
+				</g>
+			</svg>
+		</div>
+
+	</div>
+	: ""
+	}
+
 </div>
 
 }
