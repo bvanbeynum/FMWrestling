@@ -487,6 +487,7 @@ router.get("/data/externalwrestler", authInternal, async (request, response) => 
 			name: request.query.name, 
 			max: request.query.max, 
 			teamName: request.query.teamname, 
+			teamPartial: request.query.teampartial,
 			externalTeamId: request.query.externalteamid, 
 			sqlId: request.query.sqlid,
 			sqlIds: sqlIdList,

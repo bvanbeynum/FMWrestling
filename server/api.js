@@ -2010,7 +2010,7 @@ export default {
 			query = `name=${ search }`;
 		}
 		else if (searchType == "team") {
-			query = `team=${ search }`;
+			query = `teampartial=${ search }`;
 		}
 		else {
 			output.status = 562;
@@ -2049,7 +2049,10 @@ export default {
 					team: lastEvent ? lastEvent.team : null,
 					division: lastEvent ? lastEvent.division : null,
 					weightClass: lastEvent ? lastEvent.weightClass : null,
-					lastEvent: lastEvent ? { name: lastEvent.name, date: lastEvent.date } : null
+					lastEvent: lastEvent ? { name: lastEvent.name, date: lastEvent.date } : null,
+					teams: [].concat(wrestler.events)
+						.sort((eventA, eventB) => +(new Date(eventB.date)) - +(new Date(eventA.date)))
+						.reduce((output, event) => output.includes(event.team) ? output : output.concat([event.team]), [])
 				};
 			});
 		}

@@ -15,8 +15,6 @@ const WrestlerSearchComponent = () => {
 	const [ loggedInUser, setLoggedInUser ] = useState(null);
 	const [ isFilterExpanded, setIsFilterExpanded ] = useState(false);
 
-	const [ teamLookup, setTeamLookup ] = useState([]);
-	const [ teamLookupSelected, setTeamLookupSelected ] = useState("");
 	const [ wrestlerSearch, setWrestlerSearch ] = useState("");
 	const [ teamSearch, setTeamSearch ] = useState("");
 
@@ -38,7 +36,6 @@ const WrestlerSearchComponent = () => {
 					}
 				})
 				.then(data => {
-					setTeamLookup(data.scmatTeams);
 					setLoggedInUser(data.loggedInUser);
 					setPageActive(true);
 				})
@@ -72,13 +69,32 @@ const WrestlerSearchComponent = () => {
 		}
 	}, [ wrestlerSearch ]);
 
+	useEffect(() => {
+		if (teamSearch && teamSearch.length > 3) {
+			
+			fetch(`/api/wrestlersearch?search=${ teamSearch }&searchtype=team`)
+				.then(response => {
+					if (response.ok) {
+						return response.json();
+					}
+					else {
+						throw Error(response.statusText);
+					}
+				})
+				.then(data => {
+					setWrestlerResults(data.wrestlers.map(wrestler => ({
+						...wrestler,
+						lastEvent: wrestler.lastEvent ? {...wrestler.lastEvent, date: new Date(wrestler.lastEvent.date)} : null
+					})));
+				})
+				.catch(error => {
+					console.warn(error);
+				});
+		}
+	}, [ teamSearch ]);
+
 	const selectWrestler = wrestler => {
 		window.open(`/portal/wrestler.html?id=${ wrestler.id }`, "_blank");
-		// setPageView("results");
-
-		// if (!selectedWrestlers.some(selected => selected.id == wrestler.id)) {
-		// 	setSelectedWrestlers(selectedWrestlers.concat(wrestler));
-		// }
 	};
 
 	const updateWrestler = updatedWrestler => {
@@ -302,31 +318,20 @@ const WrestlerSearchComponent = () => {
 						Wrestler
 						<input type="text" value={ wrestlerSearch } onChange={ event => setWrestlerSearch(event.target.value) } aria-label="Wrestler Search" />
 					</label>
-{/* 					
+					
 					<label>
 						Team
 						<input type="text" value={ teamSearch } onChange={ event => setTeamSearch(event.target.value) } aria-label="Team Search" />
 					</label>
-					
-					<label>
-						Select Team
-						<select value={ teamLookupSelected } onChange={ event => setTeamLookupSelected(event.target.value) }>
-							{
-							teamLookup
-							.sort((teamA, teamB) => teamA.name > teamB.name ? 1 : -1)
-							.map((team, teamIndex) =>
-								<option key={teamIndex} value={ team.id }>{ team.name }</option>
-							)
-							}
-						</select>
-					</label> */}
 				</div>
 
 			</div>
 			
 			{
-			wrestlerResults.map((wrestler, wrestlerIndex) => 
-				<div key={wrestlerIndex} className="panel button" onClick={ event => selectWrestler(wrestler) }>
+			wrestlerResults
+			.sort((wrestlerA, wrestlerB) => wrestlerA.lastEvent && wrestlerB.lastEvent ? +wrestlerB.lastEvent.date - +wrestlerA.lastEvent.date : 1 )
+			.map((wrestler, wrestlerIndex) => 
+				<div key={wrestlerIndex} className="panel button" onClick={ () => selectWrestler(wrestler) }>
 					{
 					wrestler.division ?
 					<div className="subHeading">
@@ -337,7 +342,7 @@ const WrestlerSearchComponent = () => {
 
 					<h3>{ wrestler.name }</h3>
 
-					<div>{ wrestler.team }</div>
+					<div>{ wrestler.teams.join(", ") }</div>
 					{
 					wrestler.lastEvent ?
 					<div>{ wrestler.lastEvent.date.toLocaleDateString() } • { wrestler.lastEvent.name }</div>

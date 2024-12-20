@@ -103,8 +103,6 @@ const WrestlerComponent = () => {
 					loseTypes.path = "M" + loseTypes.points.map((point,pointIndex) => pointIndex % 2 == 0 ? "0 " + point : point + " 0").join(",L") + 
 						",L0 " + loseTypes.points[0];
 
-					console.log(winTypes);
-
 					setWinTypeChart({
 						win: winTypes,
 						lose: loseTypes

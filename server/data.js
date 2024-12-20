@@ -1242,6 +1242,9 @@ export default {
 		if (userFilter.name) {
 			filter.name = { $regex: new RegExp(userFilter.name, "i") };
 		}
+		if (userFilter.teamPartial) {
+			filter["events.team"] = { $regex: new RegExp("^" + userFilter.teamPartial, "i") };
+		}
 		if (userFilter.teamName) {
 			filter["events.team"] = { $regex: new RegExp("^" + userFilter.teamName + "$", "i") };
 		}
