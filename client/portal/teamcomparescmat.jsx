@@ -157,7 +157,7 @@ const TeamCompareSCMat = props => {
 	}, [ selectedDateIndex ])
 
 	const buildIndividualChart = () => {
-		const individualMax = 9;
+		const individualMax = 13;
 
 		const individualChart = {
 			svg: { width: 350, height: 400 },
