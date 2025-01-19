@@ -1244,12 +1244,14 @@ export default {
 		try {
 			output.data.wrestlers = externalWrestlers.map(wrestler => {
 				const lastTeamDivision = wrestler.events
-					.filter(event => event.team == scmatTeam.name && event.matches.some(match => match.division))
-					.sort((eventA, eventB) => +(new Date(eventB.date)) - +(new Date(eventA.date)))
-					.map(event => /(hs|high school|hs girls)/i.test(event.matches[0].division) ? "Varsity"
-							: /(jv|junior varsity)/i.test(event.matches[0]).division ? "JV"
-							: /(ms|middle school)/i.test(event.matches[0].division) ? "MS"
-							: (event.matches[0].division || "").trim()
+					.filter(event => event.team == scmatTeam.name)
+					.flatMap(event => event.matches.map(match => ({ date: new Date(event.date), division: match.division })))
+					.filter(match => /(hs|high school|hs girls|jv|junior varsity|ms|middle school)/i.test(match.division))
+					.sort((matchA, matchB) => +matchB.date - +matchA.date)
+					.map(match => /(hs|high school|hs girls)/i.test(match.division) ? "Varsity"
+							: /(jv|junior varsity)/i.test(match.division) ? "JV"
+							: /(ms|middle school)/i.test(match.division) ? "MS"
+							: (match.division || "").trim()
 					)
 					.find(() => true);
 				
