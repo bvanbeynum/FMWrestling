@@ -118,7 +118,7 @@ export default {
 			wrestler1SqlId: Number,
 			wrestler1Name: String,
 			wrestler1Team: String,
-			wrestler2sqlId: Number,
+			wrestler2SqlId: Number,
 			wrestler2Name: String,
 			wrestler2Team: String,
 			isWinner: Boolean,
