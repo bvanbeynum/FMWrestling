@@ -241,7 +241,7 @@ router.get("/api/externalwrestlersbulk", authAPI, async (request, response) => {
 });
 
 router.post("/api/externalwrestlerlineagesave", authAPI, async (request, response) => {
-	const results = await api.externalWrestlersBulkSave(request.body.sqlid, request.body.lineage, request.serverPath);
+	const results = await api.externalWrestlerLineageSave(request.body.sqlid, request.body.lineage, request.serverPath);
 
 	if (results.error) {
 		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "650f23c7547ce0273661ab8d", message: `${ results.status }: ${results.error}` }}).then();
