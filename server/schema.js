@@ -114,6 +114,17 @@ export default {
 				sort: Number
 			}]
 		}],
+		lineage: [[{ 
+			wrestler1SqlId: Number,
+			wrestler1Name: String,
+			wrestler1Team: String,
+			wrestler2sqlId: Number,
+			wrestler2Name: String,
+			wrestler2Team: String,
+			isWinner: Boolean,
+			sort: Number,
+			eventDate: Date
+		}]],
 		lastSQLUpdate: Date
 	}),
 
