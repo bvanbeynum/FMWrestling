@@ -1515,7 +1515,36 @@ export default {
 		return output;
 	},
 
-	externalWrestlersBulkSave : async (externalWrestlers, serverPath) => {
+	externalWrestlerLineageSave: async (sqlId, lineage, serverPath) => {
+		const output = {};
+
+		let wrestler;
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/externalwrestler?sqlid=${ sqlId }`).then();
+			wrestler = clientResponse.body.externalWrestlers[0];
+			wrestler.lineage = lineage;
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+		
+		try {
+			const clientResponse = await client.post(`${ serverPath }/data/externalwrestler`).send({ externalwrestler: wrestler }).then();
+			output.id = clientResponse.body.id;
+		}
+		catch (error) {
+			output.status = 562;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		return output;
+	},
+
+	externalWrestlersBulkSave: async (externalWrestlers, serverPath) => {
 		const output = { 
 			data: {
 				externalWrestlers: [],
