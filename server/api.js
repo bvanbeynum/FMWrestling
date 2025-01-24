@@ -1523,6 +1523,7 @@ export default {
 			const clientResponse = await client.get(`${ serverPath }/data/externalwrestler?sqlid=${ sqlId }`).then();
 			wrestler = clientResponse.body.externalWrestlers[0];
 			wrestler.lineage = lineage;
+			console.log(wrestler);
 		}
 		catch (error) {
 			output.status = 561;
