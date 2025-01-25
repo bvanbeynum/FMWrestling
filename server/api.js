@@ -1527,6 +1527,7 @@ export default {
 		catch (error) {
 			output.status = 561;
 			output.error = error.message;
+			console.log(sqlId);
 			console.log(error);
 			return output;
 		}
