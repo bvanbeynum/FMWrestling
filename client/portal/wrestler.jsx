@@ -63,6 +63,7 @@ const WrestlerComponent = () => {
 							data.wrestler.lineage.map(lineage => ({
 								summary: lineage[0].wrestler1Name + " may " + (lineage[0].isWinner ? "beat " : "lose to ") + lineage.at(-1).wrestler2Name,
 								length: lineage.length,
+								timespan: lineage.map(match => +(new Date(match.eventDate))).sort((dateA, dateB) => dateB - dateA).find(() => true) - lineage.map(match => +(new Date(match.eventDate))).sort((dateA, dateB) => dateA - dateB).find(() => true),
 								path: lineage.map(match => ({ ...match, eventDate: new Date(match.eventDate) }))
 							}))
 							: []
@@ -472,6 +473,9 @@ isLoading || !wrestler ?
 		{
 		wrestler.lineage
 		.filter(lineage => lineage.path[0].isWinner)
+		.sort((lineageA, lineageB) => lineageA.length != lineageB.length ? lineageA.length - lineageB.path.length
+			: lineageA.timespan - lineageB.timespan
+		)
 		.map((lineage, lineageIndex) =>
 		<React.Fragment key={lineageIndex}>
 		
@@ -506,6 +510,9 @@ isLoading || !wrestler ?
 		{
 		wrestler.lineage
 		.filter(lineage => !lineage.path[0].isWinner)
+		.sort((lineageA, lineageB) => lineageA.length != lineageB.length ? lineageA.length - lineageB.path.length
+			: lineageA.timespan - lineageB.timespan
+		)
 		.map((lineage, lineageIndex) =>
 		<React.Fragment key={lineageIndex}>
 		
