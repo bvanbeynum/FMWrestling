@@ -1522,24 +1522,28 @@ export default {
 		try {
 			const clientResponse = await client.get(`${ serverPath }/data/externalwrestler?sqlid=${ sqlId }`).then();
 			wrestler = clientResponse.body.externalWrestlers[0];
-			wrestler.lineage = lineage;
 		}
 		catch (error) {
 			output.status = 561;
 			output.error = error.message;
-			console.log(sqlId);
-			console.log(error);
 			return output;
 		}
-		
-		try {
-			const clientResponse = await client.post(`${ serverPath }/data/externalwrestler`).send({ externalwrestler: wrestler }).then();
-			output.id = clientResponse.body.id;
+
+		if (wrestler) {
+			wrestler.lineage = lineage;
+				
+			try {
+				const clientResponse = await client.post(`${ serverPath }/data/externalwrestler`).send({ externalwrestler: wrestler }).then();
+				output.id = clientResponse.body.id;
+			}
+			catch (error) {
+				output.status = 562;
+				output.error = error.message;
+				return output;
+			}
 		}
-		catch (error) {
-			output.status = 562;
-			output.error = error.message;
-			return output;
+		else {
+			console.log(`no wrestler: ${ sqlId }`);
 		}
 
 		output.status = 200;
