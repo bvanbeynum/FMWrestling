@@ -58,7 +58,14 @@ const WrestlerComponent = () => {
 								: event.matches?.some(match => match.winType && /^3rd place/i.test(match.round) && match.isWinner) ? "3rd"
 								: event.matches?.some(match => match.winType && /^3rd place/i.test(match.round) && !match.isWinner) ? "4th"
 								: ""
-						}))
+						})),
+						lineage: data.wrestler.lineage ? 
+							data.wrestler.lineage.map(lineage => ({
+								summary: lineage[0].wrestler1Name + " may " + (lineage[0].isWinner ? "beat " : "lose to ") + lineage.at(-1).wrestler2Name,
+								length: lineage.length,
+								path: lineage.map(match => ({ ...match, eventDate: new Date(match.eventDate) }))
+							}))
+							: []
 					};
 					setWrestler(wrestlerData);
 
@@ -330,9 +337,7 @@ isLoading || !wrestler ?
 	</div>
 
 	<div className="panel expandable">
-		<h3>
-			Opponents
-		</h3>
+		<h3>Opponents</h3>
 
 		<div className="inlay opponentNetwork">
 			<svg style={{ height: `${ opponentChart.height }px`, width: `${ opponentChart.width }px` }}>
@@ -460,6 +465,74 @@ isLoading || !wrestler ?
 	</div>
 	: ""
 	}
+
+	<div className="panel">
+		<h3>Winning Lineage</h3>
+
+		{
+		wrestler.lineage
+		.filter(lineage => lineage.path[0].isWinner)
+		.map((lineage, lineageIndex) =>
+		<React.Fragment key={lineageIndex}>
+		
+		<div className="sectionHeading">{ lineage.summary }</div>
+		<div className="tableContainer">
+			<table className="sectionTable wrestlerMatches">
+			<tbody>
+			{
+			lineage.path.map((path, pathIndex) => 
+			<tr key={pathIndex}>
+				<td>{ path.wrestler1Name }</td>
+				<td>{ path.wrestler1Team}</td>
+				<td>{ path.isWinner ? "beat" : "lost to" }</td>
+				<td>{ path.wrestler2Name }</td>
+				<td>{ path.eventDate.toLocaleDateString() }</td>
+				<td></td>
+			</tr>
+			)
+			}
+			</tbody>
+			</table>
+		</div>
+
+		</React.Fragment>
+		)
+		}
+	</div>
+
+	<div className="panel">
+		<h3>Loss Lineage</h3>
+
+		{
+		wrestler.lineage
+		.filter(lineage => !lineage.path[0].isWinner)
+		.map((lineage, lineageIndex) =>
+		<React.Fragment key={lineageIndex}>
+		
+		<div className="sectionHeading">{ lineage.summary }</div>
+		<div className="tableContainer">
+			<table className="sectionTable wrestlerMatches">
+			<tbody>
+			{
+			lineage.path.map((path, pathIndex) => 
+			<tr key={pathIndex}>
+				<td>{ path.wrestler1Name }</td>
+				<td>{ path.wrestler1Team}</td>
+				<td>{ path.isWinner ? "beat" : "lost to" }</td>
+				<td>{ path.wrestler2Name }</td>
+				<td>{ path.eventDate.toLocaleDateString() }</td>
+				<td></td>
+			</tr>
+			)
+			}
+			</tbody>
+			</table>
+		</div>
+
+		</React.Fragment>
+		)
+		}
+	</div>
 
 </div>
 
