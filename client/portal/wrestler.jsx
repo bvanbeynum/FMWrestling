@@ -486,12 +486,16 @@ isLoading || !wrestler ?
 			{
 			lineage.path.map((path, pathIndex) => 
 			<tr key={pathIndex}>
-				<td>{ path.wrestler1Name }</td>
-				<td>{ path.wrestler1Team}</td>
-				<td>{ path.isWinner ? "beat" : "lost to" }</td>
-				<td>{ path.wrestler2Name }</td>
-				<td>{ path.eventDate.toLocaleDateString() }</td>
-				<td></td>
+			<td>{ path.eventDate.toLocaleDateString() }</td>
+			<td>
+				<div>{ path.wrestler1Name }</div>
+				<div>{ path.wrestler1Team }</div>
+			</td>
+			<td>{ path.isWinner ? "beat" : "lost to" }</td>
+			<td>
+				<div>{ path.wrestler2Name }</div>
+				<div>{ path.wrestler2Team }</div>
+			</td>
 			</tr>
 			)
 			}
@@ -523,12 +527,16 @@ isLoading || !wrestler ?
 			{
 			lineage.path.map((path, pathIndex) => 
 			<tr key={pathIndex}>
-				<td>{ path.wrestler1Name }</td>
-				<td>{ path.wrestler1Team}</td>
-				<td>{ path.isWinner ? "beat" : "lost to" }</td>
-				<td>{ path.wrestler2Name }</td>
 				<td>{ path.eventDate.toLocaleDateString() }</td>
-				<td></td>
+				<td>
+					<div>{ path.wrestler1Name }</div>
+					<div>{ path.wrestler1Team }</div>
+				</td>
+				<td>{ path.isWinner ? "beat" : "lost to" }</td>
+				<td>
+					<div>{ path.wrestler2Name }</div>
+					<div>{ path.wrestler2Team }</div>
+				</td>
 			</tr>
 			)
 			}
