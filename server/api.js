@@ -1543,7 +1543,7 @@ export default {
 			}
 		}
 		else {
-			console.log(`no wrestler: ${ sqlId }`);
+			console.log(`${ (new Date()).toLocaleDateString() } ${ (new Date()).toLocaleTimeString() }: no wrestler: ${ sqlId }`);
 		}
 
 		output.status = 200;
