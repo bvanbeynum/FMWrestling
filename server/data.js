@@ -331,7 +331,7 @@ export default {
 	},
 
 	wrestlerGet: async (userFilter = {}) => {
-		const filter = {},
+		let filter = {},
 			select = {},
 			output = {};
 
