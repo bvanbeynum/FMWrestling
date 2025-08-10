@@ -9,8 +9,6 @@ export default {
 		users: "./client/portal/users.jsx",
 		roles: "./client/portal/roles.jsx",
 		requests: "./client/portal/requests.jsx",
-		dual: "./client/portal/dual.jsx",
-		floevent: "./client/portal/floevent.jsx",
 		teamWrestlers: "./client/portal/teamwrestlers.jsx",
 		teamCompare: "./client/portal/teamcompare.jsx",
 		wrestlerSearch: "./client/portal/wrestlersearch.jsx",
@@ -76,26 +74,6 @@ export default {
 				viewport: "width=device-width, initial-scale=1"
 			},
 			chunks: [ "schedule" ],
-			templateContent: "<html><body><div id='root'></div></body></html>"
-		}),
-		new HtmlWebpackPlugin({ 
-			filename: "./portal/dual.html",
-			title: "Fort Mill Wrestling - Portal",
-			favicon: "./client/media/favicon.ico",
-			meta: {
-				viewport: "width=device-width, initial-scale=1"
-			},
-			chunks: [ "dual" ],
-			templateContent: "<html><body><div id='root'></div></body></html>"
-		}),
-		new HtmlWebpackPlugin({ 
-			filename: "./portal/floevent.html",
-			title: "Fort Mill Wrestling - Portal",
-			favicon: "./client/media/favicon.ico",
-			meta: {
-				viewport: "width=device-width, initial-scale=1"
-			},
-			chunks: [ "floevent" ],
 			templateContent: "<html><body><div id='root'></div></body></html>"
 		}),
 		new HtmlWebpackPlugin({ 
