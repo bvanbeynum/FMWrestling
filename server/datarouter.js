@@ -511,6 +511,8 @@ router.delete("/data/externalwrestler", authInternal, async (request, response) 
 
 router.get("/data/event", authInternal, async (request, response) => {
 	try {
+		const sqlIdList = request.query.sqlids ? JSON.parse(request.query.sqlids) : null;
+		
 		const filter = { 
 			id: request.query.id, 
 			sqlId: request.query.sqlid,
