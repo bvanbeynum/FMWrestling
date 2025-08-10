@@ -144,33 +144,6 @@ export default {
 		modified: Date
 	}),
 
-	dual: mongoose.model("dual", {
-		name: String,
-		location: { name: String, city: String, state: String },
-		dateTime: Date,
-		division: String,
-		weightClass: {
-			wrestlers: [{
-				wrestlerId: String,
-				firstName: String,
-				lastName: String,
-				isHome: Boolean,
-				isWinner: Boolean,
-				winType: String,
-				points: Number
-			}],
-			timeline: [{
-				period: Number,
-				periodSeconds: Number,
-				wrestlerId: String,
-				call: String,
-				points: Number
-			}]
-		},
-		created: Date,
-		modified: Date
-	}),
-
 	scoreCall: mongoose.model("scorecall", {
 		abbreviation: String,
 		points: Number,

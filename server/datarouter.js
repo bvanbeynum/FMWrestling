@@ -148,39 +148,6 @@ router.delete("/data/wrestler", authInternal, async (request, response) => {
 	response.end();
 });
 
-router.get("/data/dual", authInternal, async (request, response) => {
-	const results = await data.dualGet(request.query.id);
-
-	if (results.error) {
-		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "641f016097f3b068a56266c6", message: `${ results.status }: ${results.error}` }}).then();
-	}
-
-	response.status(results.status).json(results.error ? { error: results.error } : results.data);
-	response.end();
-});
-
-router.post("/data/dual", authInternal, async (request, response) => {
-	const results = await data.dualSave(request.body.dual);
-
-	if (results.error) {
-		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "641f014f97f3b068a5626658", message: `${ results.status }: ${results.error}` }}).then();
-	}
-
-	response.status(results.status).json(results.error ? { error: results.error } : results.data);
-	response.end();
-});
-
-router.delete("/data/dual", authInternal, async (request, response) => {
-	const results = await data.dualDelete(request.query.id);
-
-	if (results.error) {
-		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "641f014097f3b068a5626656", message: `${ results.status }: ${results.error}` }}).then();
-	}
-
-	response.status(results.status).json(results.error ? { error: results.error } : results.data);
-	response.end();
-});
-
 router.get("/data/post", authInternal, async (request, response) => {
 	const results = await data.postGet(request.query.id, /^true$/i.test(request.query.all));
 
