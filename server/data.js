@@ -1403,6 +1403,15 @@ export default {
 				]
 			}
 		}
+		if (userFilter.sqlId) {
+			filter.sqlId = userFilter.sqlId;
+		}
+		if (userFilter.sqlIds) {
+			filter.sqlId = { $in: userFilter.sqlIds };
+		}
+		if (userFilter.select) {
+			select = userFilter.select.reduce((output, current) => ({...output, [current]: 1 }), {});
+		}
 
 		try {
 			const records = await data.event.find(filter).lean().exec();
