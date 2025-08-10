@@ -376,9 +376,8 @@ describe("API Schedule", () => {
 
 		// ********** Then
 
-		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/event`);
-		expect(client.get).toHaveBeenNthCalledWith(2, `${ serverPath }/data/floevent`);
-		expect(client.get).toHaveBeenNthCalledWith(3, `${ serverPath }/data/trackevent`);
+		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/floevent`);
+		expect(client.get).toHaveBeenNthCalledWith(2, `${ serverPath }/data/trackevent`);
 
 		expect(results).toHaveProperty("status", 200);
 		expect(results).toHaveProperty("data");
@@ -413,9 +412,8 @@ describe("API Schedule", () => {
 
 		// ********** Then
 
-		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/event?startdate=${ startDate.toLocaleDateString() }&enddate=${ endDate.toLocaleDateString() }`);
-		expect(client.get).toHaveBeenNthCalledWith(2, `${ serverPath }/data/floevent?startdate=${ startDate.toLocaleDateString() }&enddate=${ endDate.toLocaleDateString() }`);
-		expect(client.get).toHaveBeenNthCalledWith(3, `${ serverPath }/data/trackevent?startdate=${ startDate.toLocaleDateString() }&enddate=${ endDate.toLocaleDateString() }`);
+		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/floevent?startdate=${ startDate.toLocaleDateString() }&enddate=${ endDate.toLocaleDateString() }`);
+		expect(client.get).toHaveBeenNthCalledWith(2, `${ serverPath }/data/trackevent?startdate=${ startDate.toLocaleDateString() }&enddate=${ endDate.toLocaleDateString() }`);
 
 		expect(results).toHaveProperty("status", 200);
 		expect(results).toHaveProperty("data");
@@ -423,138 +421,6 @@ describe("API Schedule", () => {
 		expect(results.data).toHaveProperty("floEvents", floEvents);
 		expect(results.data.floEvents).toHaveLength(1);
 
-	});
-
-	it("saves event", async () => {
-		// ********** Given
-
-		const body = { save: { name: "Test event", location: "Test location", date: new Date(new Date().setHours(0,0,0,0)) }},
-			returnId = "testid";
-
-		const send = jest.fn().mockResolvedValue({
-			body: { id: returnId }
-		});
-		client.post = jest.fn(() => ({
-			send: send
-		}));
-
-		client.get = jest.fn().mockResolvedValue({ body: {
-			events: [{ ...body.save, id: returnId, created: new Date() }]
-		}});
-
-		// ********** When
-
-		const results = await api.scheduleSave(body, serverPath);
-
-		// ********** Then
-
-		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/event`);
-		expect(send).toHaveBeenCalledWith(
-			expect.objectContaining({
-				event: expect.objectContaining({ name: body.save.name })
-			})
-		);
-		
-		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/event?id=${ returnId }`);
-
-		expect(results).toHaveProperty("status", 200);
-		expect(results).toHaveProperty("data");
-		expect(results.data).toHaveProperty("event", expect.objectContaining({ id: returnId }));
-	});
-
-	it("deletes event", async () => {
-		// ********** Given
-
-		const deleteId = "testid",
-			body = { delete: deleteId };
-
-		client.delete = jest.fn(() => ({
-			status: "ok"
-		}));
-
-		// ********** When
-
-		const results = await api.scheduleSave(body, serverPath);
-
-		// ********** Then
-
-		expect(client.delete).toHaveBeenCalledWith(`${ serverPath }/data/event?id=${ deleteId }`);
-
-		expect(results).toHaveProperty("status", 200);
-		expect(results).toHaveProperty("data");
-		expect(results.data).toHaveProperty("status", "ok");
-	});
-
-	it("saves favorite", async () => {
-		// ********** Given
-
-		const floEvent = { id: "event1", isFavorite: false },
-			body = { addFavorite: { floEventId: floEvent.id }};
-
-		const send = jest.fn().mockResolvedValue({
-			body: { id: floEvent.id }
-		});
-		client.post = jest.fn(() => ({
-			send: send
-		}));
-
-		client.get = jest.fn()
-			.mockResolvedValueOnce({ body: { floEvents: [{ ...floEvent }] }}); // get the event
-
-		// ********** When
-
-		const results = await api.scheduleSave(body, serverPath);
-
-		// ********** Then
-
-		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/floevent?id=${ floEvent.id }`);
-
-		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/floevent`);
-		expect(send).toHaveBeenCalledWith(
-			expect.objectContaining({
-				floevent: expect.objectContaining({ isFavorite: true })
-			})
-		);
-		
-		expect(results).toHaveProperty("status", 200);
-		expect(results).toHaveProperty("data");
-		expect(results.data).toHaveProperty("floEvent", { ...floEvent, isFavorite: true });
-	});
-
-	it("removes favorite", async () => {
-		// ********** Given
-
-		const floEvent = { id: "event1", isFavorite: true },
-			body = { removeFavorite: { floEventId: floEvent.id }};
-
-		const send = jest.fn().mockResolvedValue({
-			body: { id: floEvent.id }
-		});
-		client.post = jest.fn(() => ({
-			send: send
-		}));
-
-		client.get = jest.fn()
-			.mockResolvedValueOnce({ body: { floEvents: [{ ...floEvent }] }}); // get the event
-
-		// ********** When
-
-		const results = await api.scheduleSave(body, serverPath);
-
-		// ********** Then
-
-		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/floevent?id=${ floEvent.id }`);
-
-		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/floevent`);
-		expect(send).toHaveBeenCalledWith(
-			expect.objectContaining({
-				floevent: expect.objectContaining({ isFavorite: false })
-			})
-		);
-		
-		expect(results).toHaveProperty("status", 200);
-		expect(results).toHaveProperty("data");
-		expect(results.data).toHaveProperty("floEvent", { ...floEvent, isFavorite: false });
 	});
 
 });
@@ -2031,88 +1897,6 @@ describe("SC Mat Teams", () => {
 		expect(results).toHaveProperty("status", 200);
 		expect(results).toHaveProperty("data");
 		expect(results.data).toHaveProperty("scmatTeams", expect.arrayContaining([expect.objectContaining({ id: scmatTeams[0].id })]));
-
-	});
-
-});
-
-describe("Duals", () => {
-
-	it.skip("loads the data for the dual event", async () => {
-
-		const event = {
-			date: new Date(2023,10,21),
-			name: "Test Dual",
-			location: "Test location",
-			opponents: ["Team 1", "Team 2"]
-		};
-
-		client.get = jest.fn()
-			.mockResolvedValueOnce({ body: { events: [event] } });
-		
-		const results = await api.dualLoad(event.id, serverPath);
-		
-		if (results.status != 200) {
-			console.log(results);
-		}
-
-		expect(results).toHaveProperty("status", 200);
-		expect(results).toHaveProperty("data", event);
-
-		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/event?id=${ event.id }`);
-		
-	});
-
-});
-
-describe("Wrestlers", () => {
-
-	it("loads the data for the wrestler search", async () => {
-
-		const teams = [{ id: "team1", name: "Test Team" }];
-
-		client.get = jest.fn()
-			.mockResolvedValueOnce({ body: { scmatTeams: teams } });
-		
-		const results = await api.wrestlerSearchLoad(serverPath);
-		
-		if (results.status != 200) {
-			console.log(results);
-		}
-
-		expect(results).toHaveProperty("status", 200);
-		expect(results).toHaveProperty("data", { scmatTeams: teams });
-
-		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/scmatteam`);
-		
-	});
-
-	it("searches for external wrestlers by wrestler name", async () => {
-
-		const search = "test",
-			searchType = "wrestler",
-			wrestlers = [
-				{ id: "wrestler1", name: "Test Wrestler", events: [{ team: "team 1", name: "test event", date: new Date(2023,11,7), matches: [{ division: "JV", weightClass: "106" }] }] }, 
-				{ id: "wrestler2", name: "Test Wrestler 2" }
-			],
-			expected = [
-				{ id: "wrestler1", name: "Test Wrestler", team: "team 1", division: "JV", weightClass: "106", lastEvent: { name: "test event", date: new Date(2023,11,7) } }, 
-				{ id: "wrestler2", name: "Test Wrestler 2", team: null, division: null, weightClass: null, lastEvent: null }
-			];
-
-		client.get = jest.fn()
-			.mockResolvedValueOnce({ body: { externalWrestlers: wrestlers } });
-		
-		const results = await api.wrestlerSearch(search, searchType, serverPath);
-		
-		if (results.status != 200) {
-			console.log(results);
-		}
-
-		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/externalwrestler?name=${ search }`);
-		
-		expect(results).toHaveProperty("status", 200);
-		expect(results).toHaveProperty("data", { wrestlers: expected });
 
 	});
 

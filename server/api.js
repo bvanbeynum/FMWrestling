@@ -271,22 +271,11 @@ export default {
 	},
 
 	scheduleLoad: async (serverPath, startDate, endDate) => {
-		const output = {};
+		const output = { data: {} };
 		let dateFilter = "";
 
 		if (startDate && endDate) {
 			dateFilter = `?startdate=${ startDate }&enddate=${ endDate }`;
-		}
-
-		try {
-			const clientResponse = await client.get(`${ serverPath }/data/event${ dateFilter }`);
-
-			output.data = { events: clientResponse.body.events };
-		}
-		catch (error) {
-			output.status = 561;
-			output.error = error.message;
-			return output;
 		}
 
 		try {
@@ -311,113 +300,6 @@ export default {
 
 		output.status = 200;		
 		return output;
-	},
-
-	scheduleSave: async (body, serverPath) => {
-		const output = {};
-
-		if (!body) {
-			output.status = 562;
-			output.error = "Missing action";
-			return output;
-		}
-		else if (body.save) {
-			let saveId = null;
-
-			try {
-				const clientResponse = await client.post(`${ serverPath }/data/event`).send({ event: body.save }).then();
-				saveId = clientResponse.body.id;
-			}
-			catch (error) {
-				output.status = 561;
-				output.error = error.message;
-				return output;
-			}
-
-			try {
-				const clientResponse = await client.get(`${ serverPath }/data/event?id=${ saveId }`).then();
-				
-				output.status = 200;
-				output.data = { event: clientResponse.body.events[0] };
-				return output;
-			}
-			catch (error) {
-				output.status = 562;
-				output.error = error.message;
-				return output;
-			}
-		}
-		else if (body.delete) {
-			try {
-				await client.delete(`${ serverPath }/data/event?id=${ body.delete }`);
-
-				output.status = 200;
-				output.data = { status: "ok" };
-				return output;
-			}
-			catch (error) {
-				output.status = 563;
-				output.error = error.message;
-				return output;
-			}
-		}
-		else if (body.addFavorite) {
-			let floEvent = null;
-
-			try {
-				const clientResponse = await client.get(`${ serverPath }/data/floevent?id=${ body.addFavorite.floEventId }`).then();
-
-				floEvent = clientResponse.body.floEvents[0];
-				floEvent.isFavorite = true;
-			}
-			catch (error) {
-				output.status = 561;
-				output.error = error.message;
-				return output;
-			}
-
-			try {
-				await client.post(`${ serverPath }/data/floevent`).send({ floevent: floEvent }).then();
-			}
-			catch (error) {
-				output.status = 562;
-				output.error = error.message;
-				return output;
-			}
-			
-			output.status = 200;
-			output.data = { floEvent: floEvent };
-			return output;
-		}
-		else if (body.removeFavorite) {
-			let floEvent = null;
-
-			try {
-				const clientResponse = await client.get(`${ serverPath }/data/floevent?id=${ body.removeFavorite.floEventId }`).then();
-
-				floEvent = clientResponse.body.floEvents[0];
-				floEvent.isFavorite = false;
-			}
-			catch (error) {
-				output.status = 561;
-				output.error = error.message;
-				return output;
-			}
-
-			try {
-				await client.post(`${ serverPath }/data/floevent`).send({ floevent: floEvent }).then();
-			}
-			catch (error) {
-				output.status = 562;
-				output.error = error.message;
-				return output;
-			}
-			
-			output.status = 200;
-			output.data = { floEvent: floEvent };
-			return output;
-		}
-
 	},
 
 	requestsLoad: async (serverPath) => {

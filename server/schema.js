@@ -190,16 +190,6 @@ export default {
 		expires: Date
 	}),
 
-	event: mongoose.model("event", {
-		date: Date,
-		endDate: Date,
-		name: String,
-		location: String,
-		opponents: [String],
-		created: Date,
-		modified: Date
-	}),
-
 	floEvent: mongoose.model("floevent", {
 		sqlId: Number,
 		floGUID: String,

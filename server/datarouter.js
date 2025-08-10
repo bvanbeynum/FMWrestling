@@ -220,57 +220,6 @@ router.delete("/data/post", authInternal, async (request, response) => {
 	response.end();
 });
 
-router.get("/data/event", authInternal, async (request, response) => {
-	try {
-		const results = await data.eventGet({id: request.query.id, startDate: request.query.startdate, endDate: request.query.enddate });
-
-		if (results.error) {
-			// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6480e01c4d7f52ba05e81a02", message: `${ results.status }: ${results.error}` }}).then();
-		}
-
-		response.status(results.status).json(results.error ? { error: results.error } : results.data);
-		response.end();
-	}
-	catch (error) {
-		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6480e01c4d7f52ba05e81a02", message: `570: ${error.message}` }}).then();
-		response.status(570).json({ error: error.message });
-	}
-});
-
-router.post("/data/event", authInternal, async (request, response) => {
-	try {
-		const results = await data.eventSave(request.body.event);
-
-		if (results.error) {
-			// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6480e04c4d7f52ba05e81a05", message: `${ results.status }: ${results.error}` }}).then();
-		}
-
-		response.status(results.status).json(results.error ? { error: results.error } : results.data);
-		response.end();
-	}
-	catch (error) {
-		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6480e04c4d7f52ba05e81a05", message: `570: ${error.message}` }}).then();
-		response.status(570).json({ error: error.message });
-	}
-});
-
-router.delete("/data/event", authInternal, async (request, response) => {
-	try {
-		const results = await data.eventDelete(request.query.id);
-
-		if (results.error) {
-			// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6480e12d4d7f52ba05e81a88", message: `${ results.status }: ${results.error}` }}).then();
-		}
-
-		response.status(results.status).json(results.error ? { error: results.error } : results.data);
-		response.end();
-	}
-	catch (error) {
-		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6480e12d4d7f52ba05e81a88", message: `570: ${error.message}` }}).then();
-		response.status(570).json({ error: error.message });
-	}
-});
-
 router.get("/data/role", authInternal, async (request, response) => {
 	try {
 		const results = await data.roleGet(request.query.id);
