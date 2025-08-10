@@ -1052,8 +1052,6 @@ export default {
 			const teams = clientResponse.body.teams;
 
 			output.data.team = teams.find(team => team.isMyTeam);
-
-			floTeamIds = (output.data.team.floTeams || []).map(floTeam => floTeam.id);
 		}
 		catch (error) {
 			output.status = 561;
@@ -1070,18 +1068,6 @@ export default {
 			output.status = 562;
 			output.error = error.message;
 			return output;
-		}
-
-		if (floTeamIds.length > 0) {
-			try {
-				const clientResponse = await client.get(`${ serverPath }/data/externalteam?ids=${ JSON.stringify(floTeamIds) }`);
-				output.data.team.floTeams = clientResponse.body.externalTeams;
-			}
-			catch (error) {
-				output.status = 563;
-				output.error = error.message;
-				return output;
-			}
 		}
 
 		output.status = 200;
@@ -1449,114 +1435,6 @@ export default {
 		if (output.data.externalWrestlers.some(response => response.error )) {
 			output.status = 561;
 			return output;
-		}
-
-		let teams = null;
-		try {
-			// Build the distinct list of teams
-			teams = [...new Set( externalWrestlers.flatMap(wrestler => wrestler.events.map(event => event.team)).filter(team => team) )];
-		}
-		catch (error) {
-			output.status = 565;
-			output.error = error.message;
-			return output;
-		}
-
-		let events = null;
-		try {
-			// Get a flat list of events
-			const allEvents = externalWrestlers.flatMap(wrestler => wrestler.events);
-			
-			events = [...new Set(allEvents.map(event => event.sqlId))]
-				.map(eventId => allEvents.filter(event => event.sqlId == eventId)
-					.map(event => ({
-						sqlId: event.sqlId,
-						name: event.name,
-						date: event.date,
-						team: event.team,
-					})) // Build an array of teams for the event to lookup the event by team
-					.reduce((output, event) =>
-						output.teams.includes(event.team) ? output
-							: {...event, teams: output.teams.concat(event.team) }
-					, { teams: [] })
-				);
-		}
-		catch (error) {
-			output.status = 567;
-			output.error = error.message;
-			return output;
-		}
-
-		// Loop through all the teams that had a wrestler added
-		for (let teamIndex = 0; teamIndex < teams.length; teamIndex++) {
-			let team = null;
-			try {
-				// Get the team from the database
-				const clientResponse = await client.get(`${ serverPath }/data/externalteam?exactname=${ teams[teamIndex] }`);
-				
-				if (clientResponse.body.externalTeams.length == 1) {
-					team = clientResponse.body.externalTeams[0];
-					if (!team.wrestlers) {
-						team.wrestlers = [];
-					}
-					if (!team.events) {
-						team.events = [];
-					}
-				}
-			}
-			catch (error) {
-				output.status = 563;
-				output.data.externalTeams.push({ index: teamIndex, status: output.status, error: error.message });
-			}
-
-			if (!team) {
-				// if the team doesn't exist, we'll create it
-				team = {
-					name: teams[teamIndex],
-					events: [],
-					wrestlers: []
-				};
-			}
-
-			try {
-				// Get all the wrestlers that have this team, and are not already in the list for the team
-				team.wrestlers = team.wrestlers.concat(externalWrestlers
-					.filter(wrestler => 
-						wrestler.events.some(event => event.team == team.name) &&
-						!team.wrestlers.some(teamWrestler => teamWrestler.sqlId == wrestler.sqlId)
-					)
-					.map(wrestler => ({ id: wrestler.id, sqlId: wrestler.sqlId, name: wrestler.name }))
-				);
-			}
-			catch (error) {
-				output.status = 564;
-				output.data.externalTeams.push({ index: teamIndex, status: output.status, error: error.message });
-			}
-			
-			try {
-				// Add the events to the team
-				team.events = team.events.concat(events
-					.filter(event => 
-						event.teams.includes(team.name) &&
-						!team.events.some(teamEvent => event.sqlId == teamEvent.sqlId)
-					)
-					.map(event => ({ sqlId: event.sqlId, name: event.name, date: event.date }))
-				);
-			}
-			catch (error) {
-				output.status = 566;
-				output.data.externalTeams.push({ index: teamIndex, status: output.status, error: error.message });
-			}
-
-			// Save the team
-			try {
-				const clientResponse = await client.post(`${ serverPath }/data/externalteam`).send({ externalteam: team }).then();
-				output.data.externalTeams.push({ index: teamIndex, id: clientResponse.body.id });
-			}
-			catch (error) {
-				output.status = 568;
-				output.data.externalTeams.push({ index: teamIndex, status: output.status, error: error.message });
-			}
 		}
 
 		output.status = output.status ? output.status : 200;

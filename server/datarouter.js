@@ -340,59 +340,6 @@ router.delete("/data/team", authInternal, async (request, response) => {
 	}
 });
 
-router.get("/data/externalteam", authInternal, async (request, response) => {
-	try {
-		const idsList = request.query.ids ? JSON.parse(request.query.ids) : null;
-
-		const results = await data.externalTeamGet({ id: request.query.id, ids: idsList, name: request.query.name, exactName: request.query.exactname });
-
-		if (results.error) {
-			// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64a7242c26539d4ed27752a0", message: `${ results.status }: ${results.error}` }}).then();
-		}
-
-		response.status(results.status).json(results.error ? { error: results.error } : results.data);
-		response.end();
-	}
-	catch (error) {
-		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64a7242c26539d4ed27752a0", message: `570: ${error.message}` }}).then();
-		response.status(570).json({ error: error.message });
-	}
-});
-
-router.post("/data/externalteam", authInternal, async (request, response) => {
-	try {
-		const results = await data.externalTeamSave(request.body.externalteam);
-
-		if (results.error) {
-			// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64a7244d26539d4ed27752a2", message: `${ results.status }: ${results.error}` }}).then();
-		}
-
-		response.status(results.status).json(results.error ? { error: results.error } : results.data);
-		response.end();
-	}
-	catch (error) {
-		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64a7244d26539d4ed27752a2", message: `570: ${error.message}` }}).then();
-		response.status(570).json({ error: error.message });
-	}
-});
-
-router.delete("/data/externalteam", authInternal, async (request, response) => {
-	try {
-		const results = await data.externalTeamDelete(request.query.id);
-
-		if (results.error) {
-			// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64a725e426539d4ed277530e", message: `${ results.status }: ${results.error}` }}).then();
-		}
-
-		response.status(results.status).json(results.error ? { error: results.error } : results.data);
-		response.end();
-	}
-	catch (error) {
-		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64a725e426539d4ed277530e", message: `570: ${error.message}` }}).then();
-		response.status(570).json({ error: error.message });
-	}
-});
-
 router.get("/data/externalwrestler", authInternal, async (request, response) => {
 	try {
 		const idsList = request.query.ids ? JSON.parse(request.query.ids) : null;
