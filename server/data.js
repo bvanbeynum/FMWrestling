@@ -330,16 +330,26 @@ export default {
 		return output;
 	},
 
-	wrestlerGet: async (id) => {
+	wrestlerGet: async (userFilter = {}) => {
 		const filter = {},
+			select = {},
 			output = {};
 
-		if (id) {
-			filter["_id"] = mongoose.Types.ObjectId.isValid(id) ? id : null;
+		if (userFilter.id) {
+			filter["_id"] = mongoose.Types.ObjectId.isValid(userFilter.id) ? userFilter.id : null;
+		}
+		if (userFilter.sqlId) {
+			filter.sqlId = userFilter.sqlId;
+		}
+		if (userFilter.sqlIds) {
+			filter.sqlId = { $in: userFilter.sqlIds };
+		}
+		if (userFilter.select) {
+			select = userFilter.select.reduce((output, current) => ({...output, [current]: 1 }), {});
 		}
 
 		try {
-			const records = await data.wrestler.find(filter).lean().exec();
+			const records = await data.wrestler.find(filter).select(select).lean().exec();
 			output.status = 200;
 			output.data = { wrestlers: records.map(({ _id, __v, ...data }) => ({ id: _id, ...data })) };
 		}

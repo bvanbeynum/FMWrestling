@@ -128,20 +128,42 @@ export default {
 		lastSQLUpdate: Date
 	}),
 
-	externalTeam: mongoose.model("externalTeam", {
-		name: String,
-		events: [{ sqlId: Number, name: String, date: Date }],
-		wrestlers: [{ id: String, sqlId: Number, name: String }],
-		lastSQLUpdate: Date,
-	}),
-
 	wrestler: mongoose.model("wrestler", {
-		firstName: String,
-		lastName: String,
+		sqlId: Number,
+		name: String,
 		division: String,
 		weightClass: String,
-		created: Date,
-		modified: Date
+		rating: Number,
+		deviation: Number,
+		events: [{
+			sqlId: Number,
+			date: Date,
+			name: String,
+			team: String,
+			locationState: String,
+			matches: [{
+				division: String,
+				weightClass: String,
+				round: String,
+				vs: String,
+				vsTeam: String,
+				vsSqlId: Number,
+				isWinner: Boolean,
+				winType: String,
+				sort: Number
+			}]
+		}],
+		lineage: [[{ 
+			wrestler1SqlId: Number,
+			wrestler1Name: String,
+			wrestler1Team: String,
+			wrestler2SqlId: Number,
+			wrestler2Name: String,
+			wrestler2Team: String,
+			isWinner: Boolean,
+			sort: Number,
+			eventDate: Date
+		}]]
 	}),
 
 	scoreCall: mongoose.model("scorecall", {

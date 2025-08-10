@@ -116,7 +116,15 @@ router.delete("/data/scorecall", authInternal, async (request, response) => {
 });
 
 router.get("/data/wrestler", authInternal, async (request, response) => {
-	const results = await data.wrestlerGet(request.query.id);
+		const sqlIdList = request.query.sqlids ? JSON.parse(request.query.sqlids) : null;
+		const filter = { 
+			id: request.query.id, 
+			sqlId: request.query.sqlid,
+			sqlIds: sqlIdList,
+			select: request.query.select ? request.query.select.split(",") : null
+		};
+
+	const results = await data.wrestlerGet(filter);
 
 	if (results.error) {
 		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "641f00fb97f3b068a5626653", message: `${ results.status }: ${results.error}` }}).then();
