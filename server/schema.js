@@ -190,6 +190,18 @@ export default {
 		expires: Date
 	}),
 
+	event: mongoose.model("event", {
+		sqlId: Number,
+		eventSystem: String,
+		systemId: String,
+		eventType: String,
+		name: String,
+		date: Date,
+		endDate: Date,
+		location: String,
+		state: String
+	}),
+
 	floEvent: mongoose.model("floevent", {
 		sqlId: Number,
 		floGUID: String,
