@@ -556,7 +556,7 @@ router.post("/data/event", authInternal, async (request, response) => {
 
 router.delete("/data/event", authInternal, async (request, response) => {
 	try {
-		const results = await data.eventDelete(request.query.id);
+		const results = await data.eventDelete(request.query.id, request.query.sqlid);
 
 		if (results.error) {
 			// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64ed20df26539d4ed2916038", message: `${ results.status }: ${results.error}` }}).then();

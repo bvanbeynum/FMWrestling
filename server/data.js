@@ -1490,8 +1490,20 @@ export default {
 		return output;
 	},
 
-	eventDelete: async (id) => {
+	eventDelete: async (id, sqlId) => {
 		const output = {};
+
+		if (sqlId) {
+			try {
+				const record = await data.event.findOne({ sqlId: sqlId });
+				id = record["_id"]
+			}
+			catch (error) {
+				output.status = 561;
+				output.error = "Record not found";
+				return output;
+			}
+		}
 
 		if (!id || !mongoose.Types.ObjectId.isValid(id)) {
 			output.status = 550;
