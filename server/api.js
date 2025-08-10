@@ -279,21 +279,11 @@ export default {
 		}
 
 		try {
-			const clientResponse = await client.get(`${ serverPath }/data/floevent${ dateFilter }`);
-			output.data.floEvents = clientResponse.body.floEvents;
+			const clientResponse = await client.get(`${ serverPath }/data/event${ dateFilter }`);
+			output.data.events = clientResponse.body.events;
 		}
 		catch (error) {
 			output.status = 562;
-			output.error = error.message;
-			return output;
-		}
-
-		try {
-			const clientResponse = await client.get(`${ serverPath }/data/trackevent${ dateFilter }`);
-			output.data.trackEvents = clientResponse.body.trackEvents;
-		}
-		catch (error) {
-			output.status = 563;
 			output.error = error.message;
 			return output;
 		}
