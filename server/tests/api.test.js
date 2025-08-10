@@ -366,7 +366,6 @@ describe("API Schedule", () => {
 			}];
 		
 		client.get = jest.fn()
-			.mockResolvedValueOnce({ body: { events: events }}) // Get events
 			.mockResolvedValueOnce({ body: { floEvents: floEvents } }) // Get flo events
 			.mockResolvedValueOnce({ body: { trackEvents: trackEvents } }); // Get track events
 
@@ -381,7 +380,6 @@ describe("API Schedule", () => {
 
 		expect(results).toHaveProperty("status", 200);
 		expect(results).toHaveProperty("data");
-		expect(results.data).toHaveProperty("events");
 		expect(results.data).toHaveProperty("floEvents", floEvents);
 		expect(results.data).toHaveProperty("trackEvents", trackEvents);
 
@@ -402,7 +400,6 @@ describe("API Schedule", () => {
 			endDate = new Date(2023,9,1);
 		
 		client.get = jest.fn()
-			.mockResolvedValueOnce({ body: { events: [] }}) // Get events
 			.mockResolvedValueOnce({ body: { floEvents: floEvents } }) // Get flo events
 			.mockResolvedValueOnce({ body: { trackEvents: [] } }); // Get track events
 
