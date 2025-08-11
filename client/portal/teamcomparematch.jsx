@@ -350,6 +350,15 @@ props.weightClasses && props.weightClasses.some(weightClass => weightClass.oppon
 	
 	<div key={ weightClassIndex } className="compareRow">
 		<div className={`compareTeam ${ weightClass.teamScore > 0 ? "win" : weightClass.opponentScore > 0 ? "lose" : "" }`}>
+			{
+			weightClass.teamWrestler && weightClass.teamWrestler.rating ?
+			<div>
+				<div style={{ textDecoration: "underline" }}>{ weightClass.teamWrestler.rating.toLocaleString(undefined, { maximumFractionDigits: 0 }) }</div>
+				<div>{ weightClass.teamWrestler.deviation.toLocaleString(undefined, { maximumFractionDigits: 0 }) }</div>
+			</div>
+			: ""
+			}
+
 			<select className="teamSelect" onChange={ event => selectTeamWrestler(weightClass.name, event.target.value) }>
 
 				{weightClass.teamWrestler ?
@@ -390,16 +399,28 @@ props.weightClasses && props.weightClasses.some(weightClass => weightClass.oppon
 		</div>
 
 		<div className={`compareTeam ${ weightClass.opponentScore > 0 ? "win" : weightClass.teamScore > 0 ? "lose" : "" }`}>
-			{ weightClass.opponentWrestler?.name }
+			<div className="wrestlerName">
+				{ weightClass.opponentWrestler?.name }
+
+				{
+				weightClass.opponentWrestler ?
+				<button onClick={ () => window.open(`/portal/wrestler.html?id=${ weightClass.opponentWrestler.id }`, "_blank") }>
+					{/* Eye View */}
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-320q75 0 127.5-52.5T660-500q0-75-52.5-127.5T480-680q-75 0-127.5 52.5T300-500q0 75 52.5 127.5T480-320Zm0-72q-45 0-76.5-31.5T372-500q0-45 31.5-76.5T480-608q45 0 76.5 31.5T588-500q0 45-31.5 76.5T480-392Zm0 192q-146 0-266-81.5T40-500q54-137 174-218.5T480-800q146 0 266 81.5T920-500q-54 137-174 218.5T480-200Zm0-300Zm0 220q113 0 207.5-59.5T832-500q-50-101-144.5-160.5T480-720q-113 0-207.5 59.5T128-500q50 101 144.5 160.5T480-280Z"/></svg>
+				</button>
+				: ""
+				}
+			</div>
 
 			{
-			weightClass.opponentWrestler ?
-			<button onClick={ () => window.open(`/portal/wrestler.html?id=${ weightClass.opponentWrestler.id }`, "_blank") }>
-				{/* Eye View */}
-				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-320q75 0 127.5-52.5T660-500q0-75-52.5-127.5T480-680q-75 0-127.5 52.5T300-500q0 75 52.5 127.5T480-320Zm0-72q-45 0-76.5-31.5T372-500q0-45 31.5-76.5T480-608q45 0 76.5 31.5T588-500q0 45-31.5 76.5T480-392Zm0 192q-146 0-266-81.5T40-500q54-137 174-218.5T480-800q146 0 266 81.5T920-500q-54 137-174 218.5T480-200Zm0-300Zm0 220q113 0 207.5-59.5T832-500q-50-101-144.5-160.5T480-720q-113 0-207.5 59.5T128-500q50 101 144.5 160.5T480-280Z"/></svg>
-			</button>
+			weightClass.opponentWrestler && weightClass.opponentWrestler.rating ?
+			<div>
+				<div style={{ textDecoration: "underline" }}>{ weightClass.opponentWrestler.rating.toLocaleString(undefined, { maximumFractionDigits: 0 }) }</div>
+				<div>{ weightClass.opponentWrestler.deviation.toLocaleString(undefined, { maximumFractionDigits: 0 }) }</div>
+			</div>
 			: ""
 			}
+
 		</div>
 	</div>
 

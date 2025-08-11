@@ -75,7 +75,9 @@ weightClasses.some(weightClass => weightClass.opponentWrestlers && weightClass.o
 		<div className="weightHeader">
 
 			<div className="subTitle">
-				{ weightClass.name + (weightClass.opponentWrestler ? " • " + weightClass.opponentWrestler.name : "") }
+				{ weightClass.name }
+				{ weightClass.opponentWrestler ? " • " + weightClass.opponentWrestler.name : "" }
+				{ weightClass.opponentWrestler && weightClass.opponentWrestler.rating ? ` (${ weightClass.opponentWrestler.rating.toLocaleString(undefined, { maximumFractionDigits: 0 }) } / ${ weightClass.opponentWrestler.deviation.toFixed(0) })` : "" }
 
 				{
 				weightClass.opponentWrestler ?
@@ -118,7 +120,7 @@ weightClasses.some(weightClass => weightClass.opponentWrestlers && weightClass.o
 			
 			{
 			isNaN(selectedOpponentWeight) && (wrestlerIndex == 0 || allWrestlers[wrestlerIndex - 1].weightClass != wrestler.weightClass) ?
-			<div className="allWeightDivision">{ wrestler.weightClass }</div>
+			<div className="allWeightDivision">-- { wrestler.weightClass } --</div>
 			: ""
 			}
 			
@@ -126,10 +128,20 @@ weightClasses.some(weightClass => weightClass.opponentWrestlers && weightClass.o
 				<div className="selectWrestlerDivision">{ wrestler.division }</div>
 
 				<div className="selectedWrestlerContainer">
-					<div>{ 
-						wrestler.name +
-						(wrestler.wins ? " • " + wrestler.wins + " - " + wrestler.losses + " (" + (wrestler.wins / (wrestler.wins + wrestler.losses)).toFixed(3) + ")" : "")
-					}</div>
+					<div>{ wrestler.name }</div>
+
+					{
+					wrestler.wins ?
+					<div>{ `Wins: ${ wrestler.wins }, Losses: ${ wrestler.losses } (${ (wrestler.wins / (wrestler.wins + wrestler.losses)).toFixed(3) })` }</div>
+					: "" 
+					}
+
+					{
+					wrestler.rating ?
+					<div>{ `Rating: ${ wrestler.rating.toLocaleString(undefined, { maximumFractionDigits: 0 }) } / ${ wrestler.deviation.toLocaleString(undefined, { maximumFractionDigits: 0 }) }` }</div>
+					: ""
+					}
+
 					<div>{ (wrestler.lastDate ? wrestler.lastDate.toLocaleDateString() + ": ": "") + wrestler.lastEvent.event }</div>
 				</div>
 

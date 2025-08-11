@@ -32,11 +32,17 @@ const TeamCompare = () => {
 					}
 				})
 				.then(data => {
+					
+					const savedWeightClasses = data.loggedInUser.session?.team || [];
+
 					const dataTeam = {
 						...data.team,
 						wrestlers: data.team.wrestlers.map(wrestler => ({
 							...wrestler,
-							name: wrestler.firstName + " " + wrestler.lastName,
+							weightClass: savedWeightClasses.some(savedWeightClass => savedWeightClass.wrestlerId == wrestler.id) ?
+								savedWeightClasses.filter(savedWeightClass => savedWeightClass.wrestlerId == wrestler.id).map(savedWeightClass => savedWeightClass.weightClass).find(() => true)
+								: wrestler.weightClass,
+							isSavedWrestler: savedWeightClasses.some(savedWeightClass => savedWeightClass.wrestlerId == wrestler.id),
 							division: /(hs|high school|high)/i.test(wrestler.division) ? "Varsity"
 								: /(jv|junior varsity)/i.test(wrestler.division) ? "JV"
 								: /(ms|middle school)/i.test(wrestler.division) ? "MS"
@@ -44,22 +50,29 @@ const TeamCompare = () => {
 						}))
 					};
 
-					const teamWeightClasses = dataTeam.wrestlers.flatMap(wrestler => ({ weightClass: wrestler.weightClass, division: wrestler.division }));
-							
-					// get the distinct list of weight classes from the team's weigh classes
-					const newWeightClassNames = [...new Set(teamWeightClasses.map(weightClass => weightClass.weightClass))]
-						.sort((weightA, weightB) => 
-							!isNaN(weightA) && !isNaN(weightB) ? +weightA - +weightB
-							: !isNaN(weightA) && isNaN(weightB) ? -1
-							: isNaN(weightA) && !isNaN(weightB) ? 1
-							: weightA > weightB ? 1 : -1
-						).concat(["Other"]);
+					const newWeightClassNames = ["106","113","120","126","132","138","144","150","157","165","175","190","215","285"];
 
 					const newWeightClasses = newWeightClassNames.map(weightClassName => ({
 							name: weightClassName,
 							teamWrestlers: dataTeam.wrestlers
 								.filter(wrestler => wrestler.weightClass == weightClassName)
-								.sort((wrestlerA, wrestlerB) => wrestlerA.position - wrestlerB.position)
+								.sort((wrestlerA, wrestlerB) => 
+									wrestlerA.isSavedWrestler && !wrestlerB.isSavedWrestler ? -1
+									: !wrestlerA.isSavedWrestler && wrestlerB.isSavedWrestler ? 1
+									: wrestlerA.division != wrestlerB.division ?
+										/varsity/i.test(wrestlerA.division) ? -1 
+										: /varsity/i.test(wrestlerB.division) ? 1 
+										: /jv/i.test(wrestlerA.division) ? -1
+										: /jv/i.test(wrestlerB.division) ? 1
+										: /ms/i.test(wrestlerA.division) ? -1
+										: /ms/i.test(wrestlerB.division) ? 1
+										: -1
+									: +wrestlerA.weightClass < +wrestlerB.weightClass ? -1
+									: +wrestlerA.weightClass > +wrestlerB.weightClass ? 1
+									: +wrestlerA.lastDate > +wrestlerB.lastDate ? -1
+									: +wrestlerA.lastDate < +wrestlerB.lastDate ? 1
+									: +wrestlerA.lastDate - +wrestlerB.lastDate
+								)
 								.map((wrestler, wrestlerIndex) => ({
 									...wrestler,
 									position: wrestlerIndex
@@ -129,7 +142,13 @@ const TeamCompare = () => {
 									opponentWrestler: wrestlers.find(wrestler => sessionWeight.opponentWrestlerId == wrestler.id),
 									opponentScore: sessionWeight.opponentScore,
 
-									teamWrestler: team.wrestlers.find(wrestler => sessionWeight.teamWrestlerId == wrestler.id),
+									teamWrestler: team.wrestlers.find(wrestler => 
+										sessionWeight.teamWrestlerId == wrestler.id
+										|| (
+											!sessionWeight.teamWrestlerId // There is no team wrestler selected
+											&& loggedInUser.session.team?.find(teamSession => teamSession.weightClass == sessionWeight.name && teamSession.wrestlerId == wrestler.id)
+										)
+									),
 									teamScore: sessionWeight.teamScore
 								}))
 								: [];
@@ -198,7 +217,6 @@ const TeamCompare = () => {
 	}, [ selectedOpponentId ]);
 
 	const updateScore = (weightClassSave, isTeamScore, scoreSave) => {
-		console.log(`Save - s: ${ loggedInUser.session ? "yes" : "no" }, o: ${ loggedInUser.session && loggedInUser.session.opponents ? "yes" : "no" }, o#: ${ loggedInUser.session && loggedInUser.session.opponents ? loggedInUser.session.opponents.length : "-" }`);
 		let sessionOpponents = loggedInUser.session?.opponents || [];
 
 		if (!sessionOpponents.some(opponent => opponent.id == selectedOpponentId)) {

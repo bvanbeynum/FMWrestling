@@ -119,6 +119,9 @@ router.get("/data/wrestler", authInternal, async (request, response) => {
 		const sqlIdList = request.query.sqlids ? JSON.parse(request.query.sqlids) : null;
 		const filter = { 
 			id: request.query.id, 
+			name: request.query.name, 
+			teamName: request.query.teamname, 
+			teamPartial: request.query.teampartial,
 			sqlId: request.query.sqlid,
 			sqlIds: sqlIdList,
 			select: request.query.select ? request.query.select.split(",") : null
@@ -376,23 +379,6 @@ router.get("/data/externalwrestler", authInternal, async (request, response) => 
 	}
 	catch (error) {
 		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "650e124d547ce02736559461", message: `570: ${error.message}` }}).then();
-		response.status(570).json({ error: error.message });
-	}
-});
-
-router.get("/data/externalwrestlerchainget", authInternal, async (request, response) => {
-	try {
-		const results = await data.externalWrestlerChainGet(request.query.wrestlerid, request.query.team, request.query.max);
-
-		if (results.error) {
-			// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6547e1b1cf4fc75b63986f3d", message: `${ results.status }: ${results.error}` }}).then();
-		}
-
-		response.status(results.status).json(results.error ? { error: results.error } : results.data);
-		response.end();
-	}
-	catch (error) {
-		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6547e1b1cf4fc75b63986f3d", message: `570: ${error.message}` }}).then();
 		response.status(570).json({ error: error.message });
 	}
 });

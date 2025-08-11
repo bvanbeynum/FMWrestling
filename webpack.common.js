@@ -10,6 +10,7 @@ export default {
 		roles: "./client/portal/roles.jsx",
 		requests: "./client/portal/requests.jsx",
 		teamWrestlers: "./client/portal/teamwrestlers.jsx",
+		myTeam: "./client/portal/myteam.jsx",
 		teamCompare: "./client/portal/teamcompare.jsx",
 		wrestlerSearch: "./client/portal/wrestlersearch.jsx",
 		wrestler: "./client/portal/wrestler.jsx",
@@ -84,6 +85,16 @@ export default {
 				viewport: "width=device-width, initial-scale=1"
 			},
 			chunks: [ "teamWrestlers" ],
+			templateContent: "<html><body><div id='root'></div></body></html>"
+		}),
+		new HtmlWebpackPlugin({ 
+			filename: "./portal/myteam.html",
+			title: "Fort Mill Wrestling - My Team",
+			favicon: "./client/media/favicon.ico",
+			meta: {
+				viewport: "width=device-width, initial-scale=1"
+			},
+			chunks: [ "myTeam" ],
 			templateContent: "<html><body><div id='root'></div></body></html>"
 		}),
 		new HtmlWebpackPlugin({ 

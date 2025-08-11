@@ -30,6 +30,10 @@ export default {
 		created: Date,
 		modified: Date,
 		session: {
+			team: [{
+				weightClass: String,
+				wrestlerId: String
+			}],
 			opponents: [{
 				id: String,
 				weightClasses: [{

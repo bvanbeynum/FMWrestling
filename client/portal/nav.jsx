@@ -85,7 +85,7 @@ const Nav = props => {
 			
 			{
 			privileges.includes("myteam") ?
-			<li role="button" onClick={ () => window.location = "/portal/teamwrestlers.html" } className={`button sub ${ subExpanded === "team" ? "active" : "" }`} aria-label="Team Wrestlers">
+			<li role="button" onClick={ () => window.location = "/portal/myteam.html" } className={`button sub ${ subExpanded === "team" ? "active" : "" }`} aria-label="My Team">
 			<span>My Team</span>
 			</li>
 			: ""

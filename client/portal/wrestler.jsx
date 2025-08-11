@@ -32,7 +32,7 @@ const WrestlerComponent = () => {
 			const url = new window.URLSearchParams(window.location.search);
 			const wrestlerId = url.get("id");
 
-			fetch(`/api/externalwrestlerdetails?id=${ wrestlerId }`)
+			fetch(`/api/wrestlerdetails?id=${ wrestlerId }`)
 				.then(response => {
 					if (response.ok) {
 						return response.json();
@@ -152,7 +152,7 @@ const WrestlerComponent = () => {
 	const selectOpponent = (tierIndex, opponent) => {
 		setIsOpponentLoading(opponent.id);
 
-		fetch(`/api/externalwrestlerdetails?id=${ opponent.id }`)
+		fetch(`/api/wrestlerdetails?id=${ opponent.id }`)
 			.then(response => {
 				if (response.ok) {
 					return response.json();
@@ -201,7 +201,7 @@ const WrestlerComponent = () => {
 
 	const getOpponents = wrestler => {
 		const matches = wrestler.events.flatMap(event => event.matches.map(match => ({...match, eventDate: new Date(event.date) }))),
-			opponents = [...new Set(matches.map(match => match.vsSqlId))]
+			opponents = [...new Set(matches.filter(match => match.vsSqlId).map(match => match.vsSqlId))]
 				.map(wrestlerId => 
 					matches.filter(match => match.vsSqlId == wrestlerId)
 						.reduce((output, current) => ({

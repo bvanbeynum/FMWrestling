@@ -338,6 +338,15 @@ export default {
 		if (userFilter.id) {
 			filter["_id"] = mongoose.Types.ObjectId.isValid(userFilter.id) ? userFilter.id : null;
 		}
+		if (userFilter.name) {
+			filter.name = { $regex: new RegExp(userFilter.name, "i") };
+		}
+		if (userFilter.teamPartial) {
+			filter["events.team"] = { $regex: new RegExp("^" + userFilter.teamPartial, "i") };
+		}
+		if (userFilter.teamName) {
+			filter["events.team"] = { $regex: new RegExp("^" + userFilter.teamName + "$", "i") };
+		}
 		if (userFilter.sqlId) {
 			filter.sqlId = userFilter.sqlId;
 		}

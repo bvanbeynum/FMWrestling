@@ -112,6 +112,10 @@ div.compareDropDown.active>div {
 	user-select: none;
 }
 
+.compareTeam {
+	justify-content: space-between;
+}
+
 .lineChart {
 	width: 100%;
 	height: max-content;

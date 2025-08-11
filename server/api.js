@@ -1020,6 +1020,148 @@ export default {
 		return output;
 	},
 
+	myTeamLoad: async (serverPath) => {
+		const output = {
+			data: {}
+		};
+
+		let wrestlers = [];
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/wrestler?teamname=fort mill`);
+			wrestlers = clientResponse.body.wrestlers;
+		}
+		catch (error) {
+			output.status = 563;
+			output.error = error.message;
+			return output;
+		}
+
+		try {
+			output.data.wrestlers = wrestlers.map(wrestler => {
+				const lastTeamDivision = wrestler.events
+					.filter(event => /^fort mill$/gi.test(event.team))
+					.flatMap(event => event.matches.map(match => ({ date: new Date(event.date), division: match.division })))
+					.filter(match => /(hs|high school|hs girls|jv|junior varsity|ms|middle school)/i.test(match.division))
+					.sort((matchA, matchB) => +matchB.date - +matchA.date)
+					.map(match => /(hs|high school|hs girls)/i.test(match.division) ? "Varsity"
+							: /(jv|junior varsity)/i.test(match.division) ? "JV"
+							: /(ms|middle school)/i.test(match.division) ? "MS"
+							: (match.division || "").trim()
+					)
+					.find(() => true);
+				
+				const lastTeamWeight = wrestler.events
+					.filter(event => event.matches.some(match => match.weightClass && !isNaN(match.weightClass)))
+					.sort((eventA, eventB) => +(new Date(eventB.date)) - +(new Date(eventA.date)))
+					.map(event => event.matches[0].weightClass)
+					.find(() => true);
+
+				const lastEvent = wrestler.events.map(event => ({
+						event: event.name,
+						date: new Date(event.date),
+						division: event.matches ? 
+							/(hs|high school|hs girls)/i.test(event.matches[0].division) ? "Varsity"
+							: /(jv|junior varsity)/i.test(event.matches[0].division) ? "JV"
+							: /(ms|middle school)/i.test(event.matches[0].division) ? "MS"
+							: (event.matches[0].division || "").trim()
+						: null, 
+						weightClass: event.matches ? event.matches[0].weightClass : null
+					}))
+					.sort((eventA, eventB) => +eventB.date - +eventA.date)
+					.find(() => true);
+				
+				const weightClasses = [...new Set(wrestler.events.filter(event => /^fort mill$/gi.test(event.team)).flatMap(event => event.matches.map(match => match.weightClass)))]
+					.map(weightClass => {
+						const lastMatch = wrestler.events.flatMap(event => event.matches.map(match => ({ 
+								weightClass: match.weightClass, 
+								division: /(hs|high school|hs girls)/i.test(event.matches[0].division) ? "Varsity"
+									: /(jv|junior varsity)/i.test(event.matches[0].division) ? "JV"
+									: /(ms|middle school)/i.test(event.matches[0].division) ? "MS"
+									: (event.matches[0].division || "").trim(), 
+								date: new Date(event.date), 
+								event: event.name 
+							})))
+							.filter(match => match.weightClass == weightClass)
+							.sort((matchA, matchB) => +matchB.date - +matchA.date)
+							.find(() => true);
+						
+						return {
+							weightClass: weightClass,
+							division: lastMatch.division,
+							lastDate: lastMatch.date,
+							lastEvent: lastMatch.event
+						};
+					});
+
+				return {
+					id: wrestler.id,
+					name: wrestler.name,
+					division: lastTeamDivision,
+					weightClass: lastTeamWeight,
+					weightClasses: weightClasses,
+					rating: wrestler.rating,
+					deviation: wrestler.deviation,
+					lastEvent: lastEvent,
+					wins: wrestler.events
+						.filter(event => +Date.now() - (new Date(event.date)) < 1000 * 60 * 60 * 24 * 365)
+						.reduce((sum, event) => sum + event.matches.filter(match => match.isWinner).length, 0),
+					losses: wrestler.events
+						.filter(event => +Date.now() - (new Date(event.date)) < 1000 * 60 * 60 * 24 * 365)
+						.reduce((sum, event) => sum + event.matches.filter(match => !match.isWinner).length, 0)
+				};
+			});
+		}
+		catch (error) {
+			output.status = 564;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		return output;
+	},
+
+	myTeamSaveWrestler: async (user, session, serverPath) => {
+		const output = { data: {} };
+		
+		let saveUser = null;
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/user?id=${ user.id }`);
+			saveUser = clientResponse.body.users[0];
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+
+		try {
+			if (!saveUser.session) {
+				saveUser.session = {}
+			}
+
+			saveUser.session.team = session.team;
+		}
+		catch (error) {
+			output.status = 562;
+			output.error = error.message;
+			return output;
+		}
+
+		try {
+			await client.post(`${ serverPath }/data/user`).send({ user: saveUser }).then();
+		}
+		catch (error) {
+			output.status = 563;
+			output.error = error.message;
+			return output;
+		}
+		
+		output.status = 200;
+		output.data.status = "ok";
+		return output;
+	},
+
 	teamWrestlersLoad: async (serverPath) => {
 		const output = {
 			data: {}
@@ -1046,23 +1188,51 @@ export default {
 			data: {}
 		};
 
-		let floTeamIds = [];
 		try {
-			const clientResponse = await client.get(`${ serverPath }/data/team`);
-			const teams = clientResponse.body.teams;
+			const clientResponse = await client.get(`${ serverPath }/data/wrestler?teamname=fort mill`);
+			
+			output.data.team = { 
+				wrestlers: clientResponse.body.wrestlers.map(wrestler => {
 
-			output.data.team = teams.find(team => team.isMyTeam);
+				const lastTeamDivision = wrestler.events
+					.filter(event => /^fort mill$/gi.test(event.team))
+					.flatMap(event => event.matches.map(match => ({ date: new Date(event.date), division: match.division })))
+					.filter(match => /(hs|high school|hs girls|jv|junior varsity|ms|middle school)/i.test(match.division))
+					.sort((matchA, matchB) => +matchB.date - +matchA.date)
+					.map(match => /(hs|high school|hs girls)/i.test(match.division) ? "Varsity"
+							: /(jv|junior varsity)/i.test(match.division) ? "JV"
+							: /(ms|middle school)/i.test(match.division) ? "MS"
+							: (match.division || "").trim()
+					)
+					.find(() => true);
+				
+				const lastTeamWeight = wrestler.events
+					.filter(event => event.matches && event.matches.some(match => match.weightClass && !isNaN(match.weightClass)))
+					.sort((eventA, eventB) => +(new Date(eventB.date)) - +(new Date(eventA.date)))
+					.map(event => event.matches[0].weightClass)
+					.find(() => true);
+
+				return {
+					id: wrestler.id,
+					name: wrestler.name,
+					division: lastTeamDivision,
+					rating: wrestler.rating,
+					deviation: wrestler.deviation,
+					weightClass: lastTeamWeight
+				}
+				})
+			};
 		}
 		catch (error) {
-			output.status = 561;
+			output.status = 563;
 			output.error = error.message;
 			return output;
 		}
 
 		try {
 			const clientResponse = await client.get(`${ serverPath }/data/scmatteam`);
-			output.data.team.scmatTeams = clientResponse.body.scmatTeams.filter(scmatTeam => output.data.team.scmatTeams.some(linkedTeams => linkedTeams.id == scmatTeam.id));
-			output.data.scmatTeams = clientResponse.body.scmatTeams.filter(scmatTeam => !output.data.team.scmatTeams.some(linkedTeams => linkedTeams.id == scmatTeam.id))
+			output.data.team.scmatTeams = clientResponse.body.scmatTeams.filter(scmatTeam => /^fort mill$/gi.test(scmatTeam.name));
+			output.data.scmatTeams = clientResponse.body.scmatTeams.filter(scmatTeam => !/^fort mill$/gi.test(scmatTeam.name))
 		}
 		catch (error) {
 			output.status = 562;
@@ -1088,10 +1258,10 @@ export default {
 			return output;
 		}
 
-		let externalWrestlers = [];
+		let wrestlers = [];
 		try {
-			const clientResponse = await client.get(`${ serverPath }/data/externalwrestler?teamname=${ scmatTeam.name }`);
-			externalWrestlers = clientResponse.body.externalWrestlers;
+			const clientResponse = await client.get(`${ serverPath }/data/wrestler?teamname=${ scmatTeam.name }`);
+			wrestlers = clientResponse.body.wrestlers;
 		}
 		catch (error) {
 			output.status = 563;
@@ -1100,7 +1270,7 @@ export default {
 		}
 
 		try {
-			output.data.wrestlers = externalWrestlers.map(wrestler => {
+			output.data.wrestlers = wrestlers.map(wrestler => {
 				const lastTeamDivision = wrestler.events
 					.filter(event => event.team == scmatTeam.name)
 					.flatMap(event => event.matches.map(match => ({ date: new Date(event.date), division: match.division })))
@@ -1162,6 +1332,8 @@ export default {
 					division: lastTeamDivision,
 					weightClass: lastTeamWeight,
 					weightClasses: weightClasses,
+					rating: wrestler.rating,
+					deviation: wrestler.deviation,
 					lastEvent: lastEvent,
 					wins: wrestler.events
 						.filter(event => +Date.now() - (new Date(event.date)) < 1000 * 60 * 60 * 24 * 365)
@@ -1340,16 +1512,6 @@ export default {
 			output.status = 563;
 			output.error = error.message;
 			return output;
-		}
-
-		if (homeTeam && homeTeam.length > 0) {
-			try {
-				const clientResponse = await client.get(`${ serverPath }/data/externalwrestlerchainget?wrestlerid=${ output.data.wrestler.sqlId }&team=${ homeTeam }`);
-				output.data.wrestler.tree = clientResponse.body.wrestler?.tree;
-			}
-			catch (error) {
-				output.error = error.message;
-			}
 		}
 
 		output.status = 200;
@@ -1773,8 +1935,8 @@ export default {
 
 		let wrestlers = null;
 		try {
-			const clientResponse = await client.get(`${ serverPath }/data/externalwrestler?${ query }`);
-			wrestlers = clientResponse.body.externalWrestlers;
+			const clientResponse = await client.get(`${ serverPath }/data/wrestler?${ query }`);
+			wrestlers = clientResponse.body.wrestlers;
 		}
 		catch (error) {
 			output.status = 561;
@@ -1799,6 +1961,8 @@ export default {
 				return {
 					id: wrestler.id,
 					name: wrestler.name,
+					rating: wrestler.rating,
+					deviation: wrestler.deviation,
 					team: lastEvent ? lastEvent.team : null,
 					division: lastEvent ? lastEvent.division : null,
 					weightClass: lastEvent ? lastEvent.weightClass : null,
@@ -1817,6 +1981,86 @@ export default {
 
 		output.status = 200;
 		return output;
-	}
+	},
 
+	wrestlerDetails: async (wrestlerId, serverPath) => {
+		const output = { data: {} };
+
+		let wrestler = null;
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/wrestler?id=${ wrestlerId }`);
+			wrestler = clientResponse.body.wrestlers[0];
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+
+		let opponentIdXref = [];
+		try {
+			const opponentSqlIds = [...new Set(wrestler.events.flatMap(event => event.matches.map(match => match.vsSqlId )))];
+			const clientResponse = await client.get(`${ serverPath }/data/wrestler?sqlids=${ JSON.stringify(opponentSqlIds) }&select=sqlId`);
+			opponentIdXref = clientResponse.body.wrestlers;
+		}
+		catch (error) {
+			output.status = 564;
+			output.error = error.message;
+			return output;
+		}
+		
+		try {
+			
+			wrestler = {
+				...wrestler,
+				name: wrestler.name ? wrestler.name : wrestler.firstName + " " + wrestler.lastName,
+				rating: wrestler.rating,
+				deviation: wrestler.deviation,
+				events: wrestler.events.map(event => ({
+					...event,
+					division: event.matches[0] ?
+						/(hs|high school|high)/i.test(event.matches[0].division) ? "Varsity"
+						: /(jv|junior varsity)/i.test(event.matches[0].division) ? "JV"
+						: /(ms|middle school)/i.test(event.matches[0].division) ? "MS"
+						: (event.matches[0].division || "").trim()
+						: "",
+					weightClass: event.matches[0]?.weightClass || "",
+					matches: event.matches.map(({ division, weightClass, ...match}) => ({
+						...match,
+						vsId: opponentIdXref.filter(xref => xref.sqlId == match.vsSqlId).map(xref => xref.id).find(() => true)
+					}))
+				}))
+			};
+		
+			const lastEvent = wrestler.events
+				.map(event => ({ 
+					division: event.division, 
+					date: new Date(event.date),
+					weightClass: event.weightClass
+				}))
+				.sort((eventA, eventB) => 
+					!isNaN(eventA.weightClass) && isNaN(eventB.weightClass) ? -1
+					: isNaN(eventA.weightClass) && !isNaN(eventB.weightClass) ? 1
+					: +eventB.date - +eventA.date
+				)
+				.find(() => true);
+			
+			wrestler = {
+				...wrestler,
+				division: lastEvent?.division,
+				weightClass: lastEvent?.weightClass
+			};
+
+			output.data.wrestler = wrestler;
+		}
+		catch (error) {
+			output.status = 563;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		return output;
+	}
+	
 };
