@@ -167,7 +167,12 @@ export default {
 			isWinner: Boolean,
 			sort: Number,
 			eventDate: Date
-		}]]
+		}]],
+		ratingHistory: [{
+			periodEndDate: Date,
+			rating: Number,
+			deviation: Number
+		}]
 	}),
 
 	scoreCall: mongoose.model("scorecall", {
