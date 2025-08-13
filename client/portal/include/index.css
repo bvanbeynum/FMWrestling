@@ -9,6 +9,10 @@ html, body, #root {
 	margin: 0;
 }
 
+table {
+	font-size: 14px;
+}
+
 .pageLoading {
 	display: flex;
 	background: white;

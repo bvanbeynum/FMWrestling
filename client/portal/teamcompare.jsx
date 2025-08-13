@@ -6,6 +6,7 @@ import "./include/team.css";
 import TeamCompareMatch from "./teamcomparematch.jsx";
 import TeamCompareSCMat from "./teamcomparescmat.jsx";
 import TeamLineup from "./teamlineup.jsx";
+import TeamComparePredict from "./teamcomparepredict.jsx";
 
 const TeamCompare = () => {
 
@@ -37,17 +38,19 @@ const TeamCompare = () => {
 
 					const dataTeam = {
 						...data.team,
-						wrestlers: data.team.wrestlers.map(wrestler => ({
-							...wrestler,
-							weightClass: savedWeightClasses.some(savedWeightClass => savedWeightClass.wrestlerId == wrestler.id) ?
-								savedWeightClasses.filter(savedWeightClass => savedWeightClass.wrestlerId == wrestler.id).map(savedWeightClass => savedWeightClass.weightClass).find(() => true)
-								: wrestler.weightClass,
-							isSavedWrestler: savedWeightClasses.some(savedWeightClass => savedWeightClass.wrestlerId == wrestler.id),
-							division: /(hs|high school|high)/i.test(wrestler.division) ? "Varsity"
-								: /(jv|junior varsity)/i.test(wrestler.division) ? "JV"
-								: /(ms|middle school)/i.test(wrestler.division) ? "MS"
-								: (wrestler.division || "").trim(),
-						}))
+						wrestlers: data.team.wrestlers
+							.filter(wrestler => new Date(wrestler.lastEvent.date) >= new Date(new Date().getMonth() >= 8 ? new Date().getFullYear() : new Date().getFullYear() - 1, 8, 1))
+							.map(wrestler => ({
+								...wrestler,
+								weightClass: savedWeightClasses.some(savedWeightClass => savedWeightClass.wrestlerId == wrestler.id) ? // have we saved the wrestler to a different weight class
+									savedWeightClasses.filter(savedWeightClass => savedWeightClass.wrestlerId == wrestler.id).map(savedWeightClass => savedWeightClass.weightClass).find(() => true)
+									: wrestler.weightClass,
+								isSavedWrestler: savedWeightClasses.some(savedWeightClass => savedWeightClass.wrestlerId == wrestler.id),
+								division: /(hs|high school|high)/i.test(wrestler.division) ? "Varsity"
+									: /(jv|junior varsity)/i.test(wrestler.division) ? "JV"
+									: /(ms|middle school)/i.test(wrestler.division) ? "MS"
+									: (wrestler.division || "").trim(),
+							}))
 					};
 
 					const newWeightClassNames = ["106","113","120","126","132","138","144","150","157","165","175","190","215","285"];
@@ -107,8 +110,9 @@ const TeamCompare = () => {
 				.then(data => {
 
 					// Set the data for the weight classes they've wrestled before
-					const wrestlers = data.wrestlers.map(wrestler => {
-						
+					const wrestlers = data.wrestlers
+						.filter(wrestler => new Date(wrestler.lastEvent.date) >= new Date(new Date().getMonth() >= 8 ? new Date().getFullYear() : new Date().getFullYear() - 1, 8, 1)) // Only those that have wrestled in the last season
+						.map(wrestler => {
 							const closestWeightClass = wrestler.weightClass && !isNaN(wrestler.weightClass) ? weightClasses
 									.map(weightClass => weightClass.name)
 									.filter(weightClass => !isNaN(weightClass))
@@ -426,6 +430,12 @@ const TeamCompare = () => {
 					saveWrestler={ saveWrestler }
 					/>
 
+			: pageView == "teampredict" ?
+				
+				<TeamComparePredict
+					weightClasses={ weightClasses }
+					/>
+
 			: 
 				
 				<TeamCompareSCMat
@@ -462,6 +472,12 @@ const TeamCompare = () => {
 			<button aria-label="Match Compare" onClick={ () => setPageView("match") }>
 				{/* Compare */}
 				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M420.001-55.386V-140H212.309q-30.308 0-51.308-21t-21-51.308v-535.382q0-30.308 21-51.308t51.308-21h207.692v-84.615H480v849.228h-59.999ZM200-240h220.001v-263.848L200-240Zm360 99.999V-480l200 240v-507.691q0-4.616-3.846-8.463-3.847-3.846-8.463-3.846H560v-59.999h187.691q30.308 0 51.308 21t21 51.308v535.382q0 30.308-21 51.308t-51.308 21H560Z"/></svg>
+				Match
+			</button>
+
+			<button aria-label="Match Compare" onClick={ () => setPageView("teampredict") }>
+				{/* Analysis */}
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M825-124 637-311.5q-40.5 32-90.5 50.5T441-242.5q-89 0-160.75-43.25T167-400h92q34 38 80.5 60.25T441-317.5q101 0 171.75-70.75T683.5-560q0-101-70.75-171.75T441-802.5q-95.5 0-164.5 64.25T199.5-580h-75q8-126 98.75-211.75T441-877.5q132.5 0 225 92.5t92.5 225q0 55.5-18.5 105.5T689.5-364L877-176l-52 52ZM401.5-405l-66-219-56 159h-196v-50h161l66-190h53L428-489l46.5-146H528l60 120h30.5v50H557l-51-102-52.5 162h-52Z"/></svg>
 				Match
 			</button>
 

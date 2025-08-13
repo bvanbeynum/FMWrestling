@@ -1194,31 +1194,30 @@ export default {
 			output.data.team = { 
 				wrestlers: clientResponse.body.wrestlers.map(wrestler => {
 
-				const lastTeamDivision = wrestler.events
+				const lastTeamEvent = wrestler.events
 					.filter(event => /^fort mill$/gi.test(event.team))
-					.flatMap(event => event.matches.map(match => ({ date: new Date(event.date), division: match.division })))
-					.filter(match => /(hs|high school|hs girls|jv|junior varsity|ms|middle school)/i.test(match.division))
-					.sort((matchA, matchB) => +matchB.date - +matchA.date)
-					.map(match => /(hs|high school|hs girls)/i.test(match.division) ? "Varsity"
-							: /(jv|junior varsity)/i.test(match.division) ? "JV"
-							: /(ms|middle school)/i.test(match.division) ? "MS"
-							: (match.division || "").trim()
-					)
+					.map(event => ({
+						event: event.name,
+						date: new Date(event.date),
+						division: event.matches ? 
+							/(hs|high school|hs girls)/i.test(event.matches[0].division) ? "Varsity"
+							: /(jv|junior varsity)/i.test(event.matches[0].division) ? "JV"
+							: /(ms|middle school)/i.test(event.matches[0].division) ? "MS"
+							: (event.matches[0].division || "").trim()
+						: (match.division || "").trim(), 
+						weightClass: event.matches ? event.matches[0].weightClass : null
+					}))
+					.sort((eventA, eventB) => +eventB.date - +eventA.date)
 					.find(() => true);
 				
-				const lastTeamWeight = wrestler.events
-					.filter(event => event.matches && event.matches.some(match => match.weightClass && !isNaN(match.weightClass)))
-					.sort((eventA, eventB) => +(new Date(eventB.date)) - +(new Date(eventA.date)))
-					.map(event => event.matches[0].weightClass)
-					.find(() => true);
-
 				return {
 					id: wrestler.id,
 					name: wrestler.name,
-					division: lastTeamDivision,
+					lastEvent: lastTeamEvent,
+					division: lastTeamEvent.division,
+					weightClass: lastTeamEvent.weightClass,
 					rating: wrestler.rating,
-					deviation: wrestler.deviation,
-					weightClass: lastTeamWeight
+					deviation: wrestler.deviation
 				}
 				})
 			};
