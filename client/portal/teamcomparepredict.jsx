@@ -100,7 +100,7 @@ const TeamComparePredict = props => {
 								weightClass: opponentWeightClass.name,
 								id: opponentWeightClass.opponentWrestler.id,
 								name: opponentWeightClass.opponentWrestler.name, 
-								opponentRating: opponentWeightClass.opponentWrestler.rating,
+								rating: opponentWeightClass.opponentWrestler.rating,
 								matchupPoints: wrestler.rating - opponentWeightClass.opponentWrestler.rating,
 								isWin: wrestler.rating > opponentWeightClass.opponentWrestler.rating
 							}))
@@ -126,75 +126,64 @@ const TeamComparePredict = props => {
 							.map(allWeights => allWeights.name)
 					}))
 				);
-
-			const pick1 = team.map(wrestler => ({
-				teamId: wrestler.id,
-				team: wrestler.name,
-				teamWeight: wrestler.weightClass,
-				teamRating: wrestler.rating,
-				weightClass: wrestler.opponents[0].weightClass,
-				opponentId: wrestler.opponents[0].id,
-				opponent: wrestler.opponents[0].name,
-				opponentRating: wrestler.opponents[0].opponentRating,
-				teamPoints: wrestler.opponents[0].matchupPoints,
-				isWin: wrestler.opponents[0].isWin
+			
+			const usedWrestlers = new Set();
+			const usedMatches = new Set();
+			const matchups = weightClasses.map(weightClass => ({
+				weightClass: weightClass.name,
+				position: weightClass.position,
+				teamId: null,
+				team: null,
+				teamWeight: null,
+				teamRating: null,
+				opponentId: null,
+				opponent: null,
+				opponentRating: null,
+				teamPoints: null,
+				isWin: null
 			}));
 
-			const pick1Matches = [...new Set(pick1.map(match => match.opponentId))]
-				.map(opponent => pick1
-					.filter(pick => pick.opponentId === opponent)
-					.sort((pickA, pickB) => pickA.isWin !== pickB.isWin ? pickA.isWin ? -1 : 1 : pickB.teamPoints - pickA.teamPoints)
-					.find(() => true)
-				);
-			
-			const matchups = weightClasses.map(weightClass => {
-				let match = pick1Matches.find(match => match.weightClass === weightClass.name);
+			let iteration = 0;
+			while (!matchups.every(match => match.teamId)) {
+				iteration++;
 
-				if (!match) {
-					// If this isn't anyone's first pick, then find the next best wrestler
+				// Get the best wrestler that hasn't been assigned
+				const match = team
+					.filter(wrestler => 
+						wrestler.opponents.length > 0 
+						&& !usedWrestlers.has(wrestler.id)
+						&& !usedMatches.has(wrestler.opponents[0].weightClass)
+					)
+					.map(wrestler => ({
+						method: 'wrestler',
+						weightClass: wrestler.opponents[0].weightClass,
+						team: wrestler,
+						opponent: wrestler.opponents[0]
+					}))
+					.sort((wrestlerA, wrestlerB) => wrestlerB.team.rating - wrestlerA.team.rating)
+					.find(() => true);
 
-					match = team
-						.map(wrestler => {
-							// Get the opponent for this weight class, if the wrestler can't wrestle this weight class, this will be null
-							const opponent = wrestler.opponents
-								.find(opponent => opponent.weightClass === weightClass.name);
+				if (match) {
+					usedWrestlers.add(match.team.id);
+					usedMatches.add(match.weightClass);
 
-							return {
-								teamId: wrestler.id,
-								team: wrestler.name,
-								teamWeight: wrestler.weightClass,
-								teamRating: wrestler.rating,
-								weightClass: opponent?.weightClass,
-								opponentId: opponent?.id,
-								opponent: opponent?.name,
-								opponentRating: opponent?.opponentRating,
-								teamPoints: opponent?.matchupPoints,
-								isWin: opponent?.isWin
-							};
-						})
-						.filter(wrestler => wrestler.opponent && !pick1Matches.some(match => match.teamId === wrestler.teamId))
-						.sort((wrestlerA, wrestlerB) => wrestlerA.isWin !== wrestlerB.isWin ? wrestlerA.isWin ? -1 : 1 : wrestlerB.teamPoints - wrestlerA.teamPoints)
-						.find(() => true);
+					const updateMatch = matchups.find(updateMatch => match.weightClass === updateMatch.weightClass);
+					updateMatch.method = match.method;
+					updateMatch.teamId = match.team.id;
+					updateMatch.team = match.team.name;
+					updateMatch.teamWeight = match.team.weightClass;
+					updateMatch.teamRating = match.team.rating;
+					updateMatch.opponentId = match.opponent.id;
+					updateMatch.opponent = match.opponent.name;
+					updateMatch.opponentRating = match.opponent.rating;
+					updateMatch.teamPoints = match.team.rating - match.opponent.rating;
+					updateMatch.isWin = match.team.rating > match.opponent.rating;
 					
-				}
-
-				return {
-					weightClass: weightClass.name,
-					position: weightClass.position,
-					teamId: match?.teamId,
-					team: match?.team,
-					teamWeight: match?.teamWeight,
-					teamRating: match?.teamRating,
-					opponentId: match?.opponentId,
-					opponent: match?.opponent,
-					opponentRating: match?.opponentRating,
-					teamPoints: match?.teamPoints,
-					isWin: match?.isWin,
-					teamOptions: team
-						.filter(wrestler => wrestler.weightClassRange.includes(weightClass.name))
+					updateMatch.teamOptions = team
+						.filter(wrestler => wrestler.weightClassRange.includes(updateMatch.weightClass))
 						.map(wrestler => {
 							const opponent = wrestler.opponents
-								.find(opponent => opponent.weightClass === weightClass.name);
+								.find(opponent => opponent.weightClass === updateMatch.weightClass);
 							
 							return {
 								teamId: wrestler.id,
@@ -204,19 +193,104 @@ const TeamComparePredict = props => {
 								teamPoints: opponent?.matchupPoints
 							}
 						})
-						.sort((wrestlerA, wrestlerB) => wrestlerA.isWin !== wrestlerB.isWin ? wrestlerA.isWin ? -1 : 1 : wrestlerB.teamPoints - wrestlerA.teamPoints),
-					opponentOptions: opponents
-						.filter(opponent => opponent.weightClassRange.includes(weightClass.name))
+						.sort((wrestlerA, wrestlerB) => wrestlerA.isWin !== wrestlerB.isWin ? wrestlerA.isWin ? -1 : 1 : wrestlerB.teamPoints - wrestlerA.teamPoints);
+						
+					updateMatch.opponentOptions = opponents
+						.filter(opponent => opponent.weightClassRange.includes(updateMatch.weightClass))
 						.map(opponent => ({
 							opponentId: opponent.id,
 							opponent: opponent.name,
 							opponentRating: opponent.rating,
-							isWin: match?.teamRating < opponent.rating,
-							teamPoints: match?.teamRating - opponent.rating
+							isWin: match.team.rating < opponent.rating,
+							teamPoints: match.team.rating - opponent.rating
 						}))
 						.sort((opponentA, opponentB) => opponentB.rating - opponentA.rating)
-				};
-			});
+				}
+				else {
+					break;
+				}
+
+				if (iteration > 100) {
+					break;
+				}
+			}
+
+			iteration = 0;
+			while (!matchups.every(match => match.teamId) && iteration < 100) {
+				iteration++;
+
+				// Get the first unfilled match
+				const updateMatch = matchups.find(match => !match.teamId);
+				
+				// Get a wrestler for that weight class's opponent
+				const match = weightClasses
+					.filter(weightClass => weightClass.name === updateMatch.weightClass)
+					.map(weightClass => ({
+						method: 'match',
+						weightClass: weightClass.name,
+						team: team
+							.filter(wrestler => 
+								wrestler.opponents.some(opponent => opponent.id == weightClass.opponentWrestler.id)
+								&& !usedWrestlers.has(wrestler.id) // Make sure the wrestler hasn't already been assigned
+							)
+							.sort((wrestlerA, wrestlerB) => wrestlerB.rating - wrestlerA.rating) // Get the wrestler with the best chance to win
+							.find(() => true),
+						opponent: weightClass.opponentWrestler
+					}))
+					.find(() => true);
+				
+				// If a match was found, and the match is better than the existing match
+				if (match && match.team && match.team.rating && (!updateMatch.teamRating || match.team.rating > updateMatch.teamRating)) {
+					if (usedWrestlers.has(updateMatch.teamId)) {
+						usedWrestlers.delete(updateMatch.teamId);
+					}
+
+					usedWrestlers.add(match.team.id);
+					usedMatches.add(match.weightClass);
+
+					updateMatch.method = match.method;
+					updateMatch.teamId = match.team.id;
+					updateMatch.team = match.team.name;
+					updateMatch.teamWeight = match.team.weightClass;
+					updateMatch.teamRating = match.team.rating;
+					updateMatch.opponentId = match.opponent.id;
+					updateMatch.opponent = match.opponent.name;
+					updateMatch.opponentRating = match.opponent.rating;
+					updateMatch.teamPoints = match.team.rating - match.opponent.rating;
+					updateMatch.isWin = match.team.rating > match.opponent.rating;
+					
+					updateMatch.teamOptions = team
+						.filter(wrestler => wrestler.weightClassRange.includes(updateMatch.weightClass))
+						.map(wrestler => {
+							const opponent = wrestler.opponents
+								.find(opponent => opponent.weightClass === updateMatch.weightClass);
+							
+							return {
+								teamId: wrestler.id,
+								team: wrestler.name,
+								teamRating: wrestler.rating,
+								isWin: opponent?.isWin,
+								teamPoints: opponent?.matchupPoints
+							}
+						})
+						.sort((wrestlerA, wrestlerB) => wrestlerA.isWin !== wrestlerB.isWin ? wrestlerA.isWin ? -1 : 1 : wrestlerB.teamPoints - wrestlerA.teamPoints);
+					
+					updateMatch.opponentOptions = opponents
+						.filter(opponent => opponent.weightClassRange.includes(updateMatch.weightClass))
+						.map(opponent => ({
+							opponentId: opponent.id,
+							opponent: opponent.name,
+							opponentRating: opponent.rating,
+							isWin: match.team.rating < opponent.rating,
+							teamPoints: match.team.rating - opponent.rating
+						}))
+						.sort((opponentA, opponentB) => opponentB.rating - opponentA.rating)
+				}
+
+				if (iteration > 100) {
+					break;
+				}
+			}
 
 			const teamStats = {
 				wins: matchups.filter(match => match.isWin).length,
@@ -224,8 +298,6 @@ const TeamComparePredict = props => {
 				pointDiff: matchups.reduce((total, match) => total + match.teamPoints, 0)
 			};
 			
-			console.log({ team, matchups, pick1Matches });
-
 			setStats(teamStats);
 			setBestLineup(matchups);
 			setIsLoading(false);
