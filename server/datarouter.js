@@ -149,7 +149,7 @@ router.post("/data/wrestler", authInternal, async (request, response) => {
 });
 
 router.delete("/data/wrestler", authInternal, async (request, response) => {
-	const results = await data.userDelete(request.query.id);
+	const results = await data.wrestlerDelete(request.query.id);
 
 	if (results.error) {
 		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "641f00df97f3b068a562664e", message: `${ results.status }: ${results.error}` }}).then();
