@@ -99,6 +99,9 @@ button:disabled, .button:disabled {
 	align-items: center;
 	column-gap: 1rem;
 }
+.row.expand {
+	flex-wrap: wrap;
+}
 
 .row.spread {
 	justify-content: space-between;

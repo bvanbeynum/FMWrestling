@@ -16,6 +16,7 @@ const WrestlerComponent = () => {
 	const [ selectedOpponent, setSelectedOpponent ] = useState(null);
 
 	const [ winTypeChart, setWinTypeChart ] = useState({});
+	const [ ratingChart, setRatingChart ] = useState(null);
 
 	const chartConstants = {
 		padding: { left: 10, top: 15 },
@@ -66,9 +67,54 @@ const WrestlerComponent = () => {
 								timespan: lineage.map(match => +(new Date(match.eventDate))).sort((dateA, dateB) => dateB - dateA).find(() => true) - lineage.map(match => +(new Date(match.eventDate))).sort((dateA, dateB) => dateA - dateB).find(() => true),
 								path: lineage.map(match => ({ ...match, eventDate: new Date(match.eventDate) }))
 							}))
-							: []
+							: [],
+						ratingHistory: data.wrestler.ratingHistory.map(rating => ({
+							...rating,
+							periodEndDate: new Date(rating.periodEndDate)
+						}))
 					};
 					setWrestler(wrestlerData);
+
+					const ratingHistory = wrestlerData.ratingHistory.sort((a, b) => +b.periodEndDate - +a.periodEndDate);
+					if (ratingHistory.length > 1) {
+						const chartHeight = 200;
+						const chartPadding = 20;
+						const pointWidth = 50;
+
+						const minRating = ratingHistory.reduce((min, r) => (r.rating - r.deviation) < min ? (r.rating - r.deviation) : min, ratingHistory[0].rating - ratingHistory[0].deviation);
+						const maxRating = ratingHistory.reduce((max, r) => (r.rating + r.deviation) > max ? (r.rating + r.deviation) : max, ratingHistory[0].rating + ratingHistory[0].deviation);
+						const ratingRange = maxRating - minRating === 0 ? 1 : maxRating - minRating;
+
+						const points = ratingHistory.map((r, i) => {
+							const x = (i * pointWidth) + chartPadding;
+							const y = chartHeight - (((r.rating - minRating) / ratingRange) * (chartHeight - (2 * chartPadding))) - chartPadding;
+							return { x, y, rating: r.rating, date: r.periodEndDate };
+						});
+
+						const path = "M" + points.map(p => `${p.x} ${p.y}`).join(" L");
+
+						const areaPoints = ratingHistory.map((r, i) => {
+							const x = (i * pointWidth) + chartPadding;
+							const y_upper = chartHeight - (((r.rating + r.deviation - minRating) / ratingRange) * (chartHeight - (2 * chartPadding))) - chartPadding;
+							const y_lower = chartHeight - (((r.rating - r.deviation - minRating) / ratingRange) * (chartHeight - (2 * chartPadding))) - chartPadding;
+							return { x, y_upper, y_lower };
+						});
+
+						const upperPath = areaPoints.map(p => `${p.x} ${p.y_upper}`).join(" L ");
+						const lowerPath = [...areaPoints].reverse().map(p => `${p.x} ${p.y_lower}`).join(" L ");
+						const areaPath = `M ${upperPath} L ${lowerPath} Z`;
+
+						setRatingChart({
+							width: ((ratingHistory.length - 1) * pointWidth) + (2 * chartPadding),
+							height: chartHeight,
+							points: points,
+							path: path,
+							areaPath: areaPath,
+							minRating: minRating,
+							maxRating: maxRating,
+							chartPadding: chartPadding
+						});
+					}
 
 					const matchResults = data.wrestler.events.flatMap(event => event.matches.map(match => ({
 								isWinner: match.isWinner,
@@ -399,13 +445,96 @@ isLoading || !wrestler ?
 		</div>
 	</div>
 
+	<div className="panel expandable rating">
+		<h3>Wrestler Rating</h3>
+		<div className="subHeading">
+			Rating: { wrestler.rating.toFixed(0) }, Uncertainty: { wrestler.deviation.toFixed(0) }
+		</div>
+		
+		<div className="ratingHistory">
+			<div className="inlay ratingChartContainer">
+				{
+					ratingChart ?
+					<svg className="ratingChart" style={{ width: `${ratingChart.width}px`, height: `${ratingChart.height}px` }}>
+						<line x1={0} y1={ratingChart.height - ratingChart.chartPadding} x2={ratingChart.width} y2={ratingChart.height - ratingChart.chartPadding} className="axisLine" />
+						<path d={ratingChart.areaPath} className="ratingArea" />
+						<path d={ratingChart.path} className="ratingPath" />
+						{
+							ratingChart.points.map((point, index) => (
+								<g key={index}>
+									<line x1={point.x} y1={ratingChart.height - ratingChart.chartPadding - 3} x2={point.x} y2={ratingChart.height - ratingChart.chartPadding} className="tickMark" />
+									<circle cx={point.x} cy={point.y} r="3" className="ratingPoint" />
+									<text x={point.x} y={point.y - 10} textAnchor="middle" className="ratingLabel">{Math.round(point.rating)}</text>
+									<text x={point.x} y={ratingChart.height - 5} textAnchor="middle" className="dateLabel">{point.date.toLocaleDateString('en-US', { year: '2-digit', month: '2-digit', day: '2-digit' })}</text>
+								</g>
+							))
+						}
+					</svg>
+					: <div className="emptyChart">Not enough data for a chart.</div>
+				}
+			</div>
+
+			<div className="tableContainer">
+				<table className="sectionTable">
+				<thead>
+				<tr>
+					<th>End Date</th>
+					<th>Rating</th>
+					<th>Uncertainty</th>
+					<th>Diff</th>
+				</tr>
+				</thead>
+				<tbody>
+				{
+				wrestler.ratingHistory.map((rating, ratingIndex) =>
+					<tr key={ ratingIndex }>
+					<td>{ rating.periodEndDate ? rating.periodEndDate.toLocaleDateString() : "" }</td>
+					<td>
+						{ rating.rating.toFixed(0) }&nbsp;
+						{
+						ratingIndex < wrestler.ratingHistory.length - 1 && rating.rating > wrestler.ratingHistory[ratingIndex + 1].rating ?
+							<span className="win">
+								(+{ (rating.rating - wrestler.ratingHistory[ratingIndex + 1].rating).toFixed(0) })
+							</span>
+						
+						: ratingIndex < wrestler.ratingHistory.length - 1 && rating.rating < wrestler.ratingHistory[ratingIndex + 1].rating ?
+							<span className="lose">
+								(-{ (wrestler.ratingHistory[ratingIndex + 1].rating - rating.rating).toFixed(0) })
+							</span>
+						
+						: "(0)"
+						}
+					</td>
+					<td>
+						{ rating.deviation.toFixed(0) }&nbsp;
+						{
+						ratingIndex < wrestler.ratingHistory.length - 1 && rating.deviation > wrestler.ratingHistory[ratingIndex + 1].deviation ?
+							<span className="win">
+								(+{ (rating.deviation - wrestler.ratingHistory[ratingIndex + 1].deviation).toFixed(0) })
+							</span>
+						
+						: ratingIndex < wrestler.ratingHistory.length - 1 && rating.deviation < wrestler.ratingHistory[ratingIndex + 1].deviation ?
+							<span className="lose">
+								(-{ (wrestler.ratingHistory[ratingIndex + 1].deviation - rating.deviation).toFixed(0) })
+							</span>
+						
+						: "(0)"
+						}
+					</td>
+					</tr>
+				)
+				}
+				</tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+
 	{
 	winTypeChart.win ?
 
 	<div className="panel">
-		<h3>
-			Win By
-		</h3>
+		<h3>Win By</h3>
 
 		<div className="inlay winByChart">
 			<svg style={{width: "225px", height: "200px"}}>
