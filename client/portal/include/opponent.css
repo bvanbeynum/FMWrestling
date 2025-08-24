@@ -72,6 +72,12 @@
 
 .weightClassExpandedContent {
 	margin-top: 20px;
+	height: 170px;
+	display: flex;
+	align-items: center;
+}
+
+.alternateSection {
 	display: grid;
 	grid-template-columns: 1fr 1fr;
 	grid-gap: 1rem;
@@ -82,9 +88,9 @@
 	flex-wrap: wrap;
 	gap: .5rem;
 	padding: 5px;
-	align-items: flex-start;
-	height: 90px;
+	height: 140px;
 	overflow-y: scroll;
+	align-content: start;
 }
 
 .alternateContainer>div.win {
@@ -97,6 +103,15 @@
 	border: 2px solid rgb(199 136 136);
 }
 
+.alternateContainer>.pill.button {
+	font-size: .85rem;
+}
+
 .pill>select {
 	border-bottom: none;
+}
+
+.probabilityChart svg {
+	width: 350px;
+	height: 150px;
 }

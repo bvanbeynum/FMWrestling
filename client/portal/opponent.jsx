@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom/client";
 import Nav from "./nav.jsx";
+import ProbabilityChart from "./include/ProbabilityChart.jsx";
 import "./include/index.css";
 import "./include/opponent.css";
 
@@ -390,75 +391,77 @@ const Opponent = () => {
 				<div className="panelContent weightClassExpandedContent">
 					{
 					weightClassView == "alternate" ?
-					<>
-					<div className="inlay alternateContainer">
-						{
-						match.teamAlternates && match.teamAlternates.length > 0 ?
-						match.teamAlternates.map((wrestler, wrestlerIndex) => 
+					<div className="alternateSection">
 
-						<div key={ wrestlerIndex } className={`pill ${ wrestler.rating > (match.opponent?.rating || 0) ? "win" : "lose" }`}>
-							{ wrestler.weightClass }: { wrestler.name }
+						<div className="inlay alternateContainer">
+							{
+							match.teamAlternates && match.teamAlternates.length > 0 ?
+							match.teamAlternates.map((wrestler, wrestlerIndex) => 
+
+							<div key={ wrestlerIndex } className={`pill button ${ wrestler.rating > (match.opponent?.rating || 0) ? "win" : "lose" }`}>
+								{ wrestler.weightClass }: { wrestler.name }
+							</div>
+							
+							)
+							: ""
+							}
+							<div className="pill">
+								<select value={ selectedOpponentAlternate } onChange={ event => selectAlternate(event.target.value, 'team') }>
+									<option value="" disabled>-- other --</option>
+									{
+									opponent
+									.sort((opponentA, opponentB) => 
+										opponentA.weightClass != opponentB.weightClass ?
+											isNaN(opponentA.weightClass) != isNaN(opponentB.weightClass) ?
+												isNaN(opponentA.weightClass) ? 1 : -1
+											: opponentA.weightClass - opponentB.weightClass
+										: opponentB.rating - opponentA.rating
+									)
+									.map((opponent, opponentIndex) => 
+										<option key={ opponentIndex } value={ opponent.id }>{ opponent.weightClass }: { opponent.name }</option>
+									)
+									}
+								</select>
+							</div>
 						</div>
-						
-						)
-						: ""
-						}
-						<div className="pill button">
-							<select value={ selectedOpponentAlternate } onChange={ event => selectAlternate(event.target.value, 'team') }>
-								<option value="" disabled>-- other --</option>
-								{
-								opponent
-								.sort((opponentA, opponentB) => 
-									opponentA.weightClass != opponentB.weightClass ?
-										isNaN(opponentA.weightClass) != isNaN(opponentB.weightClass) ?
-											isNaN(opponentA.weightClass) ? 1 : -1
-										: opponentA.weightClass - opponentB.weightClass
-									: opponentB.rating - opponentA.rating
-								)
-								.map((opponent, opponentIndex) => 
-									<option key={ opponentIndex } value={ opponent.id }>{ opponent.weightClass }: { opponent.name }</option>
-								)
-								}
-							</select>
+
+						<div className="inlay alternateContainer">
+							{
+							match.opponentAlternates && match.opponentAlternates.length > 0 ?
+							match.opponentAlternates.map((wrestler, wrestlerIndex) => 
+
+							<div key={ wrestlerIndex } className={`pill button ${ wrestler.rating > (match.opponent?.rating || 0) ? "win" : "lose" }`}>
+								{ wrestler.weightClass }: { wrestler.name }
+							</div>
+							
+							)
+							: ""
+							}
+							<div className="pill">
+								<select value={ selectedOpponentAlternate } onChange={ event => selectAlternate(event.target.value, 'opponent') }>
+									<option value="" disabled>other</option>
+									{
+									opponent
+									.sort((opponentA, opponentB) => 
+										opponentA.weightClass != opponentB.weightClass ?
+											isNaN(opponentA.weightClass) != isNaN(opponentB.weightClass) ?
+												isNaN(opponentA.weightClass) ? 1 : -1
+											: opponentA.weightClass - opponentB.weightClass
+										: opponentB.rating - opponentA.rating
+									)
+									.map((opponent, opponentIndex) => 
+										<option key={ opponentIndex } value={ opponent.id }>{ opponent.weightClass }: { opponent.name }</option>
+									)
+									}
+								</select>
+							</div>
 						</div>
 					</div>
-
-					<div className="inlay alternateContainer">
-						{
-						match.opponentAlternates && match.opponentAlternates.length > 0 ?
-						match.opponentAlternates.map((wrestler, wrestlerIndex) => 
-
-						<div key={ wrestlerIndex } className={`pill button ${ wrestler.rating > (match.opponent?.rating || 0) ? "win" : "lose" }`}>
-							{ wrestler.weightClass }: { wrestler.name }
-						</div>
-						
-						)
-						: ""
-						}
-						<div className="pill button">
-							<select value={ selectedOpponentAlternate } onChange={ event => selectAlternate(event.target.value, 'opponent') }>
-								<option value="" disabled>other</option>
-								{
-								opponent
-								.sort((opponentA, opponentB) => 
-									opponentA.weightClass != opponentB.weightClass ?
-										isNaN(opponentA.weightClass) != isNaN(opponentB.weightClass) ?
-											isNaN(opponentA.weightClass) ? 1 : -1
-										: opponentA.weightClass - opponentB.weightClass
-									: opponentB.rating - opponentA.rating
-								)
-								.map((opponent, opponentIndex) => 
-									<option key={ opponentIndex } value={ opponent.id }>{ opponent.weightClass }: { opponent.name }</option>
-								)
-								}
-							</select>
-						</div>
-					</div>
-					</>
 
 					: weightClassView == "compare" ?
 
-					<div>
+					<div className="probabilityChart">
+						<ProbabilityChart team={match.team} opponent={match.opponent} />
 					</div>
 
 					: ""
