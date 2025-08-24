@@ -1,0 +1,102 @@
+.weightClassContainer {
+	display: grid;
+	grid-template-columns: 1fr .5fr 1fr;
+	align-items: center;
+	text-align: center;
+	position: relative;
+	z-index: 10;
+}
+
+.wrestlerContainer {
+	text-align: center;
+	margin: 10px 0px;
+	padding: 7px 0px;
+	border-radius: 5px;
+}
+
+.wrestlerContainer.win {
+	background-color: rgb(212 247 212 / 25%);
+	border: 2px solid rgb(186 243 186 / 22%);
+}
+
+.wrestlerContainer.lose {
+	background-color: rgb(247 212 212 / 25%);
+	border: 2px solid rgb(243 186 186 / 22%);
+}
+
+.wrestlerContainer>div:first-child {
+	font-size: 1.4em;
+	color: rgb(71 71 71);
+}
+
+.wrestlerContainer>div:nth-child(n+2) {
+	font-size: .8em;
+	color: rgb(173 173 173);
+}
+
+.scoreContainer {
+	margin: 0px 20px;
+	font-family: "Keania One", sans-serif;
+	font-size: 1.3em;
+	background: rgb(0 0 0);
+	color: rgb(225 38 38);
+	border: 4px double rgb(255 255 255);
+	padding: 3px 8px;
+}
+
+.scoreBoard {
+	display: grid;
+	grid-template-columns: 35px 35px;
+}
+
+.scoreTeam {
+	margin: 0px 2px;
+}
+
+.scoreTeam.win {
+	background-color: rgb(7 107 0);
+}
+
+.scoreTeam.lose {
+	background-color: rgb(107 0 0);
+}
+
+.weightClassExapnded {
+	margin-top: -10px;
+	position: relative;
+}
+
+.weightClassExapnded>.panelActionBar>button.select {
+	background-color: rgb(223 223 245);
+}
+
+.weightClassExpandedContent {
+	margin-top: 20px;
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	grid-gap: 1rem;
+}
+
+.alternateContainer {
+	display: flex;
+	flex-wrap: wrap;
+	gap: .5rem;
+	padding: 5px;
+	align-items: flex-start;
+	height: 90px;
+	overflow-y: scroll;
+}
+
+.alternateContainer>div.win {
+	background-color: rgb(185 243 183);
+	border: 2px solid rgb(136 199 143);
+}
+
+.alternateContainer>div.lose {
+	background-color: rgb(243 183 183);
+	border: 2px solid rgb(199 136 136);
+}
+
+.pill>select {
+	border-bottom: none;
+}

@@ -1,5 +1,6 @@
 @import url("https://fonts.googleapis.com/css?family=Roboto|Russo+One");
 @import url('https://fonts.googleapis.com/css2?family=Russo+One&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Keania+One&display=swap');
 
 html, body, #root {
 	font-family: Roboto, Helvetica, Arial, sans-serif;
@@ -352,6 +353,14 @@ td.sectionList.selected {
 	color: rgb(87 87 87);
 	font-size: 14px;
 	margin-top: 10px;
+}
+
+.inlay {
+	border: 1px solid rgb(145 145 145);
+	border-radius: 4px;
+	box-shadow: inset rgba(50, 50, 93, 0.25) 0px 0px 14px -3px, rgba(0, 0, 0, 0.3) 0px 1px 3px -1px;
+	overflow: auto;
+	background-color: rgb(245 246 250);
 }
 
 .pill {

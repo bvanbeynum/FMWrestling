@@ -352,4 +352,16 @@ router.get("/api/wrestlerdetails", authAPI, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
 });
 
+router.get("/api/opponentload", authAPI, async (request, response) => {
+	const results = await api.opponentLoad(request.serverPath);
+
+	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
+});
+
+router.get("/api/opponentselect", authAPI, async (request, response) => {
+	const results = await api.opponentSelect(request.query.opponent, request.serverPath);
+
+	response.status(results.status).json(results.error ? { error: results.error } : results.data );
+});
+
 export default router;
