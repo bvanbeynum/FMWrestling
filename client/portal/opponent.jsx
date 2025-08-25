@@ -105,29 +105,41 @@ const Opponent = () => {
 
 	useEffect(() => {
 		if (team.length > 0 && opponent.length > 0) {
-			const strongLineup = generateLineup(team, opponent);
+			const initialTeamLineup = WeightClassNames.map(weightClass => 
+				team.filter(wrestler => wrestler.weightClass == weightClass)
+					.sort((wrestlerA, wrestlerB) => wrestlerB.rating - wrestlerA.rating)
+					.find(() => true)
+			);
+			const opponentLineup = generateLineup(opponent, initialTeamLineup);
+			console.log(`opponent: ${calculateLineupScore(opponentLineup)}`);
+
+			const teamLineup = generateLineup(team, opponentLineup.map(weightClass => ({
+				...weightClass.team,
+				overrideWeightClass: weightClass.weightClass,
+				overrideWeightClassPosition: weightClass.weightClassPosition
+			})));
 			
-			const fullLineup = strongLineup.map(match => ({
+			const finalLineup = teamLineup.map(match => ({
 				...match,
 				teamAlternates: team
 					.filter(wrestler => 
-						Math.abs(wrestler.weightClassPosition - match.weightClassPosition) <= 2
+						Math.abs(wrestler.weightClassPosition - match.weightClassPosition) <= 1
 						&& wrestler.id != match.team?.id
 					)
 					.sort((wrestlerA, wrestlerB) => wrestlerB.rating - wrestlerA.rating)
 					.slice(0, 5),
 				opponentAlternates: opponent
 					.filter(wrestler => 
-						Math.abs(wrestler.weightClassPosition - match.weightClassPosition) <= 2
+						Math.abs(wrestler.weightClassPosition - match.weightClassPosition) <= 1
 						&& wrestler.id != match.opponent?.id
 					)
 					.sort((wrestlerA, wrestlerB) => wrestlerB.rating - wrestlerA.rating)
 					.slice(0, 5)
 			}));
 
-			setLineup(fullLineup);
-			console.log(fullLineup);
-			console.log(calculateLineupScore(fullLineup))
+			setLineup(finalLineup);
+			console.log(`team: ${calculateLineupScore(finalLineup)}`);
+			console.log(finalLineup);
 		}
 	}, [ team, opponent ]);
 
@@ -137,8 +149,7 @@ const Opponent = () => {
 			weightClassPosition: weightClassIndex,
 			team: null,
 			opponent: opponent
-				.filter(wrestler => wrestler.weightClass == weightClass)
-				.sort((wrestlerA, wrestlerB) => wrestlerB.rating - wrestlerA.rating)
+				.filter(wrestler => (wrestler.overrideWeightClass || wrestler.weightClass) == weightClass)
 				.find(() => true)
 		}));
 
@@ -219,18 +230,29 @@ const Opponent = () => {
 			return 0;
 		}
 
-		let impactedRating = myWrestler.rating;
+		let impactedWrestlerRating = myWrestler.rating;
 		if (myWrestler.weightClassPosition != weightClassPosition) {
 			const bumpAmount = Math.abs(myWrestler.weightClassPosition - weightClassPosition);
 			if (bumpAmount > 0) {
 				// Apply a penalty if bumped. A fixed penalty per bump is a simple approach.
 				// You can adjust this penalty value (e.g., 50 Glicko points per class bumped).
 				const bumpPenalty = 75 * bumpAmount; // Example: 75 Glicko points penalty per class bumped
-				impactedRating -= bumpPenalty;
+				impactedWrestlerRating -= bumpPenalty;
 			}
 		}
 
-		const ratingDiff = impactedRating - opponentWrestler.rating;
+		let impactedOpponentRating = opponentWrestler.rating;
+		if (opponentWrestler.weightClassPosition != weightClassPosition) {
+			const bumpAmount = Math.abs(opponentWrestler.weightClassPosition - weightClassPosition);
+			if (bumpAmount > 0) {
+				// Apply a penalty if bumped. A fixed penalty per bump is a simple approach.
+				// You can adjust this penalty value (e.g., 50 Glicko points per class bumped).
+				const bumpPenalty = 75 * bumpAmount; // Example: 75 Glicko points penalty per class bumped
+				impactedOpponentRating -= bumpPenalty;
+			}
+		}
+
+		const ratingDiff = impactedWrestlerRating - impactedOpponentRating;
 		// Combine deviations to get an overall uncertainty factor.
 		const combinedDeviation = Math.sqrt(
 			myWrestler.deviation * myWrestler.deviation +
