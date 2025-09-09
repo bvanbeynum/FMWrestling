@@ -208,7 +208,7 @@ const Schedule = props => {
 				<div className="panelActionBar">
 					
 					{
-					event.eventSystem == "flo" ?
+					/flo/i.test(event.eventSystem) ?
 					<>
 					
 					<button aria-label="External Event" onClick={ () => window.open(`https://events.flowrestling.org/event/${ event.systemId }/summary`) }>
@@ -225,7 +225,7 @@ const Schedule = props => {
 
 					</>
 					
-					: event.eventSystem == "track" ?
+					: /track/i.test(event.eventSystem) ?
 
 					<button aria-label="External Event" onClick={ () => window.open(`https://www.trackwrestling.com/tw/${ event.eventType }/VerifyPassword.jsp?tournamentId=${ event.systemId }`) }>
 						{/* World */}
