@@ -339,13 +339,14 @@ export default {
 			filter["_id"] = mongoose.Types.ObjectId.isValid(userFilter.id) ? userFilter.id : null;
 		}
 		if (userFilter.name) {
-			filter.name = { $regex: new RegExp(userFilter.name, "i") };
+			const searchName = userFilter.name.toLowerCase();
+			filter.searchName = { $regex: new RegExp(searchName) };
 		}
 		if (userFilter.teamPartial) {
-			filter["events.team"] = { $regex: new RegExp("^" + userFilter.teamPartial, "i") };
+			filter["events.searchTeam"] = { $regex: new RegExp("^" + userFilter.teamPartial.toLowerCase()) };
 		}
 		if (userFilter.teamName) {
-			filter["events.team"] = { $regex: new RegExp("^" + userFilter.teamName + "$", "i") };
+			filter["events.searchTeam"] = userFilter.teamName.toLowerCase();
 		}
 		if (userFilter.sqlId) {
 			filter.sqlId = userFilter.sqlId;
@@ -377,6 +378,19 @@ export default {
 			output.status = 550;
 			output.error = "Missing object to save";
 			return output;
+		}
+
+		if (saveObject.name) {
+			saveObject.searchName = saveObject.name.toLowerCase();
+		}
+
+		if (saveObject.events) {
+			saveObject.events = saveObject.events.map(event => {
+				if (event.team) {
+					event.team = event.team.toLowerCase();
+				}
+				return event;
+			});
 		}
 
 		if (saveObject.id) {
