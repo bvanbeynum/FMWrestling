@@ -2073,7 +2073,7 @@ export default {
 			output.data.team = clientResponse.body.wrestlers
 				.map(wrestler => {
 					const lastTeamEvent = wrestler.events
-						.filter(event => /^fort mill$/gi.test(event.team))
+						.filter(event => /^fort mill$/gi.test(event.team) && event.matches && !isNaN(event.matches[0].weightClass))
 						.map(event => ({
 							event: event.name,
 							date: new Date(event.date),
@@ -2092,13 +2092,13 @@ export default {
 						id: wrestler.id,
 						name: wrestler.name,
 						lastEvent: lastTeamEvent,
-						division: lastTeamEvent.division,
-						weightClass: lastTeamEvent.weightClass,
+						division: lastTeamEvent?.division,
+						weightClass: lastTeamEvent?.weightClass,
 						rating: wrestler.rating,
 						deviation: wrestler.deviation
 					}
 				})
-				.filter(wrestler => wrestler.lastEvent.date >= new Date(new Date().getFullYear() - 1, 8, 1));
+				.filter(wrestler => wrestler.lastEvent && wrestler.lastEvent.date >= new Date(new Date().getFullYear() - 1, 8, 1));
 		}
 		catch (error) {
 			output.status = 563;

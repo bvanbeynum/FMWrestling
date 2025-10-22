@@ -111,7 +111,7 @@ const TeamCompare = () => {
 
 					// Set the data for the weight classes they've wrestled before
 					const wrestlers = data.wrestlers
-						.filter(wrestler => new Date(wrestler.lastEvent.date) >= new Date(new Date().getMonth() >= 8 ? new Date().getFullYear() : new Date().getFullYear() - 1, 8, 1)) // Only those that have wrestled in the last season
+						.filter(wrestler => new Date(wrestler.lastEvent.date) >= new Date(new Date().getFullYear() - 1, 8, 1)) // Only those that have wrestled in the last season
 						.map(wrestler => {
 							const closestWeightClass = wrestler.weightClass && !isNaN(wrestler.weightClass) ? weightClasses
 									.map(weightClass => weightClass.name)
@@ -475,11 +475,16 @@ const TeamCompare = () => {
 				Match
 			</button>
 
+			{
+			false ?
+			
 			<button aria-label="Match Compare" onClick={ () => setPageView("teampredict") }>
 				{/* Analysis */}
 				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M825-124 637-311.5q-40.5 32-90.5 50.5T441-242.5q-89 0-160.75-43.25T167-400h92q34 38 80.5 60.25T441-317.5q101 0 171.75-70.75T683.5-560q0-101-70.75-171.75T441-802.5q-95.5 0-164.5 64.25T199.5-580h-75q8-126 98.75-211.75T441-877.5q132.5 0 225 92.5t92.5 225q0 55.5-18.5 105.5T689.5-364L877-176l-52 52ZM401.5-405l-66-219-56 159h-196v-50h161l66-190h53L428-489l46.5-146H528l60 120h30.5v50H557l-51-102-52.5 162h-52Z"/></svg>
 				Match
 			</button>
+			: ""
+			}
 
 		</div>
 

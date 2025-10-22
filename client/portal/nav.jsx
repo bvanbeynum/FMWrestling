@@ -84,6 +84,14 @@ const Nav = props => {
 			</li>
 			
 			{
+			privileges.includes("teamManage") ?
+			<li role="button" onClick={ () => window.location = "/portal/opponent.html" } className={`button sub ${ subExpanded === "team" ? "active" : "" }`} aria-label="Opponent Matchup">
+			<span>Opponent Match</span>
+			</li>
+			: ""
+			}
+
+			{
 			privileges.includes("myteam") ?
 			<li role="button" onClick={ () => window.location = "/portal/myteam.html" } className={`button sub ${ subExpanded === "team" ? "active" : "" }`} aria-label="My Team">
 			<span>My Team</span>

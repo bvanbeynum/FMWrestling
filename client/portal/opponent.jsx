@@ -13,16 +13,16 @@ const Opponent = () => {
 	const [ loggedInUser, setLoggedInUser ] = useState(null);
 	const [ isFilterExpanded, setIsFilterExpanded ] = useState(false);
 
-	const [ team, setTeam ] = useState([]);
+	const [ teamWrestlers, setTeamWrestlers ] = useState([]);
+
 	const [ opponents, setOpponents ] = useState([]);
 	const [ selectedOpponent, setSelectedOpponent ] = useState("");
-	const [ opponent, setOpponent ] = useState([]);
-	const [ selectedOpponentAlternate, setSelectedOpponentAlternate ] = useState("");
+	const [ opponentWrestlers, setOpponentWrestlers ] = useState([]);
 
 	const [ lineup, setLineup ] = useState([]);
+	const [ eventDetails, setEventDetails ] = useState({})
 
-	const [ selectedWeightClass, setSelectedWeightClass ] = useState("");
-	const [ weightClassView, setWeightClassView ] = useState("alternate");
+	const [ viewPlayer, setViewPlayer ] = useState(null);
 
 	useEffect(() => {
 		if (!pageActive) {
@@ -57,7 +57,7 @@ const Opponent = () => {
 							weightClassPosition: WeightClassNames.indexOf(wrestler.weightClass)
 						}));
 
-					setTeam(wrestlersLoaded);
+					setTeamWrestlers(wrestlersLoaded);
 					setOpponents(data.opponents);
 
 					setLoggedInUser(data.loggedInUser);
@@ -72,6 +72,7 @@ const Opponent = () => {
 
 	const selectOpponent = (opponentName) => {
 		setIsLoading(true);
+		setSelectedOpponent(opponentName);
 		
 		fetch(`/api/opponentselect?opponent=${ opponentName }`)
 			.then(response => {
@@ -83,7 +84,7 @@ const Opponent = () => {
 				}
 			})
 			.then(data => {
-				const wrestlersLoaded = data.wrestlers
+				const opponentWrestlers = data.wrestlers
 					.filter(wrestler => WeightClassNames.includes(wrestler.weightClass))
 					.map(wrestler => ({
 						id: wrestler.id,
@@ -93,9 +94,14 @@ const Opponent = () => {
 						weightClass: wrestler.weightClass,
 						weightClassPosition: WeightClassNames.indexOf(wrestler.weightClass)
 					}));
+
+				const bestLineup = pickBestLineup(teamWrestlers, opponentWrestlers, []);
+				const eventStats = generateStats(bestLineup);
 				
-				setOpponent(wrestlersLoaded);
-				setSelectedOpponent(opponentName);
+				setLineup(bestLineup)
+				setEventDetails(eventStats);
+				
+				setOpponentWrestlers(opponentWrestlers);
 				setIsLoading(false);
 			})
 			.catch(error => {
@@ -103,90 +109,194 @@ const Opponent = () => {
 			});
 	};
 
-	useEffect(() => {
-		if (team.length > 0 && opponent.length > 0) {
-			const initialTeamLineup = WeightClassNames.map(weightClass => 
-				team.filter(wrestler => wrestler.weightClass == weightClass)
-					.sort((wrestlerA, wrestlerB) => wrestlerB.rating - wrestlerA.rating)
-					.find(() => true)
-			);
-			const opponentLineup = generateLineup(opponent, initialTeamLineup);
-			console.log(`opponent: ${calculateLineupScore(opponentLineup)}`);
+	const changeScore = (teamName, match, score) => {
+		const scoreLineup = lineup.map(lineupMatch => ({
+			...lineupMatch,
+			teamScore: match.weightClass != lineupMatch.weightClass ? lineupMatch.teamScore 
+				: teamName == "Fort Mill" ? score 
+				: 0,
+			opponentScore: match.weightClass != lineupMatch.weightClass ? lineupMatch.opponentScore 
+				: teamName != "Fort Mill" ? score
+				: 0
+		}));
 
-			const teamLineup = generateLineup(team, opponentLineup.map(weightClass => ({
+		setLineup(scoreLineup);
+		setEventDetails(generateStats(scoreLineup));
+	};
+
+	const selectViewPlayer = (teamName, match) => {
+		const topPicks = (teamName == "Fort Mill" ? teamWrestlers : opponentWrestlers)
+				.filter(wrestler => Math.abs(wrestler.weightClassPosition - match.weightClassPosition) <= 1)
+				.sort((wrestlerA, wrestlerB) => wrestlerB.rating - wrestlerA.rating),
+
+			alternatePicks = (teamName == "Fort Mill" ? teamWrestlers : opponentWrestlers)
+				.filter(wrestler => Math.abs(wrestler.weightClassPosition - match.weightClassPosition) > 1)
+				.sort((wrestlerA, wrestlerB) => 
+					wrestlerA.weightClassPosition != wrestlerB.weightClassPosition ?
+						wrestlerA.weightClassPosition - wrestlerB.weightClassPosition
+					: wrestlerB.rating - wrestlerA.rating
+				);
+
+		setViewPlayer({ team: teamName, match: match, topPicks: topPicks, alternatePicks: alternatePicks});
+	};
+
+	const selectAlternate = (teamName, match, wrestlerId) => {
+		const staticLineup = lineup.filter(lineupMatch => lineupMatch.isStaticOpponent || lineupMatch.isStaticTeam)
+			.map(lineupMatch => ({
+				weightClass: lineupMatch.weightClass,
+				teamWrestlerId: teamName == "Fort Mill" && lineupMatch.team?.id == wrestlerId ? null // If the wrestler is already assigned (and not the weight class) then blank
+					: lineupMatch.team?.id, // Keep the existing record
+				opponentWrestlerId: teamName != "Fort Mill" && lineupMatch.opponent?.id == wrestlerId ? null 
+					: lineupMatch.opponent?.id
+			}));
+		
+		const staticLineupIndex = staticLineup.findIndex(lineupMatch => lineupMatch.weightClass === match.weightClass);
+
+		if (staticLineupIndex !== -1) {
+			// If the weight class already exists in staticLineup
+			if (teamName === "Fort Mill") {
+				staticLineup[staticLineupIndex].teamWrestlerId = wrestlerId;
+			} else {
+				staticLineup[staticLineupIndex].opponentWrestlerId = wrestlerId;
+			}
+		} else {
+			// If the weight class does not exist, add a new record
+			staticLineup.push({
+				weightClass: match.weightClass,
+				teamWrestlerId: teamName === "Fort Mill" ? wrestlerId : null,
+				opponentWrestlerId: teamName !== "Fort Mill" ? wrestlerId : null
+			});
+		}
+
+		const bestLineup = pickBestLineup(teamWrestlers, opponentWrestlers, staticLineup);
+		const eventStats = generateStats(bestLineup);
+
+		setLineup(bestLineup);
+		setEventDetails(eventStats);
+		setViewPlayer(null);
+	};
+
+	const pickBestLineup = (teamWrestlers, opponentWrestlers, staticLineup) => {
+		const initialTeamLineup = WeightClassNames.map(weightClass => 
+			teamWrestlers.filter(wrestler => wrestler.weightClass == weightClass)
+				.sort((wrestlerA, wrestlerB) => wrestlerB.rating - wrestlerA.rating)
+				.find(() => true)
+		);
+
+		const opponentStatic = staticLineup
+				.filter(weightClass => weightClass.opponentWrestlerId)
+				.map(weightClass => ({ weightClass: weightClass.weightClass, wrestlerId: weightClass.opponentWrestlerId })),
+			teamStatic = staticLineup
+				.filter(weightClass => weightClass.teamWrestlerId)
+				.map(weightClass => ({ weightClass: weightClass.weightClass, wrestlerId: weightClass.teamWrestlerId}));
+
+		// Pick the best opponent linup given the team's best wrester at their default weight class
+		const opponentLineup = generateLineup(opponentWrestlers, initialTeamLineup, opponentStatic);
+
+		const opponentOverrides = opponentLineup
+			.filter(weightClass => weightClass.team)
+			.map(weightClass => ({
 				...weightClass.team,
 				overrideWeightClass: weightClass.weightClass,
 				overrideWeightClassPosition: weightClass.weightClassPosition
-			})));
-			
-			const finalLineup = teamLineup.map(match => ({
-				...match,
-				teamAlternates: team
-					.filter(wrestler => 
-						Math.abs(wrestler.weightClassPosition - match.weightClassPosition) <= 1
-						&& wrestler.id != match.team?.id
-					)
-					.sort((wrestlerA, wrestlerB) => wrestlerB.rating - wrestlerA.rating)
-					.slice(0, 5),
-				opponentAlternates: opponent
-					.filter(wrestler => 
-						Math.abs(wrestler.weightClassPosition - match.weightClassPosition) <= 1
-						&& wrestler.id != match.opponent?.id
-					)
-					.sort((wrestlerA, wrestlerB) => wrestlerB.rating - wrestlerA.rating)
-					.slice(0, 5)
 			}));
+		const teamBestLineup = generateLineup(teamWrestlers, opponentOverrides, teamStatic);
 
-			setLineup(finalLineup);
-			console.log(`team: ${calculateLineupScore(finalLineup)}`);
-			console.log(finalLineup);
-		}
-	}, [ team, opponent ]);
+		const teamLineup = teamBestLineup.map(match => {
+			const existing = lineup.filter(lineupMatch => lineupMatch.weightClass == match.weightClass)
+				.map(lineupMatch => ({
+					...match,
+					teamScore: (lineupMatch.teamScore || 0),
+					opponentScore: (lineupMatch.opponentScore || 0),
+					isStaticTeam: teamStatic && teamStatic.some(record => record.weightClass == match.weightClass && record.wrestlerId == match.team?.id),
+					isStaticOpponent: opponentStatic && opponentStatic.some(record => record.weightClass == match.weightClass && record.wrestlerId == match.opponent?.id)
+				}))
+				.find(() => true)
+			
+			return existing || {...match, teamScore: 0, opponentScore: 0, isStaticTeam: false, isStaticOpponent: false };
+		});
 
-	const generateLineup = (team, opponent) => {
+		return teamLineup;
+	};
+
+	const generateStats = (lineup) => {
+		return lineup.reduce((output, match) => ({
+			teamWins: output.teamWins + (match.isWin ? 1 : 0),
+			teamLosses: output.teamLosses + (match.isWin ? 0 : 1),
+			teamScore: output.teamScore + +match.teamScore,
+			teamScorePredicted: output.teamScorePredicted + (match.prediction > 0 ? match.prediction : 0),
+			opponentWins: output.opponentWins + (match.isWin ? 0 : 1),
+			opponentLosses: output.opponentLosses + (match.isWin ? 1 : 0),
+			opponentScore: output.opponentScore + +match.opponentScore,
+			opponentScorePredicted: output.opponentScorePredicted + (match.prediction < 0 ? match.prediction * -1 : 0),
+		}), { 
+			teamWins: 0, 
+			teamLosses: 0, 
+			teamScore: 0,
+			teamScorePredicted: 0, 
+			opponentWins: 0, 
+			opponentLosses: 0, 
+			opponentScore: 0,
+			opponentScorePredicted: 0 
+		});
+	};
+
+	const generateLineup = (teamA, teamBMatches, staticTeam = []) => {
 		const matches = WeightClassNames.map((weightClass, weightClassIndex) => ({
 			weightClass: weightClass,
 			weightClassPosition: weightClassIndex,
 			team: null,
-			opponent: opponent
-				.filter(wrestler => (wrestler.overrideWeightClass || wrestler.weightClass) == weightClass)
+			opponent: teamBMatches
+				.filter(match => (match.overrideWeightClass || match.weightClass) == weightClass)
 				.find(() => true)
 		}));
 
 		const usedWeightClasses = new Set();
-		const availableWrestlers = [].concat(team);
+		const availableWrestlers = [].concat(teamA);
+
+		// Set the static weight classes first
+		staticTeam.forEach(staticWrestler => {
+			const match = matches.find(lineupWrestler => lineupWrestler.weightClass == staticWrestler.weightClass);
+
+			match.team = teamA.find(wrestler => wrestler.id == staticWrestler.wrestlerId);
+			match.prediction = !match.opponent ? 6
+				: !match.team ? -6
+				: predictMatchOutcomePoints(match.team, match.opponent, match.weightClassPosition);
+			match.isWin = (match.team?.rating || 0) > (match.opponent?.rating || 0);
+
+			usedWeightClasses.add(match.weightClass);
+			availableWrestlers.splice(availableWrestlers.indexOf(match.team), 1);
+		});
 
 		availableWrestlers.sort((wrestlerA, wrestlerB) => wrestlerB.rating - wrestlerA.rating);
 
 		for (let wrestlerIndex = 0; wrestlerIndex < availableWrestlers.length; wrestlerIndex++) {
 			const bestWrestler = availableWrestlers[wrestlerIndex];
-			const bestOpponent = matches
-				.filter(lineupWrestler => 
-					Math.abs(bestWrestler.weightClassPosition - lineupWrestler.weightClassPosition) <= 1 
-					&& !usedWeightClasses.has(lineupWrestler.weightClass)
+
+			const bestMatch = matches
+				.filter(match => 
+					Math.abs(bestWrestler.weightClassPosition - match.weightClassPosition) <= 1 
+					&& !usedWeightClasses.has(match.weightClass)
 				)
-				.map(lineupWrestler => ({
-					...lineupWrestler,
-					prediction: !lineupWrestler.opponent ? 6
+				.map(match => ({
+					...match,
+					prediction: !match.opponent ? 6
 						: !bestWrestler ? -6
-						: predictMatchOutcomePoints(bestWrestler, lineupWrestler.opponent, lineupWrestler.weightClassPosition),
-					isWin: bestWrestler.rating > (lineupWrestler.opponent?.rating || 0)
+						: predictMatchOutcomePoints(bestWrestler, match.opponent, match.weightClassPosition),
+					isWin: bestWrestler.rating > (match.opponent?.rating || 0)
 				}))
 				.sort((lineupWrestlerA, lineupWrestlerB) => 
-					// lineupWrestlerA.isWin != lineupWrestlerB.isWin ?
-					// 	lineupWrestlerA.isWin ? -1 : 1
-					// : lineupWrestlerB.prediction - lineupWrestlerA.prediction
 					lineupWrestlerB.prediction - lineupWrestlerA.prediction
 				)
 				.find(() => true);
 			
-			if (bestOpponent) {
-				const match = matches.find(lineupWrestler => lineupWrestler.weightClass == bestOpponent.weightClass);
+			if (bestMatch) {
+				const match = matches.find(lineupWrestler => lineupWrestler.weightClass == bestMatch.weightClass);
 				match.team = bestWrestler;
-				match.prediction = bestOpponent.prediction;
-				match.isWin = bestOpponent.isWin;
+				match.prediction = bestMatch.prediction;
+				match.isWin = bestMatch.isWin;
 
-				usedWeightClasses.add(bestOpponent.weightClass);
+				usedWeightClasses.add(bestMatch.weightClass);
 			}
 		}
 
@@ -299,9 +409,6 @@ const Opponent = () => {
 		return -3; // Default: assumed loss for anything less than significant favor
 	};
 
-	const selectAlternate = (wrestlerId, alternateTeam) => {
-	};
-
 	return (
 <div className="page">
 	<Nav loggedInUser={ loggedInUser } />
@@ -366,149 +473,112 @@ const Opponent = () => {
 			</div>
 
 			{
-			
-			lineup.map(match => 
-			<div key={ match.weightClass }>
+			selectedOpponent ?
+			<>
 
-			<div className="panel button weightClassContainer" onClick={ () => setSelectedWeightClass(selectedWeightClass == match.weightClass ? "" : match.weightClass) }>
-				<div className={`wrestlerContainer ${ match.isWin ? "win" : "lose" }`}>
-					{
-					match.team ?
-					<>
-					<div>{ match.team?.name.split(" ")[0] }</div>
-					<div>{ match.team?.name.split(" ").slice(1).join(" ") } ({ match.team?.weightClass })</div>
-					<div>{`${ match.team?.rating.toFixed(0) } / ${ match.team?.deviation.toFixed(0) }`}</div>
-					</>
-					: 
-					<div>Forfeit</div>
-					 }
-				</div>
-
-				<div className="scoreContainer">
-					<div>{ match.weightClass }</div>
-					<div className="scoreBoard">
-						<div className={`scoreTeam ${ match.prediction > 0 ? "win" : "lose" }`}>{ match.prediction }</div>
-						<div className={`scoreTeam ${ match.prediction < 0 ? "win" : "lose" }`}>{ match.prediction * -1 }</div>
+			<div className="panel resultContainer">
+				<div className="teamContainer team">
+					<div className="teamAbbreviation">{ "Fort Mill".split(" ").map(word => word.charAt(0)).join("").toUpperCase() }</div>
+					<div className="teamActualScore">{ eventDetails.teamScore }</div>
+					<div className="teamPredictedScore">{ eventDetails.teamScorePredicted }</div>
+					<div className="teamName">Fort Mill</div>
+					<div className="teamStats">
+						wins: { eventDetails.teamWins } losses: { eventDetails.teamLosses }
 					</div>
 				</div>
 
-				<div className={`wrestlerContainer ${ !match.isWin ? "win" : "lose" }`}>
-					{
-					match.opponent ?
-					<>
-					<div>{ match.opponent?.name.split(" ")[0] }</div>
-					<div>{ match.opponent?.name.split(" ").slice(1).join(" ") } ({ match.opponent?.weightClass })</div>
-					<div>{`${ match.opponent?.rating.toFixed(0) } / ${ match.opponent?.deviation.toFixed(0) }`}</div>
-					</>
-					: 
-					<div>Forfeit</div>
-					}
+				<div className="teamContainer opponent">
+					<div className="teamAbbreviation">{ selectedOpponent.split(" ").map(word => word.charAt(0)).join("").toUpperCase() }</div>
+					<div className="teamActualScore">{ eventDetails.opponentScore }</div>
+					<div className="teamPredictedScore">{ eventDetails.opponentScorePredicted }</div>
+					<div className="teamName">{ selectedOpponent }</div>
+					<div className="teamStats">
+						wins: { eventDetails.opponentWins } losses: { eventDetails.opponentLosses }
+					</div>
 				</div>
 			</div>
+			
+			<div className="panel">
 
 			{
-			selectedWeightClass == match.weightClass ?
-			
-			<div className="panel actionBar weightClassExapnded">
-				<div className="panelContent weightClassExpandedContent">
-					{
-					weightClassView == "alternate" ?
-					<div className="alternateSection">
+			lineup.map(match => 
 
-						<div className="inlay alternateContainer">
-							{
-							match.teamAlternates && match.teamAlternates.length > 0 ?
-							match.teamAlternates.map((wrestler, wrestlerIndex) => 
+				<div key={ match.weightClass } className="matchContainer">
 
-							<div key={ wrestlerIndex } className={`pill button ${ wrestler.rating > (match.opponent?.rating || 0) ? "win" : "lose" }`}>
-								{ wrestler.weightClass }: { wrestler.name }
+					<div className={`wrestlerContainer ${ match.teamScore > 0 ? "win" : match.opponentScore > 0 ? "lose" : "" }`}>
+						<div className="wrestlerDetails">
+							<div className="button" onClick={ () => selectViewPlayer("Fort Mill", match) }>
+								{ match.team?.name }
+								{ 
+								match.isStaticTeam ?
+									/* Lock */
+									<svg viewBox="0 -960 960 960">
+										<path d="M240-80q-33 0-56.5-23.5T160-160v-400q0-33 23.5-56.5T240-640h40v-80q0-83 58.5-141.5T480-920q83 0 141.5 58.5T680-720v80h40q33 0 56.5 23.5T800-560v400q0 33-23.5 56.5T720-80H240Zm0-80h480v-400H240v400Zm240-120q33 0 56.5-23.5T560-360q0-33-23.5-56.5T480-440q-33 0-56.5 23.5T400-360q0 33 23.5 56.5T480-280ZM360-640h240v-80q0-50-35-85t-85-35q-50 0-85 35t-35 85v80ZM240-160v-400 400Z"/>
+									</svg>
+								: ""
+								}
 							</div>
-							
-							)
-							: ""
-							}
-							<div className="pill">
-								<select value={ selectedOpponentAlternate } onChange={ event => selectAlternate(event.target.value, 'team') }>
-									<option value="" disabled>-- other --</option>
-									{
-									opponent
-									.sort((opponentA, opponentB) => 
-										opponentA.weightClass != opponentB.weightClass ?
-											isNaN(opponentA.weightClass) != isNaN(opponentB.weightClass) ?
-												isNaN(opponentA.weightClass) ? 1 : -1
-											: opponentA.weightClass - opponentB.weightClass
-										: opponentB.rating - opponentA.rating
-									)
-									.map((opponent, opponentIndex) => 
-										<option key={ opponentIndex } value={ opponent.id }>{ opponent.weightClass }: { opponent.name }</option>
-									)
-									}
-								</select>
-							</div>
+							<div className="subItem">{ match.team?.weightClass }</div>
+							<div className="subItem">{ match.team?.rating.toFixed(0) } / { match.team?.deviation.toFixed(0) }</div>
 						</div>
 
-						<div className="inlay alternateContainer">
-							{
-							match.opponentAlternates && match.opponentAlternates.length > 0 ?
-							match.opponentAlternates.map((wrestler, wrestlerIndex) => 
-
-							<div key={ wrestlerIndex } className={`pill button ${ wrestler.rating > (match.opponent?.rating || 0) ? "win" : "lose" }`}>
-								{ wrestler.weightClass }: { wrestler.name }
-							</div>
-							
-							)
-							: ""
-							}
-							<div className="pill">
-								<select value={ selectedOpponentAlternate } onChange={ event => selectAlternate(event.target.value, 'opponent') }>
-									<option value="" disabled>other</option>
-									{
-									opponent
-									.sort((opponentA, opponentB) => 
-										opponentA.weightClass != opponentB.weightClass ?
-											isNaN(opponentA.weightClass) != isNaN(opponentB.weightClass) ?
-												isNaN(opponentA.weightClass) ? 1 : -1
-											: opponentA.weightClass - opponentB.weightClass
-										: opponentB.rating - opponentA.rating
-									)
-									.map((opponent, opponentIndex) => 
-										<option key={ opponentIndex } value={ opponent.id }>{ opponent.weightClass }: { opponent.name }</option>
-									)
-									}
+						<div className="scoreDetails">
+							<div>
+								<select className={ match.teamScore > 0 ? "win" : match.opponentScore > 0 ? "lose" : "" } value={ match.teamScore } onChange={ event => changeScore("Fort Mill", match, event.target.value) }>
+									<option value="0">0</option>
+									<option value="3">3</option>
+									<option value="4">4</option>
+									<option value="5">5</option>
+									<option value="6">6</option>
 								</select>
 							</div>
+							<div className={ match.prediction > 0 ? "win" : "lose" }>{ match.prediction > 0 ? match.prediction : 0 }</div>
 						</div>
 					</div>
 
-					: weightClassView == "compare" ?
-
-					<div className="probabilityChart">
-						<ProbabilityChart team={match.team} opponent={match.opponent} />
+					<div className="weightContainer">
+						{ match.weightClass }
 					</div>
 
-					: ""
-					}
+					<div className={`wrestlerContainer ${ match.opponentScore > 0 ? "win" : match.teamScore > 0 ? "lose" : "" }`}>
+						<div className="scoreDetails">
+							<div>
+								<select className={ match.opponentScore > 0 ? "win" : match.teamScore > 0 ? "lose" : "" } value={ match.opponentScore } onChange={ event => changeScore(selectedOpponent, match, event.target.value)}>
+									<option value="0">0</option>
+									<option value="3">3</option>
+									<option value="4">4</option>
+									<option value="5">5</option>
+									<option value="6">6</option>
+								</select>
+							</div>
+							<div className={ match.prediction < 0 ? "win" : "lose" }>{ match.prediction < 0 ? match.prediction * -1 : 0 }</div>
+						</div>
+
+						<div className="wrestlerDetails">
+							<div className="button" onClick={ () => selectViewPlayer(selectedOpponent, match) }>
+								{ match.opponent?.name }
+								{ 
+								match.isStaticOpponent ?
+									/* Lock */
+									<svg viewBox="0 -960 960 960">
+										<path d="M240-80q-33 0-56.5-23.5T160-160v-400q0-33 23.5-56.5T240-640h40v-80q0-83 58.5-141.5T480-920q83 0 141.5 58.5T680-720v80h40q33 0 56.5 23.5T800-560v400q0 33-23.5 56.5T720-80H240Zm0-80h480v-400H240v400Zm240-120q33 0 56.5-23.5T560-360q0-33-23.5-56.5T480-440q-33 0-56.5 23.5T400-360q0 33 23.5 56.5T480-280ZM360-640h240v-80q0-50-35-85t-85-35q-50 0-85 35t-35 85v80ZM240-160v-400 400Z"/>
+									</svg>
+								: ""
+								}
+							</div>
+							<div className="subItem">{ match.opponent?.weightClass }</div>
+							<div className="subItem">{ match.opponent?.rating.toFixed(0) } / { match.opponent?.deviation.toFixed(0) }</div>
+						</div>
+					</div>
+
 				</div>
 
-				<div className="panelActionBar">
-					<button className={ weightClassView == "alternate" ? "select" : "" } onClick={ () => setWeightClassView("alternate") }>
-						{/* Wrestlers */}
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M55.077-93.847 12.924-136l143.692-143.692-46.308-123.385q-6.23-15.692-2.423-36.692 3.808-21 20.115-37.307l132-132q10.462-10.462 22.539-15.693 12.076-5.23 27.153-5.23 15.077 0 27.154 5.23 12.076 5.231 22.538 15.693l80.769 78q27.385 27 65.231 42.692 37.846 15.692 81.692 17.615v59.999q-55-1.923-103.153-20.731-48.154-18.808-81.923-52.192l-34.923-34.154L259.23-410l87.846 89.846v230.153h-59.998v-204.615l-72.002-66.463v107.233l-160 159.999Zm552.001 3.846v-265.383l85.538-81.539-30.154-166.156q-22.693 27.616-48.386 49.502-25.693 21.885-57.463 34.27-23.768-2-45.576-11.116-21.807-9.115-37.191-24.114 45.769-7.616 84.5-34.539 38.732-26.924 59.962-61.539l39.231-64q15.077-24.307 41.423-32.269 26.345-7.961 52.268 2.885l195.846 82.923v171.075h-59.998v-132.153l-95.079-38.001L904.768-90.001H840.77L767.616-396.54l-100.54 85.001v221.538h-59.998ZM447.076-614.615q-30.692 0-52.269-21.577-21.577-21.577-21.577-52.269 0-30.692 21.577-52.269 21.577-21.576 52.269-21.576 30.692 0 52.269 21.576 21.577 21.577 21.577 52.269 0 30.692-21.577 52.269-21.577 21.577-52.269 21.577ZM664-776.154q-30.692 0-52.269-21.576-21.576-21.577-21.576-52.269 0-30.692 21.576-52.269 21.577-21.577 52.269-21.577 30.693 0 52.269 21.577 21.577 21.577 21.577 52.269 0 30.692-21.577 52.269-21.576 21.576-52.269 21.576Z"></path></svg>
-						Alternate
-					</button>
-					<button className={ weightClassView == "compare" ? "select" : "" } onClick={ () => setWeightClassView("compare") }>
-						{/* Compare */}
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M420.001-55.386V-140H212.309q-30.308 0-51.308-21t-21-51.308v-535.382q0-30.308 21-51.308t51.308-21h207.692v-84.615H480v849.228h-59.999ZM200-240h220.001v-263.848L200-240Zm360 99.999V-480l200 240v-507.691q0-4.616-3.846-8.463-3.847-3.846-8.463-3.846H560v-59.999h187.691q30.308 0 51.308 21t21 51.308v535.382q0 30.308-21 51.308t-51.308 21H560Z"/></svg>
-						Compare
-					</button>
-				</div>
-			</div>
-			
-			: ""
+			)
 			}
 
 			</div>
-			)
+			</>
+			: ""
 			}
 
 		</div>
@@ -516,7 +586,111 @@ const Opponent = () => {
 		}
 
 	</div>
+
+	<div className={`backdrop ${ viewPlayer ? "active" : "" }`}></div>
+
+	<div className={`editLineupContainer ${ viewPlayer ? "active" : "" }`}>
+		{
+		viewPlayer ?
+		<>
+
+		<div className="linupTop">
+			<div className="lineupHeader">
+				{/* Close */}
+				<svg className="button" viewBox="0 -960 960 960" onClick={ () => setViewPlayer(null) }>
+					<path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/>
+				</svg>
+			</div>
+
+			<div className="wrestlerName">
+				{
+				viewPlayer.team == "Fort Mill" ? viewPlayer.match.team.name : viewPlayer.match.opponent.name
+				}
+			</div>
+			<div className="wrestlerStats">
+				{
+				viewPlayer.team == "Fort Mill" ? 
+					`${viewPlayer.match.team.rating.toFixed(0)} / ${ viewPlayer.match.team.deviation.toFixed(0) }`
+					: `${viewPlayer.match.opponent.rating.toFixed(0)} / ${ viewPlayer.match.opponent.deviation.toFixed(0) }`
+				}
+			</div>
+		</div>
+		
+		<div className="lineupContainer">
+			<div className="lineupTitle">Comparison Probability</div>
+
+			<div className="probabilityChart">
+				<ProbabilityChart team={viewPlayer.match.team} opponent={viewPlayer.match.opponent} />
+			</div>
+		</div>
+
+		<div className="lineupContainer">
+			<div className="lineupTitle">Alternate Wrestlers</div>
+			
+			<div>
+				<div className="lineupAlternateHeader">
+					Top Picks
+				</div>
+
+				<div className="lineupAlternates">
+				{
+				viewPlayer.topPicks.map((topPick, topPickIndex) =>
+					<div key={ topPickIndex } className="lineupAlternate">
+						<div className="alternateWeightClass">{ topPick.weightClass }</div>
+
+						<div>
+							<div className="alternateName">{ topPick.name }</div>
+							<div className="subItem">{`${topPick.rating?.toFixed(0)} / ${ topPick.deviation?.toFixed(0) }`}</div>
+							<div className="subItem">Status: unassigned</div>
+						</div>
+						
+						<div className="alternateSelect button" onClick={ () => selectAlternate(viewPlayer.team, viewPlayer.match, topPick.id) }>
+							{/* Check */}
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+								<path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/>
+							</svg>
+						</div>
+					</div>
+				)}
+				</div>
+
+				<div className="lineupAlternateHeader">
+					Alternates
+				</div>
+
+				<div className="lineupAlternates">
+				{
+				viewPlayer.alternatePicks.map((alternatePick, alternatePickIndex) =>
+					<div key={ alternatePickIndex } className="lineupAlternate">
+						<div className="alternateWeightClass">{ alternatePick.weightClass }</div>
+
+						<div>
+							<div className="alternateName">{ alternatePick.name }</div>
+							<div className="subItem">{`${alternatePick.rating?.toFixed(0)} / ${ alternatePick.deviation?.toFixed(0) }`}</div>
+							<div className="subItem">Status: unassigned</div>
+						</div>
+						
+						<div className="alternateSelect button" onClick={ () => selectAlternate(viewPlayer.team, viewPlayer.match, alternatePick.id) }>
+							{/* Check */}
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+								<path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/>
+							</svg>
+						</div>
+					</div>
+				)}
+				</div>
+			
+			</div>
+		</div>
+		
+		</>
+		: ""
+		}
+
+	</div>
+
 </div>
+
 	);
 		
 }

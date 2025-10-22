@@ -1,114 +1,258 @@
-.weightClassContainer {
+.resultContainer {
 	display: grid;
-	grid-template-columns: 1fr .5fr 1fr;
-	align-items: center;
-	text-align: center;
-	position: relative;
-	z-index: 10;
+	grid-template-columns: 1fr 1fr;
+}
+
+.teamContainer.opponent {
+	text-align: right;
+}
+
+.teamAbbreviation {
+	font-family: 'Russo One';
+	font-size: 2em;
+	padding: 3px 9px;
+	border-radius: 6px;
+	margin-bottom: 7px;
+}
+
+.teamContainer.team .teamAbbreviation {
+	background-color: rgb(10 66 115);
+	color: rgb(223 170 3);
+	float: left;
+	margin-right: 7px;
+}
+
+.teamContainer.opponent .teamAbbreviation {
+	background-color: rgb(161 40 40);
+	color: rgb(211 211 211);
+	float: right;
+	margin-left: 7px;
+}
+
+.teamActualScore {
+	font-size: 1.5em;
+	font-family: 'Russo One';
+}
+
+.teamPredictedScore {
+	font-size: .9em;
+	color: rgb(171 171 171);
+}
+
+.teamName {
+	clear: both;
+}
+
+.teamStats {
+	font-size: .8em;
+	color: rgb(171 171 171);
+}
+
+.matchContainer {
+	display: grid;
+	grid-template-columns: 1fr 50px 1fr;
+	border-bottom: solid 1px rgb(211 211 211);
+	padding: 6px 0px;
+	color: rgb(79 79 79);
 }
 
 .wrestlerContainer {
-	text-align: center;
-	margin: 10px 0px;
-	padding: 7px 0px;
-	border-radius: 5px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
 }
-
 .wrestlerContainer.win {
-	background-color: rgb(212 247 212 / 25%);
-	border: 2px solid rgb(186 243 186 / 22%);
+	background-color: rgb(229 255 229);
 }
-
 .wrestlerContainer.lose {
-	background-color: rgb(247 212 212 / 25%);
-	border: 2px solid rgb(243 186 186 / 22%);
+	background-color: rgb(255 237 237);
 }
 
-.wrestlerContainer>div:first-child {
+.wrestlerContainer:last-child>.wrestlerDetails {
+	text-align: right;
+}
+
+.wrestlerDetails svg {
+	width: 12px;
+	height: 12px;
+}
+
+.wrestlerContainer .subItem {
+	font-size: .8em;
+	color: rgb(171 171 171);
+}
+
+.scoreDetails {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.scoreDetails select {
+	border: 0;
+	color: rgb(79 79 79);
+	appearance: none;
+	font-size: 1.3em;
+}
+.scoreDetails select.win {
+	color: rgb(0 165 0);
+}
+.scoreDetails select.lose {
+	color: rgb(255 0 0);
+}
+
+.scoreDetails>div:nth-child(2) {
+	color: rgb(171 171 171);
+	font-size: .8em;
+}
+
+.scoreDetails>div:nth-child(2).win {
+	color: rgb(0 165 0);
+}
+
+.scoreDetails>div:nth-child(2).lose {
+	color: rgb(255 0 0);
+}
+
+.weightContainer {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: .8em;
+	font-weight: bold;
+	border-left: solid 1px rgb(211 211 211);
+	border-right: solid 1px rgb(211 211 211);
+	margin: 4px 8px;
+}
+
+.backdrop {
+	position: fixed;
+	z-index: -10;
+	opacity: 0;
+	top: 0;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	background-color: rgb(103 103 103 / 89%);
+	transition: opacity 350ms ease-out;
+}
+.backdrop.active {
+	opacity: 100;
+	z-index: 20;
+}
+
+.editLineupContainer {
+	position: fixed;
+	top: 50px;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	background: rgb(245 245 245);
+	z-index: 30;
+	border-top-right-radius: 10px;
+	border-top-left-radius: 10px;
+	box-shadow: rgba(50, 50, 93, 0.25) 0px -2px 7px -3px, rgba(0, 0, 0, 0.3) 0px 1px 3px -1px;
+	transform: translateY(100%);
+	transition: transform 350ms cubic-bezier(0.03, -0.4, 0.46, 1.1);
+	overflow: auto;
+	max-width: 800px;
+	margin: auto;
+}
+.editLineupContainer.active {
+	transform: translateY(0);
+}
+
+.linupTop {
+	background-color: rgb(255 255 255);
+	border-top-left-radius: 10px;
+	border-top-right-radius: 10px;
+	padding-bottom: 20px;
+	box-shadow: rgba(50, 50, 93, 0.45) 0px 1px 2px -1px;
+}
+
+.lineupHeader {
+	display: flex;
+	justify-content: end;
+	padding: 7px 10px;
+}
+
+.lineupHeader svg {
+	width: 28px;
+	height: 28px;
+	margin: 0px 0px;
+}
+
+.lineupHeader path {
+	fill: rgb(149 147 147);
+}
+
+.wrestlerName {
+	margin: 0px 10px;
 	font-size: 1.4em;
 	color: rgb(71 71 71);
 }
 
-.wrestlerContainer>div:nth-child(n+2) {
-	font-size: .8em;
-	color: rgb(173 173 173);
+.wrestlerStats {
+	color: rgb(171 171 171);
+	margin: 0px 10px;
 }
 
-.scoreContainer {
-	margin: 0px 20px;
-	font-family: "Keania One", sans-serif;
-	font-size: 1.3em;
-	background: rgb(0 0 0);
-	color: rgb(225 38 38);
-	border: 4px double rgb(255 255 255);
-	padding: 3px 8px;
+.lineupContainer {
+	margin: 10px 0px;
+	background-color: rgb(255 255 255);
+	border-radius: 10px;
+	padding: 10px;
+	box-shadow: rgba(50, 50, 93, 0.45) 0px 0px 4px -1px;
 }
 
-.scoreBoard {
-	display: grid;
-	grid-template-columns: 35px 35px;
+.lineupTitle {
+	font-size: 1.1em;
+	margin-bottom: 20px;
 }
 
-.scoreTeam {
-	margin: 0px 2px;
-}
-
-.scoreTeam.win {
-	background-color: rgb(7 107 0);
-}
-
-.scoreTeam.lose {
-	background-color: rgb(107 0 0);
-}
-
-.weightClassExapnded {
-	margin-top: -10px;
-	position: relative;
-}
-
-.weightClassExapnded>.panelActionBar>button.select {
-	background-color: rgb(223 223 245);
-}
-
-.weightClassExpandedContent {
-	margin-top: 20px;
-	height: 170px;
+.probabilityChart {
 	display: flex;
+	justify-content: center;
+}
+
+.lineupAlternateHeader {
+	border-top: 1px solid rgb(173 171 171);
+	border-bottom: 1px solid rgb(173 171 171);
+	margin: 20px 0px;
+	padding: 5px 0px;
+}
+
+.lineupAlternate {
+	display: flex;
+	justify-content: space-between;
+	padding: 5px 0px;
 	align-items: center;
 }
-
-.alternateSection {
-	display: grid;
-	grid-template-columns: 1fr 1fr;
-	grid-gap: 1rem;
+.lineupAlternate:nth-child(2n) {
+	background-color: rgb(247 247 255);
+}
+.lineupAlternate>div:nth-child(2) {
+	flex: 1;
 }
 
-.alternateContainer {
-	display: flex;
-	flex-wrap: wrap;
-	gap: .5rem;
-	padding: 5px;
-	height: 140px;
-	overflow-y: scroll;
-	align-content: start;
+.alternateWeightClass {
+	margin: 0px 10px;
+	font-size: .8em;
+	background: rgb(124 124 247);
+	padding: 2px 8px;
+	border-radius: 6px;
+	color: rgb(255 255 255);
 }
 
-.alternateContainer>div.win {
-	background-color: rgb(185 243 183);
-	border: 2px solid rgb(136 199 143);
+.editLineupContainer .subItem {
+	font-size: .8em;
+	color: rgb(171 171 171);
 }
 
-.alternateContainer>div.lose {
-	background-color: rgb(243 183 183);
-	border: 2px solid rgb(199 136 136);
-}
-
-.alternateContainer>.pill.button {
-	font-size: .85rem;
-}
-
-.pill>select {
-	border-bottom: none;
+.alternateSelect svg {
+	background-color: rgb(186 186 255);
+	border-radius: 24px;
+	padding: 3px;
 }
 
 .probabilityChart svg {
