@@ -215,6 +215,21 @@
 	justify-content: center;
 }
 
+.probabilityChart svg {
+	width: 350px;
+	height: 150px;
+}
+
+.RunningTotalChart {
+	display: flex;
+	justify-content: center;
+}
+
+.RunningTotalChart svg {
+	width: 348px;
+	height: 261px;
+}
+
 .lineupAlternateHeader {
 	border-top: 1px solid rgb(173 171 171);
 	border-bottom: 1px solid rgb(173 171 171);
@@ -253,9 +268,4 @@
 	background-color: rgb(186 186 255);
 	border-radius: 24px;
 	padding: 3px;
-}
-
-.probabilityChart svg {
-	width: 350px;
-	height: 150px;
 }

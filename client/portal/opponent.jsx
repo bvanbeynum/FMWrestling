@@ -2,11 +2,15 @@ import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom/client";
 import Nav from "./nav.jsx";
 import ProbabilityChart from "./include/ProbabilityChart.jsx";
+import RunningTotalChart from "./include/RunningTotalChart.jsx";
 import "./include/index.css";
 import "./include/opponent.css";
+import { set } from "mongoose";
 
 const Opponent = () => {
-	const WeightClassNames = ["106","113","120","126","132","138","144","150","157","165","175","190","215","285"];
+
+	const [ weightClassNames, setWeightClassNames ] = useState(["106","113","120","126","132","138","144","150","157","165","175","190","215","285"]);
+	const [ startingWeight, setStartingWeight ] = useState("106")
 
 	const [ pageActive, setPageActive ] = useState(false);
 	const [ isLoading, setIsLoading ] = useState(true);
@@ -41,7 +45,7 @@ const Opponent = () => {
 					const savedWeightClasses = data.loggedInUser.session?.team || [];
 					
 					const wrestlersLoaded = data.team
-						.filter(wrestler => WeightClassNames.includes(wrestler.weightClass))
+						.filter(wrestler => weightClassNames.includes(wrestler.weightClass))
 						.map(wrestler => ({
 							id: wrestler.id,
 							name: wrestler.name,
@@ -54,7 +58,7 @@ const Opponent = () => {
 						}))
 						.map(wrestler => ({
 							...wrestler,
-							weightClassPosition: WeightClassNames.indexOf(wrestler.weightClass)
+							weightClassPosition: weightClassNames.indexOf(wrestler.weightClass)
 						}));
 
 					setTeamWrestlers(wrestlersLoaded);
@@ -69,6 +73,23 @@ const Opponent = () => {
 				});
 		}
 	}, []);
+
+	useEffect(() => {
+		if (lineup && lineup.length > 0) {
+			const staticLineup = lineup.filter(lineupMatch => lineupMatch.isStaticOpponent || lineupMatch.isStaticTeam)
+				.map(lineupMatch => ({ 
+					weightClass: lineupMatch.weightClass, 
+					teamWrestlerId: lineupMatch.isStaticTeam ? lineupMatch.team.id : null, 
+					opponentWrestlerId: lineupMatch.isStaticOpponent ? lineupMatch.opponent.id : null 
+				}));
+
+			const bestLineup = pickBestLineup(teamWrestlers, opponentWrestlers, staticLineup);
+			const eventStats = generateStats(bestLineup);
+
+			setLineup(bestLineup);
+			setEventDetails(eventStats);
+		}
+	}, [ weightClassNames ])
 
 	const selectOpponent = (opponentName) => {
 		setIsLoading(true);
@@ -85,14 +106,14 @@ const Opponent = () => {
 			})
 			.then(data => {
 				const opponentWrestlers = data.wrestlers
-					.filter(wrestler => WeightClassNames.includes(wrestler.weightClass))
+					.filter(wrestler => weightClassNames.includes(wrestler.weightClass))
 					.map(wrestler => ({
 						id: wrestler.id,
 						name: wrestler.name,
 						rating: wrestler.rating,
 						deviation: wrestler.deviation,
 						weightClass: wrestler.weightClass,
-						weightClassPosition: WeightClassNames.indexOf(wrestler.weightClass)
+						weightClassPosition: weightClassNames.indexOf(wrestler.weightClass)
 					}));
 
 				const bestLineup = pickBestLineup(teamWrestlers, opponentWrestlers, []);
@@ -124,6 +145,17 @@ const Opponent = () => {
 		setEventDetails(generateStats(scoreLineup));
 	};
 
+	const updateStartingWeight = startingWeight => {
+		const weightIndex = weightClassNames.findIndex(weightClass => weightClass == startingWeight),
+			newWeightClasses = [
+				...weightClassNames.slice(weightIndex),
+				...weightClassNames.slice(0, weightIndex)
+			];
+		
+		setWeightClassNames(newWeightClasses);
+		setStartingWeight(startingWeight);
+	};
+
 	const selectViewPlayer = (teamName, match) => {
 		const topPicks = (teamName == "Fort Mill" ? teamWrestlers : opponentWrestlers)
 				.filter(wrestler => Math.abs(wrestler.weightClassPosition - match.weightClassPosition) <= 1)
@@ -145,9 +177,11 @@ const Opponent = () => {
 			.map(lineupMatch => ({
 				weightClass: lineupMatch.weightClass,
 				teamWrestlerId: teamName == "Fort Mill" && lineupMatch.team?.id == wrestlerId ? null // If the wrestler is already assigned (and not the weight class) then blank
-					: lineupMatch.team?.id, // Keep the existing record
+					: lineupMatch.isStaticTeam ? lineupMatch.team?.id // Keep the existing record
+					: null,
 				opponentWrestlerId: teamName != "Fort Mill" && lineupMatch.opponent?.id == wrestlerId ? null 
-					: lineupMatch.opponent?.id
+					: lineupMatch.isStaticOpponent ? lineupMatch.opponent?.id
+					: null
 			}));
 		
 		const staticLineupIndex = staticLineup.findIndex(lineupMatch => lineupMatch.weightClass === match.weightClass);
@@ -177,7 +211,7 @@ const Opponent = () => {
 	};
 
 	const pickBestLineup = (teamWrestlers, opponentWrestlers, staticLineup) => {
-		const initialTeamLineup = WeightClassNames.map(weightClass => 
+		const initialTeamLineup = weightClassNames.map(weightClass => 
 			teamWrestlers.filter(wrestler => wrestler.weightClass == weightClass)
 				.sort((wrestlerA, wrestlerB) => wrestlerB.rating - wrestlerA.rating)
 				.find(() => true)
@@ -197,8 +231,7 @@ const Opponent = () => {
 			.filter(weightClass => weightClass.team)
 			.map(weightClass => ({
 				...weightClass.team,
-				overrideWeightClass: weightClass.weightClass,
-				overrideWeightClassPosition: weightClass.weightClassPosition
+				overrideWeightClass: weightClass.weightClass
 			}));
 		const teamBestLineup = generateLineup(teamWrestlers, opponentOverrides, teamStatic);
 
@@ -242,7 +275,7 @@ const Opponent = () => {
 	};
 
 	const generateLineup = (teamA, teamBMatches, staticTeam = []) => {
-		const matches = WeightClassNames.map((weightClass, weightClassIndex) => ({
+		const weights = weightClassNames.map((weightClass, weightClassIndex) => ({
 			weightClass: weightClass,
 			weightClassPosition: weightClassIndex,
 			team: null,
@@ -256,7 +289,7 @@ const Opponent = () => {
 
 		// Set the static weight classes first
 		staticTeam.forEach(staticWrestler => {
-			const match = matches.find(lineupWrestler => lineupWrestler.weightClass == staticWrestler.weightClass);
+			const match = weights.find(lineupWrestler => lineupWrestler.weightClass == staticWrestler.weightClass);
 
 			match.team = teamA.find(wrestler => wrestler.id == staticWrestler.wrestlerId);
 			match.prediction = !match.opponent ? 6
@@ -273,9 +306,9 @@ const Opponent = () => {
 		for (let wrestlerIndex = 0; wrestlerIndex < availableWrestlers.length; wrestlerIndex++) {
 			const bestWrestler = availableWrestlers[wrestlerIndex];
 
-			const bestMatch = matches
+			const bestMatch = weights
 				.filter(match => 
-					Math.abs(bestWrestler.weightClassPosition - match.weightClassPosition) <= 1 
+					Math.abs(weightClassNames.findIndex(weightClass => weightClass == bestWrestler.weightClass) - match.weightClassPosition) <= 1 
 					&& !usedWeightClasses.has(match.weightClass)
 				)
 				.map(match => ({
@@ -291,7 +324,7 @@ const Opponent = () => {
 				.find(() => true);
 			
 			if (bestMatch) {
-				const match = matches.find(lineupWrestler => lineupWrestler.weightClass == bestMatch.weightClass);
+				const match = weights.find(lineupWrestler => lineupWrestler.weightClass == bestMatch.weightClass);
 				match.team = bestWrestler;
 				match.prediction = bestMatch.prediction;
 				match.isWin = bestMatch.isWin;
@@ -300,7 +333,7 @@ const Opponent = () => {
 			}
 		}
 
-		return matches;
+		return weights;
 	};
 
 	const calculateLineupScore = matches => {
@@ -340,9 +373,12 @@ const Opponent = () => {
 			return 0;
 		}
 
+		const wrestlerPosition = weightClassNames.findIndex(weightClass => weightClass == myWrestler.weightClass);
+		const opponentPosition = weightClassNames.findIndex(weightClass => weightClass == opponentWrestler.weightClass)
+
 		let impactedWrestlerRating = myWrestler.rating;
-		if (myWrestler.weightClassPosition != weightClassPosition) {
-			const bumpAmount = Math.abs(myWrestler.weightClassPosition - weightClassPosition);
+		if (wrestlerPosition != weightClassPosition) {
+			const bumpAmount = Math.abs(wrestlerPosition - weightClassPosition);
 			if (bumpAmount > 0) {
 				// Apply a penalty if bumped. A fixed penalty per bump is a simple approach.
 				// You can adjust this penalty value (e.g., 50 Glicko points per class bumped).
@@ -352,8 +388,8 @@ const Opponent = () => {
 		}
 
 		let impactedOpponentRating = opponentWrestler.rating;
-		if (opponentWrestler.weightClassPosition != weightClassPosition) {
-			const bumpAmount = Math.abs(opponentWrestler.weightClassPosition - weightClassPosition);
+		if (opponentPosition != weightClassPosition) {
+			const bumpAmount = Math.abs(opponentPosition - weightClassPosition);
 			if (bumpAmount > 0) {
 				// Apply a penalty if bumped. A fixed penalty per bump is a simple approach.
 				// You can adjust this penalty value (e.g., 50 Glicko points per class bumped).
@@ -469,7 +505,18 @@ const Opponent = () => {
 							)}
 						</select>
 					</label>
+
+					<label>
+						Starting Weight
+						<select value={ startingWeight } onChange={ event => updateStartingWeight(event.target.value) }>
+							{
+							weightClassNames.map((weightClass, weightClassIndex) => 
+							<option key={ weightClassIndex } value={ weightClass }>{ weightClass }</option>
+							)}
+						</select>
+					</label>
 				</div>
+				
 			</div>
 
 			{
@@ -495,6 +542,19 @@ const Opponent = () => {
 					<div className="teamStats">
 						wins: { eventDetails.opponentWins } losses: { eventDetails.opponentLosses }
 					</div>
+				</div>
+			</div>
+			
+			<div className="panel">
+				<div>Score</div>
+
+				<div className="runningTotalChart">
+					<RunningTotalChart
+						lineup={lineup}
+						weightClassNames={weightClassNames}
+						teamName={"Fort Mill"}
+						opponentName={selectedOpponent}
+					/>
 				</div>
 			</div>
 			
@@ -577,6 +637,7 @@ const Opponent = () => {
 			}
 
 			</div>
+
 			</>
 			: ""
 			}
