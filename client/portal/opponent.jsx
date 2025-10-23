@@ -8,6 +8,7 @@ import "./include/opponent.css";
 import { set } from "mongoose";
 
 const Opponent = () => {
+	const originalWeightClasses = ["106","113","120","126","132","138","144","150","157","165","175","190","215","285"];
 
 	const [ weightClassNames, setWeightClassNames ] = useState(["106","113","120","126","132","138","144","150","157","165","175","190","215","285"]);
 	const [ startingWeight, setStartingWeight ] = useState("106")
@@ -17,6 +18,9 @@ const Opponent = () => {
 	const [ loggedInUser, setLoggedInUser ] = useState(null);
 	const [ isFilterExpanded, setIsFilterExpanded ] = useState(false);
 
+	const [ saveName, setSaveName ] = useState("");
+	const [ selectedLineup, setSelectedLineup ] = useState("");
+
 	const [ teamWrestlers, setTeamWrestlers ] = useState([]);
 
 	const [ opponents, setOpponents ] = useState([]);
@@ -25,6 +29,7 @@ const Opponent = () => {
 
 	const [ lineup, setLineup ] = useState([]);
 	const [ eventDetails, setEventDetails ] = useState({})
+	const [ savedLineups, setSavedLineups ] = useState([]);
 
 	const [ viewPlayer, setViewPlayer ] = useState(null);
 
@@ -55,10 +60,6 @@ const Opponent = () => {
 								savedWeightClasses.filter(savedWeightClass => savedWeightClass.wrestlerId == wrestler.id).map(savedWeightClass => savedWeightClass.weightClass).find(() => true)
 								: wrestler.weightClass,
 							isSavedWrestler: savedWeightClasses.some(savedWeightClass => savedWeightClass.wrestlerId == wrestler.id)
-						}))
-						.map(wrestler => ({
-							...wrestler,
-							weightClassPosition: weightClassNames.indexOf(wrestler.weightClass)
 						}));
 
 					setTeamWrestlers(wrestlersLoaded);
@@ -73,23 +74,6 @@ const Opponent = () => {
 				});
 		}
 	}, []);
-
-	useEffect(() => {
-		if (lineup && lineup.length > 0) {
-			const staticLineup = lineup.filter(lineupMatch => lineupMatch.isStaticOpponent || lineupMatch.isStaticTeam)
-				.map(lineupMatch => ({ 
-					weightClass: lineupMatch.weightClass, 
-					teamWrestlerId: lineupMatch.isStaticTeam ? lineupMatch.team.id : null, 
-					opponentWrestlerId: lineupMatch.isStaticOpponent ? lineupMatch.opponent.id : null 
-				}));
-
-			const bestLineup = pickBestLineup(teamWrestlers, opponentWrestlers, staticLineup);
-			const eventStats = generateStats(bestLineup);
-
-			setLineup(bestLineup);
-			setEventDetails(eventStats);
-		}
-	}, [ weightClassNames ])
 
 	const selectOpponent = (opponentName) => {
 		setIsLoading(true);
@@ -112,22 +96,90 @@ const Opponent = () => {
 						name: wrestler.name,
 						rating: wrestler.rating,
 						deviation: wrestler.deviation,
-						weightClass: wrestler.weightClass,
-						weightClassPosition: weightClassNames.indexOf(wrestler.weightClass)
+						weightClass: wrestler.weightClass
 					}));
 
 				const bestLineup = pickBestLineup(teamWrestlers, opponentWrestlers, []);
 				const eventStats = generateStats(bestLineup);
-				
+
+				if (loggedInUser.session && loggedInUser.session.matchSave && loggedInUser.session.matchSave.length > 0) {
+					setSavedLineups(loggedInUser.session.matchSave
+						.filter(save => save.opponent == opponentName)
+						.map(save => ({...save, id: save["_id"] }))
+					);
+				}
+						
 				setLineup(bestLineup)
 				setEventDetails(eventStats);
-				
+
 				setOpponentWrestlers(opponentWrestlers);
 				setIsLoading(false);
 			})
 			.catch(error => {
 				console.warn(error);
 			});
+	};
+
+	const changeLineup = lineupId => {
+		let loadLineup,
+			newWeightClasses,
+			newLineup;
+
+		if (lineupId) {
+			// Selected an existing lineup
+			loadLineup = savedLineups.find(lineup => lineup.id == lineupId);
+			
+			const weightIndex = weightClassNames.findIndex(weightClass => weightClass == loadLineup.startingWeightClass);
+			
+			newWeightClasses = [
+					...weightClassNames.slice(weightIndex),
+					...weightClassNames.slice(0, weightIndex)
+				];
+
+			newLineup = loadLineup.lineup.map(lineupMatch => {
+				const teamWrestler = teamWrestlers.find(wrestler => wrestler.id == lineupMatch.teamWrestlerId);
+				const opponentWrestler = opponentWrestlers.find(wrestler => wrestler.id == lineupMatch.opponentWrestlerId);
+				const weightClassPosition = newWeightClasses.indexOf(lineupMatch.weightClass)
+
+				return {
+					weightClass: lineupMatch.weightClass,
+					weightClassPosition: weightClassPosition,
+					isStaticTeam: lineupMatch.isStaticTeam && teamWrestler !== null,
+					team: teamWrestler,
+					teamScore: lineupMatch.teamScore,
+					isStaticOpponent: lineupMatch.isStaticOpponent && opponentWrestler !== null,
+					opponent: opponentWrestler,
+					opponentScore: lineupMatch.opponentScore,
+					prediction: !opponentWrestler ? 6
+						: !teamWrestler ? -6
+						: predictMatchOutcomePoints(teamWrestler, opponentWrestler, weightClassPosition)
+				}
+			});
+
+			setSelectedLineup(lineupId);
+			setSaveName(loadLineup.name);
+			setStartingWeight(loadLineup.startingWeightClass);
+		}
+		else {
+			// Create a new lineup
+
+			const weightIndex = weightClassNames.findIndex(weightClass => weightClass == "106");
+			
+			newWeightClasses = [
+					...weightClassNames.slice(weightIndex),
+					...weightClassNames.slice(0, weightIndex)
+				];
+				
+			newLineup = pickBestLineup(teamWrestlers, opponentWrestlers, [], newWeightClasses, true);
+
+			setSelectedLineup("");
+			setSaveName("");
+			setStartingWeight("106");
+		}
+
+		setWeightClassNames(newWeightClasses);
+		setLineup(newLineup);
+		setEventDetails(generateStats(newLineup));
 	};
 
 	const changeScore = (teamName, match, score) => {
@@ -150,19 +202,32 @@ const Opponent = () => {
 			newWeightClasses = [
 				...weightClassNames.slice(weightIndex),
 				...weightClassNames.slice(0, weightIndex)
-			];
-		
+			],
+			updatedLineup = [
+				...lineup.slice(weightIndex),
+				...lineup.slice(0, weightIndex)
+				]
+				.map((match, matchIndex) => ({
+					...match,
+					weightClassPosition: matchIndex
+				}));
+
+		setLineup(updatedLineup);
 		setWeightClassNames(newWeightClasses);
 		setStartingWeight(startingWeight);
 	};
 
 	const selectViewPlayer = (teamName, match) => {
+		const originalMatchPosition = originalWeightClasses.findIndex(weightClass => weightClass == match.weightClass);
+
 		const topPicks = (teamName == "Fort Mill" ? teamWrestlers : opponentWrestlers)
-				.filter(wrestler => Math.abs(wrestler.weightClassPosition - match.weightClassPosition) <= 1)
+				.map(wrestler => ({...wrestler, weightClassPosition: originalWeightClasses.indexOf(wrestler.weightClass)}))
+				.filter(wrestler => Math.abs(wrestler.weightClassPosition - originalMatchPosition) <= 1)
 				.sort((wrestlerA, wrestlerB) => wrestlerB.rating - wrestlerA.rating),
 
 			alternatePicks = (teamName == "Fort Mill" ? teamWrestlers : opponentWrestlers)
-				.filter(wrestler => Math.abs(wrestler.weightClassPosition - match.weightClassPosition) > 1)
+				.map(wrestler => ({...wrestler, weightClassPosition: weightClassNames.indexOf(wrestler.weightClass)}))
+				.filter(wrestler => Math.abs(wrestler.weightClassPosition - originalMatchPosition) > 1)
 				.sort((wrestlerA, wrestlerB) => 
 					wrestlerA.weightClassPosition != wrestlerB.weightClassPosition ?
 						wrestlerA.weightClassPosition - wrestlerB.weightClassPosition
@@ -210,8 +275,87 @@ const Opponent = () => {
 		setViewPlayer(null);
 	};
 
-	const pickBestLineup = (teamWrestlers, opponentWrestlers, staticLineup) => {
-		const initialTeamLineup = weightClassNames.map(weightClass => 
+	const saveLineup = isSave => {
+		const savePacket = {};
+
+		if (isSave) {
+			savePacket.saveid = selectedLineup;
+			savePacket.savename = saveName;
+			savePacket.opponentname = selectedOpponent;
+			savePacket.startingweightclass = startingWeight;
+
+			savePacket.lineup.map(lineupMatch => ({
+				weightClass: lineupMatch.weightClass,
+				isStaticTeam: lineupMatch.isStaticTeam,
+				teamWrestlerId: lineupMatch.team?.id,
+				teamScore: lineupMatch.teamScore,
+				isStaticOpponent: lineupMatch.isStaticOpponent,
+				opponentWrestlerId: lineupMatch.opponent?.id,
+				opponentScore: lineupMatch.opponentScore,
+			}));
+		}
+		else {
+			savePacket.saveid = selectedLineup;
+		}
+
+		setIsLoading(true);
+		
+		fetch(`/api/opponentsavelineup`, { 
+				method: "post", 
+				headers: { "Content-Type": "application/json" }, 
+				body: JSON.stringify({ saveid: selectedLineup, savename: saveName, opponentname: selectedOpponent, startingweightclass: startingWeight, lineup: saveLineup }) 
+			})
+			.then(response => {
+				if (response.ok) {
+					return response.json();
+				}
+				else {
+					throw Error(response.statusText);
+				}
+			})
+			.then(data => {
+				if (data.savedMatches && data.savedMatches.length > 0) {
+					setSavedLineups(data.savedMatches
+						.filter(save => save.opponent == selectedOpponent)
+						.map(save => ({...save, id: save["_id"] }))
+					);
+				}
+				
+				if (!selectedLineup) {
+					const addedMatch = data.savedMatches.find(save => !savedLineups.some(existing => existing.id == save["_id"]));
+
+					setSelectedLineup(addedMatch["_id"]);
+				}
+				else if (!isSave) {
+					// Create a new lineup
+
+					const weightIndex = weightClassNames.findIndex(weightClass => weightClass == "106");
+					
+					const newWeightClasses = [
+							...weightClassNames.slice(weightIndex),
+							...weightClassNames.slice(0, weightIndex)
+						];
+						
+					const newLineup = pickBestLineup(teamWrestlers, opponentWrestlers, [], newWeightClasses, true);
+
+					setSelectedLineup("");
+					setSaveName("");
+					setStartingWeight("106");
+					setWeightClassNames(newWeightClasses);
+					setLineup(newLineup);
+					setEventDetails(generateStats(newLineup));
+				}
+
+				setIsLoading(false);
+			})
+			.catch(error => {
+				console.warn(error);
+			});
+		
+	};
+
+	const pickBestLineup = (teamWrestlers, opponentWrestlers, staticLineup, weightClassOverride, newLineupOverride = false) => {
+		const initialTeamLineup = (weightClassOverride || weightClassNames).map(weightClass => 
 			teamWrestlers.filter(wrestler => wrestler.weightClass == weightClass)
 				.sort((wrestlerA, wrestlerB) => wrestlerB.rating - wrestlerA.rating)
 				.find(() => true)
@@ -225,7 +369,7 @@ const Opponent = () => {
 				.map(weightClass => ({ weightClass: weightClass.weightClass, wrestlerId: weightClass.teamWrestlerId}));
 
 		// Pick the best opponent linup given the team's best wrester at their default weight class
-		const opponentLineup = generateLineup(opponentWrestlers, initialTeamLineup, opponentStatic);
+		const opponentLineup = generateLineup((weightClassOverride || weightClassNames), opponentWrestlers, initialTeamLineup, opponentStatic);
 
 		const opponentOverrides = opponentLineup
 			.filter(weightClass => weightClass.team)
@@ -233,7 +377,7 @@ const Opponent = () => {
 				...weightClass.team,
 				overrideWeightClass: weightClass.weightClass
 			}));
-		const teamBestLineup = generateLineup(teamWrestlers, opponentOverrides, teamStatic);
+		const teamBestLineup = generateLineup((weightClassOverride || weightClassNames), teamWrestlers, opponentOverrides, teamStatic);
 
 		const teamLineup = teamBestLineup.map(match => {
 			const existing = lineup.filter(lineupMatch => lineupMatch.weightClass == match.weightClass)
@@ -246,7 +390,12 @@ const Opponent = () => {
 				}))
 				.find(() => true)
 			
-			return existing || {...match, teamScore: 0, opponentScore: 0, isStaticTeam: false, isStaticOpponent: false };
+			if (existing && !newLineupOverride) {
+				return existing;
+			}
+			else {
+				return {...match, teamScore: 0, opponentScore: 0, isStaticTeam: false, isStaticOpponent: false };
+			}
 		});
 
 		return teamLineup;
@@ -254,12 +403,32 @@ const Opponent = () => {
 
 	const generateStats = (lineup) => {
 		return lineup.reduce((output, match) => ({
-			teamWins: output.teamWins + (match.isWin ? 1 : 0),
-			teamLosses: output.teamLosses + (match.isWin ? 0 : 1),
+			teamWins: output.teamWins + (
+				match.teamScore > 0 ? 1
+				: match.opponentScore > 0 ? 0
+				: match.prediction > 0 ? 1
+				: 0
+			),
+			teamLosses: output.teamLosses + (
+				match.teamScore > 0 ? 0
+				: match.opponentScore > 0 ? 1
+				: match.prediction < 0 ? 1
+				: 0
+			),
 			teamScore: output.teamScore + +match.teamScore,
 			teamScorePredicted: output.teamScorePredicted + (match.prediction > 0 ? match.prediction : 0),
-			opponentWins: output.opponentWins + (match.isWin ? 0 : 1),
-			opponentLosses: output.opponentLosses + (match.isWin ? 1 : 0),
+			opponentWins: output.opponentWins + output.teamLosses + (
+				match.teamScore > 0 ? 0
+				: match.opponentScore > 0 ? 1
+				: match.prediction < 0 ? 1
+				: 0
+			),
+			opponentLosses: output.opponentLosses + (
+				match.teamScore > 0 ? 1
+				: match.opponentScore > 0 ? 0
+				: match.prediction > 0 ? 1
+				: 0
+			),
 			opponentScore: output.opponentScore + +match.opponentScore,
 			opponentScorePredicted: output.opponentScorePredicted + (match.prediction < 0 ? match.prediction * -1 : 0),
 		}), { 
@@ -274,8 +443,8 @@ const Opponent = () => {
 		});
 	};
 
-	const generateLineup = (teamA, teamBMatches, staticTeam = []) => {
-		const weights = weightClassNames.map((weightClass, weightClassIndex) => ({
+	const generateLineup = (weightClasses, teamA, teamBMatches, staticTeam = []) => {
+		const weights = weightClasses.map((weightClass, weightClassIndex) => ({
 			weightClass: weightClass,
 			weightClassPosition: weightClassIndex,
 			team: null,
@@ -295,7 +464,6 @@ const Opponent = () => {
 			match.prediction = !match.opponent ? 6
 				: !match.team ? -6
 				: predictMatchOutcomePoints(match.team, match.opponent, match.weightClassPosition);
-			match.isWin = (match.team?.rating || 0) > (match.opponent?.rating || 0);
 
 			usedWeightClasses.add(match.weightClass);
 			availableWrestlers.splice(availableWrestlers.indexOf(match.team), 1);
@@ -307,16 +475,15 @@ const Opponent = () => {
 			const bestWrestler = availableWrestlers[wrestlerIndex];
 
 			const bestMatch = weights
-				.filter(match => 
-					Math.abs(weightClassNames.findIndex(weightClass => weightClass == bestWrestler.weightClass) - match.weightClassPosition) <= 1 
+				.filter((match) => 
+					Math.abs(weightClasses.findIndex(weightClass => weightClass == bestWrestler.weightClass) - match.weightClassPosition) <= 1 
 					&& !usedWeightClasses.has(match.weightClass)
 				)
 				.map(match => ({
 					...match,
 					prediction: !match.opponent ? 6
 						: !bestWrestler ? -6
-						: predictMatchOutcomePoints(bestWrestler, match.opponent, match.weightClassPosition),
-					isWin: bestWrestler.rating > (match.opponent?.rating || 0)
+						: predictMatchOutcomePoints(bestWrestler, match.opponent, match.weightClassPosition)
 				}))
 				.sort((lineupWrestlerA, lineupWrestlerB) => 
 					lineupWrestlerB.prediction - lineupWrestlerA.prediction
@@ -327,7 +494,6 @@ const Opponent = () => {
 				const match = weights.find(lineupWrestler => lineupWrestler.weightClass == bestMatch.weightClass);
 				match.team = bestWrestler;
 				match.prediction = bestMatch.prediction;
-				match.isWin = bestMatch.isWin;
 
 				usedWeightClasses.add(bestMatch.weightClass);
 			}
@@ -505,7 +671,10 @@ const Opponent = () => {
 							)}
 						</select>
 					</label>
-
+					
+					{
+					selectedOpponent ?
+					
 					<label>
 						Starting Weight
 						<select value={ startingWeight } onChange={ event => updateStartingWeight(event.target.value) }>
@@ -515,6 +684,27 @@ const Opponent = () => {
 							)}
 						</select>
 					</label>
+
+					: ""
+					}
+
+					{
+					savedLineups && savedLineups.length > 0 ?
+
+					<label>
+						Saved
+						<select value={ selectedLineup } onChange={ event => changeLineup(event.target.value) }>
+							<option value="">*New</option>
+							{
+							savedLineups.map(lineup => 
+							<option key={ lineup.id } value={ lineup.id }>{ lineup.name }</option>
+							)}
+						</select>
+					</label>
+
+					: ""
+
+					}
 				</div>
 				
 			</div>
@@ -546,7 +736,7 @@ const Opponent = () => {
 			</div>
 			
 			<div className="panel">
-				<div>Score</div>
+				<h3>Score</h3>
 
 				<div className="runningTotalChart">
 					<RunningTotalChart
@@ -559,6 +749,7 @@ const Opponent = () => {
 			</div>
 			
 			<div className="panel">
+				<h3>Lineup</h3>
 
 			{
 			lineup.map(match => 
@@ -636,6 +827,24 @@ const Opponent = () => {
 			)
 			}
 
+				<div className="saveLineupContainer">
+					<input type="text" value={ saveName } onChange={ event => setSaveName(event.target.value) } />
+
+					<button className="lineupButton save" onClick={ () => saveLineup(true) } disabled={ !saveName }>
+						Save
+					</button>
+					
+					{
+					selectedLineup ?
+					
+					<button className="lineupButton delete" onClick={ () => saveLineup(false) }>
+						Delete
+					</button>
+
+					: ""
+					}
+				</div>
+
 			</div>
 
 			</>
@@ -648,7 +857,7 @@ const Opponent = () => {
 
 	</div>
 
-	<div className={`backdrop ${ viewPlayer ? "active" : "" }`}></div>
+	<div className={`backdrop ${ viewPlayer ? "active" : "" }`} onClick={ () => setViewPlayer(null) }></div>
 
 	<div className={`editLineupContainer ${ viewPlayer ? "active" : "" }`}>
 		{

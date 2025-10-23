@@ -45,16 +45,17 @@ export default {
 				}]
 			}],
 			matchSave: [{
+				name: String,
 				opponent: String,
 				startingWeightClass: String,
 				lineup: [{
 					weightClass: String,
-					teamWresterId: String,
+					isStaticTeam: Boolean,
+					teamWrestlerId: String,
 					teamScore: Number,
-					teamPredicted: Number,
+					isStaticOpponent: Boolean,
 					opponentWrestlerId: String,
-					opponentScore: Number,
-					opponentPredicted: Number
+					opponentScore: Number
 				}]
 			}]
 		}

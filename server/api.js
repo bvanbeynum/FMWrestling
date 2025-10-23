@@ -2178,7 +2178,7 @@ export default {
 		return output;		
 	},
 
-	opponentSaveLineup: async (user, opponentName, startingWeightClass, lineup, serverPath) => {
+	opponentSaveLineup: async (user, saveId, saveName, opponentName, startingWeightClass, lineup, serverPath) => {
 		const output = { data: {} };
 		
 		let saveUser = null;
@@ -2199,22 +2199,28 @@ export default {
 			if (!saveUser.session.matchSave) {
 				saveUser.session.matchSave = [];
 			}
-
-			if (saveUser.session.matchSave.some(match => match.opponent == opponentName)) {
+			
+			if (!lineup && saveUser.session.matchSave.some(match => match["_id"] == saveId)) {
+				// Delete the match
+				saveUser.session.matchSave = saveUser.session.matchSave.filter(match => match["_id"] != saveId);
+			}
+			else if (saveUser.session.matchSave.some(match => match["_id"] == saveId)) {
 				// Opponent exists, replace it
 				saveUser.session.matchSave = saveUser.session.matchSave.map(match => {
-					if (match.opponent == opponentName) {
+					if (match["_id"] == saveId) {
 						return {
+							_id: saveId,
+							name: saveName,
 							opponent: opponentName,
 							startingWeightClass: startingWeightClass,
 							lineup: lineup.map(lineupMatch => ({
 								weightClass: lineupMatch.weightClass,
+								isStaticTeam: lineupMatch.isStaticTeam,
 								teamWrestlerId: lineupMatch.teamWrestlerId,
 								teamScore: lineupMatch.teamScore,
-								teamPredicted: lineupMatch.teamPredicted,
+								isStaticOpponent: lineupMatch.isStaticOpponent,
 								opponentWrestlerId: lineupMatch.opponentWrestlerId,
-								opponentScore: lineupMatch.opponentScore,
-								opponentPredicted: lineupMatch.opponentPredicted
+								opponentScore: lineupMatch.opponentScore
 							}))
 						};
 					}
@@ -2224,17 +2230,18 @@ export default {
 			}
 			else {
 				// Opponent doesn't exist, add it
-				saveUser.session.matchSave.append({
+				saveUser.session.matchSave.push({
+					name: saveName,
 					opponent: opponentName,
 					startingWeightClass: startingWeightClass,
 					lineup: lineup.map(lineupMatch => ({
 						weightClass: lineupMatch.weightClass,
+						isStaticTeam: lineupMatch.isStaticTeam,
 						teamWrestlerId: lineupMatch.teamWrestlerId,
 						teamScore: lineupMatch.teamScore,
-						teamPredicted: lineupMatch.teamPredicted,
+						isStaticOpponent: lineupMatch.isStaticOpponent,
 						opponentWrestlerId: lineupMatch.opponentWrestlerId,
-						opponentScore: lineupMatch.opponentScore,
-						opponentPredicted: lineupMatch.opponentPredicted
+						opponentScore: lineupMatch.opponentScore
 					}))
 				});
 			}
@@ -2254,9 +2261,20 @@ export default {
 			return output;
 		}
 		
-		output.status = 200;
-		output.data.status = "ok";
-		return output;
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/user?id=${ user.id }`);
+			const returnUser = clientResponse.body.users[0];
+
+			output.status = 200;
+			output.data.savedMatches = returnUser.session.matchSave;
+			return output;
+		}
+		catch (error) {
+			output.status = 564;
+			output.error = error.message;
+			return output;
+		}
+		
 	}
 	
 };
