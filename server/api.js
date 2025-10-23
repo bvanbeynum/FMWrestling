@@ -2176,6 +2176,87 @@ export default {
 
 		output.status = 200;
 		return output;		
+	},
+
+	opponentSaveLineup: async (user, opponentName, startingWeightClass, lineup, serverPath) => {
+		const output = { data: {} };
+		
+		let saveUser = null;
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/user?id=${ user.id }`);
+			saveUser = clientResponse.body.users[0];
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+
+		try {
+			if (!saveUser.session) {
+				saveUser.session = {}
+			}
+			if (!saveUser.session.matchSave) {
+				saveUser.session.matchSave = [];
+			}
+
+			if (saveUser.session.matchSave.some(match => match.opponent == opponentName)) {
+				// Opponent exists, replace it
+				saveUser.session.matchSave = saveUser.session.matchSave.map(match => {
+					if (match.opponent == opponentName) {
+						return {
+							opponent: opponentName,
+							startingWeightClass: startingWeightClass,
+							lineup: lineup.map(lineupMatch => ({
+								weightClass: lineupMatch.weightClass,
+								teamWrestlerId: lineupMatch.teamWrestlerId,
+								teamScore: lineupMatch.teamScore,
+								teamPredicted: lineupMatch.teamPredicted,
+								opponentWrestlerId: lineupMatch.opponentWrestlerId,
+								opponentScore: lineupMatch.opponentScore,
+								opponentPredicted: lineupMatch.opponentPredicted
+							}))
+						};
+					}
+
+					return match;
+				});
+			}
+			else {
+				// Opponent doesn't exist, add it
+				saveUser.session.matchSave.append({
+					opponent: opponentName,
+					startingWeightClass: startingWeightClass,
+					lineup: lineup.map(lineupMatch => ({
+						weightClass: lineupMatch.weightClass,
+						teamWrestlerId: lineupMatch.teamWrestlerId,
+						teamScore: lineupMatch.teamScore,
+						teamPredicted: lineupMatch.teamPredicted,
+						opponentWrestlerId: lineupMatch.opponentWrestlerId,
+						opponentScore: lineupMatch.opponentScore,
+						opponentPredicted: lineupMatch.opponentPredicted
+					}))
+				});
+			}
+		}
+		catch (error) {
+			output.status = 562;
+			output.error = error.message;
+			return output;
+		}
+
+		try {
+			await client.post(`${ serverPath }/data/user`).send({ user: saveUser }).then();
+		}
+		catch (error) {
+			output.status = 563;
+			output.error = error.message;
+			return output;
+		}
+		
+		output.status = 200;
+		output.data.status = "ok";
+		return output;
 	}
 	
 };

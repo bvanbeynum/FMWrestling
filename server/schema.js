@@ -43,6 +43,19 @@ export default {
 					opponentWrestlerId: String,
 					teamWrestlerId: String
 				}]
+			}],
+			matchSave: [{
+				opponent: String,
+				startingWeightClass: String,
+				lineup: [{
+					weightClass: String,
+					teamWresterId: String,
+					teamScore: Number,
+					teamPredicted: Number,
+					opponentWrestlerId: String,
+					opponentScore: Number,
+					opponentPredicted: Number
+				}]
 			}]
 		}
 	}),

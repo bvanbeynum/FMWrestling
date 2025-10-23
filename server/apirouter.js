@@ -352,6 +352,8 @@ router.get("/api/wrestlerdetails", authAPI, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
 });
 
+// ***************** Opponent ********************
+
 router.get("/api/opponentload", authAPI, async (request, response) => {
 	const results = await api.opponentLoad(request.serverPath);
 
@@ -360,6 +362,16 @@ router.get("/api/opponentload", authAPI, async (request, response) => {
 
 router.get("/api/opponentselect", authAPI, async (request, response) => {
 	const results = await api.opponentSelect(request.query.opponent, request.serverPath);
+
+	response.status(results.status).json(results.error ? { error: results.error } : results.data );
+});
+
+router.post("/api/opponentsavelineup", authAPI, async (request, response) => {
+	const results = await api.opponentSaveLineup(request.user, request.body.opponentname, request.body.startingweightclass, request.body.lineup, request.serverPath);
+
+	if (results.error) {
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "651b68f7cf4fc75b63591ee7", message: `${ results.status }: ${results.error}` }}).then();
+	}
 
 	response.status(results.status).json(results.error ? { error: results.error } : results.data );
 });
