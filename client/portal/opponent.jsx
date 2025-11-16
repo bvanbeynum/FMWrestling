@@ -276,15 +276,10 @@ const Opponent = () => {
 	};
 
 	const saveLineup = isSave => {
-		const savePacket = {};
-
+		
+		let saveLineup = null;
 		if (isSave) {
-			savePacket.saveid = selectedLineup;
-			savePacket.savename = saveName;
-			savePacket.opponentname = selectedOpponent;
-			savePacket.startingweightclass = startingWeight;
-
-			savePacket.lineup.map(lineupMatch => ({
+			saveLineup = lineup.map(lineupMatch => ({
 				weightClass: lineupMatch.weightClass,
 				isStaticTeam: lineupMatch.isStaticTeam,
 				teamWrestlerId: lineupMatch.team?.id,
@@ -294,16 +289,19 @@ const Opponent = () => {
 				opponentScore: lineupMatch.opponentScore,
 			}));
 		}
-		else {
-			savePacket.saveid = selectedLineup;
-		}
 
 		setIsLoading(true);
 		
 		fetch(`/api/opponentsavelineup`, { 
 				method: "post", 
 				headers: { "Content-Type": "application/json" }, 
-				body: JSON.stringify({ saveid: selectedLineup, savename: saveName, opponentname: selectedOpponent, startingweightclass: startingWeight, lineup: saveLineup }) 
+				body: JSON.stringify({ 
+					saveid: selectedLineup, 
+					savename: saveName, 
+					opponentname: selectedOpponent, 
+					startingweightclass: startingWeight, 
+					lineup: saveLineup 
+				}) 
 			})
 			.then(response => {
 				if (response.ok) {
