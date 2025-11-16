@@ -2138,6 +2138,7 @@ export default {
 
 		try {
 			output.data.wrestlers = wrestlers
+				.filter(wrestler => wrestler.events.some(event => /^sc$/gi.test(event.locationState))) // Wrestler has wrestled in SC
 				.map(wrestler => {
 					const lastTeamEvent = wrestler.events
 						.filter(event => event.matches.some(match => match.weightClass && !isNaN(match.weightClass)))
@@ -2166,7 +2167,10 @@ export default {
 						lastEvent: lastTeamEvent
 					};
 				})
-				.filter(wrestler => wrestler.lastEvent && wrestler.lastEvent.date >= new Date(new Date().getFullYear() - 1, 8, 1));
+				.filter(wrestler => 
+					wrestler.lastEvent // Has a last event
+					&& wrestler.lastEvent.date >= new Date(new Date().getFullYear() - 1, 8, 1) // Last event within the last school year
+				);
 		}
 		catch (error) {
 			output.status = 564;
