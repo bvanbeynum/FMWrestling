@@ -874,7 +874,24 @@ const Opponent = () => {
 
 			<div className="wrestlerName">
 				{
-				viewPlayer.team == "Fort Mill" ? viewPlayer.match.team.name : viewPlayer.match.opponent.name
+				viewPlayer.team == "Fort Mill" ? 
+					<>
+					<div>{viewPlayer.match.team.name}</div> 
+					<button onClick={ () => window.open(`/portal/wrestler.html?id=${ viewPlayer.match.team.id }`, "_blank") }>
+						{/* Eye View */}
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-320q75 0 127.5-52.5T660-500q0-75-52.5-127.5T480-680q-75 0-127.5 52.5T300-500q0 75 52.5 127.5T480-320Zm0-72q-45 0-76.5-31.5T372-500q0-45 31.5-76.5T480-608q45 0 76.5 31.5T588-500q0 45-31.5 76.5T480-392Zm0 192q-146 0-266-81.5T40-500q54-137 174-218.5T480-800q146 0 266 81.5T920-500q-54 137-174 218.5T480-200Zm0-300Zm0 220q113 0 207.5-59.5T832-500q-50-101-144.5-160.5T480-720q-113 0-207.5 59.5T128-500q50 101 144.5 160.5T480-280Z"/></svg>
+					</button>
+					</>
+					
+					: 
+					
+					<>
+					<div>{viewPlayer.match.opponent.name}</div>
+					<button onClick={ () => window.open(`/portal/wrestler.html?id=${ viewPlayer.match.opponent.id }`, "_blank") }>
+						{/* Eye View */}
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-320q75 0 127.5-52.5T660-500q0-75-52.5-127.5T480-680q-75 0-127.5 52.5T300-500q0 75 52.5 127.5T480-320Zm0-72q-45 0-76.5-31.5T372-500q0-45 31.5-76.5T480-608q45 0 76.5 31.5T588-500q0 45-31.5 76.5T480-392Zm0 192q-146 0-266-81.5T40-500q54-137 174-218.5T480-800q146 0 266 81.5T920-500q-54 137-174 218.5T480-200Zm0-300Zm0 220q113 0 207.5-59.5T832-500q-50-101-144.5-160.5T480-720q-113 0-207.5 59.5T128-500q50 101 144.5 160.5T480-280Z"/></svg>
+					</button>
+					</>
 				}
 			</div>
 			<div className="wrestlerStats">
@@ -909,7 +926,11 @@ const Opponent = () => {
 						<div className="alternateWeightClass">{ topPick.weightClass }</div>
 
 						<div>
-							<div className="alternateName">{ topPick.name }</div>
+							<div className="alternateName">
+								<a href={ `/portal/wrestler.html?id=${ topPick.id }` } target="_blank">
+									{ topPick.name }
+								</a>
+							</div>
 							<div className="subItem">{`${topPick.rating?.toFixed(0)} / ${ topPick.deviation?.toFixed(0) }`}</div>
 							<div className="subItem">Status: unassigned</div>
 						</div>

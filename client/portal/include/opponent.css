@@ -212,6 +212,12 @@ button.lineupButton.delete {
 	margin: 0px 10px;
 	font-size: 1.4em;
 	color: rgb(71 71 71);
+	display: flex;
+	justify-content: space-between;
+}
+.wrestlerName button {
+	border: 0;
+	background-color: transparent;
 }
 
 .wrestlerStats {
