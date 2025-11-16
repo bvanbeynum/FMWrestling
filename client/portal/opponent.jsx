@@ -241,10 +241,12 @@ const Opponent = () => {
 		const staticLineup = lineup.filter(lineupMatch => lineupMatch.isStaticOpponent || lineupMatch.isStaticTeam)
 			.map(lineupMatch => ({
 				weightClass: lineupMatch.weightClass,
-				teamWrestlerId: teamName == "Fort Mill" && lineupMatch.team?.id == wrestlerId ? null // If the wrestler is already assigned (and not the weight class) then blank
+				teamWrestlerId: lineupMatch.isStaticTeam && !lineupMatch.team ? "forfeit"
+					: teamName == "Fort Mill" && lineupMatch.team?.id == wrestlerId ? null // If the wrestler is already assigned (and not the weight class) then blank
 					: lineupMatch.isStaticTeam ? lineupMatch.team?.id // Keep the existing record
 					: null,
-				opponentWrestlerId: teamName != "Fort Mill" && lineupMatch.opponent?.id == wrestlerId ? null 
+				opponentWrestlerId: lineupMatch.isStaticOpponent && !lineupMatch.opponent ? "forfeit"
+					: teamName != "Fort Mill" && lineupMatch.opponent?.id == wrestlerId ? null 
 					: lineupMatch.isStaticOpponent ? lineupMatch.opponent?.id
 					: null
 			}));
@@ -254,16 +256,16 @@ const Opponent = () => {
 		if (staticLineupIndex !== -1) {
 			// If the weight class already exists in staticLineup
 			if (teamName === "Fort Mill") {
-				staticLineup[staticLineupIndex].teamWrestlerId = wrestlerId;
+				staticLineup[staticLineupIndex].teamWrestlerId = wrestlerId || "forfeit";
 			} else {
-				staticLineup[staticLineupIndex].opponentWrestlerId = wrestlerId;
+				staticLineup[staticLineupIndex].opponentWrestlerId = wrestlerId || "forfeit";
 			}
 		} else {
 			// If the weight class does not exist, add a new record
 			staticLineup.push({
 				weightClass: match.weightClass,
-				teamWrestlerId: teamName === "Fort Mill" ? wrestlerId : null,
-				opponentWrestlerId: teamName !== "Fort Mill" ? wrestlerId : null
+				teamWrestlerId: teamName === "Fort Mill" ? wrestlerId || "forfeit" : null,
+				opponentWrestlerId: teamName !== "Fort Mill" ? wrestlerId || "forfeit" : null
 			});
 		}
 
@@ -383,8 +385,8 @@ const Opponent = () => {
 					...match,
 					teamScore: (lineupMatch.teamScore || 0),
 					opponentScore: (lineupMatch.opponentScore || 0),
-					isStaticTeam: teamStatic && teamStatic.some(record => record.weightClass == match.weightClass && record.wrestlerId == match.team?.id),
-					isStaticOpponent: opponentStatic && opponentStatic.some(record => record.weightClass == match.weightClass && record.wrestlerId == match.opponent?.id)
+					isStaticTeam: teamStatic && teamStatic.some(record => record.weightClass == match.weightClass && record.wrestlerId),
+					isStaticOpponent: opponentStatic && opponentStatic.some(record => record.weightClass == match.weightClass && record.wrestlerId)
 				}))
 				.find(() => true)
 			
@@ -459,7 +461,8 @@ const Opponent = () => {
 			const match = weights.find(lineupWrestler => lineupWrestler.weightClass == staticWrestler.weightClass);
 
 			match.team = teamA.find(wrestler => wrestler.id == staticWrestler.wrestlerId);
-			match.prediction = !match.opponent ? 6
+			match.prediction = !match.opponent && !match.team ? 0 // Double forfeit
+				: !match.opponent ? 6
 				: !match.team ? -6
 				: predictMatchOutcomePoints(match.team, match.opponent, match.weightClassPosition);
 
@@ -479,7 +482,8 @@ const Opponent = () => {
 				)
 				.map(match => ({
 					...match,
-					prediction: !match.opponent ? 6
+					prediction: !match.opponent && !bestWrestler ? 0 // Double forfeit
+						: !match.opponent ? 6
 						: !bestWrestler ? -6
 						: predictMatchOutcomePoints(bestWrestler, match.opponent, match.weightClassPosition)
 				}))
@@ -757,7 +761,7 @@ const Opponent = () => {
 					<div className={`wrestlerContainer ${ match.teamScore > 0 ? "win" : match.opponentScore > 0 ? "lose" : "" }`}>
 						<div className="wrestlerDetails">
 							<div className="button" onClick={ () => selectViewPlayer("Fort Mill", match) }>
-								{ match.team?.name }
+								{ match.team ? match.team.name : "Forfeit" }
 								{ 
 								match.isStaticTeam ?
 									/* Lock */
@@ -767,8 +771,8 @@ const Opponent = () => {
 								: ""
 								}
 							</div>
-							<div className="subItem">{ match.team?.weightClass }</div>
-							<div className="subItem">{ match.team?.rating.toFixed(0) } / { match.team?.deviation.toFixed(0) }</div>
+							<div className="subItem">{ match.team ? match.team.weightClass : "" }</div>
+							<div className="subItem">{ match.team ? match.team.rating.toFixed(0) + " / " + match.team.deviation.toFixed(0) : "" }</div>
 						</div>
 
 						<div className="scoreDetails">
@@ -805,7 +809,7 @@ const Opponent = () => {
 
 						<div className="wrestlerDetails">
 							<div className="button" onClick={ () => selectViewPlayer(selectedOpponent, match) }>
-								{ match.opponent?.name }
+								{ match.opponent ? match.opponent.name : "Forfeit" }
 								{ 
 								match.isStaticOpponent ?
 									/* Lock */
@@ -815,8 +819,8 @@ const Opponent = () => {
 								: ""
 								}
 							</div>
-							<div className="subItem">{ match.opponent?.weightClass }</div>
-							<div className="subItem">{ match.opponent?.rating.toFixed(0) } / { match.opponent?.deviation.toFixed(0) }</div>
+							<div className="subItem">{ match.opponent ? match.opponent.weightClass : "" }</div>
+							<div className="subItem">{ match.opponent ? match.opponent.rating.toFixed(0) + " / " + match.opponent.deviation.toFixed(0) : "" }</div>
 						</div>
 					</div>
 
@@ -870,6 +874,13 @@ const Opponent = () => {
 				</svg>
 			</div>
 
+			{
+			(viewPlayer.team == "Fort Mill" && !viewPlayer.match.team) || (viewPlayer.team != "Fort Mill" && !viewPlayer.match.opponent) ?
+
+				<div className="wrestlerName">Forfeit</div>
+			
+			:
+			<>
 			<div className="wrestlerName">
 				{
 				viewPlayer.team == "Fort Mill" ? 
@@ -899,8 +910,12 @@ const Opponent = () => {
 					: `${viewPlayer.match.opponent.rating.toFixed(0)} / ${ viewPlayer.match.opponent.deviation.toFixed(0) }`
 				}
 			</div>
+			</>
+			}
 		</div>
 		
+		{
+		(viewPlayer.team == "Fort Mill" && viewPlayer.match.team) || (viewPlayer.team != "Fort Mill" && viewPlayer.match.opponent) ?
 		<div className="lineupContainer">
 			<div className="lineupTitle">Comparison Probability</div>
 
@@ -908,11 +923,24 @@ const Opponent = () => {
 				<ProbabilityChart team={viewPlayer.match.team} opponent={viewPlayer.match.opponent} />
 			</div>
 		</div>
+		: ""
+		}
 
 		<div className="lineupContainer">
 			<div className="lineupTitle">Alternate Wrestlers</div>
 			
 			<div>
+				<div className="lineupAlternate">
+					<div></div>
+					<div className="alternateName">Forfeit</div>
+					<div className="alternateSelect button" onClick={ () => selectAlternate(viewPlayer.team, viewPlayer.match, null) }>
+						{/* Check */}
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+							<path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/>
+						</svg>
+					</div>
+				</div>
+
 				<div className="lineupAlternateHeader">
 					Top Picks
 				</div>
