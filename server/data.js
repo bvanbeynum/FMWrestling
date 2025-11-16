@@ -387,7 +387,7 @@ export default {
 		if (saveObject.events) {
 			saveObject.events = saveObject.events.map(event => {
 				if (event.team) {
-					event.team = event.team.toLowerCase();
+					event.searchTeam = event.team.toLowerCase();
 				}
 				return event;
 			});
