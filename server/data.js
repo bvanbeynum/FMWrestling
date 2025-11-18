@@ -371,6 +371,88 @@ export default {
 		return output;
 	},
 
+	wrestlerRankingGet: async (rankingFilter = {}) => {
+		const output = {};
+
+		try {
+			const oneYearAgo = new Date();
+			oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+			const elemMatchFilter = {
+				"matches.division": { $in: [/high school/i, /hs/i] },
+				date: { $gte: oneYearAgo }
+			};
+
+			if (rankingFilter.state) {
+				elemMatchFilter.locationState = rankingFilter.state.toUpperCase();
+			}
+			if (rankingFilter.team) {
+				elemMatchFilter.searchTeam = rankingFilter.team.toLowerCase();
+			}
+			if (rankingFilter.weightClass) {
+				elemMatchFilter["matches.weightClass"] = rankingFilter.weightClass;
+			}
+
+			const pipeline = [
+				{
+					$match: {
+						events: {
+							$elemMatch: elemMatchFilter
+						}
+					}
+				},
+				{
+					$sort: {
+						rating: -1
+					}
+				},
+				{
+					$limit: 20
+				},
+				{
+					$project: {
+						_id: 1,
+						name: 1,
+						rating: 1,
+						deviation: 1,
+						events: {
+							$map: {
+								input: "$events",
+								as: "event",
+								in: {
+									date: "$$event.date",
+									team: "$$event.team",
+									locationState: "$$event.locationState",
+									matches: {
+										$let: {
+											vars: {
+												firstMatch: { $arrayElemAt: ["$$event.matches", 0] }
+											},
+											in: [{
+												division: "$$firstMatch.division",
+												weightClass: "$$firstMatch.weightClass"
+											}]
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			];
+
+			const records = await data.wrestler.aggregate(pipeline).exec();
+			output.status = 200;
+			output.data = { wrestlers: records.map(({ _id, ...data }) => ({ id: _id, ...data })) };
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+		}
+
+		return output;
+	},
+
 	wrestlerSave: async (saveObject) => {
 		const output = {};
 

@@ -1,17 +1,14 @@
 import React, { useEffect, useState, useRef } from "react";
 import ReactDOM from "react-dom/client";
 import NavComponent from "./nav.jsx";
-import WrestlerDetails from "./wrestlerdetails.jsx";
 import "./include/index.css";
 import "./include/wrestler.css";
 
 const WrestlerSearchComponent = () => {
 
 	const chartColors = ["#0074C2", "#F0AC00", "#E66000", "#5E97BD", "#B89E5C", "#E5641E"];
-	const TAU = 0.5;
 
 	const [ pageActive, setPageActive ] = useState(false);
-	const [ pageView, setPageView ] = useState("search");
 	const [ loggedInUser, setLoggedInUser ] = useState(null);
 	const [ isFilterExpanded, setIsFilterExpanded ] = useState(false);
 
@@ -19,14 +16,17 @@ const WrestlerSearchComponent = () => {
 	const [ teamSearch, setTeamSearch ] = useState("");
 
 	const [ wrestlerResults, setWrestlerResults ] = useState([]);
-	const [ selectedWrestlers, setSelectedWrestlers ] = useState([]);
-	const [ compareWrestlers, setCompareWrestlers ] = useState([]);
-	const [ compareChart, setCompareChart ] = useState({ size: { width: 500, height: 350 }, paths: [], labels: [] });
-	const [ probabilities, setProbabilities ] = useState([]);
+	const [ wrestlerRankings, setWrestlerRankings ] = useState([]);
 
+	const [ filterState, setFilterState ] = useState("SC");
+	const [ filterWeightClass, setFilterWeightClass ] = useState("");
+	const [ filterClassification, setFilterClassification ] = useState("");
+	const [ filterTeam, setFilterTeam ] = useState("");
+	const [ filters, setFilters ] = useState({});
+	
 	useEffect(() => {
 		if (!pageActive) {
-			fetch(`/api/wrestlersearchload`)
+			fetch(`/api/wrestlersearchload?rankingstate=SC`)
 				.then(response => {
 					if (response.ok) {
 						return response.json();
@@ -36,6 +36,30 @@ const WrestlerSearchComponent = () => {
 					}
 				})
 				.then(data => {
+					const rankings = data.wrestlerRankings.map((wrestler, index) => ({
+						...wrestler,
+						teamLast: wrestler.teams
+							.sort((teamA, teamB) => new Date(teamB.lastDate) - new Date(teamA.lastDate))
+							.find(() => true),
+						weightClassLast: wrestler.weightClasses
+							.sort((weightClassA, weightClassB) => new Date(weightClassB.lastDate) - new Date(weightClassA.lastDate))
+							.find(() => true),
+						weightClassCommon: wrestler.events.slice(0,5)
+							.reduce((output, event) => {
+								const weightClassEntry = output.find(entry => entry.weightClass === event.weightClass);
+								if (weightClassEntry) {
+									weightClassEntry.count += 1;
+								}
+								else {
+									output.push({ weightClass: event.weightClass, count: 1 });
+								}
+								return output;
+							}, [])
+							.sort((a, b) => b.count - a.count)[0]?.weightClass || null
+					}));
+
+					setWrestlerRankings(rankings);
+
 					setLoggedInUser(data.loggedInUser);
 					setPageActive(true);
 				})
@@ -97,78 +121,52 @@ const WrestlerSearchComponent = () => {
 		window.open(`/portal/wrestler.html?id=${ wrestler.id }`, "_blank");
 	};
 
-	const updateWrestler = updatedWrestler => {
-		setSelectedWrestlers(selectedWrestlers.map(wrestler => wrestler.id == updatedWrestler.id ? updatedWrestler : wrestler));
-	};
+	const updateFilter = (filterName, filterValue) => {
+		const newFilters = { ...filters, [filterName]: filterValue };
+		setPageActive(false);
+		setFilters(newFilters);
+		setFilterState(newFilters.state || "");
+		setFilterWeightClass(newFilters.weightClass || "");
+		setFilterTeam(newFilters.team || "");
 
-	const normalDistribution = (x, mean, standardDeviation) => {
-		// Calculate the Z-score (standardizaion)
-		const z = (x - mean) / standardDeviation;
+		fetch(`/api/wrestlersearchranking?state=${ newFilters.state || "" }&team=${ newFilters.team || "" }&weightclass=${ newFilters.weightClass || "" }`)
+			.then(response => {
+				if (response.ok) {
+					return response.json();
+				}
+				else {
+					throw Error(response.statusText);
+				}
+			})
+			.then(data => {
+				const rankings = data.wrestlerRankings.map((wrestler, index) => ({
+					...wrestler,
+					teamLast: wrestler.teams
+						.sort((teamA, teamB) => new Date(teamB.lastDate) - new Date(teamA.lastDate))
+						.find(() => true),
+					weightClassLast: wrestler.weightClasses
+						.sort((weightClassA, weightClassB) => new Date(weightClassB.lastDate) - new Date(weightClassA.lastDate))
+						.find(() => true),
+					weightClassCommon: wrestler.events.slice(0,5)
+						.reduce((output, event) => {
+							const weightClassEntry = output.find(entry => entry.weightClass === event.weightClass);
+							if (weightClassEntry) {
+								weightClassEntry.count += 1;
+							}
+							else {
+								output.push({ weightClass: event.weightClass, count: 1 });
+							}
+							return output;
+						}, [])
+						.sort((a, b) => b.count - a.count)[0]?.weightClass || null
+				}));
 
-		// Probability density function (PDF)
-		const constant = 1 / (standardDeviation * Math.sqrt(2 * Math.PI));
-		const pdf = constant * Math.exp(-0.5 * Math.pow((x - mean) / standardDeviation, 2));
-
-		return pdf;
-	};
-
-	const scale = phi => 1 / Math.sqrt(1 + 3 * Math.pow(phi, 2) / Math.pow(Math.PI, 2));
-
-	const probability = (rating1, deviation1, rating2, deviation2) => {
-		// Calculate the expected outcome for each partitipant
-		const expected1 = 1 / (1 + Math.exp(-TAU * scale(deviation2) * (rating1 - rating2)));
-		const expected2 = 1 / (1 + Math.exp(-TAU * scale(deviation1) * (rating2 - rating1)));
-
-		// Calculate the win probability for participant 1
-		const winProbability = expected1 / (expected1 + expected2);
-
-		return winProbability;
-	};
-
-	const addCompare = compare => {
-
-		if (compareWrestlers.some(wrestler => wrestler.id == compare.id)) {
-			setCompareWrestlers(compareWrestlers.filter(wrestler => wrestler.id != compare.id));
-		}
-		else {
-			const wrestlers = compareWrestlers.concat(compare);
-
-			const valueMin = wrestlers.map(wrestler => wrestler.gRating - (wrestler.gDeviation * 3)).sort((wrestlerA, wrestlerB) => wrestlerA - wrestlerB).find(() => true),
-				valueMax = wrestlers.map(wrestler => wrestler.gRating + (wrestler.gDeviation * 3)).sort((wrestlerA, wrestlerB) => wrestlerB - wrestlerA).find(() => true),
-				steps = 100,
-				step = (valueMax - valueMin) / steps,
-				wrestlerDistributions = wrestlers.map(wrestler =>
-					Array.from(Array(steps).keys()).map(point => normalDistribution(valueMin + (point * step), wrestler.gRating, wrestler.gDeviation))
-					),
-				pointMin = wrestlerDistributions.flatMap(distribution => distribution).sort((pointA, pointB) => pointA - pointB).find(() => true),
-				pointMax = wrestlerDistributions.flatMap(distribution => distribution).sort((pointA, pointB) => pointB - pointA).find(() => true),
-				wrestlerPaths = wrestlerDistributions.map((distribution, distributionIndex) => ({
-					color: chartColors[distributionIndex],
-					path: distribution.map((point, pointIndex) => 
-						(pointIndex == 0 ? "M" : "L") + ((pointIndex * compareChart.size.width) / steps) + " " + (compareChart.size.height - ((point * compareChart.size.height) / (pointMax - pointMin)))
-					).join(", ")
-				})),
-				labels = [
-					{ x: 0, text: Math.round(valueMin), align: "start" },
-					{ x: compareChart.size.width, text: Math.round(valueMax), align: "end" },
-					...wrestlers.map(wrestler => ({ x: ((wrestler.gRating - valueMin) * compareChart.size.width) / (valueMax - valueMin), text: Math.round(wrestler.gRating), align: "middle" }))
-				];
-			
-			const updatedProbability = wrestlers.map(wrestler => ({
-				name: wrestler.name,
-				compare: wrestlers
-					.filter(compare => compare.id != wrestler.id)
-					.map(compare => ({
-						name: compare.name,
-						wrestlerProb: (probability(wrestler.gRating, wrestler.gDeviation, compare.gRating, compare.gDeviation) * 100).toFixed(2),
-						compareProb: (probability(compare.gRating, compare.gDeviation, wrestler.gRating, wrestler.gDeviation) * 100).toFixed(2)
-					}))
-			}));
-			
-			setCompareChart({ ...compareChart, paths: wrestlerPaths, labels: labels })
-			setProbabilities(updatedProbability);
-			setCompareWrestlers(wrestlers);
-		}
+				setWrestlerRankings(rankings);
+				setPageActive(true);
+			})
+			.catch(error => {
+				console.warn(error);
+			});
 	}
 
 	return (
@@ -199,104 +197,7 @@ const WrestlerSearchComponent = () => {
 			<header>
 				<h1>Search Wrestlers</h1>
 			</header>
-		
-			{
 
-			pageView == "results" ? 
-			
-			selectedWrestlers.map((wrestler, wrestlerIndex) =>
-				
-				<WrestlerDetails 
-					key={wrestlerIndex} 
-					wrestlerId={ wrestler.id } 
-					wrestlerName={ wrestler.name }
-					updateWrestler={ updateWrestler }
-					addCompare={ addCompare }
-					isCompare={ compareWrestlers.some(compare => compare.id == wrestler.id) }
-					wrestler={ wrestler }
-					closeWrestler={ wrestlerId => setSelectedWrestlers(selectedWrestlers.filter(selected => selected.id != wrestlerId)) }
-					/>
-
-			)
-
-			: pageView == "compare" ?
-			<>
-
-			<div className="panel expandable">
-				<h3>
-					{ compareWrestlers.map(wrestler => wrestler.name).join(" • ") }
-				</h3>
-
-				<svg viewBox={`0 0 ${ compareChart.size.width } ${ compareChart.size.height + 20 }`} preserveAspectRatio="xMidYMid meet" className="lineChart">
-					<g className="chartArea">
-						{
-						compareChart.paths.map((path, pathIndex) =>
-						<path key={ pathIndex } stroke={ path.color } d={ path.path } />
-						)
-						}
-
-						{
-						compareChart.labels
-						.filter((label) => label.x != 0 && label.x != compareChart.size.width)
-						.map((label, labelIndex) => 
-						<line key={labelIndex} className="chartLine" x1={ label.x } y1="0" x2={ label.x } y2={ compareChart.size.height }></line>
-						)
-						}
-					</g>
-
-					<g className="bottomAxis" transform={`translate(0, ${ compareChart.size.height + 3 })`}>
-						<line className="axisLine" x1="0" y1="0" x2={ compareChart.size.width } y2="0"></line>
-						{
-						compareChart.labels.map((label, labelIndex) => 	
-						<text key={ labelIndex } x={ label.x } y="8" textAnchor={ label.align } alignmentBaseline="hanging">{ label.text }</text>
-						)
-						}
-					</g>
-				</svg>
-
-				<div className="lineChart legend">
-				{
-				compareWrestlers.map((wrestler, wrestlerIndex) =>
-					
-					<div key={wrestlerIndex} className="legendItem">
-						<div className="colorBox" style={{ backgroundColor: chartColors[wrestlerIndex] }}></div>
-						<div>{ wrestler.name }</div>
-					</div>
-
-				)
-				}
-				</div>
-			</div>
-
-			{
-			probabilities.map((wrestler, wrestlerIndex) =>
-
-			<div key={wrestlerIndex} className="panel">
-				<h3>{ wrestler.name }</h3>
-
-				<table className="sectionTable probabilityTable">
-				<tbody>
-				{
-				wrestler.compare.map((compare, compareIndex) =>
-				<tr key={compareIndex}>
-					<td>{ wrestler.name }</td>
-					<td className={ compare.wrestlerProb > 50 ? "win" : compare.wrestlerProb < 50 ? "lose" : "" }>{ compare.wrestlerProb }</td>
-					<td className={ compare.compareProb > 50 ? "win" : compare.compareProb < 50 ? "lose" : "" }>{ compare.compareProb }</td>
-					<td>{ compare.name }</td>
-				</tr>
-				)
-				}
-				</tbody>
-				</table>
-			</div>
-
-			)
-			}
-
-			</>
-			: 
-
-			<>
 			<div className="panel filter">
 				<div className="row">
 					<h3>Filter</h3>
@@ -328,6 +229,8 @@ const WrestlerSearchComponent = () => {
 			</div>
 			
 			{
+			wrestlerResults.length > 0 ?
+
 			wrestlerResults
 			.sort((wrestlerA, wrestlerB) => wrestlerA.lastEvent && wrestlerB.lastEvent ? +wrestlerB.lastEvent.date - +wrestlerA.lastEvent.date : 1 )
 			.map((wrestler, wrestlerIndex) => 
@@ -350,10 +253,89 @@ const WrestlerSearchComponent = () => {
 					}
 				</div>
 			)
+
+			: loggedInUser && loggedInUser.privileges && loggedInUser.privileges.includes("rankingsView") ?
+
+			<div className="panel expandable">
+				<h3>Rankings</h3>
+
+				<div className="filterControls">
+					<div className="filterBar">
+						<div className="filterItem">
+							<label htmlFor="state-filter">State</label>
+							<select id="state-filter" name="state" value={ filterState } onChange={ event => updateFilter("state", event.target.value) }>
+								<option value="">All</option>
+								<option value="SC">SC</option>
+								<option value="NC">NC</option>
+								<option value="GA">GA</option>
+								<option value="Tn">TN</option>
+							</select>
+						</div>
+						<div className="filterItem">
+							<label htmlFor="weight-class-filter">Weight Class</label>
+							<select id="weight-class-filter" name="weightClass" value={ filterWeightClass } onChange={ event => updateFilter("weightClass", event.target.value) }>
+								<option value="">All</option>
+								<option value="106">106</option>
+								<option value="113">113</option>
+								<option value="120">120</option>
+								<option value="126">126</option>
+								<option value="132">132</option>
+								<option value="138">138</option>
+								<option value="144">144</option>
+								<option value="150">150</option>
+								<option value="157">157</option>
+								<option value="165">165</option>
+								<option value="175">175</option>
+								<option value="190">190</option>
+								<option value="215">215</option>
+								<option value="285">285</option>
+							</select>
+						</div>
+						{/* <div className="filterItem">
+							<label htmlFor="classification-filter">Classification</label>
+							<select id="classification-filter" name="classification">
+								<option value="">All</option>
+							</select>
+						</div> */}
+						<div className="filterItem">
+							<label htmlFor="team-filter">Team</label>
+							<select id="team-filter" name="team" value={ filterTeam } onChange={ event => updateFilter("state", event.target.value) }>
+								<option value="">All</option>
+							</select>
+						</div>
+					</div>
+				</div>
+
+				<table className="rankingsTable">
+					<thead>
+						<tr>
+							<th>Rank</th>
+							<th>Name</th>
+							<th>Weight Class (Last)</th>
+							<th>Weight Class (Common)</th>
+							<th>Team</th>
+						</tr>
+					</thead>
+					<tbody>
+						{wrestlerRankings.map((wrestler, index) => (
+							<tr key={wrestler.id}>
+								<td>{index + 1}</td>
+								<td>
+									<a onClick={() => selectWrestler(wrestler)}>{wrestler.name}</a>
+								</td>
+								<td>{wrestler.weightClassLast?.weightClass}</td>
+								<td>{wrestler.weightClassCommon}</td>
+								<td>{wrestler.teamLast?.name}</td>
+							</tr>
+						))}
+					</tbody>
+				</table>
+			</div>
+
+			: ""
+
 			}
 			
-			</>
-			}
 		</div>
 
 		</>

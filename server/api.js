@@ -1899,12 +1899,87 @@ export default {
 		return output;
 	},
 
-	wrestlerSearchLoad: async (serverPath) => {
+	wrestlerSearchLoad: async (rankingState, serverPath) => {
 		const output = { data: {} }
 
 		try {
-			const clientResponse = await client.get(`${ serverPath }/data/scmatteam`);
-			output.data.scmatTeams = clientResponse.body.scmatTeams;
+			const clientResponse = await client.get(`${ serverPath }/data/wrestlerranking?state=${ rankingState }`);
+			output.data.wrestlerRankings = clientResponse.body.wrestlers.map(wrestler => ({
+				id: wrestler.id,
+				name: wrestler.name,
+				rating: wrestler.rating,
+				deviation: wrestler.deviation,
+				events: wrestler.events.map(event => ({
+					name: event.name,
+					date: new Date(event.date),
+					team: event.team,
+					weightClass: event.matches[0] ? event.matches[0].weightClass : null
+				})),
+				teams: [...new Set(wrestler.events.filter(event => event.team).map(event => event.team))]
+					.map(teamName => ({ 
+						name: teamName,
+						lastDate: wrestler.events
+							.filter(event => event.team == teamName)
+							.map(event => new Date(event.date))
+							.sort((dateA, dateB) => +dateB - +dateA)
+							.find(() => true)
+					})),
+				weightClasses: [... new Set(wrestler.events.flatMap(event => event.matches.filter(match => match.weightClass).map(match => match.weightClass)))]
+					.map(weightClass => ({
+						weightClass: weightClass,
+						lastDate: wrestler.events
+							.filter(event => event.matches.some(match => match.weightClass == weightClass))
+							.map(event => new Date(event.date))
+							.sort((dateA, dateB) => +dateB - +dateA)
+							.find(() => true)
+					}))
+			}));
+		}
+		catch (error) {
+			output.status = 562;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		return output;
+	},
+
+	wrestlerSearchRanking: async (state, team, weightClass, serverPath) => {
+		const output = { data: {} };
+
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/wrestlerranking?${ state ? `state=${ state }&` : "" }${ team ? `team=${ encodeURIComponent(team) }&` : "" }${ weightClass ? `weightclass=${ encodeURIComponent(weightClass) }` : "" }`);
+			output.data.wrestlerRankings = clientResponse.body.wrestlers.map(wrestler => ({
+				id: wrestler.id,
+				name: wrestler.name,
+				rating: wrestler.rating,
+				deviation: wrestler.deviation,
+				events: wrestler.events.map(event => ({
+					name: event.name,
+					date: new Date(event.date),
+					team: event.team,
+					weightClass: event.matches[0] ? event.matches[0].weightClass : null
+				})),
+				teams: [...new Set(wrestler.events.filter(event => event.team).map(event => event.team))]
+					.map(teamName => ({ 
+						name: teamName,
+						lastDate: wrestler.events
+							.filter(event => event.team == teamName)
+							.map(event => new Date(event.date))
+							.sort((dateA, dateB) => +dateB - +dateA)
+							.find(() => true)
+					})),
+				weightClasses: [... new Set(wrestler.events.flatMap(event => event.matches.filter(match => match.weightClass).map(match => match.weightClass)))]
+					.map(weightClass => ({
+						weightClass: weightClass,
+						lastDate: wrestler.events
+							.filter(event => event.matches.some(match => match.weightClass == weightClass))
+							.map(event => new Date(event.date))
+							.sort((dateA, dateB) => +dateB - +dateA)
+							.find(() => true)
+					}))
+			}));
 		}
 		catch (error) {
 			output.status = 561;
