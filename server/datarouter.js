@@ -137,6 +137,22 @@ router.get("/data/wrestler", authInternal, async (request, response) => {
 	response.end();
 });
 
+router.get("/data/wrestlerranking", authInternal, async (request, response) => {
+	try {
+		const results = await data.wrestlerRankingGet({ state: request.query.state, team: request.query.team, weightClass: request.query.weightclass });
+
+		if (results.error) {
+			// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6512f4d0cf4fc75b6309f5f3", message: `${ results.status }: ${results.error}` }}).then();
+		}
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6512f4d0cf4fc75b6309f5f3", message: `570: ${error.message}` }}).then();
+		response.status(570).json({ error: error.message });
+	}
+});
+
 router.post("/data/wrestler", authInternal, async (request, response) => {
 	const results = await data.wrestlerSave(request.body.wrestler);
 
@@ -150,6 +166,44 @@ router.post("/data/wrestler", authInternal, async (request, response) => {
 
 router.delete("/data/wrestler", authInternal, async (request, response) => {
 	const results = await data.wrestlerDelete(request.query.id);
+
+	if (results.error) {
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "641f00df97f3b068a562664e", message: `${ results.status }: ${results.error}` }}).then();
+	}
+
+	response.status(results.status).json(results.error ? { error: results.error } : results.data);
+	response.end();
+});
+
+router.get("/data/school", authInternal, async (request, response) => {
+		const filter = { 
+			id: request.query.id, 
+			name: request.query.name
+		};
+
+	const results = await data.schoolGet(filter);
+
+	if (results.error) {
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "641f00fb97f3b068a5626653", message: `${ results.status }: ${results.error}` }}).then();
+	}
+
+	response.status(results.status).json(results.error ? { error: results.error } : results.data);
+	response.end();
+});
+
+router.post("/data/school", authInternal, async (request, response) => {
+	const results = await data.schoolSave(request.body.school);
+
+	if (results.error) {
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "641f00ec97f3b068a5626651", message: `${ results.status }: ${results.error}` }}).then();
+	}
+
+	response.status(results.status).json(results.error ? { error: results.error } : results.data);
+	response.end();
+});
+
+router.delete("/data/school", authInternal, async (request, response) => {
+	const results = await data.schoolDelete(request.query.id);
 
 	if (results.error) {
 		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "641f00df97f3b068a562664e", message: `${ results.status }: ${results.error}` }}).then();
@@ -379,22 +433,6 @@ router.get("/data/externalwrestler", authInternal, async (request, response) => 
 	}
 	catch (error) {
 		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "650e124d547ce02736559461", message: `570: ${error.message}` }}).then();
-		response.status(570).json({ error: error.message });
-	}
-});
-
-router.get("/data/wrestlerranking", authInternal, async (request, response) => {
-	try {
-		const results = await data.wrestlerRankingGet({ state: request.query.state, team: request.query.team, weightClass: request.query.weightclass });
-
-		if (results.error) {
-			// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6512f4d0cf4fc75b6309f5f3", message: `${ results.status }: ${results.error}` }}).then();
-		}
-		response.status(results.status).json(results.error ? { error: results.error } : results.data);
-		response.end();
-	}
-	catch (error) {
-		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6512f4d0cf4fc75b6309f5f3", message: `570: ${error.message}` }}).then();
 		response.status(570).json({ error: error.message });
 	}
 });

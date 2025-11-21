@@ -189,6 +189,14 @@ export default {
 		}]
 	}),
 
+	school: mongoose.model("school", {
+		name: String,
+		searchName: String,
+		confrence: String,
+		region: String,
+		lookupNames: [String]
+	}),
+
 	scoreCall: mongoose.model("scorecall", {
 		abbreviation: String,
 		points: Number,

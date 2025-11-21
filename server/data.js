@@ -552,6 +552,122 @@ export default {
 		return output;
 	},
 
+	schoolGet: async (userFilter = {}) => {
+		let filter = {},
+			select = {},
+			output = {};
+
+		if (userFilter.id) {
+			filter["_id"] = mongoose.Types.ObjectId.isValid(userFilter.id) ? userFilter.id : null;
+		}
+		if (userFilter.name) {
+			const searchName = userFilter.name.toLowerCase();
+			filter.searchName = { $regex: new RegExp(searchName) };
+		}
+
+		try {
+			const records = await data.school.find(filter).select(select).lean().exec();
+			output.status = 200;
+			output.data = { schools: records.map(({ _id, __v, ...data }) => ({ id: _id, ...data })) };
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+		}
+
+		return output;
+	},
+
+	schoolSave: async (saveObject) => {
+		const output = {};
+
+		if (!saveObject) {
+			output.status = 550;
+			output.error = "Missing object to save";
+			return output;
+		}
+
+		if (saveObject.name) {
+			saveObject.searchName = saveObject.name.toLowerCase();
+		}
+
+		if (saveObject.id) {
+			let record = null;
+			try {
+				record = await data.school.findById(saveObject.id).exec();
+			}
+			catch (error) {
+				output.status = 560;
+				output.error = error.message;
+				return output;
+			}
+
+			if (!record) {
+				output.status = 561;
+				output.error = "Record not found";
+				return output;
+			}
+
+			try {
+				Object.keys(saveObject).forEach(field => {
+					if (field != "id" && field != "_id") {
+						record[field] = saveObject[field];
+					}
+				});
+				record.modified = new Date();
+
+				record = await record.save();
+			}
+			catch (error) {
+				output.status = 562;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			output.data = { id: record._id };
+		}
+		else {
+			let record = null;
+			try {
+				record = await (new data.school({ ...saveObject, created: new Date(), modified: new Date() })).save();
+			}
+			catch (error) {
+				output.status = 563;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			output.data = { id: record._id };
+		}
+
+		return output;
+	},
+
+	schoolDelete: async (id) => {
+		const output = {};
+
+		if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+			output.status = 550;
+			output.error = "Missing ID to delete";
+			return output;
+		}
+
+		try {
+			await data.school.deleteOne({ _id: id });
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		output.data = { status: "ok" };
+		return output;
+	},
+
 	postGet: async (id, includeExpired) => {
 		let filter = {},
 			output = {};
