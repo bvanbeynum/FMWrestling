@@ -192,7 +192,7 @@ export default {
 	school: mongoose.model("school", {
 		name: String,
 		searchName: String,
-		confrence: String,
+		classification: String,
 		region: String,
 		lookupNames: [String]
 	}),
