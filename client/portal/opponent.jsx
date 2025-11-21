@@ -5,7 +5,6 @@ import ProbabilityChart from "./include/ProbabilityChart.jsx";
 import RunningTotalChart from "./include/RunningTotalChart.jsx";
 import "./include/index.css";
 import "./include/opponent.css";
-import { set } from "mongoose";
 
 const Opponent = () => {
 	const originalWeightClasses = ["106","113","120","126","132","138","144","150","157","165","175","190","215","285"];
@@ -23,8 +22,10 @@ const Opponent = () => {
 
 	const [ teamWrestlers, setTeamWrestlers ] = useState([]);
 
+	const [ opponentSelect, setOpponentSelect ] = useState([]);
 	const [ opponents, setOpponents ] = useState([]);
 	const [ selectedOpponent, setSelectedOpponent ] = useState("");
+	const [ selectedOpponentId, setSelectedOpponentId ] = useState("");
 	const [ opponentWrestlers, setOpponentWrestlers ] = useState([]);
 
 	const [ lineup, setLineup ] = useState([]);
@@ -63,7 +64,23 @@ const Opponent = () => {
 						}));
 
 					setTeamWrestlers(wrestlersLoaded);
-					setOpponents(data.opponents);
+					setOpponents(data.schools);
+
+					const selectGroup = [...new Set(data.schools.sort((schoolA, schoolB) => 
+						schoolA.classification != schoolB.classification ?
+							schoolA.classification > schoolB.classification ? -1 : 1
+						: schoolA.region != schoolB.region ?
+							schoolA.region > schoolB.region ? 1 : -1
+						: schoolA.name > schoolB.name ?
+							1 : -1
+						).map(school => `${school.classification || "NA"} - ${school.region || "NA"}`))]
+						.map(group => ({
+							name: group,
+							schools: data.schools
+								.filter(school => `${school.classification || "NA"} - ${school.region || "NA"}` == group)
+								.sort()
+						}));
+					setOpponentSelect(selectGroup);
 
 					setLoggedInUser(data.loggedInUser);
 					setPageActive(true);
@@ -75,11 +92,13 @@ const Opponent = () => {
 		}
 	}, []);
 
-	const selectOpponent = (opponentName) => {
+	const selectOpponent = opponentId => {
+		const opponent = opponents.find(opponent => opponent.id == opponentId);
 		setIsLoading(true);
-		setSelectedOpponent(opponentName);
+		setSelectedOpponent(opponent);
+		setSelectedOpponentId(opponent.id);
 		
-		fetch(`/api/opponentselect?opponent=${ opponentName }`)
+		fetch(`/api/opponentselect?opponent=${ opponent.id }`)
 			.then(response => {
 				if (response.ok) {
 					return response.json();
@@ -101,10 +120,10 @@ const Opponent = () => {
 
 				const bestLineup = pickBestLineup(teamWrestlers, opponentWrestlers, []);
 				const eventStats = generateStats(bestLineup);
-
+				
 				if (loggedInUser.session && loggedInUser.session.matchSave && loggedInUser.session.matchSave.length > 0) {
 					setSavedLineups(loggedInUser.session.matchSave
-						.filter(save => save.opponent == opponentName)
+						.filter(save => save.opponentId == opponent.id)
 						.map(save => ({...save, id: save["_id"] }))
 					);
 				}
@@ -300,7 +319,7 @@ const Opponent = () => {
 				body: JSON.stringify({ 
 					saveid: selectedLineup, 
 					savename: saveName, 
-					opponentname: selectedOpponent, 
+					opponentid: selectedOpponent.id,
 					startingweightclass: startingWeight, 
 					lineup: saveLineup 
 				}) 
@@ -314,9 +333,11 @@ const Opponent = () => {
 				}
 			})
 			.then(data => {
+				console.log(`selected opponent id: ${selectedOpponent.id}`);
+				console.log(data);
 				if (data.savedMatches && data.savedMatches.length > 0) {
 					setSavedLineups(data.savedMatches
-						.filter(save => save.opponent == selectedOpponent)
+						.filter(save => save.opponentId == selectedOpponent.id)
 						.map(save => ({...save, id: save["_id"] }))
 					);
 				}
@@ -641,8 +662,8 @@ const Opponent = () => {
 				<h1>Match Up</h1>
 				
 				{
-				selectOpponent ?
-				<h1 className="subTitle">{ selectedOpponent }</h1>
+				selectedOpponent ?
+				<h1 className="subTitle">{ selectedOpponent.name }</h1>
 				: "" }
 			</header>
 		
@@ -665,12 +686,18 @@ const Opponent = () => {
 				<div className={`filterContent ${ isFilterExpanded ? "active" : "" }`}>
 					<label>
 						Opponent
-						<select value={ selectedOpponent } onChange={ event => selectOpponent(event.target.value) }>
+						<select value={ selectedOpponentId } onChange={ event => selectOpponent(event.target.value) }>
 							<option value="">-- Select Opponent --</option>
 							{
-							opponents.map((opponent, opponentIndex) => 
-							<option key={ opponentIndex } value={ opponent }>{ opponent }</option>
-							)}
+							opponentSelect.map((group, groupIndex) => 
+								<optgroup key={ groupIndex } label={ group.name }>
+									{
+									group.schools.map((school, schoolIndex) => 
+										<option key={ schoolIndex } value={ school.id }>{ school.name }</option>
+									)}
+								</optgroup>
+							)
+							}
 						</select>
 					</label>
 					
@@ -727,10 +754,10 @@ const Opponent = () => {
 				</div>
 
 				<div className="teamContainer opponent">
-					<div className="teamAbbreviation">{ selectedOpponent.split(" ").map(word => word.charAt(0)).join("").toUpperCase() }</div>
+					<div className="teamAbbreviation">{ selectedOpponent.name.split(" ").map(word => word.charAt(0)).join("").toUpperCase() }</div>
 					<div className="teamActualScore">{ eventDetails.opponentScore }</div>
 					<div className="teamPredictedScore">{ eventDetails.opponentScorePredicted }</div>
-					<div className="teamName">{ selectedOpponent }</div>
+					<div className="teamName">{ selectedOpponent.name }</div>
 					<div className="teamStats">
 						wins: { eventDetails.opponentWins } losses: { eventDetails.opponentLosses }
 					</div>
@@ -745,7 +772,7 @@ const Opponent = () => {
 						lineup={lineup}
 						weightClassNames={weightClassNames}
 						teamName={"Fort Mill"}
-						opponentName={selectedOpponent}
+						opponentName={selectedOpponent.name}
 					/>
 				</div>
 			</div>
@@ -796,7 +823,7 @@ const Opponent = () => {
 					<div className={`wrestlerContainer ${ match.opponentScore > 0 ? "win" : match.teamScore > 0 ? "lose" : "" }`}>
 						<div className="scoreDetails">
 							<div>
-								<select className={ match.opponentScore > 0 ? "win" : match.teamScore > 0 ? "lose" : "" } value={ match.opponentScore } onChange={ event => changeScore(selectedOpponent, match, event.target.value)}>
+								<select className={ match.opponentScore > 0 ? "win" : match.teamScore > 0 ? "lose" : "" } value={ match.opponentScore } onChange={ event => changeScore(selectedOpponent.name, match, event.target.value)}>
 									<option value="0">0</option>
 									<option value="3">3</option>
 									<option value="4">4</option>
@@ -808,7 +835,7 @@ const Opponent = () => {
 						</div>
 
 						<div className="wrestlerDetails">
-							<div className="button" onClick={ () => selectViewPlayer(selectedOpponent, match) }>
+							<div className="button" onClick={ () => selectViewPlayer(selectedOpponent.name, match) }>
 								{ match.opponent ? match.opponent.name : "Forfeit" }
 								{ 
 								match.isStaticOpponent ?

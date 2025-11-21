@@ -46,7 +46,7 @@ export default {
 			}],
 			matchSave: [{
 				name: String,
-				opponent: String,
+				opponentId: String,
 				startingWeightClass: String,
 				lineup: [{
 					weightClass: String,

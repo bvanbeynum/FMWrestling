@@ -2182,13 +2182,18 @@ export default {
 		}
 
 		try {
-			const clientResponse = await client.get(`${ serverPath }/data/scmatteam`);
-			output.data.opponents = clientResponse.body.scmatTeams
-				.filter(scmatTeam => !/^fort mill$/gi.test(scmatTeam.name))
-				.map(scmatTeam => scmatTeam.name); 
+			const clientResponse = await client.get(`${ serverPath }/data/school`);
+			output.data.schools = clientResponse.body.schools
+				.filter(school => !/^fort mill$/gi.test(school.name))
+				.map(school => ({
+					id: school.id,
+					name: school.name,
+					classification: school.classification,
+					region: school.region
+				}));
 		}
 		catch (error) {
-			output.status = 562;
+			output.status = 564;
 			output.error = error.message;
 			return output;
 		}
@@ -2197,8 +2202,20 @@ export default {
 		return output;
 	},
 
-	opponentSelect: async (opponentName, serverPath) => {
+	opponentSelect: async (opponentId, serverPath) => {
 		const output = { data: {} };
+
+		let opponentName = "";
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/school?id=${ opponentId }`);
+			const opponentSchool = clientResponse.body.schools[0];
+			opponentName = opponentSchool.name;
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
 
 		let wrestlers = [];
 		try {
@@ -2257,7 +2274,7 @@ export default {
 		return output;		
 	},
 
-	opponentSaveLineup: async (user, saveId, saveName, opponentName, startingWeightClass, lineup, serverPath) => {
+	opponentSaveLineup: async (user, saveId, saveName, opponentId, startingWeightClass, lineup, serverPath) => {
 		const output = { data: {} };
 		
 		let saveUser = null;
@@ -2290,7 +2307,7 @@ export default {
 						return {
 							_id: saveId,
 							name: saveName,
-							opponent: opponentName,
+							opponentId: opponentId,
 							startingWeightClass: startingWeightClass,
 							lineup: lineup.map(lineupMatch => ({
 								weightClass: lineupMatch.weightClass,
@@ -2311,7 +2328,7 @@ export default {
 				// Opponent doesn't exist, add it
 				saveUser.session.matchSave.push({
 					name: saveName,
-					opponent: opponentName,
+					opponentId: opponentId,
 					startingWeightClass: startingWeightClass,
 					lineup: lineup.map(lineupMatch => ({
 						weightClass: lineupMatch.weightClass,

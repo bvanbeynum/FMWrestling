@@ -377,7 +377,7 @@ router.get("/api/opponentselect", authAPI, async (request, response) => {
 });
 
 router.post("/api/opponentsavelineup", authAPI, async (request, response) => {
-	const results = await api.opponentSaveLineup(request.user, request.body.saveid, request.body.savename, request.body.opponentname, request.body.startingweightclass, request.body.lineup, request.serverPath);
+	const results = await api.opponentSaveLineup(request.user, request.body.saveid, request.body.savename, request.body.opponentid, request.body.startingweightclass, request.body.lineup, request.serverPath);
 
 	if (results.error) {
 		console.log(`Error ${results.status}: ${ results.error }`);
