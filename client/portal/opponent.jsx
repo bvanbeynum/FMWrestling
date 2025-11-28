@@ -382,6 +382,21 @@ const Opponent = () => {
 				.find(() => true)
 		);
 
+		// If the initial lineup has any nulls (forfeits), fill them with the next best available wrestler
+		initialTeamLineup.forEach((lineupWrestler, lineupIndex) => {
+			if (!lineupWrestler) {
+				const usedWrestlerIds = new Set(initialTeamLineup.map(lineupWrestler => lineupWrestler?.id));
+				const availableWrestlers = teamWrestlers
+					.filter(wrestler => 
+						Math.abs(weightClassNames.findIndex(weightClass => weightClass == wrestler.weightClass) - lineupIndex) <= 1 &&
+						!usedWrestlerIds.has(wrestler.id))
+					.sort((wrestlerA, wrestlerB) => wrestlerB.rating - wrestlerA.rating);
+				if (availableWrestlers.length > 0) {
+					initialTeamLineup[lineupIndex] = availableWrestlers[0];
+				}
+			}
+		});
+
 		const opponentStatic = staticLineup
 				.filter(weightClass => weightClass.opponentWrestlerId)
 				.map(weightClass => ({ weightClass: weightClass.weightClass, wrestlerId: weightClass.opponentWrestlerId })),
