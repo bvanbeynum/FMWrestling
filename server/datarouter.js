@@ -178,7 +178,8 @@ router.delete("/data/wrestler", authInternal, async (request, response) => {
 router.get("/data/school", authInternal, async (request, response) => {
 		const filter = { 
 			id: request.query.id, 
-			name: request.query.name
+			name: request.query.name,
+			select: request.query.select ? request.query.select.split(",") : null
 		};
 
 	const results = await data.schoolGet(filter);

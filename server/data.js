@@ -564,6 +564,9 @@ export default {
 			const searchName = userFilter.name.toLowerCase();
 			filter.searchName = { $regex: new RegExp(searchName) };
 		}
+		if (userFilter.select) {
+			select = userFilter.select.reduce((output, current) => ({...output, [current]: 1 }), {});
+		}
 
 		try {
 			const records = await data.school.find(filter).select(select).lean().exec();
