@@ -158,6 +158,7 @@ export default {
 			date: Date,
 			name: String,
 			team: String,
+			searchTeam: String,
 			locationState: String,
 			matches: [{
 				division: String,
