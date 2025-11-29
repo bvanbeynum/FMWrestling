@@ -467,12 +467,10 @@ export default {
 		}
 
 		if (saveObject.events) {
-			saveObject.events = saveObject.events.map(event => {
-				if (event.team) {
-					event.searchTeam = event.team.toLowerCase();
-				}
-				return event;
-			});
+			saveObject.events = saveObject.events.map(event => ({
+				...event,
+				searchTeam: event.team ? event.team.toLowerCase() : null
+			}));
 		}
 
 		if (saveObject.id) {
