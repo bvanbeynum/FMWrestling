@@ -124,7 +124,6 @@ const Opponent = () => {
 						weightClass: wrestler.weightClass,
 						lastDate: new Date(wrestler.lastEvent?.date),
 					}));
-				console.log(opponentWrestlers);
 
 				const bestLineup = pickBestLineup(teamWrestlers, opponentWrestlers, []);
 				const eventStats = generateStats(bestLineup);
@@ -341,8 +340,6 @@ const Opponent = () => {
 				}
 			})
 			.then(data => {
-				console.log(`selected opponent id: ${selectedOpponent.id}`);
-				console.log(data);
 				if (data.savedMatches && data.savedMatches.length > 0) {
 					setSavedLineups(data.savedMatches
 						.filter(save => save.opponentId == selectedOpponent.id)
