@@ -7,6 +7,11 @@ import "./include/index.css";
 import "./include/opponent.css";
 
 const Opponent = () => {
+	
+	const seasonStart = new Date() > new Date(new Date().getFullYear(), 11, 1) ?
+		new Date(new Date().getFullYear(), 8, 1)
+		: new Date(new Date().getFullYear() - 1, 8, 1);
+		
 	const originalWeightClasses = ["106","113","120","126","132","138","144","150","157","165","175","190","215","285"];
 
 	const [ weightClassNames, setWeightClassNames ] = useState(["106","113","120","126","132","138","144","150","157","165","175","190","215","285"]);
@@ -57,6 +62,7 @@ const Opponent = () => {
 							name: wrestler.name,
 							rating: wrestler.rating,
 							deviation: wrestler.deviation,
+							lastDate: new Date(wrestler.lastEvent?.date),
 							weightClass: savedWeightClasses.some(savedWeightClass => savedWeightClass.wrestlerId == wrestler.id) ? // have we saved the wrestler to a different weight class
 								savedWeightClasses.filter(savedWeightClass => savedWeightClass.wrestlerId == wrestler.id).map(savedWeightClass => savedWeightClass.weightClass).find(() => true)
 								: wrestler.weightClass,
@@ -115,8 +121,10 @@ const Opponent = () => {
 						name: wrestler.name,
 						rating: wrestler.rating,
 						deviation: wrestler.deviation,
-						weightClass: wrestler.weightClass
+						weightClass: wrestler.weightClass,
+						lastDate: new Date(wrestler.lastEvent?.date),
 					}));
+				console.log(opponentWrestlers);
 
 				const bestLineup = pickBestLineup(teamWrestlers, opponentWrestlers, []);
 				const eventStats = generateStats(bestLineup);
@@ -378,7 +386,10 @@ const Opponent = () => {
 	const pickBestLineup = (teamWrestlers, opponentWrestlers, staticLineup, weightClassOverride, newLineupOverride = false) => {
 		const initialTeamLineup = (weightClassOverride || weightClassNames).map(weightClass => 
 			teamWrestlers.filter(wrestler => wrestler.weightClass == weightClass)
-				.sort((wrestlerA, wrestlerB) => wrestlerB.rating - wrestlerA.rating)
+				.sort((wrestlerA, wrestlerB) => 
+					wrestlerA.lastDate < seasonStart ? 1
+					: wrestlerB.lastDate < seasonStart ? -1
+					: wrestlerB.rating - wrestlerA.rating)
 				.find(() => true)
 		);
 
@@ -390,7 +401,10 @@ const Opponent = () => {
 					.filter(wrestler => 
 						Math.abs(weightClassNames.findIndex(weightClass => weightClass == wrestler.weightClass) - lineupIndex) <= 1 &&
 						!usedWrestlerIds.has(wrestler.id))
-					.sort((wrestlerA, wrestlerB) => wrestlerB.rating - wrestlerA.rating);
+					.sort((wrestlerA, wrestlerB) => 
+						wrestlerA.lastDate < seasonStart ? 1
+						: wrestlerB.lastDate < seasonStart ? -1
+						: wrestlerB.rating - wrestlerA.rating);
 				if (availableWrestlers.length > 0) {
 					initialTeamLineup[lineupIndex] = availableWrestlers[0];
 				}
@@ -506,7 +520,11 @@ const Opponent = () => {
 			availableWrestlers.splice(availableWrestlers.indexOf(match.team), 1);
 		});
 
-		availableWrestlers.sort((wrestlerA, wrestlerB) => wrestlerB.rating - wrestlerA.rating);
+		availableWrestlers.sort((wrestlerA, wrestlerB) => 
+			wrestlerA.lastDate < seasonStart ? 1
+			: wrestlerB.lastDate < seasonStart ? -1
+			: wrestlerB.rating - wrestlerA.rating
+		);
 
 		for (let wrestlerIndex = 0; wrestlerIndex < availableWrestlers.length; wrestlerIndex++) {
 			const bestWrestler = availableWrestlers[wrestlerIndex];
