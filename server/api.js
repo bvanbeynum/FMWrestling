@@ -2371,6 +2371,106 @@ export default {
 			return output;
 		}
 		
+	},
+
+	opponentEventLoad: async (serverPath) => {
+		const output = {
+			data: {}
+		};
+
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/school`);
+			output.data.schools = clientResponse.body.schools
+				.map(school => ({
+					id: school.id,
+					name: school.name,
+					classification: school.classification,
+					region: school.region
+				}));
+		}
+		catch (error) {
+			output.status = 564;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		return output;
+	},
+
+	opponentEventSelect: async (opponentId, serverPath) => {
+		const output = { data: {} };
+
+		let opponentName = "";
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/school?id=${ opponentId }`);
+			const opponentSchool = clientResponse.body.schools[0];
+			opponentName = opponentSchool.name;
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+
+		let wrestlers = [];
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/wrestler?teamname=${ opponentName }`);
+			wrestlers = clientResponse.body.wrestlers;
+		}
+		catch (error) {
+			output.status = 563;
+			output.error = error.message;
+			return output;
+		}
+
+		try {
+			const allEvents = wrestlers.flatMap(wrestler => 
+					wrestler.events.filter(event => event.team == opponentName)
+						.map(event => ({
+							lookupKey: `${ new Date(event.date).toLocaleDateString() }|${ event.name }`,
+							name: event.name,
+							date: new Date(event.date),
+							division: event.matches[0] ? event.matches[0].division : null,
+							weightClass: event.matches[0] ? event.matches[0].weightClass : null,
+							matches: event.matches,
+							wrestler: {
+								id: wrestler.id,
+								sqlId: wrestler.sqlId,
+								name: wrestler.name,
+								rating: wrestler.rating,
+								deviation: wrestler.deviation
+							}
+						}))
+				),
+				uniqueEvents = [...new Set(allEvents.map(event => event.lookupKey))],
+				teamEvents = uniqueEvents.map(eventKey => {
+					const eventInfo = allEvents.find(event => event.lookupKey == eventKey);
+					return {
+						name: eventInfo.name,
+						date: eventInfo.date,
+						wrestlers: allEvents
+							.filter(event => event.lookupKey == eventKey)
+							.map(event => ({
+								...event.wrestler, 
+								division: event.division,
+								weightClass: event.weightClass,
+								matches: event.matches 
+							}))
+					};
+				})
+				.sort((eventA, eventB) => +eventB.date - +eventA.date);
+
+			output.data.events = teamEvents;
+		}
+		catch (error) {
+			output.status = 564;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		return output;		
 	}
 	
 };

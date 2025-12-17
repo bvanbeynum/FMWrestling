@@ -13,6 +13,7 @@ export default {
 		myTeam: "./client/portal/myteam.jsx",
 		teamCompare: "./client/portal/teamcompare.jsx",
 		opponent: "./client/portal/opponent.jsx",
+		opponentEvent: "./client/portal/opponentevent.jsx",
 		wrestlerSearch: "./client/portal/wrestlersearch.jsx",
 		wrestler: "./client/portal/wrestler.jsx",
 		noaccess: "./client/portal/noaccess.jsx"
@@ -116,6 +117,16 @@ export default {
 				viewport: "width=device-width, initial-scale=1"
 			},
 			chunks: [ "opponent" ],
+			templateContent: "<html><body><div id='root'></div></body></html>"
+		}),
+		new HtmlWebpackPlugin({ 
+			filename: "./portal/opponentevent.html",
+			title: "Fort Mill Wrestling - Opponent Events",
+			favicon: "./client/media/favicon.ico",
+			meta: {
+				viewport: "width=device-width, initial-scale=1"
+			},
+			chunks: [ "opponentEvent" ],
 			templateContent: "<html><body><div id='root'></div></body></html>"
 		}),
 		new HtmlWebpackPlugin({ 

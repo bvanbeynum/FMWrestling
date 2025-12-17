@@ -387,4 +387,18 @@ router.post("/api/opponentsavelineup", authAPI, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : results.data );
 });
 
+// ***************** Opponent Event ********************
+
+router.get("/api/opponenteventload", authAPI, async (request, response) => {
+	const results = await api.opponentEventLoad(request.serverPath);
+
+	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
+});
+
+router.get("/api/opponenteventselect", authAPI, async (request, response) => {
+	const results = await api.opponentEventSelect(request.query.opponent, request.serverPath);
+
+	response.status(results.status).json(results.error ? { error: results.error } : results.data );
+});
+
 export default router;
