@@ -419,6 +419,7 @@ table.sectionTable {
 
 .sectionTable td {
 	padding: 4px 3px;
+	border-bottom: 2px rgb(235 235 235) solid;
 }
 
 .sectionTable td:nth-child(1) {

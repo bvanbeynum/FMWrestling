@@ -2,6 +2,93 @@ import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom/client";
 import Nav from "./nav.jsx";
 import "./include/index.css";
+import "./include/opponentevent.css";
+
+const Match = ({ match, showRound }) => {
+	return (
+		<tr>
+			{showRound && <td>{match.round}</td>}
+			<td>{match.vs} ({match.vsTeam})</td>
+			<td><span className={match.isWinner ? 'win' : 'loss'}>{match.isWinner ? 'Win' : 'Loss'}</span> • {match.winType}</td>
+		</tr>
+	);
+};
+
+const Wrestler = ({ wrestler }) => {
+	const [isExpanded, setIsExpanded] = useState(false);
+
+	const sortedMatches = wrestler.matches.sort((a, b) => a.sort - b.sort);
+
+	const wins = wrestler.matches.filter(match => match.isWinner).length;
+	const losses = wrestler.matches.length - wins;
+	const winPercentage = wrestler.matches.length > 0 ? ((wins / wrestler.matches.length) * 100).toFixed(0) : 0;
+
+	const showRound = wrestler.matches.some(match => match.round && match.round.length > 0);
+
+	return (
+		<div className="wrestler-item">
+			<div className="wrestler-header" onClick={() => setIsExpanded(!isExpanded)}>
+				<div>
+					<div>{wrestler.weightClass} &bull; {wrestler.name}</div>
+					<div className="wrestler-stats">{wins}-{losses} ({winPercentage}%)</div>
+				</div>
+				<span>{isExpanded ? '[-]' : '[+]'}</span>
+			</div>
+			{isExpanded && (
+				<div className="matches-container inlay">
+					<table className="sectionTable">
+						<thead>
+							<tr>
+								{showRound && <th>Round</th>}
+								<th>Opponent</th>
+								<th>Result</th>
+							</tr>
+						</thead>
+						<tbody>
+							{sortedMatches.map((match, index) => (
+								<Match key={index} match={match} showRound={showRound} />
+							))}
+						</tbody>
+					</table>
+				</div>
+			)}
+		</div>
+	);
+};
+
+const EventPanel = ({ event }) => {
+	const wrestlersByDivision = event.wrestlers.reduce((acc, wrestler) => {
+		const { division } = wrestler;
+		if (!acc[division]) {
+			acc[division] = [];
+		}
+		acc[division].push(wrestler);
+		return acc;
+	}, {});
+
+	const sortedDivisions = Object.keys(wrestlersByDivision).sort();
+
+	return (
+		<div className="panel expandable">
+			<div className="eventHeader">
+				<div>{event.name}</div>
+			</div>
+			<div className="subHeading" style={{ textAlign: 'center' }}>{new Date(event.date).toLocaleDateString()}</div>
+			<div className="panelContent">
+				{sortedDivisions.map(division => (
+					<div key={division}>
+						{sortedDivisions.length > 1 && <h4 className="division-header">{division}</h4>}
+						{wrestlersByDivision[division]
+							.sort((a, b) => parseInt(a.weightClass) - parseInt(b.weightClass))
+							.map(wrestler => (
+								<Wrestler key={wrestler.id} wrestler={wrestler} />
+							))}
+					</div>
+				))}
+			</div>
+		</div>
+	);
+};
 
 const OpponentEvent = () => {
 
@@ -150,8 +237,11 @@ const OpponentEvent = () => {
 						</select>
 					</label>
 				</div>
-				
 			</div>
+
+			{
+			events.map((event, eventIndex) => <EventPanel key={eventIndex} event={event} />)
+			}
 
 		</div>
 
