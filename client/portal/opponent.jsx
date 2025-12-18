@@ -15,6 +15,7 @@ const Opponent = () => {
 	const originalWeightClasses = ["106","113","120","126","132","138","144","150","157","165","175","190","215","285"];
 
 	const [ weightClassNames, setWeightClassNames ] = useState(["106","113","120","126","132","138","144","150","157","165","175","190","215","285"]);
+	const [ startingWeightIndex, setStartingWeightIndex ] = useState(0)
 	const [ startingWeight, setStartingWeight ] = useState("106")
 
 	const [ pageActive, setPageActive ] = useState(false);
@@ -155,7 +156,8 @@ const Opponent = () => {
 			// Selected an existing lineup
 			loadLineup = savedLineups.find(lineup => lineup.id == lineupId);
 			
-			const weightIndex = weightClassNames.findIndex(weightClass => weightClass == loadLineup.startingWeightClass);
+			const weightIndex = weightClassNames.findIndex(weightClass => weightClass == loadLineup.startingWeightClass),
+				rangeIndex = originalWeightClasses.findIndex(weightClass => weightClass == loadLineup.startingWeightClass);
 			
 			newWeightClasses = [
 					...weightClassNames.slice(weightIndex),
@@ -185,6 +187,7 @@ const Opponent = () => {
 			setSelectedLineup(lineupId);
 			setSaveName(loadLineup.name);
 			setStartingWeight(loadLineup.startingWeightClass);
+			setStartingWeightIndex(rangeIndex);
 		}
 		else {
 			// Create a new lineup
@@ -241,6 +244,28 @@ const Opponent = () => {
 		setLineup(updatedLineup);
 		setWeightClassNames(newWeightClasses);
 		setStartingWeight(startingWeight);
+	};
+
+	const updateStartingWeightIndex = newStartIndex => {
+		const newWeightClass = originalWeightClasses[newStartIndex],
+			newIndex = weightClassNames.findIndex(weightClass => weightClass == newWeightClass),
+			newWeightClasses = [
+				...weightClassNames.slice(newIndex),
+				...weightClassNames.slice(0, newIndex)
+			],
+			updatedLineup = [
+				...lineup.slice(newIndex),
+				...lineup.slice(0, newIndex)
+				]
+				.map((match, matchIndex) => ({
+					...match,
+					weightClassPosition: matchIndex
+				}));
+
+		setLineup(updatedLineup);
+		setWeightClassNames(newWeightClasses);
+		setStartingWeight(newWeightClass);
+		setStartingWeightIndex(newStartIndex);
 	};
 
 	const selectViewPlayer = (teamName, match) => {
@@ -804,6 +829,11 @@ const Opponent = () => {
 						teamName={"Fort Mill"}
 						opponentName={selectedOpponent.name}
 					/>
+				</div>
+
+				<div className="startingWeight">
+					<input type="range" min="0" max={ weightClassNames.length - 1 } step="1" value={ startingWeightIndex } onChange={ event => updateStartingWeightIndex(event.target.value) } />
+					<div>Starting Weight: { startingWeight } lbs</div>
 				</div>
 			</div>
 			
