@@ -52,7 +52,7 @@
 	display: grid;
 	grid-template-columns: 1fr 50px 1fr;
 	border-bottom: solid 1px rgb(211 211 211);
-	padding: 6px 0px;
+	padding: 3px 0px;
 	color: rgb(79 79 79);
 }
 

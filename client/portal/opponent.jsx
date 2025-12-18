@@ -828,8 +828,7 @@ const Opponent = () => {
 								: ""
 								}
 							</div>
-							<div className="subItem">{ match.team ? match.team.weightClass : "" }</div>
-							<div className="subItem">{ match.team ? match.team.rating.toFixed(0) + " / " + match.team.deviation.toFixed(0) : "" }</div>
+							<div className="subItem">{ match.team ? match.team.weightClass + " • " + match.team.rating.toFixed(0) + " (" + match.team.deviation.toFixed(0) + ")" : "" }</div>
 						</div>
 
 						<div className="scoreDetails">
@@ -876,8 +875,9 @@ const Opponent = () => {
 								: ""
 								}
 							</div>
-							<div className="subItem">{ match.opponent ? match.opponent.weightClass : "" }</div>
-							<div className="subItem">{ match.opponent ? match.opponent.rating.toFixed(0) + " / " + match.opponent.deviation.toFixed(0) : "" }</div>
+							<div className="subItem">
+								{ match.opponent ? match.opponent.weightClass + " • " + match.opponent.rating.toFixed(0) + " (" + match.opponent.deviation.toFixed(0) + ")" : "" }
+							</div>
 						</div>
 					</div>
 

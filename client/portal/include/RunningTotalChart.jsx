@@ -90,6 +90,19 @@ const RunningTotalChart = ({ lineup, weightClassNames, teamName, opponentName })
 			<line x1={chartData.margin.left} y1={chartData.height - chartData.margin.bottom} x2={chartData.width - chartData.margin.right} y2={chartData.height - chartData.margin.bottom} stroke="black" />
 			<line x1={chartData.margin.left} y1={chartData.margin.top} x2={chartData.margin.left} y2={chartData.height - chartData.margin.bottom} stroke="black" />
 
+			{/* Vertical grid lines */}
+			{chartData.xAxisLabels.map((label, i) => (
+				<line
+					key={`vline-${i}`}
+					x1={label.x}
+					y1={chartData.margin.top}
+					x2={label.x}
+					y2={chartData.height - chartData.margin.bottom}
+					stroke="lightgray"
+					strokeDasharray="2,2"
+				/>
+			))}
+
 			{/* X-Axis Labels */}
 			{chartData.xAxisLabels.map((label, i) => (
 				<text key={i} x={label.x} y={label.y} textAnchor="middle" fontSize="10">{label.text}</text>
