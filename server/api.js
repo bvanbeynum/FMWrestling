@@ -2233,7 +2233,7 @@ export default {
 				.filter(wrestler => wrestler.events.some(event => /^sc$/gi.test(event.locationState))) // Wrestler has wrestled in SC
 				.map(wrestler => {
 					const lastTeamEvent = wrestler.events
-						.filter(event => event.matches.some(match => match.weightClass && !isNaN(match.weightClass)))
+						.filter(event => event.matches.some(match => match.weightClass && !isNaN(match.weightClass.replace("lbs", "").trim())))
 						.sort((eventA, eventB) => +(new Date(eventB.date)) - +(new Date(eventA.date)))
 						.map(event => ({
 							name: event.name,
@@ -2245,7 +2245,7 @@ export default {
 									: /(ms|middle school)/i.test(event.matches[0].division) ? "MS"
 									: (event.matches[0].division || "").trim()
 								: null, 
-							weightClass: event.matches ? event.matches[0].weightClass : null
+							weightClass: event.matches ? event.matches[0].weightClass.replace("lbs", "").trim() : null
 						}))
 						.find(() => true);
 
