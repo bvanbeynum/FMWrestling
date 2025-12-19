@@ -149,6 +149,9 @@ const Opponent = () => {
 				setOpponentEvents(newEvents);
 				setOpponentWrestlers(opponentWrestlers);
 				setIsLoading(false);
+				setSelectedLineup("");
+				setSaveName("");
+				setSelectedEventLineup("");
 			})
 			.catch(error => {
 				console.warn(error);
@@ -156,29 +159,37 @@ const Opponent = () => {
 	};
 
 	const setEventLinup = eventKey => {
-		const opponentEvent = opponentEvents.find(event => event.key == eventKey);
+		let newLineup;
+		if (eventKey) {
+			const opponentEvent = opponentEvents.find(event => event.key == eventKey);
 
-		const newLineup = lineup.map(lineupMatch => {
-			const eventWrestler = opponentEvent.wrestlers.find(wrestler => wrestler.weightClass == lineupMatch.weightClass);
-			const opponentWrestler = eventWrestler ? opponentWrestlers.find(wrestler => wrestler.id == eventWrestler.id) : null;
-			const weightClassPosition = weightClassNames.indexOf(lineupMatch.weightClass)
+			newLineup = lineup.map(lineupMatch => {
+				const eventWrestler = opponentEvent.wrestlers.find(wrestler => wrestler.weightClass == lineupMatch.weightClass);
+				const opponentWrestler = eventWrestler ? opponentWrestlers.find(wrestler => wrestler.id == eventWrestler.id) : null;
+				const weightClassPosition = weightClassNames.indexOf(lineupMatch.weightClass)
 
-			return {
-				...lineupMatch,
-				weightClass: lineupMatch.weightClass,
-				weightClassPosition: weightClassPosition,
-				teamScore: 0,
-				isStaticOpponent: true,
-				opponent: opponentWrestler,
-				opponentScore: 0,
-				prediction: !opponentWrestler ? 6
-					: !lineupMatch.team ? -6
-					: predictMatchOutcomePoints(lineupMatch.team, opponentWrestler, weightClassPosition)
-			}
-		});
+				return {
+					...lineupMatch,
+					weightClass: lineupMatch.weightClass,
+					weightClassPosition: weightClassPosition,
+					teamScore: 0,
+					isStaticOpponent: true,
+					opponent: opponentWrestler,
+					opponentScore: 0,
+					prediction: !opponentWrestler ? 6
+						: !lineupMatch.team ? -6
+						: predictMatchOutcomePoints(lineupMatch.team, opponentWrestler, weightClassPosition)
+				}
+			});
+		}
+		else {
+			// Create a new lineup
+			newLineup = pickBestLineup(teamWrestlers, opponentWrestlers, [], weightClassNames, true);
+		}
 
 		setLineup(newLineup);
 		setSelectedLineup("");
+		setSaveName("");
 		setEventDetails(generateStats(newLineup));
 		setSelectedEventLineup(eventKey);
 	};
