@@ -18,6 +18,9 @@ const Opponent = () => {
 	const [ startingWeightIndex, setStartingWeightIndex ] = useState(0)
 	const [ startingWeight, setStartingWeight ] = useState("106")
 
+	const [ opponentEvents, setOpponentEvents ] = useState([]);
+	const [ selectedEventLineup, setSelectedEventLineup ] = useState("");
+
 	const [ pageActive, setPageActive ] = useState(false);
 	const [ isLoading, setIsLoading ] = useState(true);
 	const [ loggedInUser, setLoggedInUser ] = useState(null);
@@ -139,12 +142,45 @@ const Opponent = () => {
 				setLineup(bestLineup)
 				setEventDetails(eventStats);
 
+				const newEvents = data.events
+					.filter(event => event.wrestlers.some(wrestler => opponentWrestlers.some(opponentWrestler => opponentWrestler.id == wrestler.id)))
+					.map(event => ({...event, date: new Date(event.date) })).sort((eventA, eventB) => +eventB.date - +eventA.date);
+
+				setOpponentEvents(newEvents);
 				setOpponentWrestlers(opponentWrestlers);
 				setIsLoading(false);
 			})
 			.catch(error => {
 				console.warn(error);
 			});
+	};
+
+	const setEventLinup = eventKey => {
+		const opponentEvent = opponentEvents.find(event => event.key == eventKey);
+
+		const newLineup = lineup.map(lineupMatch => {
+			const eventWrestler = opponentEvent.wrestlers.find(wrestler => wrestler.weightClass == lineupMatch.weightClass);
+			const opponentWrestler = eventWrestler ? opponentWrestlers.find(wrestler => wrestler.id == eventWrestler.id) : null;
+			const weightClassPosition = weightClassNames.indexOf(lineupMatch.weightClass)
+
+			return {
+				...lineupMatch,
+				weightClass: lineupMatch.weightClass,
+				weightClassPosition: weightClassPosition,
+				teamScore: 0,
+				isStaticOpponent: true,
+				opponent: opponentWrestler,
+				opponentScore: 0,
+				prediction: !opponentWrestler ? 6
+					: !lineupMatch.team ? -6
+					: predictMatchOutcomePoints(lineupMatch.team, opponentWrestler, weightClassPosition)
+			}
+		});
+
+		setLineup(newLineup);
+		setSelectedLineup("");
+		setEventDetails(generateStats(newLineup));
+		setSelectedEventLineup(eventKey);
 	};
 
 	const changeLineup = lineupId => {
@@ -188,6 +224,7 @@ const Opponent = () => {
 			setSaveName(loadLineup.name);
 			setStartingWeight(loadLineup.startingWeightClass);
 			setStartingWeightIndex(rangeIndex);
+			setSelectedEventLineup("");
 		}
 		else {
 			// Create a new lineup
@@ -760,11 +797,12 @@ const Opponent = () => {
 					selectedOpponent ?
 					
 					<label>
-						Starting Weight
-						<select value={ startingWeight } onChange={ event => updateStartingWeight(event.target.value) }>
+						Event Lineup
+						<select value={ selectedEventLineup } onChange={ event => setEventLinup(event.target.value) }>
+							<option value="">-- Select Event --</option>
 							{
-							weightClassNames.map((weightClass, weightClassIndex) => 
-							<option key={ weightClassIndex } value={ weightClass }>{ weightClass }</option>
+							opponentEvents.map((event, eventIndex) => 
+							<option key={ eventIndex } value={ event.key }>{ event.name + " (" + event.date.toLocaleDateString() + ")" }</option>
 							)}
 						</select>
 					</label>

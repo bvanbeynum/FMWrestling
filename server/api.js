@@ -2263,6 +2263,55 @@ export default {
 					wrestler.lastEvent // Has a last event
 					&& wrestler.lastEvent.date >= new Date(new Date().getFullYear() - 1, 8, 1) // Last event within the last school year
 				);
+			
+			const seasonStart = new Date() > new Date(new Date().getFullYear(), 11, 1) ?
+				new Date(new Date().getFullYear(), 8, 1)
+				: new Date(new Date().getFullYear() - 1, 8, 1)
+			
+			const allEvents = wrestlers.flatMap(wrestler => 
+					wrestler.events
+						.filter(event => 
+							event.team == opponentName && 
+							new Date(event.date) >= seasonStart &&
+							event.matches.some(match => match.weightClass && !isNaN(match.weightClass.replace("lbs", "").trim()))
+						)
+						.map(event => ({
+							lookupKey: `${ new Date(event.date).toLocaleDateString() }|${ event.name }`,
+							name: event.name,
+							date: new Date(event.date),
+							division: event.matches[0] ? event.matches[0].division : null,
+							weightClass: event.matches[0] ? event.matches[0].weightClass.replace("lbs", "").trim() : null,
+							matches: event.matches.map(match => ({...match, weightClass: match.weightClass ? match.weightClass.replace("lbs", "").trim() : null }) ),
+							wrestler: {
+								id: wrestler.id,
+								sqlId: wrestler.sqlId,
+								name: wrestler.name,
+								rating: wrestler.rating,
+								deviation: wrestler.deviation
+							}
+						}))
+				),
+				uniqueEvents = [...new Set(allEvents.map(event => event.lookupKey))],
+				teamEvents = uniqueEvents.map(eventKey => {
+					return allEvents.filter(event => event.lookupKey == eventKey)
+						.map(eventInfo => ({
+							key: eventKey,
+							name: eventInfo.name,
+							date: eventInfo.date,
+							wrestlers: allEvents
+								.filter(event => event.lookupKey == eventKey)
+								.map(event => ({
+									...event.wrestler, 
+									division: event.division,
+									weightClass: event.weightClass,
+									matches: event.matches 
+								}))
+						}))
+						.find(() => true);
+				})
+				.sort((eventA, eventB) => +eventB.date - +eventA.date);
+
+			output.data.events = teamEvents;
 		}
 		catch (error) {
 			output.status = 564;
