@@ -398,7 +398,7 @@ export default {
 				const schoolNames = schools
 					.filter(school => school.classification == rankingFilter.classification)
 					.flatMap(school => school.lookupNames.map(name => name.toLowerCase()));
-				elemMatchFilter.searchTeam = { $in: schoolNames.map(name => new RegExp("^" + name)) };
+				elemMatchFilter.searchTeam = { $in: schoolNames };
 			}
 
 			const pipeline = [
