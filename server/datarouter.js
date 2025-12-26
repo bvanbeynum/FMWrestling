@@ -139,7 +139,7 @@ router.get("/data/wrestler", authInternal, async (request, response) => {
 
 router.get("/data/wrestlerranking", authInternal, async (request, response) => {
 	try {
-		const results = await data.wrestlerRankingGet({ state: request.query.state, team: request.query.team, weightClass: request.query.weightclass });
+		const results = await data.wrestlerRankingGet({ state: request.query.state, team: request.query.team, weightClass: request.query.weightclass, classification: request.query.classification, serverPath: request.query.serverpath });
 
 		if (results.error) {
 			// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6512f4d0cf4fc75b6309f5f3", message: `${ results.status }: ${results.error}` }}).then();

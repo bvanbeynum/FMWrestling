@@ -1899,57 +1899,27 @@ export default {
 		return output;
 	},
 
-	wrestlerSearchLoad: async (rankingState, serverPath) => {
-		const output = { data: {} }
+	wrestlerSearchRanking: async (state, team, weightClass, classification, serverPath) => {
+		const output = { data: {} };
 
 		try {
-			const clientResponse = await client.get(`${ serverPath }/data/wrestlerranking?state=${ rankingState }`);
-			output.data.wrestlerRankings = clientResponse.body.wrestlers.map(wrestler => ({
-				id: wrestler.id,
-				name: wrestler.name,
-				rating: wrestler.rating,
-				deviation: wrestler.deviation,
-				events: wrestler.events.map(event => ({
-					name: event.name,
-					date: new Date(event.date),
-					team: event.team,
-					weightClass: event.matches[0] ? event.matches[0].weightClass : null
-				})),
-				teams: [...new Set(wrestler.events.filter(event => event.team).map(event => event.team))]
-					.map(teamName => ({ 
-						name: teamName,
-						lastDate: wrestler.events
-							.filter(event => event.team == teamName)
-							.map(event => new Date(event.date))
-							.sort((dateA, dateB) => +dateB - +dateA)
-							.find(() => true)
-					})),
-				weightClasses: [... new Set(wrestler.events.flatMap(event => event.matches.filter(match => match.weightClass).map(match => match.weightClass)))]
-					.map(weightClass => ({
-						weightClass: weightClass,
-						lastDate: wrestler.events
-							.filter(event => event.matches.some(match => match.weightClass == weightClass))
-							.map(event => new Date(event.date))
-							.sort((dateA, dateB) => +dateB - +dateA)
-							.find(() => true)
-					}))
-			}));
+			const clientResponse = await client.get(`${ serverPath }/data/school`);
+			output.data.schools = clientResponse.body.schools
+				.map(school => ({
+					id: school.id,
+					name: school.name,
+					classification: school.classification,
+					region: school.region
+				}));
 		}
 		catch (error) {
-			output.status = 562;
+			output.status = 564;
 			output.error = error.message;
 			return output;
 		}
 
-		output.status = 200;
-		return output;
-	},
-
-	wrestlerSearchRanking: async (state, team, weightClass, serverPath) => {
-		const output = { data: {} };
-
 		try {
-			const clientResponse = await client.get(`${ serverPath }/data/wrestlerranking?${ state ? `state=${ state }&` : "" }${ team ? `team=${ encodeURIComponent(team) }&` : "" }${ weightClass ? `weightclass=${ encodeURIComponent(weightClass) }` : "" }`);
+			const clientResponse = await client.get(`${ serverPath }/data/wrestlerranking?${ state ? `state=${ state }&` : "" }${ team ? `team=${ encodeURIComponent(team) }&` : "" }${ weightClass ? `weightclass=${ encodeURIComponent(weightClass) }` : "" }${ classification ? `&classification=${ encodeURIComponent(classification) }` : "" }`);
 			output.data.wrestlerRankings = clientResponse.body.wrestlers.map(wrestler => ({
 				id: wrestler.id,
 				name: wrestler.name,
@@ -1959,22 +1929,26 @@ export default {
 					name: event.name,
 					date: new Date(event.date),
 					team: event.team,
+					isSchoolTeam: output.data.schools.some(school => event.team && event.team.toLowerCase().includes(school.name.toLowerCase())),
 					weightClass: event.matches[0] ? event.matches[0].weightClass : null
 				})),
 				teams: [...new Set(wrestler.events.filter(event => event.team).map(event => event.team))]
 					.map(teamName => ({ 
 						name: teamName,
+						isSchoolTeam: output.data.schools.some(school => teamName && teamName.toLowerCase().includes(school.name.toLowerCase())),
 						lastDate: wrestler.events
 							.filter(event => event.team == teamName)
 							.map(event => new Date(event.date))
 							.sort((dateA, dateB) => +dateB - +dateA)
 							.find(() => true)
 					})),
-				weightClasses: [... new Set(wrestler.events.flatMap(event => event.matches.filter(match => match.weightClass).map(match => match.weightClass)))]
+				weightClasses: [...new Set(
+						wrestler.events.flatMap(event => event.matches.filter(match => match.weightClass).map(match => parseInt(match.weightClass, 10)).filter(wc => !isNaN(wc)))
+					)]
 					.map(weightClass => ({
 						weightClass: weightClass,
 						lastDate: wrestler.events
-							.filter(event => event.matches.some(match => match.weightClass == weightClass))
+							.filter(event => event.matches.some(match => match.weightClass && parseInt(match.weightClass, 10) === weightClass))
 							.map(event => new Date(event.date))
 							.sort((dateA, dateB) => +dateB - +dateA)
 							.find(() => true)

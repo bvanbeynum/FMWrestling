@@ -323,7 +323,7 @@ router.get("/api/scmatteamsearch", authAPI, async (request, response) => {
 // ***************** Wrestler ********************
 
 router.get("/api/wrestlersearchload", authAPI, async (request, response) => {
-	const results = await api.wrestlerSearchLoad(request.query.rankingstate || "sc", request.serverPath);
+	const results = await api.wrestlerSearchRanking("SC", null, null, null, request.serverPath);
 
 	if (results.error) {
 		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "65723e6ccf4fc75b63a0e3dd", message: `${ results.status }: ${results.error}` }}).then();
@@ -353,7 +353,7 @@ router.get("/api/wrestlerdetails", authAPI, async (request, response) => {
 });
 
 router.get("/api/wrestlersearchranking", authAPI, async (request, response) => {
-	const results = await api.wrestlerSearchRanking(request.query.state, request.query.team, request.query.weightclass, request.serverPath);
+	const results = await api.wrestlerSearchRanking(request.query.state, request.query.team, request.query.weightclass, request.query.classification, request.serverPath);
 
 	if (results.error) {
 		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "65724f4ccf4fc75b63a1c0f3", message: `${ results.status }: ${results.error}` }}).then();

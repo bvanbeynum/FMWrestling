@@ -375,12 +375,13 @@ export default {
 		const output = {};
 
 		try {
-			const oneYearAgo = new Date();
-			oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-
+			const seasonStart = new Date() > new Date(new Date().getFullYear(), 11, 1) ?
+				new Date(new Date().getFullYear(), 8, 1)
+				: new Date(new Date().getFullYear() - 1, 8, 1);
+		
 			const elemMatchFilter = {
 				"matches.division": { $in: [/high school/i, /hs/i] },
-				date: { $gte: oneYearAgo }
+				date: { $gte: seasonStart }
 			};
 
 			if (rankingFilter.state) {
@@ -390,7 +391,14 @@ export default {
 				elemMatchFilter.searchTeam = rankingFilter.team.toLowerCase();
 			}
 			if (rankingFilter.weightClass) {
-				elemMatchFilter["matches.weightClass"] = rankingFilter.weightClass;
+				elemMatchFilter["matches.weightClass"] = { $regex: new RegExp("^" + rankingFilter.weightClass) };
+			}
+			if (rankingFilter.classification) {
+				const schools = await data.school.find().select({lookupNames: 1, classification: 1}).lean().exec();
+				const schoolNames = schools
+					.filter(school => school.classification == rankingFilter.classification)
+					.flatMap(school => school.lookupNames.map(name => name.toLowerCase()));
+				elemMatchFilter.searchTeam = { $in: schoolNames.map(name => new RegExp("^" + name)) };
 			}
 
 			const pipeline = [

@@ -6,6 +6,10 @@ import "./include/wrestler.css";
 
 const WrestlerSearchComponent = () => {
 
+	const seasonStart = new Date() > new Date(new Date().getFullYear(), 11, 1) ?
+		new Date(new Date().getFullYear(), 8, 1)
+		: new Date(new Date().getFullYear() - 1, 8, 1);
+
 	const chartColors = ["#0074C2", "#F0AC00", "#E66000", "#5E97BD", "#B89E5C", "#E5641E"];
 
 	const [ pageActive, setPageActive ] = useState(false);
@@ -22,7 +26,9 @@ const WrestlerSearchComponent = () => {
 	const [ filterWeightClass, setFilterWeightClass ] = useState("");
 	const [ filterClassification, setFilterClassification ] = useState("");
 	const [ filterTeam, setFilterTeam ] = useState("");
-	const [ filters, setFilters ] = useState({});
+	const [ filters, setFilters ] = useState({ state: "SC", weightClass: "", classification: "", team: "" });
+
+	const [ schools, setSchools ] = useState([]);
 	
 	useEffect(() => {
 		if (!pageActive) {
@@ -36,29 +42,8 @@ const WrestlerSearchComponent = () => {
 					}
 				})
 				.then(data => {
-					const rankings = data.wrestlerRankings.map((wrestler, index) => ({
-						...wrestler,
-						teamLast: wrestler.teams
-							.sort((teamA, teamB) => new Date(teamB.lastDate) - new Date(teamA.lastDate))
-							.find(() => true),
-						weightClassLast: wrestler.weightClasses
-							.sort((weightClassA, weightClassB) => new Date(weightClassB.lastDate) - new Date(weightClassA.lastDate))
-							.find(() => true),
-						weightClassCommon: wrestler.events.slice(0,5)
-							.reduce((output, event) => {
-								const weightClassEntry = output.find(entry => entry.weightClass === event.weightClass);
-								if (weightClassEntry) {
-									weightClassEntry.count += 1;
-								}
-								else {
-									output.push({ weightClass: event.weightClass, count: 1 });
-								}
-								return output;
-							}, [])
-							.sort((a, b) => b.count - a.count)[0]?.weightClass || null
-					}));
-
-					setWrestlerRankings(rankings);
+					setWrestlerRankings(buildRankings(data.wrestlerRankings));
+					setSchools(data.schools);
 
 					setLoggedInUser(data.loggedInUser);
 					setPageActive(true);
@@ -127,9 +112,10 @@ const WrestlerSearchComponent = () => {
 		setFilters(newFilters);
 		setFilterState(newFilters.state || "");
 		setFilterWeightClass(newFilters.weightClass || "");
+		setFilterClassification(newFilters.classification || "");
 		setFilterTeam(newFilters.team || "");
 
-		fetch(`/api/wrestlersearchranking?state=${ newFilters.state || "" }&team=${ newFilters.team || "" }&weightclass=${ newFilters.weightClass || "" }`)
+		fetch(`/api/wrestlersearchranking?state=${ newFilters.state || "" }&team=${ newFilters.team || "" }&weightclass=${ newFilters.weightClass || "" }&classification=${ newFilters.classification || "" }`)
 			.then(response => {
 				if (response.ok) {
 					return response.json();
@@ -139,35 +125,29 @@ const WrestlerSearchComponent = () => {
 				}
 			})
 			.then(data => {
-				const rankings = data.wrestlerRankings.map((wrestler, index) => ({
-					...wrestler,
-					teamLast: wrestler.teams
-						.sort((teamA, teamB) => new Date(teamB.lastDate) - new Date(teamA.lastDate))
-						.find(() => true),
-					weightClassLast: wrestler.weightClasses
-						.sort((weightClassA, weightClassB) => new Date(weightClassB.lastDate) - new Date(weightClassA.lastDate))
-						.find(() => true),
-					weightClassCommon: wrestler.events.slice(0,5)
-						.reduce((output, event) => {
-							const weightClassEntry = output.find(entry => entry.weightClass === event.weightClass);
-							if (weightClassEntry) {
-								weightClassEntry.count += 1;
-							}
-							else {
-								output.push({ weightClass: event.weightClass, count: 1 });
-							}
-							return output;
-						}, [])
-						.sort((a, b) => b.count - a.count)[0]?.weightClass || null
-				}));
-
-				setWrestlerRankings(rankings);
+				setWrestlerRankings(buildRankings(data.wrestlerRankings));
 				setPageActive(true);
 			})
 			.catch(error => {
 				console.warn(error);
 			});
-	}
+	};
+
+	const buildRankings = wrestlerRankings => {
+		return wrestlerRankings.map(wrestler => ({
+			...wrestler,
+			teamLast: wrestler.teams
+				.sort((teamA, teamB) => 
+					teamA.isSchoolTeam && !teamB.isSchoolTeam ? -1 
+					: teamB.isSchoolTeam && !teamA.isSchoolTeam ? 1 
+					: new Date(teamB.lastDate) - new Date(teamA.lastDate)
+				)
+				.find(() => true),
+			weightClass: wrestler.weightClasses
+				.sort((weightClassA, weightClassB) => new Date(weightClassB.lastDate) - new Date(weightClassA.lastDate))
+				.find(() => true)
+		}));
+	};
 
 	return (
 <div className="page">
@@ -291,12 +271,17 @@ const WrestlerSearchComponent = () => {
 								<option value="285">285</option>
 							</select>
 						</div>
-						{/* <div className="filterItem">
+						<div className="filterItem">
 							<label htmlFor="classification-filter">Classification</label>
-							<select id="classification-filter" name="classification">
+							<select id="classification-filter" name="classification" value={ filterClassification } onChange={ event => updateFilter("classification", event.target.value) }>
 								<option value="">All</option>
+								{
+								[...new Set(schools.map(school => school.classification).filter(classification => classification))].sort().map((classification, index) => (
+									<option key={index} value={classification}>{ classification }</option>
+								))
+								}
 							</select>
-						</div> */}
+						</div>
 						<div className="filterItem">
 							<label htmlFor="team-filter">Team</label>
 							<select id="team-filter" name="team" value={ filterTeam } onChange={ event => updateFilter("state", event.target.value) }>
@@ -311,8 +296,8 @@ const WrestlerSearchComponent = () => {
 						<tr>
 							<th>Rank</th>
 							<th>Name</th>
-							<th>Weight Class (Last)</th>
-							<th>Weight Class (Common)</th>
+							<th>Rating</th>
+							<th>Weight Class</th>
 							<th>Team</th>
 						</tr>
 					</thead>
@@ -323,8 +308,8 @@ const WrestlerSearchComponent = () => {
 								<td>
 									<a onClick={() => selectWrestler(wrestler)}>{wrestler.name}</a>
 								</td>
-								<td>{wrestler.weightClassLast?.weightClass}</td>
-								<td>{wrestler.weightClassCommon}</td>
+								<td>{wrestler.rating.toFixed(0)} ({wrestler.deviation.toFixed(0)})</td>
+								<td>{wrestler.weightClass.weightClass}</td>
 								<td>{wrestler.teamLast?.name}</td>
 							</tr>
 						))}
