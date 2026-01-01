@@ -167,6 +167,8 @@ export default {
 				vs: String,
 				vsTeam: String,
 				vsSqlId: Number,
+				vsRating: Number,
+				vsDeviation: Number,
 				isWinner: Boolean,
 				winType: String,
 				sort: Number
