@@ -70,9 +70,39 @@ const WrestlerComponent = () => {
 							: [],
 						ratingHistory: data.wrestler.ratingHistory.map(rating => ({
 							...rating,
-							periodEndDate: new Date(rating.periodEndDate)
+							periodEndDate: new Date(new Date(rating.periodEndDate).setHours(0,0,0,0))
 						}))
 					};
+
+					wrestlerData.ratingHistory = wrestlerData.ratingHistory
+						.map(rating => ({ 
+							...rating,
+							results: wrestlerData.events
+								.filter(event => 
+									event.date <= rating.periodEndDate
+									&& event.date >= new Date(new Date(rating.periodEndDate).setDate(rating.periodEndDate.getDate() - 6))
+								)
+								.flatMap(event => event.matches.map(match => ({
+									eventDate: event.date,
+									eventName: event.name,
+									isWinner: match.isWinner,
+									vs: match.vs,
+									vsId: match.vsId,
+									vsTeam: match.vsTeam,
+									vsRating: match.vsRating,
+									vsDeviation: match.vsDeviation,
+									prediction: 
+										match.isWinner ?
+											rating.rating > match.vsRating ? "Expected"
+											: rating.rating + rating.deviation > match.vsRating - match.vsDeviation ? "In Range"
+											: "Unexpected"
+										: rating.rating < match.vsRating ? "Expected"
+											: rating.rating - rating.deviation < match.vsRating + match.vsDeviation ? "In Range"
+											: "Unexpected"
+								})))
+								.sort((matchA, matchB) => +matchB.eventDate - +matchA.eventDate)
+						}));
+
 					setWrestler(wrestlerData);
 
 					const ratingHistory = wrestlerData.ratingHistory.sort((a, b) => +b.periodEndDate - +a.periodEndDate);
@@ -452,6 +482,7 @@ isLoading || !wrestler ?
 		</div>
 		
 		<div className="ratingHistory">
+
 			<div className="inlay ratingChartContainer">
 				{
 					ratingChart ?
@@ -474,59 +505,89 @@ isLoading || !wrestler ?
 				}
 			</div>
 
-			<div className="tableContainer">
-				<table className="sectionTable">
-				<thead>
-				<tr>
-					<th>End Date</th>
-					<th>Rating</th>
-					<th>Uncertainty</th>
-					<th>Diff</th>
-				</tr>
-				</thead>
-				<tbody>
-				{
-				wrestler.ratingHistory.map((rating, ratingIndex) =>
-					<tr key={ ratingIndex }>
-					<td>{ rating.periodEndDate ? rating.periodEndDate.toLocaleDateString() : "" }</td>
-					<td>
-						{ rating.rating.toFixed(0) }&nbsp;
-						{
-						ratingIndex < wrestler.ratingHistory.length - 1 && rating.rating > wrestler.ratingHistory[ratingIndex + 1].rating ?
-							<span className="win">
-								(+{ (rating.rating - wrestler.ratingHistory[ratingIndex + 1].rating).toFixed(0) })
-							</span>
-						
-						: ratingIndex < wrestler.ratingHistory.length - 1 && rating.rating < wrestler.ratingHistory[ratingIndex + 1].rating ?
-							<span className="lose">
-								(-{ (wrestler.ratingHistory[ratingIndex + 1].rating - rating.rating).toFixed(0) })
-							</span>
-						
-						: "(0)"
+			<div className="tableContainer ratingTableContainer">
+				{ wrestler.ratingHistory.map((rating, ratingIndex) =>
+
+				<div key={ratingIndex} className="ratingRow">
+					<div className="ratingHeader">
+						<div className="ratingLabel">{ rating.periodEndDate ? rating.periodEndDate.toLocaleDateString() : "" }</div>
+						<div className="ratingLabel">
+							{ rating.rating.toFixed(0) }&nbsp;
+							{
+							ratingIndex < wrestler.ratingHistory.length - 1 && rating.rating > wrestler.ratingHistory[ratingIndex + 1].rating ?
+								<span className="win">
+									(+{ (rating.rating - wrestler.ratingHistory[ratingIndex + 1].rating).toFixed(0) })
+								</span>
+							
+							: ratingIndex < wrestler.ratingHistory.length - 1 && rating.rating < wrestler.ratingHistory[ratingIndex + 1].rating ?
+								<span className="lose">
+									(-{ (wrestler.ratingHistory[ratingIndex + 1].rating - rating.rating).toFixed(0) })
+								</span>
+							
+							: "(0)"
+							}
+						</div>
+						<div className="ratingLabel">
+							{ rating.deviation.toFixed(0) }&nbsp;
+							{
+							ratingIndex < wrestler.ratingHistory.length - 1 && rating.deviation > wrestler.ratingHistory[ratingIndex + 1].deviation ?
+								<span className="win">
+									(+{ (rating.deviation - wrestler.ratingHistory[ratingIndex + 1].deviation).toFixed(0) })
+								</span>
+							
+							: ratingIndex < wrestler.ratingHistory.length - 1 && rating.deviation < wrestler.ratingHistory[ratingIndex + 1].deviation ?
+								<span className="lose">
+									(-{ (wrestler.ratingHistory[ratingIndex + 1].deviation - rating.deviation).toFixed(0) })
+								</span>
+							
+							: "(0)"
+							}
+						</div>
+					</div>
+
+					<div className="ratingEvents">
+						{ rating.results.length == 0 ?
+							<div className="noEvents">No events</div>
+						:
+							<table className="sectionTable ratingEvents">
+							<tbody>
+							{
+							rating.results.map((result, resultIndex) =>
+								<tr key={ resultIndex }>
+									<td>{ result.eventDate.toLocaleDateString() }</td>
+									<td>{ result.eventName }</td>
+									<td className={`${ result.isWinner ? "win" : "lose" }`}>
+										{ result.isWinner ? "Beat" : "Lost to" }
+									</td>
+									<td>
+										{ result.vs } ({ result.vsTeam})
+										{
+										result.vsId ?
+										<button onClick={ () => window.open(`/portal/wrestler.html?id=${ result.vsId }`, "_blank") }>
+											{/* Eye View */}
+											<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-320q75 0 127.5-52.5T660-500q0-75-52.5-127.5T480-680q-75 0-127.5 52.5T300-500q0 75 52.5 127.5T480-320Zm0-72q-45 0-76.5-31.5T372-500q0-45 31.5-76.5T480-608q45 0 76.5 31.5T588-500q0 45-31.5 76.5T480-392Zm0 192q-146 0-266-81.5T40-500q54-137 174-218.5T480-800q146 0 266 81.5T920-500q-54 137-174 218.5T480-200Zm0-300Zm0 220q113 0 207.5-59.5T832-500q-50-101-144.5-160.5T480-720q-113 0-207.5 59.5T128-500q50 101 144.5 160.5T480-280Z"/></svg>
+										</button>
+										: ""}
+									</td>
+									<td>
+										{ result.vsRating ? result.vsRating.toFixed(0) : "" }
+										{ result.vsDeviation ? " ±" + result.vsDeviation.toFixed(0) : "" }
+									</td>
+									<td className={`${ result.prediction == "Expected" ? "win" : result.prediction == "Unexpected" ? "lose" : "" }`}>
+										{ result.prediction }
+									</td>
+								</tr>
+							)
+							}
+							</tbody>
+							</table>
 						}
-					</td>
-					<td>
-						{ rating.deviation.toFixed(0) }&nbsp;
-						{
-						ratingIndex < wrestler.ratingHistory.length - 1 && rating.deviation > wrestler.ratingHistory[ratingIndex + 1].deviation ?
-							<span className="win">
-								(+{ (rating.deviation - wrestler.ratingHistory[ratingIndex + 1].deviation).toFixed(0) })
-							</span>
-						
-						: ratingIndex < wrestler.ratingHistory.length - 1 && rating.deviation < wrestler.ratingHistory[ratingIndex + 1].deviation ?
-							<span className="lose">
-								(-{ (wrestler.ratingHistory[ratingIndex + 1].deviation - rating.deviation).toFixed(0) })
-							</span>
-						
-						: "(0)"
-						}
-					</td>
-					</tr>
-				)
-				}
-				</tbody>
-				</table>
+					</div>
+				</div>
+
+				)}
 			</div>
+		
 		</div>
 	</div>
 
