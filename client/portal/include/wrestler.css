@@ -195,6 +195,14 @@
 	margin: 5px 0px 5px 20px;
 }
 
+.ratingEvents td {
+	vertical-align: middle;
+}
+
+.ratingEvents button {
+	vertical-align: middle;
+}
+
 /* Desktop styles */
 @media (min-width: 768px) {
 	.filterBar {

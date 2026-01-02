@@ -549,7 +549,7 @@ isLoading || !wrestler ?
 						{ rating.results.length == 0 ?
 							<div className="noEvents">No events</div>
 						:
-							<table className="sectionTable ratingEvents">
+							<table className="sectionTable">
 							<tbody>
 							{
 							rating.results.map((result, resultIndex) =>
