@@ -153,6 +153,8 @@ export default {
 		weightClass: String,
 		rating: Number,
 		deviation: Number,
+		searchNames: [String],
+		searchTeams: [String],
 		events: [{
 			sqlId: Number,
 			date: Date,
