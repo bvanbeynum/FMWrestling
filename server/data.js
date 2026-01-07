@@ -340,15 +340,15 @@ export default {
 		}
 		if (userFilter.name) {
 			const searchName = userFilter.name.toLowerCase();
-			filter.searchNames = { $regex: new RegExp(searchName) };
+			filter.searchName = { $regex: new RegExp(searchName) };
 		}
 		if (userFilter.teamPartial) {
 			const searchTeam = userFilter.teamPartial.toLowerCase();
-			filter.searchTeams = { $regex: new RegExp("^" + searchTeam) };
+			filter.searchTeam = { $regex: new RegExp("^" + searchTeam) };
 		}
 		if (userFilter.teamName) {
 			const searchTeam = userFilter.teamName.toLowerCase();
-			filter.searchTeams = searchTeam;
+			filter.searchTeam = searchTeam;
 		}
 		if (userFilter.sqlId) {
 			filter.sqlId = userFilter.sqlId;
