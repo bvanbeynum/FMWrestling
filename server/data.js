@@ -344,11 +344,11 @@ export default {
 		}
 		if (userFilter.teamPartial) {
 			const searchTeam = userFilter.teamPartial.toLowerCase();
-			filter.searchTeam = { $regex: new RegExp("^" + searchTeam) };
+			filter["events.searchTeam"] = { $regex: new RegExp("^" + searchTeam) };
 		}
 		if (userFilter.teamName) {
 			const searchTeam = userFilter.teamName.toLowerCase();
-			filter.searchTeam = searchTeam;
+			filter["events.searchTeam"] = searchTeam;
 		}
 		if (userFilter.sqlId) {
 			filter.sqlId = userFilter.sqlId;
