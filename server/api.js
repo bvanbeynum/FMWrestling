@@ -2122,7 +2122,7 @@ export default {
 			output.data.team = clientResponse.body.wrestlers
 				.map(wrestler => {
 					const lastTeamEvent = wrestler.events
-						.filter(event => /^fort mill$/gi.test(event.team) && event.matches && !isNaN(event.matches[0].weightClass))
+						.filter(event => /^fort mill$/gi.test(event.team) && event.matches && !isNaN(event.matches[0].weightClass.replace("lbs", "").trim()))
 						.map(event => ({
 							event: event.name,
 							date: new Date(event.date),
