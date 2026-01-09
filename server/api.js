@@ -2132,7 +2132,7 @@ export default {
 								: /(ms|middle school)/i.test(event.matches[0].division) ? "MS"
 								: (event.matches[0].division || "").trim()
 							: (match.division || "").trim(), 
-							weightClass: event.matches ? event.matches[0].weightClass : null
+							weightClass: event.matches ? event.matches[0].weightClass.replace("lbs", "").trim() : null
 						}))
 						.sort((eventA, eventB) => +eventB.date - +eventA.date)
 						.find(() => true);
