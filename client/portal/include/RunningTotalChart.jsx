@@ -32,7 +32,7 @@ const RunningTotalChart = ({ lineup, weightClassNames, teamName, opponentName })
 			});
 
 			const allScores = data.flatMap(d => [+d.teamScore, +d.opponentScore, +d.teamPrediction, +d.opponentPrediction]);
-			const maxY = Math.max(...allScores);
+			const maxY = Math.max(...allScores) > 30 ? Math.max(...allScores) : 30;
 
 			const scaleX = (index) => margin.left + index * ((width - margin.left - margin.right) / (data.length - 1));
 			const scaleY = (y) => (height - margin.bottom) - (y / maxY) * (height - margin.top - margin.bottom);

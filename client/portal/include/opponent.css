@@ -48,6 +48,40 @@
 	color: rgb(171 171 171);
 }
 
+.winTable {
+	display: flex;
+	margin: 8px 0px;
+}
+
+.winTable table {
+	margin: 0;
+	padding: 0;
+	border-collapse: collapse;
+}
+
+.teamContainer td {
+	vertical-align: top;
+}
+
+.teamContainer.team td {
+	padding: 0px 10px 0px 0px;
+}
+
+.teamContainer.opponent .winTable {
+	justify-content: end;
+}
+
+.teamContainer.opponent td {
+	padding: 0px 0px 0px 10px;
+}
+
+.teamStats.positive {
+	color: rgb(0 165 0);
+}
+.teamStats.negative {
+	color: rgb(255 0 0);
+}
+
 .matchContainer {
 	display: grid;
 	grid-template-columns: 1fr 50px 1fr;
@@ -138,6 +172,7 @@ button.lineupButton.delete {
 
 .weightContainer {
 	display: flex;
+	flex-direction: column;
 	align-items: center;
 	justify-content: center;
 	font-size: .8em;
@@ -145,6 +180,18 @@ button.lineupButton.delete {
 	border-left: solid 1px rgb(211 211 211);
 	border-right: solid 1px rgb(211 211 211);
 	margin: 4px 8px;
+}
+
+.scoreDifference {
+	font-size: .8em;
+	margin-top: 4px;
+	font-weight: normal;
+}
+.scoreDifference.positive {
+	color: rgb(0 165 0);
+}
+.scoreDifference.negative {
+	color: rgb(255 0 0);
 }
 
 .backdrop {
