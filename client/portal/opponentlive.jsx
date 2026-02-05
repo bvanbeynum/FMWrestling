@@ -389,7 +389,7 @@ const OpponentLive = () => {
 				method: "post", 
 				headers: { "Content-Type": "application/json" }, 
 				body: JSON.stringify({ 
-					saveid: selectedLineup, 
+					saveid: null, 
 					savename: saveName, 
 					opponentid: selectedOpponent.id,
 					startingweightclass: startingWeight, 
