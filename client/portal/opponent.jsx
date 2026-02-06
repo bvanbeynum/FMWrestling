@@ -376,10 +376,10 @@ const Opponent = () => {
 		setViewPlayer(null);
 	};
 
-	const saveLineup = isSave => {
+	const saveLineup = saveType => {
 		
 		let saveLineup = null;
-		if (isSave) {
+		if (saveType == "save" || saveType == "copy") {
 			saveLineup = lineup.map(lineupMatch => ({
 				weightClass: lineupMatch.weightClass,
 				isStaticTeam: lineupMatch.isStaticTeam,
@@ -397,7 +397,7 @@ const Opponent = () => {
 				method: "post", 
 				headers: { "Content-Type": "application/json" }, 
 				body: JSON.stringify({ 
-					saveid: selectedLineup, 
+					saveid: saveType == "save" || saveType == "delete"? selectedLineup : null, 
 					savename: saveName, 
 					opponentid: selectedOpponent.id,
 					startingweightclass: startingWeight, 
@@ -420,12 +420,12 @@ const Opponent = () => {
 					);
 				}
 				
-				if (!selectedLineup) {
+				if (saveType == "save" || saveType == "copy") {
 					const addedMatch = data.savedMatches.find(save => !savedLineups.some(existing => existing.id == save["_id"]));
 
 					setSelectedLineup(addedMatch["_id"]);
 				}
-				else if (!isSave) {
+				else if (saveType == "delete") {
 					// Create a new lineup
 
 					const weightIndex = weightClassNames.findIndex(weightClass => weightClass == "106");
@@ -968,17 +968,21 @@ const Opponent = () => {
 				<div className="saveLineupContainer">
 					<input type="text" value={ saveName } onChange={ event => setSaveName(event.target.value) } />
 
-					<button className="lineupButton save" onClick={ () => saveLineup(true) } disabled={ !saveName }>
+					<button className="lineupButton save" onClick={ () => saveLineup("save") } disabled={ !saveName }>
 						Save
 					</button>
 					
 					{
 					selectedLineup ?
-					
-					<button className="lineupButton delete" onClick={ () => saveLineup(false) }>
+					<>
+					<button className="lineupButton delete" onClick={ () => saveLineup("delete") }>
 						Delete
 					</button>
 
+					<button className="lineupButton save" onClick={ () => saveLineup("copy") }>
+						Copy
+					</button>
+					</>
 					: ""
 					}
 				</div>
