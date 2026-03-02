@@ -2494,6 +2494,11 @@ export default {
 
 		output.status = 200;
 		return output;		
+	},
+
+	dualStatsUpload: async (statsImage, serverPath) => {
+		const output = { data: {} };
+		
 	}
 	
 };

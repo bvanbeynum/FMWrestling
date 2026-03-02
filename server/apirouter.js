@@ -401,4 +401,21 @@ router.get("/api/opponenteventselect", authAPI, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : results.data );
 });
 
+// ***************** Dual Stats ********************
+
+router.get("/api/dualstatsload", authAPI, async (request, response) => {
+	response.status(200).json({ loggedInUser: request.user });
+});
+
+router.post("/api/dualstatsupload", authAPI, async (request, response) => {
+	const results = await api.dualStatsUpload(request.file, request.serverPath);
+	
+	if (results.error) {
+		console.log(`Error ${results.status}: ${ results.error }`);
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "651b68f7cf4fc75b63591ee7", message: `${ results.status }: ${results.error}` }}).then();
+	}
+
+	response.status(results.status).json(results.error ? { error: results.error } : results.data );
+});
+
 export default router;
