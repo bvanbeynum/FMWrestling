@@ -11,9 +11,31 @@ const DualStats = () => {
 	const [ isUploading, setIsUploading ] = useState(false);
 	const [ loggedInUser, setLoggedInUser ] = useState(null);
 	const [ selectedFile, setSelectedFile ] = useState(null);
-	const [ uploadResult, setUploadResult ] = useState(null);
-	const fileInputRef = createRef();
 
+	const [ uploadResult, setUploadResult ] = useState(null);
+	const [ wrestlers, setWrestlers ] = useState([]);
+	const [ imagePath, setImagePath ] = useState(null);
+	
+	const [ zoom, setZoom ] = useState(0);
+	
+	const fileInputRef = createRef();
+	const panelRef = createRef();
+
+	const [panelWidth, setPanelWidth] = useState(0);
+
+	useEffect(() => {
+		const currentPanelRef = panelRef.current;
+		if (currentPanelRef) {
+			const resizeObserver = new ResizeObserver(entries => {
+				for (let entry of entries) {
+					setPanelWidth(entry.contentRect.width);
+				}
+			});
+			resizeObserver.observe(currentPanelRef);
+			return () => resizeObserver.disconnect();
+		}
+	}, [imagePath]);
+	
 	useEffect(() => {
 		if (!pageActive) {
 			fetch("/api/dualstatsload")
@@ -36,6 +58,10 @@ const DualStats = () => {
 		}
 	}, []);
 
+	const handleZoomChange = (event) => {
+		setZoom(parseInt(event.target.value, 10));
+	};
+
 	const handleFileChange = (event) => {
 		setSelectedFile(event.target.files[0]);
 		setUploadResult(null);
@@ -45,21 +71,25 @@ const DualStats = () => {
 		const interval = setInterval(() => {
 			fetch(`/api/dualstatsupload/${jobId}`)
 				.then(response => response.json())
-				.then(job => {
-					if (job.status === "completed") {
+				.then(data => {
+
+					if (data.status === "completed") {
+						setWrestlers(data.data.wrestlers);
+						setImagePath(`/media/temp/${data.data.fileName}`);
+
 						clearInterval(interval);
 						setIsUploading(false);
-						setUploadResult(job.data);
 						setSelectedFile(null);
-					} else if (job.status === "error") {
+					}
+					else {
 						clearInterval(interval);
 						setIsUploading(false);
-						console.error("File upload error", job.error);
+						console.error("File upload error", data.error);
 					}
+
 				})
 				.catch(error => {
 					clearInterval(interval);
-
 					setIsUploading(false);
 					console.error("Polling error", error);
 				});
@@ -136,7 +166,7 @@ const DualStats = () => {
 					<div className="fake-input" onClick={() => fileInputRef.current.click()}>
 						{selectedFile ? selectedFile.name : "Select stat sheet file..."}
 					</div>
-					<input ref={fileInputRef} type="file" onChange={handleFileChange} style={{ display: "none" }} />
+					<input ref={fileInputRef} type="file" onChange={handleFileChange} className="hidden-file-input" />
 					
 					<div className="uploadActions">
 						<button type="submit" disabled={isUploading}>Upload</button>
@@ -144,6 +174,32 @@ const DualStats = () => {
 				</form>
 				}
 			</div>
+
+			{imagePath && (
+			<div className="panel" ref={panelRef} style={{ height: panelWidth ? `${panelWidth}px` : 'auto' }}>
+				<h3>Stat Sheet Image</h3>
+				<div className="image-scroll-container">
+					<img
+						src={imagePath}
+						className="stat-sheet-image"
+						style={{
+							width: `${100 + zoom}%`,
+						}}
+						alt="Stat Sheet"
+					/>
+				</div>
+				<div className="zoom-slider">
+					<input
+						type="range"
+						min="0"
+						max="200"
+						value={zoom}
+						onChange={handleZoomChange}
+						className="zoom-slider-input"
+					/>
+				</div>
+			</div>
+			)}
 
 		</div>
 

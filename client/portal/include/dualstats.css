@@ -30,3 +30,21 @@
 	text-overflow: ellipsis;
 	margin-top: 20px;
 }
+
+.hidden-file-input {
+	display: none;
+}
+
+.image-scroll-container {
+	overflow: auto;
+	width: 100%;
+	height: calc(100% - 70px);
+}
+
+.stat-sheet-image {
+	height: auto;
+}
+
+.zoom-slider-input {
+	width: 100%;
+}
