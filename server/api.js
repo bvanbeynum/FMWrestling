@@ -2499,8 +2499,12 @@ export default {
 	dualStatsUpload: async (imageBuffer, mimetype, serverPath) => {
 		const output = { data: {} };
 
+		// Mock response for testing without API calls
+		// output.data = [{ "wrestler_name": "Mason Findel", "scores": [ "E1", "T2", "E1", "E1", "E1", "T2" ] }, { "wrestler_name": "Brame", "scores": [ "T2", "R2", "T2", "T2", "E1" ] }, { "wrestler_name": "Murphy", "scores": [ "T2", "N4", "N4", "F 1:12" ] }, { "wrestler_name": "Merritt", "scores": [] }, { "wrestler_name": "L. VanBuren", "scores": [ "T2", "N4", "F 1:39" ] }, { "wrestler_name": "Stelpani", "scores": [] }, { "wrestler_name": "Walker", "scores": [] }, { "wrestler_name": "Johnson", "scores": [ "T2", "N4", "F :35" ] }, { "wrestler_name": "Wartman", "scores": [ "T2", "E1", "T2", "T2", "N4" ] }, { "wrestler_name": "Sloan", "scores": [] }, { "wrestler_name": "Van Buren", "scores": [ "T2", "T2", "T2", "N4", "E1" ] }, { "wrestler_name": "Salvato", "scores": [] }, { "wrestler_name": "Nguyen", "scores": [ "T2", "N2", "T2", "T2", "T2", "T2" ] }, { "wrestler_name": "Harding", "scores": [ "E1", "E1", "E1", "E1" ] }, { "wrestler_name": "Green", "scores": [ "T2", "N4", "F 1:28" ] }, { "wrestler_name": "Smoure", "scores": [] }, { "wrestler_name": "Colton", "scores": [ "R2", "R2" ] }, { "wrestler_name": "Wieland", "scores": [ "T2", "N4", "E1", "T2" ] }, { "wrestler_name": "Mitchener", "scores": [ "T2", "T2", "E1", "T2", "T2" ] }, { "wrestler_name": "Johaning", "scores": [ "R2", "E1" ] }, { "wrestler_name": "Metcalf", "scores": [] }, { "wrestler_name": "Schrader", "scores": [ "T2", "T2", "N4", "E1", "E1", "T2" ] }, { "wrestler_name": "Lawrence", "scores": [ "T2", "E1", "N4" ] }, { "wrestler_name": "Hyde", "scores": [ "E1", "E1" ] }, { "wrestler_name": "Forter", "scores": [] }, { "wrestler_name": "Lee", "scores": [] }, { "wrestler_name": "Shope", "scores": [ "E1", "T2" ] }, { "wrestler_name": "McGee", "scores": [] } ];
+		// output.status = 200;
+		// return output;
+
 		try {
-			console.log("Received image for dual stats upload, size:", imageBuffer.length, "bytes");
 			const imageBytes = imageBuffer.toString("base64");
 
 			const prompt = `
@@ -2529,12 +2533,10 @@ Do not return any other text or markup.
 			let text = jsonResponse["candidates"][0]["content"]["parts"][0]["text"];
 			text = text.replace("```json", "").replace("```", "");
 			const wrestlerData = JSON.parse(text);
-			console.log("Extracted wrestler data:", wrestlerData);
 
 			output.data = wrestlerData;
 			output.status = 200;
 		} catch (error) {
-			console.error("Error processing dual stats upload:", error);
 			output.error = error.message;
 			output.status = 500;
 		}

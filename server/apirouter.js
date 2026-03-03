@@ -415,33 +415,42 @@ router.post("/api/dualstatsupload", authAPI, async (request, response) => {
 		jobs[jobId] = { status: "processing" };
 
 		request.busboy.on("file", (fieldname, file, { filename, encoding, mimeType }) => {
-			console.log(`Received file upload: ${filename}, encoding: ${encoding}, mimeType: ${mimeType}`);
 			const chunks = [];
+
 			file.on("data", (chunk) => {
 				chunks.push(chunk);
 			});
 
+			file.on("error", (err) => {
+				jobs[jobId] = { status: "error", error: "File stream error: " + err.message };
+			});
+
 			file.on("end", async () => {
 				const imageBuffer = Buffer.concat(chunks);
-				
+
 				api.dualStatsUpload(imageBuffer, mimeType, request.serverPath)
 					.then(results => {
 						if (results.error) {
-							console.log(`Error ${results.status}: ${ results.error }`);
 							jobs[jobId] = { status: "error", error: results.error };
 						} else {
 							jobs[jobId] = { status: "completed", data: results.data };
 						}
 					})
 					.catch(error => {
-						console.log(`Error: ${error}`);
 						jobs[jobId] = { status: "error", error: error.message };
 					});
 			});
 		});
 
+		request.busboy.on("error", (err) => {
+			jobs[jobId] = { status: "error", error: "Busboy error: " + err.message };
+		});
+
+		request.busboy.on("finish", () => {
+			response.status(202).json({ jobId });
+		});
+		
 		request.pipe(request.busboy);
-		response.status(202).json({ jobId });
 	} else {
 		response.status(400).json({ error: "File upload error" });
 	}

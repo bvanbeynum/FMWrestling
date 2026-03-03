@@ -126,49 +126,25 @@ const DualStats = () => {
 			<div className="panel">
 				<h3>Upload Stat Sheet</h3>
 
+				{
+				isUploading ?
+				<div className="pageLoading">
+					<img src="/media/wrestlingloading.gif" alt="Loading" />
+				</div>
+				:
 				<form onSubmit={handleFileUpload}>
 					<div className="fake-input" onClick={() => fileInputRef.current.click()}>
 						{selectedFile ? selectedFile.name : "Select stat sheet file..."}
 					</div>
 					<input ref={fileInputRef} type="file" onChange={handleFileChange} style={{ display: "none" }} />
 					
-					<div className="row" style={{ marginTop: "20px" }}>
-						<div style={{flex: 1}}></div>
-						<button type="submit" disabled={isUploading}>
-							{isUploading ? "Uploading..." : "Upload"}
-						</button>
+					<div className="uploadActions">
+						<button type="submit" disabled={isUploading}>Upload</button>
 					</div>
 				</form>
+				}
 			</div>
 
-			{isUploading && (
-				<div className="pageLoading">
-					<img src="/media/wrestlingloading.gif" alt="Loading" />
-				</div>
-			)}
-
-			{uploadResult && (
-				<div className="panel">
-					<h3>Upload Results</h3>
-					<table>
-						<thead>
-							<tr>
-								<th>Wrestler</th>
-								<th>Scores</th>
-							</tr>
-						</thead>
-						<tbody>
-							{Object.entries(uploadResult).map(([name, scores]) => (
-								<tr key={name}>
-									<td>{name}</td>
-									<td>{scores.join(", ")}</td>
-								</tr>
-							))}
-						</tbody>
-					</table>
-				</div>
-			)}
-		
 		</div>
 
 		}
