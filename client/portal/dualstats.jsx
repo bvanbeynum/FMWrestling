@@ -8,8 +8,10 @@ const DualStats = () => {
 
 	const [ pageActive, setPageActive ] = useState(false);
 	const [ isLoading, setIsLoading ] = useState(true);
+	const [ isUploading, setIsUploading ] = useState(false);
 	const [ loggedInUser, setLoggedInUser ] = useState(null);
 	const [ selectedFile, setSelectedFile ] = useState(null);
+	const [ uploadResult, setUploadResult ] = useState(null);
 	const fileInputRef = createRef();
 
 	useEffect(() => {
@@ -36,6 +38,32 @@ const DualStats = () => {
 
 	const handleFileChange = (event) => {
 		setSelectedFile(event.target.files[0]);
+		setUploadResult(null);
+	};
+
+	const pollJobStatus = (jobId) => {
+		const interval = setInterval(() => {
+			fetch(`/api/dualstatsupload/${jobId}`)
+				.then(response => response.json())
+				.then(job => {
+					if (job.status === "completed") {
+						clearInterval(interval);
+						setIsUploading(false);
+						setUploadResult(job.data);
+						setSelectedFile(null);
+					} else if (job.status === "error") {
+						clearInterval(interval);
+						setIsUploading(false);
+						console.error("File upload error", job.error);
+					}
+				})
+				.catch(error => {
+					clearInterval(interval);
+
+					setIsUploading(false);
+					console.error("Polling error", error);
+				});
+		}, 2000);
 	};
 
 	const handleFileUpload = (event) => {
@@ -44,6 +72,9 @@ const DualStats = () => {
 		if (!selectedFile) {
 			return;
 		}
+
+		setIsUploading(true);
+		setUploadResult(null);
 
 		const formData = new FormData();
 		formData.append("file", selectedFile);
@@ -54,9 +85,12 @@ const DualStats = () => {
 			})
 			.then((response) => response.json())
 			.then((data) => {
-				console.log("File upload success", data);
+				if (data.jobId) {
+					pollJobStatus(data.jobId);
+				}
 			})
 			.catch((error) => {
+				setIsUploading(false);
 				console.error("File upload error", error);
 			});
 	};
@@ -100,10 +134,40 @@ const DualStats = () => {
 					
 					<div className="row" style={{ marginTop: "20px" }}>
 						<div style={{flex: 1}}></div>
-						<button type="submit">Upload</button>
+						<button type="submit" disabled={isUploading}>
+							{isUploading ? "Uploading..." : "Upload"}
+						</button>
 					</div>
 				</form>
 			</div>
+
+			{isUploading && (
+				<div className="pageLoading">
+					<img src="/media/wrestlingloading.gif" alt="Loading" />
+				</div>
+			)}
+
+			{uploadResult && (
+				<div className="panel">
+					<h3>Upload Results</h3>
+					<table>
+						<thead>
+							<tr>
+								<th>Wrestler</th>
+								<th>Scores</th>
+							</tr>
+						</thead>
+						<tbody>
+							{Object.entries(uploadResult).map(([name, scores]) => (
+								<tr key={name}>
+									<td>{name}</td>
+									<td>{scores.join(", ")}</td>
+								</tr>
+							))}
+						</tbody>
+					</table>
+				</div>
+			)}
 		
 		</div>
 

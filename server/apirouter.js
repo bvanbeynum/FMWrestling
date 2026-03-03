@@ -1,9 +1,11 @@
 import express from "express";
 import client from "superagent";
+import crypto from "crypto";
 import api from "./api.js";
 import browser from "express-useragent";
 
 const router = express.Router();
+const jobs = {};
 
 const authAPI = async (request, response, next) => {
 	const results = await api.authAPI(request.serverPath, request.headers["referer"], request.cookies.wm);
@@ -409,6 +411,9 @@ router.get("/api/dualstatsload", authAPI, async (request, response) => {
 
 router.post("/api/dualstatsupload", authAPI, async (request, response) => {
 	if (request.busboy) {
+		const jobId = crypto.randomUUID();
+		jobs[jobId] = { status: "processing" };
+
 		request.busboy.on("file", (fieldname, file, { filename, encoding, mimeType }) => {
 			console.log(`Received file upload: ${filename}, encoding: ${encoding}, mimeType: ${mimeType}`);
 			const chunks = [];
@@ -418,20 +423,44 @@ router.post("/api/dualstatsupload", authAPI, async (request, response) => {
 
 			file.on("end", async () => {
 				const imageBuffer = Buffer.concat(chunks);
-				const results = await api.dualStatsUpload(imageBuffer, mimeType, request.serverPath);
-
-				if (results.error) {
-					console.log(`Error ${results.status}: ${ results.error }`);
-					// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "651b68f7cf4fc75b63591ee7", message: `${ results.status }: ${results.error}` }}).then();
-				}
-
-				response.status(results.status).json(results.error ? { error: results.error } : results.data );
+				
+				api.dualStatsUpload(imageBuffer, mimeType, request.serverPath)
+					.then(results => {
+						if (results.error) {
+							console.log(`Error ${results.status}: ${ results.error }`);
+							jobs[jobId] = { status: "error", error: results.error };
+						} else {
+							jobs[jobId] = { status: "completed", data: results.data };
+						}
+					})
+					.catch(error => {
+						console.log(`Error: ${error}`);
+						jobs[jobId] = { status: "error", error: error.message };
+					});
 			});
 		});
 
 		request.pipe(request.busboy);
+		response.status(202).json({ jobId });
 	} else {
 		response.status(400).json({ error: "File upload error" });
+	}
+});
+
+router.get("/api/dualstatsupload/:jobId", authAPI, (request, response) => {
+	const jobId = request.params.jobId;
+	const job = jobs[jobId];
+
+	if (job) {
+		if (job.status === "completed") {
+			const jobData = jobs[jobId].data;
+			delete jobs[jobId];
+			response.status(200).json({ status: "completed", data: jobData });
+		} else {
+			response.status(200).json(job);
+		}
+	} else {
+		response.status(404).json({ status: "not_found" });
 	}
 });
 

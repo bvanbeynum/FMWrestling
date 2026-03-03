@@ -2507,7 +2507,7 @@ export default {
 This image contains a table with a row for each wrestler as well as wrestler score shorthand.
 Extract the wrestler name, and an array of the wrestler's scores.
 Return the data as a JSON object with a key for the wrestler name, and an array of scores.
-Do not return any other text or markup.
+Do not return any other text or markup. 
 `;
 
 			const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${config.geminiAPIKey}`;
