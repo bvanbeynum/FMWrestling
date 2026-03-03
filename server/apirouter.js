@@ -408,14 +408,31 @@ router.get("/api/dualstatsload", authAPI, async (request, response) => {
 });
 
 router.post("/api/dualstatsupload", authAPI, async (request, response) => {
-	const results = await api.dualStatsUpload(request.file, request.serverPath);
-	
-	if (results.error) {
-		console.log(`Error ${results.status}: ${ results.error }`);
-		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "651b68f7cf4fc75b63591ee7", message: `${ results.status }: ${results.error}` }}).then();
-	}
+	if (request.busboy) {
+		request.busboy.on("file", (fieldname, file, { filename, encoding, mimeType }) => {
+			console.log(`Received file upload: ${filename}, encoding: ${encoding}, mimeType: ${mimeType}`);
+			const chunks = [];
+			file.on("data", (chunk) => {
+				chunks.push(chunk);
+			});
 
-	response.status(results.status).json(results.error ? { error: results.error } : results.data );
+			file.on("end", async () => {
+				const imageBuffer = Buffer.concat(chunks);
+				const results = await api.dualStatsUpload(imageBuffer, mimeType, request.serverPath);
+
+				if (results.error) {
+					console.log(`Error ${results.status}: ${ results.error }`);
+					// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "651b68f7cf4fc75b63591ee7", message: `${ results.status }: ${results.error}` }}).then();
+				}
+
+				response.status(results.status).json(results.error ? { error: results.error } : results.data );
+			});
+		});
+
+		request.pipe(request.busboy);
+	} else {
+		response.status(400).json({ error: "File upload error" });
+	}
 });
 
 export default router;

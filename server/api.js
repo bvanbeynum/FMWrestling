@@ -2496,9 +2496,50 @@ export default {
 		return output;		
 	},
 
-	dualStatsUpload: async (statsImage, serverPath) => {
+	dualStatsUpload: async (imageBuffer, mimetype, serverPath) => {
 		const output = { data: {} };
-		
+
+		try {
+			console.log("Received image for dual stats upload, size:", imageBuffer.length, "bytes");
+			const imageBytes = imageBuffer.toString("base64");
+
+			const prompt = `
+This image contains a table with a row for each wrestler as well as wrestler score shorthand.
+Extract the wrestler name, and an array of the wrestler's scores.
+Return the data as a JSON object with a key for the wrestler name, and an array of scores.
+Do not return any other text or markup.
+`;
+
+			const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${config.geminiAPIKey}`;
+			const headers = { "Content-Type": "application/json" };
+			const data = {
+				"contents": [
+					{
+						"parts": [
+							{ "text": prompt },
+							{ "inline_data": { "mime_type": mimetype, "data": imageBytes } }
+						]
+					}
+				]
+			};
+
+			const response = await client.post(url).set(headers).send(data);
+			const jsonResponse = response.body;
+
+			let text = jsonResponse["candidates"][0]["content"]["parts"][0]["text"];
+			text = text.replace("```json", "").replace("```", "");
+			const wrestlerData = JSON.parse(text);
+			console.log("Extracted wrestler data:", wrestlerData);
+
+			output.data = wrestlerData;
+			output.status = 200;
+		} catch (error) {
+			console.error("Error processing dual stats upload:", error);
+			output.error = error.message;
+			output.status = 500;
+		}
+
+		return output;
 	}
 	
 };
