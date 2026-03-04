@@ -243,9 +243,9 @@ const DualStats = () => {
 				<h3>Existing Duals</h3>
 				
 				{duals.map((dual, index) => (
-					<div key={index} className="dual-summary" onClick={() => { loadDual(dual); }}>
-						<span className="dual-date">{dual.dualDate.toLocaleDateString()}</span>
-						<span className="dual-opponent">{dual.opponent}</span>
+					<div key={index} className="dual-summary">
+						<span className="dual-date" onClick={() => { loadDual(dual); }}>{dual.dualDate.toLocaleDateString()}</span>
+						<span className="dual-opponent" onClick={() => { loadDual(dual); }}>{dual.opponent}</span>
 						<button onClick={() => handleDelete(dual.id)}>
 							{/* Trash */}
 							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
@@ -290,6 +290,7 @@ const DualStats = () => {
 							width: `${100 + zoom}%`,
 						}}
 						alt="Stat Sheet"
+						onClick={() => window.open(imagePath, "_blank")}
 					/>
 				</div>
 				<div className="zoom-slider">
