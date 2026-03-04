@@ -2577,6 +2577,36 @@ Do not return any other text or markup.
 		}
 
 		return output;
-	}
+	},
 	
+	dualStatsSave: async (dual, serverPath) => {
+		const output = {};
+
+		try {
+			const clientResponse = await client.post(`${ serverPath }/data/dual`).send({ 
+				dual: {
+					...dual,
+					wrestlers: dual.wrestlers.map(wrestler => ({
+						...wrestler,
+						scores: {
+							takedowns: wrestler.scores.t,
+							escapes: wrestler.scores.e,
+							reversals: wrestler.scores.r,
+							nearfalls: wrestler.scores.n
+						}
+					}))
+				} 
+			}).then();
+
+			output.status = 200;
+			output.data = { id: clientResponse.body.id };
+			return output;
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+	}
+
 };

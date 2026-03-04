@@ -136,9 +136,33 @@ const DualStats = () => {
 	};
 
 	const handleSave = () => {
-		console.log({
+		// TODO: Implement save functionality. it should use the API endpoint /api/dualstatssave to save the dual meet stats to the database.
+		const dualData = {
 			opponent,
-			wrestlers
+			wrestlers,
+		};
+
+		fetch("/api/dualstatssave", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ dual: dualData }),
+		})
+		.then(response => response.json())
+		.then(data => {
+			if (data.error) {
+				console.error("Save error", data.error);
+			}
+			else {
+				setSelectedFile(null);
+				setOpponent("");
+				setWrestlers([]);
+				setImagePath(null);
+			}
+		})
+		.catch(error => {
+			console.error("Save error", error);
 		});
 	};
 

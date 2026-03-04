@@ -473,4 +473,14 @@ router.get("/api/dualstatsupload/:jobId", authAPI, (request, response) => {
 	}
 });
 
+router.post("/api/dualstatssave", authAPI, async (request, response) => {
+	const results = await api.dualStatsSave(request.body.dual, request.serverPath);
+
+	if (results.error) {
+		console.log(`Error ${results.status}: ${ results.error }`);
+	}
+
+	response.status(results.status).json(results.error ? { error: results.error } : results.data );
+});
+
 export default router;
