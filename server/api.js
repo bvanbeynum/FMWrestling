@@ -2576,14 +2576,23 @@ Do not return any other text or markup.
 			output.data.stats = {
 					...statsData,
 					wrestlers: statsData.wrestlers.map(wrestler => ({
-						...wrestler,
-						scores: wrestler.scores
-							.reduce((output, score) => {
-								const prefix = score.substring(0, 1);
-								output[prefix.toLowerCase()] += 1;
-								return output;
-							}, { takedowns: 0, escapes: 0, nearfalls: 0, reversals: 0 })
-					}))
+							...wrestler,
+							scores: wrestler.scores
+								.reduce((output, score) => {
+									const prefix = score.substring(0, 1);
+									output[prefix.toLowerCase()] += 1;
+									return output;
+								}, { t: 0, e: 0, n: 0, r: 0 })
+						}))
+						.map(wrestler => ({
+							...wrestler,
+							scores: {
+								takedowns: wrestler.scores.t,
+								escapes: wrestler.scores.e,
+								nearfalls: wrestler.scores.n,
+								reversals: wrestler.scores.r
+							}
+						}))
 				};
 
 			output.data.fileName = fileName;
