@@ -2626,10 +2626,25 @@ Do not return any other text or markup.
 		const output = {};
 
 		try {
-			await client.delete(`${ serverPath }/data/dual?id=${ dualId }`).then();
+			const clientResponse = await client.get(`${ serverPath }/data/dual?id=${ dualId }`);
+			const dual = clientResponse.body.duals[0];
+			
+			if (dual.imagePath) {
+				const imagePath = path.join(process.cwd(), 'client', 'media', 'temp', dual.imagePath);
+				await fs.promises.unlink(imagePath);
+			}
 		}
 		catch (error) {
 			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+
+		try {
+			await client.delete(`${ serverPath }/data/dual?id=${ dualId }`).then();
+		}
+		catch (error) {
+			output.status = 562;
 			output.error = error.message;
 			return output;
 		}
@@ -2642,7 +2657,7 @@ Do not return any other text or markup.
 			return output;
 		}
 		catch (error) {
-			output.status = 562;
+			output.status = 563;
 			output.error = error.message;
 			return output;
 		}
