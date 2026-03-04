@@ -132,9 +132,13 @@ const DualStats = () => {
 			});
 	};
 
-	const handleWrestlerChange = (index, field, value) => {
+	const handleWrestlerChange = (index, field, isScore, value) => {
 		const updatedWrestlers = [...wrestlers];
-		updatedWrestlers[index].scores[field] = value;
+		if (isScore) {
+			updatedWrestlers[index].scores[field] = value;
+		} else {
+			updatedWrestlers[index][field] = value;
+		}
 		setWrestlers(updatedWrestlers);
 	};
 
@@ -347,49 +351,49 @@ const DualStats = () => {
 									<input
 										type="text"
 										value={wrestler.name}
-										onChange={e => handleWrestlerChange(index, "name", e.target.value)}
+										onChange={e => handleWrestlerChange(index, "name", false, e.target.value)}
 									/>
 								</td>
 								<td>
 									<input
 										type="text"
 										value={wrestler.weight}
-										onChange={e => handleWrestlerChange(index, "weight", e.target.value)}
+										onChange={e => handleWrestlerChange(index, "weight", false, e.target.value)}
 									/>
 								</td>
 								<td>
 									<input
-										type="text"
+										type="number"
 										value={wrestler.results}
-										onChange={e => handleWrestlerChange(index, "results", e.target.value)}
+										onChange={e => handleWrestlerChange(index, "results", false, e.target.value)}
 									/>
 								</td>
 								<td>
 									<input
 										type="number"
 										value={wrestler.scores.takedowns}
-										onChange={e => handleWrestlerChange(index, "scores.takedowns", parseInt(e.target.value))}
+										onChange={e => handleWrestlerChange(index, "takedowns", true, parseInt(e.target.value))}
 									/>
 								</td>
 								<td>
 									<input
 										type="number"
 										value={wrestler.scores.escapes}
-										onChange={e => handleWrestlerChange(index, "scores.escapes", parseInt(e.target.value))}
+										onChange={e => handleWrestlerChange(index, "escapes", true, parseInt(e.target.value))}
 									/>
 								</td>
 								<td>
 									<input
 										type="number"
 										value={wrestler.scores.reversals}
-										onChange={e => handleWrestlerChange(index, "scores.reversals", parseInt(e.target.value))}
+										onChange={e => handleWrestlerChange(index, "reversals", true, parseInt(e.target.value))}
 									/>
 								</td>
 								<td>
 									<input
 										type="number"
 										value={wrestler.scores.nearfalls}
-										onChange={e => handleWrestlerChange(index, "scores.nearfalls", parseInt(e.target.value))}
+										onChange={e => handleWrestlerChange(index, "nearfalls", true, parseInt(e.target.value))}
 									/>
 								</td>
 							</tr>
