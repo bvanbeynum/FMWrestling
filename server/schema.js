@@ -323,6 +323,21 @@ export default {
 				date: Date
 			}]
 		}]
+	}),
+
+	dual: mongoose.model("dual", {
+		opponent: String,
+		wrestlers: [{
+			name: String,
+			weight: String,
+			results: Number,
+			scores: {
+				takedowns: Number,
+				escapes: Number,
+				reversals: Number,
+				nearfalls: Number
+			}
+		}]
 	})
 	
 };

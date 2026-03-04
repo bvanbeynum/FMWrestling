@@ -1917,6 +1917,113 @@ export default {
 		output.status = 200;
 		output.data = { status: "ok" };
 		return output;
+	},
+
+	dualGet: async (userFilter = {}) => {
+		const filter = {},
+			output = {};
+
+		if (userFilter.id) {
+			filter["_id"] = mongoose.Types.ObjectId.isValid(userFilter.id) ? userFilter.id : null;
+		}
+
+		try {
+			const records = await data.dual.find(filter).lean().exec();
+			output.status = 200;
+			output.data = { duals: records.map(({ _id, __v, ...data }) => ({ id: _id, ...data })) };
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+		}
+
+		return output;
+	},
+
+	dualSave: async (saveObject) => {
+		const output = {};
+
+		if (!saveObject) {
+			output.status = 550;
+			output.error = "Missing object to save";
+			return output;
+		}
+
+		if (saveObject.id) {
+			let record = null;
+			try {
+				record = await data.dual.findById(saveObject.id).exec();
+			}
+			catch (error) {
+				output.status = 560;
+				output.error = error.message;
+				return output;
+			}
+
+			if (!record) {
+				output.status = 561;
+				output.error = "Record not found";
+				return output;
+			}
+
+			try {
+				Object.keys(saveObject).forEach(field => {
+					if (field != "id" && field != "_id") {
+						record[field] = saveObject[field];
+					}
+				});
+				record.modified = new Date();
+
+				record = await record.save();
+			}
+			catch (error) {
+				output.status = 562;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			output.data = { id: record._id };
+		}
+		else {
+			let record = null;
+			try {
+				record = await (new data.dual({ ...saveObject, created: new Date(), modified: new Date() })).save();
+			}
+			catch (error) {
+				output.status = 563;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			output.data = { id: record._id };
+		}
+
+		return output;
+	},
+
+	dualDelete: async (id) => {
+		const output = {};
+
+		if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+			output.status = 550;
+			output.error = "Missing ID to delete";
+			return output;
+		}
+
+		try {
+			await data.dual.deleteOne({ _id: id });
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		output.data = { status: "ok" };
+		return output;
 	}
 
 };
