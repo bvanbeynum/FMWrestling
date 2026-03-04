@@ -12,17 +12,18 @@ const DualStats = () => {
 	const [ loggedInUser, setLoggedInUser ] = useState(null);
 	const [ selectedFile, setSelectedFile ] = useState(null);
 
-	const [ uploadResult, setUploadResult ] = useState(null);
+	const [ duals, setDuals ] = useState([]);
 	const [ wrestlers, setWrestlers ] = useState([]);
+	const [ dualId, setDualId ] = useState(null);
 	const [ opponent, setOpponent ] = useState("");
+	const [ dualDate, setDualDate ] = useState("");
 	const [ imagePath, setImagePath ] = useState(null);
 	
 	const [ zoom, setZoom ] = useState(0);
+	const [panelWidth, setPanelWidth] = useState(0);
 	
 	const fileInputRef = createRef();
 	const panelRef = createRef();
-
-	const [panelWidth, setPanelWidth] = useState(0);
 
 	useEffect(() => {
 		const currentPanelRef = panelRef.current;
@@ -49,6 +50,7 @@ const DualStats = () => {
 					}
 				})
 				.then(data => {
+					setDuals(data.duals.map(dual => ({ ...dual, dualDate: new Date(dual.dualDate) })));
 					setLoggedInUser(data.loggedInUser);
 					setPageActive(true);
 					setIsLoading(false);
@@ -65,6 +67,8 @@ const DualStats = () => {
 
 	const handleFileChange = (event) => {
 		setSelectedFile(event.target.files[0]);
+		setDualId(null);
+		setDualDate("");
 		setOpponent("");
 		setWrestlers([]);
 		setImagePath(null);
@@ -108,7 +112,6 @@ const DualStats = () => {
 		}
 
 		setIsUploading(true);
-		setUploadResult(null);
 
 		const formData = new FormData();
 		formData.append("file", selectedFile);
@@ -136,9 +139,11 @@ const DualStats = () => {
 	};
 
 	const handleSave = () => {
-		// TODO: Implement save functionality. it should use the API endpoint /api/dualstatssave to save the dual meet stats to the database.
 		const dualData = {
+			id: dualId,
 			opponent,
+			imagePath: imagePath ? imagePath.replace("/media/temp/", "") : null,
+			dualDate,
 			wrestlers,
 		};
 
@@ -155,15 +160,54 @@ const DualStats = () => {
 				console.error("Save error", data.error);
 			}
 			else {
-				setSelectedFile(null);
+				setDuals(data.duals.map(dual => ({ ...dual, dualDate: new Date(dual.dualDate) })));
+
+				setDualId(null);
+				setDualDate("");
 				setOpponent("");
 				setWrestlers([]);
+				setSelectedFile(null);
 				setImagePath(null);
 			}
 		})
 		.catch(error => {
 			console.error("Save error", error);
 		});
+	};
+
+	const handleDelete = (id) => {
+		fetch("/api/dualstatsdelete", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ id }),
+		})
+		.then(response => response.json())
+		.then(data => {
+			if (data.error) {
+				console.error("Delete error", data.error);
+			}
+			else {
+				setDuals(data.duals.map(dual => ({ ...dual, dualDate: new Date(dual.dualDate) })));
+			}
+		})
+		.catch(error => {
+			console.error("Delete error", error);
+		});
+	};
+
+	const loadDual = (dual) => {
+		setDualId(dual.id);
+		setOpponent(dual.opponent);
+		setDualDate(dual.dualDate.toISOString().split("T")[0]);
+		setWrestlers(dual.wrestlers);
+		setImagePath(`/media/temp/${dual.imagePath}`);
+		setSelectedFile(null);
+		setZoom(0);
+		setPanelWidth(0);
+		fileInputRef.current.value = "";
+		panelRef.current.scrollTop = 0;
 	};
 
 	return (
@@ -193,6 +237,25 @@ const DualStats = () => {
 			<header>
 				<h1>Dual Stats</h1>
 			</header>
+
+			{duals.length > 0 && (
+			<div className="panel">
+				<h3>Existing Duals</h3>
+				
+				{duals.map((dual, index) => (
+					<div key={index} className="dual-summary" onClick={() => { loadDual(dual); }}>
+						<span className="dual-date">{dual.dualDate.toLocaleDateString()}</span>
+						<span className="dual-opponent">{dual.opponent}</span>
+						<button onClick={() => handleDelete(dual.id)}>
+							{/* Trash */}
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+								<path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/>
+							</svg>
+						</button>
+					</div>
+				))}
+			</div>
+			)}
 
 			<div className="panel">
 				<h3>Upload Stat Sheet</h3>
@@ -245,6 +308,16 @@ const DualStats = () => {
 			{wrestlers.length > 0 &&
 			<div className="panel">
 				<h3>Dual Meet Stats</h3>
+
+				<div className="form-group">
+					<label>Dual Date</label>
+					<input
+						type="date"
+						value={dualDate}
+						onChange={e => setDualDate(e.target.value)}
+					/>
+				</div>
+
 				<div className="form-group">
 					<label>Opponent</label>
 					<input
@@ -253,6 +326,7 @@ const DualStats = () => {
 						onChange={e => setOpponent(e.target.value)}
 					/>
 				</div>
+
 				<table className="wrestler-stats-table">
 					<thead>
 						<tr>
@@ -292,29 +366,29 @@ const DualStats = () => {
 								<td>
 									<input
 										type="number"
-										value={wrestler.scores.t}
-										onChange={e => handleWrestlerChange(index, "scores.t", parseInt(e.target.value))}
+										value={wrestler.scores.takedowns}
+										onChange={e => handleWrestlerChange(index, "scores.takedowns", parseInt(e.target.value))}
 									/>
 								</td>
 								<td>
 									<input
 										type="number"
-										value={wrestler.scores.e}
-										onChange={e => handleWrestlerChange(index, "scores.e", parseInt(e.target.value))}
+										value={wrestler.scores.escapes}
+										onChange={e => handleWrestlerChange(index, "scores.escapes", parseInt(e.target.value))}
 									/>
 								</td>
 								<td>
 									<input
 										type="number"
-										value={wrestler.scores.r}
-										onChange={e => handleWrestlerChange(index, "scores.r", parseInt(e.target.value))}
+										value={wrestler.scores.reversals}
+										onChange={e => handleWrestlerChange(index, "scores.reversals", parseInt(e.target.value))}
 									/>
 								</td>
 								<td>
 									<input
 										type="number"
-										value={wrestler.scores.n}
-										onChange={e => handleWrestlerChange(index, "scores.n", parseInt(e.target.value))}
+										value={wrestler.scores.nearfalls}
+										onChange={e => handleWrestlerChange(index, "scores.nearfalls", parseInt(e.target.value))}
 									/>
 								</td>
 							</tr>

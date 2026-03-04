@@ -326,7 +326,9 @@ export default {
 	}),
 
 	dual: mongoose.model("dual", {
+		dualDate: Date,
 		opponent: String,
+		imagePath: String,
 		wrestlers: [{
 			name: String,
 			weight: String,

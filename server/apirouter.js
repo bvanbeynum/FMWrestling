@@ -406,7 +406,9 @@ router.get("/api/opponenteventselect", authAPI, async (request, response) => {
 // ***************** Dual Stats ********************
 
 router.get("/api/dualstatsload", authAPI, async (request, response) => {
-	response.status(200).json({ loggedInUser: request.user });
+	const results = await api.dualStatsLoad(request.serverPath);
+
+	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
 });
 
 router.post("/api/dualstatsupload", authAPI, async (request, response) => {
@@ -428,7 +430,7 @@ router.post("/api/dualstatsupload", authAPI, async (request, response) => {
 			file.on("end", async () => {
 				const imageBuffer = Buffer.concat(chunks);
 
-				api.dualStatsUpload(imageBuffer, mimeType, request.serverPath)
+				api.dualStatsUpload(imageBuffer, mimeType)
 					.then(results => {
 						if (results.error) {
 							jobs[jobId] = { status: "error", error: results.error };
@@ -475,6 +477,16 @@ router.get("/api/dualstatsupload/:jobId", authAPI, (request, response) => {
 
 router.post("/api/dualstatssave", authAPI, async (request, response) => {
 	const results = await api.dualStatsSave(request.body.dual, request.serverPath);
+
+	if (results.error) {
+		console.log(`Error ${results.status}: ${ results.error }`);
+	}
+
+	response.status(results.status).json(results.error ? { error: results.error } : results.data );
+});
+
+router.post("/api/dualstatsdelete", authAPI, async (request, response) => {
+	const results = await api.dualStatsDelete(request.body.id, request.serverPath);
 
 	if (results.error) {
 		console.log(`Error ${results.status}: ${ results.error }`);

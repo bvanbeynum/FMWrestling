@@ -2498,11 +2498,28 @@ export default {
 		return output;		
 	},
 
-	dualStatsUpload: async (imageBuffer, mimetype, serverPath) => {
+	dualStatsLoad: async (serverPath) => {
+		const output = { data: {} };
+
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/dual`);
+			output.data.duals = clientResponse.body.duals;
+		}
+		catch (error) {
+			output.status = 564;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		return output;		
+	},
+
+	dualStatsUpload: async (imageBuffer, mimetype) => {
 		const output = { data: {} };
 
 		// Mock response for testing without API calls
-		// const statsData = {"opponent": "East Side","wrestlers": [{"name": "Mason Fodel","weight": "106","results": 3,"scores": {"1": null,"t": 2,"e": 4,"n": 0,"r": 0}},{"name": "Brame","weight": "106","results": 0,"scores": {"t": 3,"e": 1,"n": 1,"r": 1,"s": null}},{"name": "Murphy","weight": "113","results": 6,"scores": {"t": 1,"e": 0,"n": 2,"r": 0,"p": null}},{"name": "Merritt","weight": "113","results": 0,"scores": {"1": null,"t": 0,"e": 0,"n": 0,"r": 0}},{"name": "L. Van Byrnum","weight": "120","results": 6,"scores": {"t": 1,"e": 0,"n": 1,"r": 0,"p": null}},{"name": "Stolpork","weight": "120","results": 0,"scores": {"1": null,"t": 0,"e": 0,"n": 0,"r": 0}},{"name": "Waller","weight": "126","results": 0,"scores": {"t": 0,"e": 0,"n": 0,"r": 0}},{"name": "Johnson","weight": "126","results": 6,"scores": {"1": null,"t": 1,"e": 0,"n": 1,"r": 0,"p": null}},{"name": "Wartman","weight": "132","results": 4,"scores": {"t": 3,"e": 1,"n": 1,"r": 0}},{"name": "Sloan","weight": "132","results": 0,"scores": {"t": 0,"e": 0,"n": 0,"r": 0}},{"name": "Van Byrnum","weight": "138","results": 3,"scores": {"t": 3,"e": 0,"n": 1,"r": 0}},{"name": "Salvato","weight": "138","results": 0,"scores": {"t": 0,"e": 0,"n": 0,"r": 0}},{"name": "Nguyen","weight": "144","results": 5,"scores": {"1": null,"t": 5,"e": 0,"n": 1,"r": 0}},{"name": "Harding","weight": "144","results": 0,"scores": {"t": 0,"e": 4,"n": 1,"r": 0,"s": null}},{"name": "Green","weight": "150","results": 6,"scores": {"t": 1,"e": 0,"n": 1,"r": 0,"p": null}},{"name": "Smoure","weight": "150","results": 0,"scores": {"1": null,"t": 0,"e": 0,"n": 0,"r": 0}},{"name": "Colton","weight": "157","results": 0,"scores": {"t": 1,"e": 0,"n": 0,"r": 2}},{"name": "Wyland","weight": "157","results": 3,"scores": {"1": null,"t": 2,"e": 0,"n": 2,"r": 0}},{"name": "Mitchenson","weight": "165","results": 4,"scores": {"t": 4,"e": 1,"n": 0,"r": 0,"s": null}},{"name": "Johanning","weight": "165","results": 0,"scores": {"t": 0,"e": 1,"n": 1,"r": 1}},{"name": "Metcalf","weight": "175","results": 0,"scores": {"t": 0,"e": 1,"n": 0,"r": 0,"s": null}},{"name": "Schrader","weight": "175","results": 5,"scores": {"1": null,"t": 3,"e": 2,"n": 2,"r": 0}},{"name": "Lawrence","weight": "190","results": 4,"scores": {"t": 1,"e": 1,"n": 1,"r": 0,"s": null}},{"name": "Hyde","weight": "190","results": 0,"scores": {"1": null,"t": 0,"e": 2,"n": 0,"r": 0,"s": null}},{"name": "Fortet","weight": "215","results": 0,"scores": {"t": 0,"e": 0,"n": 0,"r": 0}},{"name": "Lee","weight": "215","results": 6,"scores": {"t": 0,"e": 0,"n": 0,"r": 0,"p": null}},{"name": "Shope","weight": "285","results": 3,"scores": {"t": 1,"e": 1,"n": 0,"r": 0,"v": null,"s": null,"=": null}},{"name": "McGee","weight": "285","results": 0,"scores": {"t": 0,"e": 0,"n": 0,"r": 0,"s": null}}]};
+		// const statsData = {"opponent": "East Side","wrestlers": [{"name": "Mason Fodel","weight": "106","results": 3,"scores": {"1": null,"takedowns": 2,"escapes": 4,"nearfalls": 0,"reversals": 0}},{"name": "Brame","weight": "106","results": 0,"scores": {"takedowns": 3,"escapes": 1,"nearfalls": 1,"reversals": 1,"s": null}},{"name": "Murphy","weight": "113","results": 6,"scores": {"takedowns": 1,"escapes": 0,"nearfalls": 2,"reversals": 0,"p": null}},{"name": "Merritt","weight": "113","results": 0,"scores": {"1": null,"takedowns": 0,"escapes": 0,"nearfalls": 0,"reversals": 0}},{"name": "L. Van Byrnum","weight": "120","results": 6,"scores": {"takedowns": 1,"escapes": 0,"nearfalls": 1,"reversals": 0,"p": null}},{"name": "Stolpork","weight": "120","results": 0,"scores": {"1": null,"takedowns": 0,"escapes": 0,"nearfalls": 0,"reversals": 0}},{"name": "Waller","weight": "126","results": 0,"scores": {"takedowns": 0,"escapes": 0,"nearfalls": 0,"reversals": 0}},{"name": "Johnson","weight": "126","results": 6,"scores": {"1": null,"takedowns": 1,"escapes": 0,"nearfalls": 1,"reversals": 0,"p": null}},{"name": "Wartman","weight": "132","results": 4,"scores": {"takedowns": 3,"escapes": 1,"nearfalls": 1,"reversals": 0}},{"name": "Sloan","weight": "132","results": 0,"scores": {"takedowns": 0,"escapes": 0,"nearfalls": 0,"reversals": 0}},{"name": "Van Byrnum","weight": "138","results": 3,"scores": {"takedowns": 3,"escapes": 0,"nearfalls": 1,"reversals": 0}},{"name": "Salvato","weight": "138","results": 0,"scores": {"takedowns": 0,"escapes": 0,"nearfalls": 0,"reversals": 0}},{"name": "Nguyen","weight": "144","results": 5,"scores": {"1": null,"takedowns": 5,"escapes": 0,"nearfalls": 1,"reversals": 0}},{"name": "Harding","weight": "144","results": 0,"scores": {"takedowns": 0,"escapes": 4,"nearfalls": 1,"reversals": 0,"s": null}},{"name": "Green","weight": "150","results": 6,"scores": {"takedowns": 1,"escapes": 0,"nearfalls": 1,"reversals": 0,"p": null}},{"name": "Smoure","weight": "150","results": 0,"scores": {"1": null,"takedowns": 0,"escapes": 0,"nearfalls": 0,"reversals": 0}},{"name": "Colton","weight": "157","results": 0,"scores": {"takedowns": 1,"escapes": 0,"nearfalls": 0,"reversals": 2}},{"name": "Wyland","weight": "157","results": 3,"scores": {"1": null,"takedowns": 2,"escapes": 0,"nearfalls": 2,"reversals": 0}},{"name": "Mitchenson","weight": "165","results": 4,"scores": {"takedowns": 4,"escapes": 1,"nearfalls": 0,"reversals": 0,"s": null}},{"name": "Johanning","weight": "165","results": 0,"scores": {"takedowns": 0,"escapes": 1,"nearfalls": 1,"reversals": 1}},{"name": "Metcalf","weight": "175","results": 0,"scores": {"takedowns": 0,"escapes": 1,"nearfalls": 0,"reversals": 0,"s": null}},{"name": "Schrader","weight": "175","results": 5,"scores": {"1": null,"takedowns": 3,"escapes": 2,"nearfalls": 2,"reversals": 0}},{"name": "Lawrence","weight": "190","results": 4,"scores": {"takedowns": 1,"escapes": 1,"nearfalls": 1,"reversals": 0,"s": null}},{"name": "Hyde","weight": "190","results": 0,"scores": {"1": null,"takedowns": 0,"escapes": 2,"nearfalls": 0,"reversals": 0,"s": null}},{"name": "Fortet","weight": "215","results": 0,"scores": {"takedowns": 0,"escapes": 0,"nearfalls": 0,"reversals": 0}},{"name": "Lee","weight": "215","results": 6,"scores": {"takedowns": 0,"escapes": 0,"nearfalls": 0,"reversals": 0,"p": null}},{"name": "Shope","weight": "285","results": 3,"scores": {"takedowns": 1,"escapes": 1,"nearfalls": 0,"reversals": 0,"v": null,"s": null,"=": null}},{"name": "McGee","weight": "285","results": 0,"scores": {"takedowns": 0,"escapes": 0,"nearfalls": 0,"reversals": 0,"s": null}}]};
 		// output.data.stats = statsData;
 		// output.data.fileName = "1772549673582.png";
 		// output.status = 200;
@@ -2565,7 +2582,7 @@ Do not return any other text or markup.
 								const prefix = score.substring(0, 1);
 								output[prefix.toLowerCase()] += 1;
 								return output;
-							}, { t: 0, e: 0, n: 0, r: 0 })
+							}, { takedowns: 0, escapes: 0, nearfalls: 0, reversals: 0 })
 					}))
 				};
 
@@ -2583,27 +2600,49 @@ Do not return any other text or markup.
 		const output = {};
 
 		try {
-			const clientResponse = await client.post(`${ serverPath }/data/dual`).send({ 
-				dual: {
-					...dual,
-					wrestlers: dual.wrestlers.map(wrestler => ({
-						...wrestler,
-						scores: {
-							takedowns: wrestler.scores.t,
-							escapes: wrestler.scores.e,
-							reversals: wrestler.scores.r,
-							nearfalls: wrestler.scores.n
-						}
-					}))
-				} 
-			}).then();
-
-			output.status = 200;
-			output.data = { id: clientResponse.body.id };
-			return output;
+			await client.post(`${ serverPath }/data/dual`).send({ dual: dual }).then();
 		}
 		catch (error) {
 			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/dual`);	
+
+			output.status = 200;
+			output.data = { duals: clientResponse.body.duals };
+			return output;
+		}
+		catch (error) {
+			output.status = 562;
+			output.error = error.message;
+			return output;
+		}
+	},
+
+	dualStatsDelete: async (dualId, serverPath) => {
+		const output = {};
+
+		try {
+			await client.delete(`${ serverPath }/data/dual?id=${ dualId }`).then();
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/dual`);
+
+			output.status = 200;
+			output.data = { duals: clientResponse.body.duals };
+			return output;
+		}
+		catch (error) {
+			output.status = 562;
 			output.error = error.message;
 			return output;
 		}
