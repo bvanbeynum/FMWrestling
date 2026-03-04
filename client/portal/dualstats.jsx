@@ -14,6 +14,7 @@ const DualStats = () => {
 
 	const [ uploadResult, setUploadResult ] = useState(null);
 	const [ wrestlers, setWrestlers ] = useState([]);
+	const [ opponent, setOpponent ] = useState("");
 	const [ imagePath, setImagePath ] = useState(null);
 	
 	const [ zoom, setZoom ] = useState(0);
@@ -64,7 +65,9 @@ const DualStats = () => {
 
 	const handleFileChange = (event) => {
 		setSelectedFile(event.target.files[0]);
-		setUploadResult(null);
+		setOpponent("");
+		setWrestlers([]);
+		setImagePath(null);
 	};
 
 	const pollJobStatus = (jobId) => {
@@ -74,14 +77,15 @@ const DualStats = () => {
 				.then(data => {
 
 					if (data.status === "completed") {
-						setWrestlers(data.data.wrestlers);
-						setImagePath(`/media/temp/${data.data.fileName}`);
+						setOpponent(data.stats.opponent);
+						setWrestlers(data.stats.wrestlers);
+						setImagePath(`/media/temp/${data.fileName}`);
 
 						clearInterval(interval);
 						setIsUploading(false);
 						setSelectedFile(null);
 					}
-					else {
+					else if (data.status === "error") {
 						clearInterval(interval);
 						setIsUploading(false);
 						console.error("File upload error", data.error);
@@ -123,6 +127,19 @@ const DualStats = () => {
 				setIsUploading(false);
 				console.error("File upload error", error);
 			});
+	};
+
+	const handleWrestlerChange = (index, field, value) => {
+		const updatedWrestlers = [...wrestlers];
+		updatedWrestlers[index][field] = value;
+		setWrestlers(updatedWrestlers);
+	};
+
+	const handleSave = () => {
+		console.log({
+			opponent,
+			wrestlers
+		});
 	};
 
 	return (
@@ -200,6 +217,91 @@ const DualStats = () => {
 				</div>
 			</div>
 			)}
+
+			{wrestlers.length > 0 &&
+			<div className="panel">
+				<h3>Dual Meet Stats</h3>
+				<div className="form-group">
+					<label>Opponent</label>
+					<input
+						type="text"
+						value={opponent}
+						onChange={e => setOpponent(e.target.value)}
+					/>
+				</div>
+				<table className="wrestler-stats-table">
+					<thead>
+						<tr>
+							<th>Name</th>
+							<th>Weight</th>
+							<th>Score</th>
+							<th>T</th>
+							<th>E</th>
+							<th>R</th>
+							<th>N</th>
+						</tr>
+					</thead>
+					<tbody>
+						{wrestlers.map((wrestler, index) => (
+							<tr key={index}>
+								<td>
+									<input
+										type="text"
+										value={wrestler.name}
+										onChange={e => handleWrestlerChange(index, "name", e.target.value)}
+									/>
+								</td>
+								<td>
+									<input
+										type="text"
+										value={wrestler.weight}
+										onChange={e => handleWrestlerChange(index, "weight", e.target.value)}
+									/>
+								</td>
+								<td>
+									<input
+										type="text"
+										value={wrestler.results}
+										onChange={e => handleWrestlerChange(index, "results", e.target.value)}
+									/>
+								</td>
+								<td>
+									<input
+										type="number"
+										value={wrestler.scores.t}
+										onChange={e => handleWrestlerChange(index, "scores.t", parseInt(e.target.value))}
+									/>
+								</td>
+								<td>
+									<input
+										type="number"
+										value={wrestler.scores.e}
+										onChange={e => handleWrestlerChange(index, "scores.e", parseInt(e.target.value))}
+									/>
+								</td>
+								<td>
+									<input
+										type="number"
+										value={wrestler.scores.r}
+										onChange={e => handleWrestlerChange(index, "scores.r", parseInt(e.target.value))}
+									/>
+								</td>
+								<td>
+									<input
+										type="number"
+										value={wrestler.scores.n}
+										onChange={e => handleWrestlerChange(index, "scores.n", parseInt(e.target.value))}
+									/>
+								</td>
+							</tr>
+						))}
+					</tbody>
+				</table>
+				<div className="form-actions">
+					<button onClick={handleSave}>Save</button>
+				</div>
+			</div>
+			}
 
 		</div>
 

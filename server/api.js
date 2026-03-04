@@ -3,6 +3,8 @@ import jwt from "jsonwebtoken";
 import config from "./config.js";
 import { google } from "googleapis";
 import nodemailer from "nodemailer";
+import fs, { stat } from "fs";
+import path from "path";
 
 export default {
 
@@ -2500,17 +2502,37 @@ export default {
 		const output = { data: {} };
 
 		// Mock response for testing without API calls
-		// output.data = [{ "wrestler_name": "Mason Findel", "scores": [ "E1", "T2", "E1", "E1", "E1", "T2" ] }, { "wrestler_name": "Brame", "scores": [ "T2", "R2", "T2", "T2", "E1" ] }, { "wrestler_name": "Murphy", "scores": [ "T2", "N4", "N4", "F 1:12" ] }, { "wrestler_name": "Merritt", "scores": [] }, { "wrestler_name": "L. VanBuren", "scores": [ "T2", "N4", "F 1:39" ] }, { "wrestler_name": "Stelpani", "scores": [] }, { "wrestler_name": "Walker", "scores": [] }, { "wrestler_name": "Johnson", "scores": [ "T2", "N4", "F :35" ] }, { "wrestler_name": "Wartman", "scores": [ "T2", "E1", "T2", "T2", "N4" ] }, { "wrestler_name": "Sloan", "scores": [] }, { "wrestler_name": "Van Buren", "scores": [ "T2", "T2", "T2", "N4", "E1" ] }, { "wrestler_name": "Salvato", "scores": [] }, { "wrestler_name": "Nguyen", "scores": [ "T2", "N2", "T2", "T2", "T2", "T2" ] }, { "wrestler_name": "Harding", "scores": [ "E1", "E1", "E1", "E1" ] }, { "wrestler_name": "Green", "scores": [ "T2", "N4", "F 1:28" ] }, { "wrestler_name": "Smoure", "scores": [] }, { "wrestler_name": "Colton", "scores": [ "R2", "R2" ] }, { "wrestler_name": "Wieland", "scores": [ "T2", "N4", "E1", "T2" ] }, { "wrestler_name": "Mitchener", "scores": [ "T2", "T2", "E1", "T2", "T2" ] }, { "wrestler_name": "Johaning", "scores": [ "R2", "E1" ] }, { "wrestler_name": "Metcalf", "scores": [] }, { "wrestler_name": "Schrader", "scores": [ "T2", "T2", "N4", "E1", "E1", "T2" ] }, { "wrestler_name": "Lawrence", "scores": [ "T2", "E1", "N4" ] }, { "wrestler_name": "Hyde", "scores": [ "E1", "E1" ] }, { "wrestler_name": "Forter", "scores": [] }, { "wrestler_name": "Lee", "scores": [] }, { "wrestler_name": "Shope", "scores": [ "E1", "T2" ] }, { "wrestler_name": "McGee", "scores": [] } ];
+		// const statsData = {"opponent": "East Side","wrestlers": [{"name": "Mason Fodel","weight": "106","results": 3,"scores": {"1": null,"t": 2,"e": 4,"n": 0,"r": 0}},{"name": "Brame","weight": "106","results": 0,"scores": {"t": 3,"e": 1,"n": 1,"r": 1,"s": null}},{"name": "Murphy","weight": "113","results": 6,"scores": {"t": 1,"e": 0,"n": 2,"r": 0,"p": null}},{"name": "Merritt","weight": "113","results": 0,"scores": {"1": null,"t": 0,"e": 0,"n": 0,"r": 0}},{"name": "L. Van Byrnum","weight": "120","results": 6,"scores": {"t": 1,"e": 0,"n": 1,"r": 0,"p": null}},{"name": "Stolpork","weight": "120","results": 0,"scores": {"1": null,"t": 0,"e": 0,"n": 0,"r": 0}},{"name": "Waller","weight": "126","results": 0,"scores": {"t": 0,"e": 0,"n": 0,"r": 0}},{"name": "Johnson","weight": "126","results": 6,"scores": {"1": null,"t": 1,"e": 0,"n": 1,"r": 0,"p": null}},{"name": "Wartman","weight": "132","results": 4,"scores": {"t": 3,"e": 1,"n": 1,"r": 0}},{"name": "Sloan","weight": "132","results": 0,"scores": {"t": 0,"e": 0,"n": 0,"r": 0}},{"name": "Van Byrnum","weight": "138","results": 3,"scores": {"t": 3,"e": 0,"n": 1,"r": 0}},{"name": "Salvato","weight": "138","results": 0,"scores": {"t": 0,"e": 0,"n": 0,"r": 0}},{"name": "Nguyen","weight": "144","results": 5,"scores": {"1": null,"t": 5,"e": 0,"n": 1,"r": 0}},{"name": "Harding","weight": "144","results": 0,"scores": {"t": 0,"e": 4,"n": 1,"r": 0,"s": null}},{"name": "Green","weight": "150","results": 6,"scores": {"t": 1,"e": 0,"n": 1,"r": 0,"p": null}},{"name": "Smoure","weight": "150","results": 0,"scores": {"1": null,"t": 0,"e": 0,"n": 0,"r": 0}},{"name": "Colton","weight": "157","results": 0,"scores": {"t": 1,"e": 0,"n": 0,"r": 2}},{"name": "Wyland","weight": "157","results": 3,"scores": {"1": null,"t": 2,"e": 0,"n": 2,"r": 0}},{"name": "Mitchenson","weight": "165","results": 4,"scores": {"t": 4,"e": 1,"n": 0,"r": 0,"s": null}},{"name": "Johanning","weight": "165","results": 0,"scores": {"t": 0,"e": 1,"n": 1,"r": 1}},{"name": "Metcalf","weight": "175","results": 0,"scores": {"t": 0,"e": 1,"n": 0,"r": 0,"s": null}},{"name": "Schrader","weight": "175","results": 5,"scores": {"1": null,"t": 3,"e": 2,"n": 2,"r": 0}},{"name": "Lawrence","weight": "190","results": 4,"scores": {"t": 1,"e": 1,"n": 1,"r": 0,"s": null}},{"name": "Hyde","weight": "190","results": 0,"scores": {"1": null,"t": 0,"e": 2,"n": 0,"r": 0,"s": null}},{"name": "Fortet","weight": "215","results": 0,"scores": {"t": 0,"e": 0,"n": 0,"r": 0}},{"name": "Lee","weight": "215","results": 6,"scores": {"t": 0,"e": 0,"n": 0,"r": 0,"p": null}},{"name": "Shope","weight": "285","results": 3,"scores": {"t": 1,"e": 1,"n": 0,"r": 0,"v": null,"s": null,"=": null}},{"name": "McGee","weight": "285","results": 0,"scores": {"t": 0,"e": 0,"n": 0,"r": 0,"s": null}}]};
+		// output.data.stats = statsData;
+		// output.data.fileName = "1772549673582.png";
 		// output.status = 200;
 		// return output;
+
+		const extension = mimetype.split('/')[1];
+		const fileName = `${Date.now()}.${extension}`;
+		const filePath = path.join(process.cwd(), 'client', 'media', 'temp', fileName);
+
+		try {
+			fs.writeFileSync(filePath, imageBuffer);
+		} catch (error) {
+			output.status = 561;
+			output.error = `Error saving file: ${error.message}`;
+			return output;
+		}
 
 		try {
 			const imageBytes = imageBuffer.toString("base64");
 
 			const prompt = `
-This image contains a table with a row for each wrestler as well as wrestler score shorthand.
-Extract the wrestler name, and an array of the wrestler's scores.
-Return the data as a JSON object with a key for the wrestler name, and an array of scores.
+This image contains the visitor name at the top, as well as a table with a row for each wrestler with the wrestler score shorthand, and the match results.
+Extract
+* The opponent name at the top of the sheet.
+* An array of wrestler data
+	* The wrestler name
+	* The wrestler's weight class
+	* An array of the wrestler's scores
+	* The match results score - there should only be one score per weight class. If one is blank, then treat it as 0.
+Return the data as a JSON object with a key for the opponent name, and an array of objects with a key for the wrestler name, a key for the match results score, and an array of scores {opponent: String, wrestlers: [name: String, weight: String, results: Number, scores: Array<String>]}.
 Do not return any other text or markup. 
 `;
 
@@ -2532,13 +2554,26 @@ Do not return any other text or markup.
 
 			let text = jsonResponse["candidates"][0]["content"]["parts"][0]["text"];
 			text = text.replace("```json", "").replace("```", "");
-			const wrestlerData = JSON.parse(text);
+			const statsData = JSON.parse(text);
 
-			output.data = wrestlerData;
+			output.data.stats = {
+					...statsData,
+					wrestlers: statsData.wrestlers.map(wrestler => ({
+						...wrestler,
+						scores: wrestler.scores
+							.reduce((output, score) => {
+								const prefix = score.substring(0, 1);
+								output[prefix.toLowerCase()] += 1;
+								return output;
+							}, { t: 0, e: 0, n: 0, r: 0 })
+					}))
+				};
+
+			output.data.fileName = fileName;
 			output.status = 200;
 		} catch (error) {
 			output.error = error.message;
-			output.status = 500;
+			output.status = 562;
 		}
 
 		return output;

@@ -48,3 +48,76 @@
 .zoom-slider-input {
 	width: 100%;
 }
+
+.wrestler-stats-table {
+	width: 100%;
+	border-collapse: collapse;
+	margin-top: 20px;
+	table-layout: fixed;
+}
+
+.wrestler-stats-table th,
+.wrestler-stats-table td {
+	border: 1px solid #ccc;
+	padding: 8px;
+	text-align: left;
+}
+
+.wrestler-stats-table th {
+	background-color: #f4f4f4;
+}
+
+.wrestler-stats-table input {
+	width: 100%;
+	border: none;
+	background: transparent;
+	padding: 0;
+	margin: 0;
+	font-size: .8em;
+	font-family: inherit;
+	text-align: center;
+}
+
+.wrestler-stats-table th:nth-child(1),
+.wrestler-stats-table td:nth-child(1) {
+	width: 35%;
+}
+
+.wrestler-stats-table th:nth-child(2),
+.wrestler-stats-table td:nth-child(2) {
+	width: 15%;
+}
+
+.wrestler-stats-table th:nth-child(3),
+.wrestler-stats-table td:nth-child(3) {
+	width: 15%;
+}
+
+.wrestler-stats-table th:nth-child(n+4),
+.wrestler-stats-table td:nth-child(n+4) {
+	width: 8.75%;
+}
+
+.form-actions {
+	display: flex;
+	justify-content: end;
+	margin-top: 20px;
+}
+
+.form-actions button {
+	padding: 2px 10px;
+	color: white;
+	border-radius: 8px;
+	background-color: rgb(95 95 255);
+	border: 2px solid rgb(59 59 249);
+}
+
+.wrestler-stats-table input[type=number]::-webkit-inner-spin-button, 
+.wrestler-stats-table input[type=number]::-webkit-outer-spin-button { 
+	-webkit-appearance: none; 
+	margin: 0; 
+}
+
+.wrestler-stats-table input[type=number] {
+	-moz-appearance: textfield;
+}

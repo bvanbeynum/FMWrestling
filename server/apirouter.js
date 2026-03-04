@@ -464,7 +464,7 @@ router.get("/api/dualstatsupload/:jobId", authAPI, (request, response) => {
 		if (job.status === "completed") {
 			const jobData = jobs[jobId].data;
 			delete jobs[jobId];
-			response.status(200).json({ status: "completed", data: jobData });
+			response.status(200).json({ status: "completed", ...jobData });
 		} else {
 			response.status(200).json(job);
 		}
