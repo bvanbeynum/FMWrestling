@@ -134,7 +134,7 @@ const DualStats = () => {
 
 	const handleWrestlerChange = (index, field, value) => {
 		const updatedWrestlers = [...wrestlers];
-		updatedWrestlers[index][field] = value;
+		updatedWrestlers[index].scores[field] = value;
 		setWrestlers(updatedWrestlers);
 	};
 
