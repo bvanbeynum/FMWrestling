@@ -430,10 +430,10 @@ router.post("/api/dualstatsupload", authAPI, async (request, response) => {
 			file.on("end", async () => {
 				const imageBuffer = Buffer.concat(chunks);
 
-				api.dualStatsUpload(imageBuffer, mimeType)
+				api.dualStatsUpload(imageBuffer, mimeType, request.serverPath)
 					.then(results => {
 						if (results.error) {
-							jobs[jobId] = { status: "error", error: results.error };
+							jobs[jobId] = { status: "error", statusCode: results.status, error: results.error };
 						} else {
 							jobs[jobId] = { status: "completed", data: results.data };
 						}

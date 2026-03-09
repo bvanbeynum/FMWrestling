@@ -2205,6 +2205,10 @@ export default {
 		}
 
 		try {
+			const seasonStart = new Date() > new Date(new Date().getFullYear(), 11, 1) ?
+				new Date(new Date().getFullYear(), 8, 1)
+				: new Date(new Date().getFullYear() - 1, 8, 1)
+			
 			output.data.wrestlers = wrestlers
 				.filter(wrestler => wrestler.events.some(event => /^sc$/gi.test(event.locationState))) // Wrestler has wrestled in SC
 				.map(wrestler => {
@@ -2237,12 +2241,8 @@ export default {
 				})
 				.filter(wrestler => 
 					wrestler.lastEvent // Has a last event
-					&& wrestler.lastEvent.date >= new Date(new Date().getFullYear() - 1, 8, 1) // Last event within the last school year
+					&& wrestler.lastEvent.date >= seasonStart // Last event within the last school year
 				);
-			
-			const seasonStart = new Date() > new Date(new Date().getFullYear(), 11, 1) ?
-				new Date(new Date().getFullYear(), 8, 1)
-				: new Date(new Date().getFullYear() - 1, 8, 1)
 			
 			const allEvents = wrestlers.flatMap(wrestler => 
 					wrestler.events
@@ -2515,7 +2515,7 @@ export default {
 		return output;		
 	},
 
-	dualStatsUpload: async (imageBuffer, mimetype) => {
+	dualStatsUpload: async (imageBuffer, mimetype, serverPath) => {
 		const output = { data: {} };
 
 		// Mock response for testing without API calls
@@ -2536,6 +2536,7 @@ export default {
 			output.error = `Error saving file: ${error.message}`;
 			return output;
 		}
+		console.log(`File saved to ${ filePath }`);
 
 		try {
 			const imageBytes = imageBuffer.toString("base64");
@@ -2547,7 +2548,7 @@ Extract
 * An array of wrestler data
 	* The wrestler name
 	* The wrestler's weight class
-	* An array of the wrestler's scores
+	* An array of the wrestler's scores (the format should be character then digit. e.g. N4, T3, E1. single characters or digits should be ignored)
 	* The match results score - there should only be one score per weight class. If one is blank, then treat it as 0.
 Return the data as a JSON object with a key for the opponent name, and an array of objects with a key for the wrestler name, a key for the match results score, and an array of scores {opponent: String, wrestlers: [name: String, weight: String, results: Number, scores: Array<String>]}.
 Do not return any other text or markup. 
@@ -2594,12 +2595,178 @@ Do not return any other text or markup.
 							}
 						}))
 				};
+			console.log(`Extracted ${ output.data.stats.wrestlers.length } wrestlers from stats sheet for opponent ${ output.data.stats.opponent }`);
 
 			output.data.fileName = fileName;
 			output.status = 200;
 		} catch (error) {
 			output.error = error.message;
 			output.status = 562;
+		}
+
+		let schools = [],
+			opponentSchool = null;
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/school`);
+			schools = clientResponse.body.schools;
+			// First try to find the opponent school through basic string matching, ignoring case, whitespace, and non-alphanumeric characters
+			opponentSchool = schools.find(school => school.name.toLowerCase().replace(/\s/g, "").replace(/[^a-z]/gi, "") == output.data.stats.opponent.toLowerCase().replace(/\s/g, "").replace(/[^a-z]/gi, ""));
+			console.log(`Basic string matching found opponent school: ${ opponentSchool ? opponentSchool.name : "No match found" }`);
+		}
+		catch (error) {
+			output.status = 564;
+			output.error = error.message;
+			return output;
+		}
+
+		// If the opponent school isn't found through basic string matching, use the Gemini API to find the closest match based on the list of schools
+		if (!opponentSchool) {
+			try {
+				const prompt = `The opponent name "${ output.data.stats.opponent }" was not found in the database. 
+					Based on the following list of schools, which school is the most likely match? 
+					If there is no good match, return null. ${ schools.map(school => school.name).join(", ") }`;
+
+				const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${config.geminiAPIKey}`;
+				const headers = { "Content-Type": "application/json" };
+				const data = {
+					"contents": [
+						{
+							"parts": [
+								{ "text": prompt }
+							]
+						}
+					]
+				};
+
+				const response = await client.post(url).set(headers).send(data);
+				const jsonResponse = response.body;
+
+				let text = jsonResponse["candidates"][0]["content"]["parts"][0]["text"];
+				text = text.replace(/["']/g, "").trim();
+
+				opponentSchool = schools.find(school => school.name.toLowerCase() == text.toLowerCase());
+				console.log(`Gemini matching found opponent school: ${ opponentSchool ? opponentSchool.name : "No match found" }`);
+			} catch (error) {
+				output.status = 565;
+				output.error = `Error finding opponent school: ${error.message}`;
+				return output;
+			}
+		}
+
+		if (opponentSchool) {
+			// Load the found school
+			output.data.stats.opponent = opponentSchool.name;
+			output.data.stats.opponentId = opponentSchool.id;
+
+			const schoolNames = opponentSchool.lookupNames;
+
+			const seasonStart = new Date() > new Date(new Date().getFullYear(), 11, 1) ?
+				new Date(new Date().getFullYear(), 8, 1)
+				: new Date(new Date().getFullYear() - 1, 8, 1)
+			
+			// Load the wrestlers for the found school & Fort Mill to find potential matches for the wrestlers based on their last event
+			let wrestlers = [];
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/wrestler?teamname=fort mill`);
+				
+				wrestlers = clientResponse.body.wrestlers
+					.map(wrestler => {
+						const lastTeamEventDate = wrestler.events
+							.filter(event => /^fort mill$/gi.test(event.team) && event.matches && !isNaN(event.matches[0].weightClass.replace("lbs", "").trim()))
+							.map(event => new Date(event.date))
+							.sort((eventA, eventB) => +eventB - +eventA)
+							.find(() => true);
+						
+						return {
+							id: wrestler.id,
+							name: wrestler.name,
+							lastEventDate: lastTeamEventDate
+						}
+					})
+					.filter(wrestler => wrestler.lastEventDate && wrestler.lastEventDate >= seasonStart)
+					.map(({ lastEventDate, ...wrestler }) => wrestler);	
+			}
+			catch (error) {
+				output.status = 566;
+				output.error = error.message;
+				return output;
+			}
+
+			try {
+				const clientResponse = await client.get(`${ serverPath }/data/wrestler?teamname=${ opponentSchool.name }`);
+				const opponentWrestlers = clientResponse.body.wrestlers;
+
+				wrestlers = wrestlers.concat(opponentWrestlers
+					.filter(wrestler => wrestler.events.some(event => /^sc$/gi.test(event.locationState))) // Wrestler has wrestled in SC
+					.map(wrestler => {
+						const lastTeamEventDate = wrestler.events
+							.filter(event => schoolNames.includes(event.team) && event.matches && !isNaN(event.matches[0].weightClass.replace("lbs", "").trim()))
+							.map(event => new Date(event.date))
+							.sort((eventA, eventB) => +eventB - +eventA)
+							.find(() => true);
+
+						return {
+							id: wrestler.id,
+							name: wrestler.name,
+							lastEventDate: lastTeamEventDate
+						};
+					})
+					.filter(wrestler => 
+						wrestler.lastEventDate // Has a last event
+						&& wrestler.lastEventDate >= seasonStart // Last event within the last school year
+					)
+					.map(({ lastEventDate, ...wrestler }) => wrestler));
+			}
+			catch (error) {
+				output.status = 567;
+				output.error = error.message;
+				return output;
+			}
+			console.log(`Wrestlers loaded for matching: ${ wrestlers.length } wrestlers found`);
+
+			// Use the list of wrestlers to find potential matches for the wrestlers in the stats based on name matching, and add potential wrestler IDs to the stats data
+			const prompt = `Based on the following list of wrestlers, which wrestler is the most likely match for each wrestler in the stats data?
+If there is no good match for a wrestler, return null for that wrestler. 
+Wrestlers: ${ output.data.stats.wrestlers.map(wrestler => wrestler.name).join(", ") }
+Wrestler Lookup Names: ${ wrestlers.map(wrestler => `${wrestler.name} (${ wrestler.id})`).join(", ") }
+Return the matches as an array, [{ lookup: String, matchId: String }] where the lookup is the wrestler name from the wrestlers, and the matchId is the ID of the matched wrestler from the wrestler lookup names. If there is no good match, matchId should be null.`;
+
+			try {
+				const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${config.geminiAPIKey}`;
+				const headers = { "Content-Type": "application/json" };
+				const data = {
+					"contents": [
+						{
+							"parts": [
+								{ "text": prompt }
+							]
+						}
+					]
+				};
+
+				const response = await client.post(url).set(headers).send(data);
+				const jsonResponse = response.body;
+
+				let text = jsonResponse["candidates"][0]["content"]["parts"][0]["text"];
+				text = text.replace("```json", "").replace("```", "");
+				const wrestlerMatches = JSON.parse(text);
+				
+				console.log(`Wrestler matches from Gemini ${ wrestlerMatches.length } matches found`);
+				output.data.stats.wrestlers = output.data.stats.wrestlers.map(wrestler => {
+					const match = wrestlerMatches.find(match => match.lookup.toLowerCase() == wrestler.name.toLowerCase());
+					return {
+						...wrestler,
+						lookup: wrestler.name,
+						name: wrestlers.find(wrestler => match && wrestler.id == match.matchId)?.name || wrestler.name,
+						id: match && match.matchId ? wrestlers.find(wrestler => wrestler.id == match.matchId)?.id : null,
+						match: match 
+					};
+				});
+			} catch (error) {
+				output.status = 568;
+				output.error = `Error matching wrestlers: ${error.message}`;
+				return output;
+			}
 		}
 
 		return output;
