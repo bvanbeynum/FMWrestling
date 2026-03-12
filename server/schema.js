@@ -77,7 +77,9 @@ export default {
 		name: String,
 		token: String,
 		url: String,
-		isDev: Boolean
+		isDev: Boolean,
+		created: Date,
+		modified: Date
 	}),
 
 	deviceRequest: mongoose.model("devicerequest", {
@@ -103,7 +105,9 @@ export default {
 		isMyTeam: Boolean,
 		wrestlers: [{ id: String, firstName: String, lastName: String, division: String, weightClass: String, position: Number }],
 		floTeams: [{ id: String, name: String }],
-		scmatTeams: [{ id: String, name: String }]
+		scmatTeams: [{ id: String, name: String }],
+		created: Date,
+		modified: Date
 	}),
 
 	externalWrestler: mongoose.model("externalWrestler", {
@@ -143,7 +147,9 @@ export default {
 			sort: Number,
 			eventDate: Date
 		}]],
-		lastSQLUpdate: Date
+		lastSQLUpdate: Date,
+		created: Date,
+		modified: Date
 	}),
 
 	wrestler: mongoose.model("wrestler", {
@@ -191,7 +197,9 @@ export default {
 			periodEndDate: Date,
 			rating: Number,
 			deviation: Number
-		}]
+		}],
+		created: Date,
+		modified: Date
 	}),
 
 	school: mongoose.model("school", {
@@ -200,7 +208,9 @@ export default {
 		searchName: String,
 		classification: String,
 		region: String,
-		lookupNames: [String]
+		lookupNames: [String],
+		created: Date,
+		modified: Date
 	}),
 
 	scoreCall: mongoose.model("scorecall", {
@@ -231,7 +241,9 @@ export default {
 		date: Date,
 		endDate: Date,
 		location: String,
-		state: String
+		state: String,
+		created: Date,
+		modified: Date
 	}),
 
 	floEvent: mongoose.model("floevent", {
@@ -296,7 +308,9 @@ export default {
 				teams: [ String ],
 				message: String
 			}]
-		}]
+		}],
+		created: Date,
+		modified: Date
 	}),
 
 	trackEvent: mongoose.model("trackevent", {
@@ -306,7 +320,9 @@ export default {
 		date: Date,
 		endDate: Date,
 		location: String,
-		state: String
+		state: String,
+		created: Date,
+		modified: Date
 	}),
 
 	scmatTeam: mongoose.model("scmatteam", {
@@ -322,7 +338,9 @@ export default {
 				ranking: Number,
 				date: Date
 			}]
-		}]
+		}],
+		created: Date,
+		modified: Date
 	}),
 
 	dual: mongoose.model("dual", {
@@ -339,7 +357,9 @@ export default {
 				reversals: Number,
 				nearfalls: Number
 			}
-		}]
+		}],
+		created: Date,
+		modified: Date
 	})
 	
 };
