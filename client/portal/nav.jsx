@@ -178,8 +178,12 @@ const Nav = props => {
 			<li role="button" onClick={ () => window.location = "/portal/dualstats.html" } className={`button sub ${ subExpanded === "user" ? "active" : "" }`}>
 				<span>Dual Stats</span>
 			</li>
-			</>
+			
+			<li role="button" onClick={ () => window.location = "/portal/duplicates.html" } className={`button sub ${ subExpanded === "user" ? "active" : "" }`}>
+				<span>Duplicates</span>
+			</li>
 
+			</>
 			: ""
 			}
 

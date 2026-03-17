@@ -2837,6 +2837,140 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 			output.error = error.message;
 			return output;
 		}
+	},
+
+	duplicatesLoad: async () => {
+		const output = { data: {} };
+
+		output.status = 200;
+		return output;
+	},
+
+	duplicatesSearch: async (daysPast, serverPath) => {
+		const output = { data: {} };
+
+		let schools = [];
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/school`);
+			schools = clientResponse.body.schools;
+		}
+		catch (error) {
+			output.status = 562;
+			output.error = error.message;
+			return output;
+		}
+
+		let newWrestlers = [];
+		try {
+			const lastDays = new Date();
+			lastDays.setDate(lastDays.getDate() - daysPast);
+			console.log(`Loading wrestlers created since ${ lastDays.toISOString() } for duplicate check`);
+			const clientResponse = await client.get(`${ serverPath }/data/wrestler?createdsince=${ lastDays.toISOString() }`);
+			newWrestlers = clientResponse.body.wrestlers;
+			console.log(`Loaded ${ newWrestlers.length } new wrestlers for duplicate check`);
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+
+		// Only look for duplicates for the schools
+		let lookupWrestlers = newWrestlers;
+		try {
+			const schoolLookup = schools.flatMap(school => school.lookupNames.map(name => name.toLowerCase()));
+			lookupWrestlers = newWrestlers.filter(wrestler => wrestler.events.some(event => schoolLookup.includes(event.searchTeam)));
+			console.log(`Filtered to ${ lookupWrestlers.length } wrestlers with events matching school lookup names for duplicate check`);
+		}
+		catch (error) {
+			output.status = 563;
+			output.error = error.message;
+			return output; 
+		}
+
+		try {
+			const wrestlersWithDuplicates = [];
+			const batchSize = 5;
+			
+			console.log(`Starting duplicate check for ${lookupWrestlers.length} wrestlers in batches of ${batchSize}.`);
+			for (let batchIndex = 0; batchIndex < lookupWrestlers.length; batchIndex += batchSize) {
+				const batch = lookupWrestlers.slice(batchIndex, batchIndex + batchSize);
+				
+				const duplicateChecks = batch.map(wrestler => {
+					const teams = wrestler.events.flatMap(event => event.searchTeam);
+					return client.get(`${serverPath}/data/wrestler?initialsearch=${encodeURIComponent(wrestler.name)}&teams=${encodeURIComponent(JSON.stringify(teams))}`);
+				});
+				
+				console.log(`Checking batch ${batchIndex / batchSize + 1}: Wrestlers ${batchIndex + 1} to ${Math.min(batchIndex + batchSize, lookupWrestlers.length)}`);
+				const duplicateResponses = await Promise.all(duplicateChecks);
+				console.log(`Duplicate check responses: ${ duplicateResponses.map((res, index) => `Wrestler: ${batch[index].name}, Duplicates Found: ${res.body.wrestlers.length - 1}`).join("; ") }`);
+				
+				const batchWithDuplicates = batch.map((wrestler, index) => {
+						const potentialDuplicates = duplicateResponses[index]?.body?.wrestlers;
+						return {
+							id: wrestler.id,
+							name: wrestler.name,
+							teams: [...new Set(wrestler.events.flatMap(event => event.team))],
+							events: wrestler.events.map(event => ({ name: event.name, team: event.team, date: event.date })),
+							duplicates: potentialDuplicates?.filter(duplicate => duplicate.id !== wrestler.id)
+									.map(duplicate => ({
+										id: duplicate.id,
+										name: duplicate.name,
+										events: duplicate.events.map(event => ({ name: event.name, team: event.team, date: event.date })),
+										teams: [...new Set(duplicate.events.flatMap(event => event.team))]
+									})),
+						}; 
+					})
+					.filter(wrestler => wrestler.duplicates && wrestler.duplicates.length > 0);
+				wrestlersWithDuplicates.push(...batchWithDuplicates);
+			}
+			output.data.wrestlers = wrestlersWithDuplicates;
+		}
+		catch(error) {
+			console.error("Error during batched duplicate check:", error);
+			output.status = 564;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		return output;		
+	},
+
+	duplicatesMerge: async (duplicateSets, serverPath) => {
+		const output = { data: {} };
+
+		const allIds = [... new Set(duplicateSets.flatMap(set => set))];
+		console.log(`Merging ${ duplicateSets.length } sets of duplicates with a total of ${ allIds.length } wrestler records: ${ allIds.join(", ") }`);
+
+		let wrestlersToMerge = [];
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/wrestler?ids=${ JSON.stringify(allIds) }`);
+			wrestlersToMerge = clientResponse.body.wrestlers;
+			console.log(`Loaded ${ wrestlersToMerge.length } wrestlers to merge from server`);
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+
+		try {
+			output.data.mergeResults = [];
+			for (const set of duplicateSets) {
+				const wrestlersInSet = wrestlersToMerge.filter(wrestler => set.includes(wrestler.id));
+				output.data.mergeSet = wrestlersInSet;
+				output.data.mergeResults.push(wrestlersInSet);
+			}
+		}
+		catch (error) {
+			output.status = 562;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		return output;
 	}
 
 };

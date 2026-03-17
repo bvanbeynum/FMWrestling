@@ -118,13 +118,17 @@ router.delete("/data/scorecall", authInternal, async (request, response) => {
 router.get("/data/wrestler", authInternal, async (request, response) => {
 		const sqlIdList = request.query.sqlids ? JSON.parse(request.query.sqlids) : null;
 		const filter = { 
-			id: request.query.id, 
+			id: request.query.id,
+			ids: request.query.ids ? JSON.parse(request.query.ids) : null,
 			name: request.query.name, 
+			initialSearch: request.query.initialsearch,
+			teams: request.query.teams ? JSON.parse(request.query.teams) : null,
 			teamName: request.query.teamname, 
 			teamPartial: request.query.teampartial,
 			sqlId: request.query.sqlid,
 			sqlIds: sqlIdList,
-			select: request.query.select ? request.query.select.split(",") : null
+			select: request.query.select ? request.query.select.split(",") : null,
+			createdSince: request.query.createdsince
 		};
 
 	const results = await data.wrestlerGet(filter);

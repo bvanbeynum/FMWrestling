@@ -338,6 +338,9 @@ export default {
 		if (userFilter.id) {
 			filter["_id"] = mongoose.Types.ObjectId.isValid(userFilter.id) ? userFilter.id : null;
 		}
+		if (userFilter.ids) {
+			filter["_id"] = { $in: userFilter.ids.map(id => mongoose.Types.ObjectId.isValid(id) ? id : null) };
+		}
 		if (userFilter.name) {
 			const searchName = userFilter.name.toLowerCase();
 			filter.searchName = { $regex: new RegExp(searchName) };
@@ -358,6 +361,29 @@ export default {
 		}
 		if (userFilter.select) {
 			select = userFilter.select.reduce((output, current) => ({...output, [current]: 1 }), {});
+		}
+		if (userFilter.createdSince) {
+			filter.created = { $gte: new Date(userFilter.createdSince) };
+		}
+		if (userFilter.initialSearch && userFilter.teams) {
+			const escapeRegExp = (str) => {
+				// $& means the whole matched string
+				return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+			};
+			
+			const searchParts = userFilter.initialSearch.toLowerCase().split(" ");
+			if (searchParts.length >= 2) {
+				const firstName = searchParts[0];
+				const lastName = searchParts.slice(1).join(" ");
+				filter.searchName = {
+					$regex: new RegExp(`(^${escapeRegExp(firstName[0])}[\\w ]* ${escapeRegExp(lastName)}$)|(^${escapeRegExp(firstName)} ${escapeRegExp(lastName[0])}[\\w ]*$)`, "i")
+				};
+			}
+			else {
+				filter.searchName = { $regex: new RegExp(`^${escapeRegExp(userFilter.initialSearch)}`, "i") };
+			}
+
+			filter["events.searchTeam"] = { $in: userFilter.teams.map(team => team.toLowerCase()) };
 		}
 
 		try {
