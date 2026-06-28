@@ -10,6 +10,7 @@ export default {
 		roles: "./client/portal/roles.jsx",
 		requests: "./client/portal/requests.jsx",
 		dualStats: "./client/portal/dualstats.jsx",
+		dual: "./client/portal/dual.jsx",
 		teamWrestlers: "./client/portal/teamwrestlers.jsx",
 		myTeam: "./client/portal/myteam.jsx",
 		teamCompare: "./client/portal/teamcompare.jsx",
@@ -80,6 +81,16 @@ export default {
 				viewport: "width=device-width, initial-scale=1"
 			},
 			chunks: [ "dualStats" ],
+			templateContent: "<html><body><div id='root'></div></body></html>"
+		}),
+		new HtmlWebpackPlugin({ 
+			filename: "./portal/dual.html",
+			title: "Fort Mill Wrestling - Dual Match",
+			favicon: "./client/media/favicon.ico",
+			meta: {
+				viewport: "width=device-width, initial-scale=1"
+			},
+			chunks: [ "dual" ],
 			templateContent: "<html><body><div id='root'></div></body></html>"
 		}),
 		new HtmlWebpackPlugin({ 

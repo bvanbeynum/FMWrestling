@@ -6,243 +6,324 @@ import "./include/schedule.css";
 
 const Schedule = props => {
 
-	const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-
 	const [ pageActive, setPageActive ] = useState(false);
-	const [ isFilterExpanded, setIsFilterExpanded ] = useState(false);
-	const [ selectedState, setSelectedState ] = useState("SC");
-
-	const [ events, setEvents ] = useState([]);
+	const [ isLoading, setIsLoading ] = useState(true);
 	const [ loggedInUser, setLoggedInUser ] = useState(null);
 
-	const [ monthSelected, setMonthSelect ] = useState(new Date().getMonth());
-	const [ yearSelected, setYearSelected ] = useState(new Date().getFullYear());
-	const [ monthDays, setMonthDays ] = useState(Array.from(Array(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()).keys()).map(day => ({ day: day + 1})));
-	const [ monthStart, setMonthStart ] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1).getDay() + 1); // get the first day of the week for the current month
+	const [ events, setEvents ] = useState([]);
+	
+	// Determine current season based on Sept 1 - Aug 31
+	const getCurrentSeason = (d = new Date()) => {
+		const year = d.getFullYear();
+		const month = d.getMonth(); // 0-indexed, 8 is September
+		if (month >= 8) {
+			return `${year}-${year + 1}`;
+		} else {
+			return `${year - 1}-${year}`;
+		}
+	};
+
+	const [ selectedSeason, setSelectedSeason ] = useState(getCurrentSeason());
+	const [ selectedEventType, setSelectedEventType ] = useState("All");
 
 	useEffect(() => {
 		if (!pageActive) {
-			setPageActive(true);
-			
-			fetch(`/api/scheduleload?startdate=${ monthSelected + 1 }/1/${ yearSelected }&enddate=${ monthSelected + 1 }/${ new Date(yearSelected, monthSelected + 1, 0).getDate() }/${ yearSelected }`)
+			fetch(`/api/scheduleload`)
 				.then(response => {
 					if (response.ok) {
 						return response.json();
-					}
-					else {
+					} else {
 						throw Error(response.statusText);
 					}
 				})
 				.then(data => {
-					
-					const newEvents = data.events.map(event => ({
-							...event,
-							type: event.eventSystem?.toLowerCase(),
-							date: new Date(event.date),
-							endDate: event.endDate ? new Date(event.endDate) : null,
-							location: event.location,
-							state: event.state
-						}));
+					const loadedEvents = [
+						...(data.events || []),
+						...(data.floEvents || []),
+						...(data.trackEvents || [])
+					].map(event => ({
+						...event,
+						type: event.eventSystem?.toLowerCase(),
+						date: new Date(event.date),
+						endDate: event.endDate ? new Date(event.endDate) : null
+					}));
 
-					const days = Array.from(Array(new Date(yearSelected, monthSelected + 1, 0).getDate()).keys()) // Get array of dates, get last day of the month to know array length
-					.map(day => {
-						const dateStart = new Date(yearSelected, monthSelected, day + 1),
-							dateEnd = new Date(yearSelected, monthSelected, day + 2);
-
-						return {
-							day: day + 1,
-							className: newEvents.some(event => (event.date >= dateStart && event.date < dateEnd) || (event.endDate && event.endDate > dateStart && event.endDate < dateEnd)) ? "single" : ""
-						};
-					});
+					const loadedDuals = (data.duals || []).map(dual => ({
+						id: dual.id || dual._id,
+						name: dual.opponent ? `Dual vs ${dual.opponent}` : "Dual Match",
+						opponent: dual.opponent,
+						date: new Date(dual.dualDate),
+						eventSystem: "dual",
+						type: "dual"
+					}));
 
 					setLoggedInUser(data.loggedInUser);
-					setEvents(newEvents);
-					setMonthDays(days);
-
-					// Expand filter box if no events are visible
-					if (!newEvents.some(event => event.date.getMonth() === monthSelected && event.date.getFullYear() === yearSelected && (!selectedState || event.state == selectedState || !event.state))) {
-						setIsFilterExpanded(true);
-					}
-					
+					setEvents([...loadedEvents, ...loadedDuals]);
+					setPageActive(true);
+					setIsLoading(false);
 				})
 				.catch(error => {
 					console.warn(error);
+					setIsLoading(false);
 				});
 		}
 	}, []);
 
-	const changeMonth = (monthNew, yearNew) => {
-		setMonthSelect(monthNew);
-		setYearSelected(yearNew);
-		setMonthStart(new Date(yearNew, monthNew, 1).getDay() + 1); // get the first day of the week for the current month
-		setMonthDays(Array.from(Array(new Date(yearNew, monthNew + 1, 0).getDate()).keys()).map(day => ({ day: day + 1})));
+	// Helper to get season string for an event date
+	const getEventSeason = (date) => {
+		if (!date || isNaN(date.getTime())) return getCurrentSeason();
+		const year = date.getFullYear();
+		const month = date.getMonth();
+		return month >= 8 ? `${year}-${year + 1}` : `${year - 1}-${year}`;
+	};
+
+	// Generate season options dynamically
+	const availableSeasons = Array.from(new Set([
+		getCurrentSeason(),
+		`${new Date().getFullYear() + 1}-${new Date().getFullYear() + 2}`,
+		`${new Date().getFullYear() - 1}-${new Date().getFullYear()}`,
+		...events.map(e => getEventSeason(e.date))
+	])).sort().reverse();
+
+	// Helper to calculate Monday of the week for a given date
+	const getMonday = (d) => {
+		const date = new Date(d);
+		const day = date.getDay();
+		const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+		const monday = new Date(date.setDate(diff));
+		monday.setHours(0, 0, 0, 0);
+		return monday;
+	};
+
+	const getEventCategory = (event) => {
+		const system = (event.eventSystem || "").toLowerCase();
+		if (system.includes("track") || system.includes("flo")) {
+			return "Tournament";
+		}
+		return "Dual";
+	};
+
+	// Filter events by season and event type
+	const filteredEvents = events.filter(event => {
+		const matchesSeason = getEventSeason(event.date) === selectedSeason;
 		
-		fetch(`/api/scheduleload?startdate=${ monthNew + 1 }/1/${ yearNew }&enddate=${ monthNew + 1 }/${ new Date(yearNew, monthNew + 1, 0).getDate() }/${ yearNew }`)
-			.then(response => {
-				if (response.ok) {
-					return response.json();
-				}
-				else {
-					throw Error(response.statusText);
-				}
-			})
-			.then(data => {
-				
-				const newEvents = data.events.map(event => ({
-					...event,
-					type: event.eventSystem?.toLowerCase(),
-					date: new Date(event.date),
-					endDate: event.endDate ? new Date(event.endDate) : null,
-					location: event.location,
-					state: event.state
-				}));
-				
-				setEvents(newEvents);
-					
-				const days = Array.from(Array(new Date(yearNew, monthNew + 1, 0).getDate()).keys()) // Get array of dates, get last day of the month to know array length
-				.map(day => {
-					const dateStart = new Date(yearNew, monthNew, day + 1),
-						dateEnd = new Date(yearNew, monthNew, day + 2);
+		let matchesType = true;
+		if (selectedEventType !== "All") {
+			const category = getEventCategory(event);
+			matchesType = category.toLowerCase() === selectedEventType.toLowerCase();
+		}
+		
+		return matchesSeason && matchesType;
+	});
 
-					return {
-						day: day + 1,
-						className: newEvents.some(event => (event.date >= dateStart && event.date < dateEnd) || (event.endDate && event.endDate > dateStart && event.endDate < dateEnd)) ? "single" : ""
-					};
-				})
+	// Group filtered events by Week (Monday start) and then by Day
+	const groupEventsByWeek = (eventList) => {
+		const sorted = [...eventList].sort((a, b) => a.date - b.date);
+		const weeksMap = new Map();
 
-				setMonthDays(days);
+		sorted.forEach(event => {
+			const monday = getMonday(event.date);
+			const weekKey = monday.getTime();
 
-			})
-			.catch(error => {
-				console.warn(error);
-			});
-			
+			if (!weeksMap.has(weekKey)) {
+				weeksMap.set(weekKey, {
+					mondayDate: monday,
+					daysMap: new Map()
+				});
+			}
+
+			const weekGroup = weeksMap.get(weekKey);
+			const dayKey = new Date(event.date.getFullYear(), event.date.getMonth(), event.date.getDate()).getTime();
+
+			if (!weekGroup.daysMap.has(dayKey)) {
+				weekGroup.daysMap.set(dayKey, {
+					date: event.date,
+					events: []
+				});
+			}
+
+			weekGroup.daysMap.get(dayKey).events.push(event);
+		});
+
+		return Array.from(weeksMap.values()).map(week => ({
+			mondayDate: week.mondayDate,
+			days: Array.from(week.daysMap.values())
+		}));
+	};
+
+	const groupedWeeks = groupEventsByWeek(filteredEvents);
+
+	const formatTimeString = (date) => {
+		if (!date) return "All Day";
+		const hours = date.getHours();
+		const minutes = date.getMinutes();
+		if (hours === 0 && minutes === 0) return "All Day";
+		return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 	};
 
 	return (
-
 <div className="page">
 	<Nav loggedInUser={ loggedInUser } />
 
 	<div>
+		{
+		isLoading ?
 
-		<header>
-			<h1>Schedule</h1>
-		</header>
+		<div className="pageLoading">
+			<img src="/media/wrestlingloading.gif" alt="Loading..." />
+		</div>
+
+		: !loggedInUser || !loggedInUser.privileges || (!loggedInUser.privileges.includes("scheduleView") && !loggedInUser.privileges.includes("scheduleManage")) ?
+
+		<div className="noAccess">
+			<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q54 0 104-17.5t92-50.5L228-676q-33 42-50.5 92T160-480q0 134 93 227t227 93Zm252-124q33-42 50.5-92T800-480q0-134-93-227t-227-93q-54 0-104 17.5T284-732l448 448Z"/></svg>
+			<a>Unauthorized</a>
+		</div>
+
+		:
 
 		<div className={`schedule container ${ pageActive ? "active" : "" }`}>
+			<header className="scheduleHeader">
+				<h1>Schedule</h1>
 
-			<div className="panel centered">
-				<div className="calendarHeader">
-					<button onClick={ () => changeMonth(monthSelected == 0 ? 11 : monthSelected - 1, monthSelected == 0 ? yearSelected - 1 : yearSelected) }>◀</button>
-					<h3 className="monthName">{ months[monthSelected] }</h3>
-					<button onClick={ () => changeMonth((monthSelected + 1) % 12, monthSelected == 11 ? yearSelected + 1 : yearSelected) }>▶</button>
-				</div>
+				<div className="scheduleFilters">
+					<select 
+						value={ selectedSeason } 
+						onChange={ e => setSelectedSeason(e.target.value) }
+						aria-label="Filter Season"
+					>
+						{ availableSeasons.map(season => (
+							<option key={ season } value={ season }>{ season }</option>
+						))}
+					</select>
 
-				<ol className="calendar">
-					<li className="day">S</li>
-					<li className="day">M</li>
-					<li className="day">T</li>
-					<li className="day">W</li>
-					<li className="day">T</li>
-					<li className="day">F</li>
-					<li className="day">S</li>
+					<select 
+						value={ selectedEventType } 
+						onChange={ e => setSelectedEventType(e.target.value) }
+						aria-label="Filter Event Type"
+					>
+						<option value="All">All Events</option>
+						<option value="Tournament">Tournament</option>
+						<option value="Dual">Dual</option>
+					</select>
 
-					{
-					monthDays.map(date => 
-					<li key={date.day} className={ date.className } style={ date.day === 1 ? { gridColumnStart: monthStart } : {} }>{ date.day }</li>
-					)
-					}
-				</ol>
-
-			</div>
-			
-			<div className="panel filter">
-				<div className="row">
-					<h3>Filter</h3>
-
-					<div className="filterExpand" onClick={ () => setIsFilterExpanded(isFilterExpanded => !isFilterExpanded) }>
-						{
-						isFilterExpanded ?
-						// Close
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg>
-						: 
-						// Tune
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M440-120v-240h80v80h320v80H520v80h-80Zm-320-80v-80h240v80H120Zm160-160v-80H120v-80h160v-80h80v240h-80Zm160-80v-80h400v80H440Zm160-160v-240h80v80h160v80H680v80h-80Zm-480-80v-80h400v80H120Z"/></svg>
-						}
-					</div>
-				</div>
-
-				<div className={`filterContent ${ isFilterExpanded ? "active" : "" }`}>
-					<label>
-						State
-						<select value={ selectedState } onChange={ event => setSelectedState(event.target.value)}>
-							<option value="">All States</option>
-							<option value="SC">SC</option>
-							<option value="NC">NC</option>
-							<option value="TN">TN</option>
-							<option value="GA">GA</option>
-						</select>
-					</label>
-				</div>
-
-			</div>
-			
-			{
-			events
-			.filter(event => event.date.getMonth() === monthSelected && event.date.getFullYear() === yearSelected && (!selectedState || event.state == selectedState))
-			.sort((eventA, eventB) => eventA.date - eventB.date)
-			.map(event =>
-				
-			<div key={ event.id } data-testid={ event.id } className={`panel ${ event.type } actionBar`}>
-				<div className="panelContent">
-					<div className="subHeading">
-						Date: { event.date.toLocaleDateString() + (event.endDate && event.endDate - event.date > 86400000 ? " - " + event.endDate.toLocaleDateString() : "" ) }
-					</div>
-
-					<h3>{ event.name }</h3>
-					
-					<div>Location: { event.location }</div>
-				</div>
-
-				<div className="panelActionBar">
-					
-					{
-					/flo/i.test(event.eventSystem) ?
-					<>
-					
-					<button aria-label="External Event" onClick={ () => window.open(`https://events.flowrestling.org/event/${ event.systemId }/summary`) }>
-						{/* World */}
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480.067-100.001q-78.836 0-148.204-29.92-69.369-29.92-120.682-81.21-51.314-51.291-81.247-120.629-29.933-69.337-29.933-148.173t29.92-148.204q29.92-69.369 81.21-120.682 51.291-51.314 120.629-81.247 69.337-29.933 148.173-29.933t148.204 29.92q69.369 29.92 120.682 81.21 51.314 51.291 81.247 120.629 29.933 69.337 29.933 148.173t-29.92 148.204q-29.92 69.369-81.21 120.682-51.291 51.314-120.629 81.247-69.337 29.933-148.173 29.933ZM440-162v-78q-33 0-56.5-23.5T360-320v-40L168-552q-3 18-5.5 36t-2.5 36q0 121 79.5 212T440-162Zm276-102q20-22 36-47.5t26.5-53q10.5-27.5 16-56.5t5.5-59q0-98.29-54.308-179.53Q691.385-740.769 600-776.769V-760q0 33-23.5 56.5T520-680h-80v80q0 17-11.5 28.5T400-560h-80v80h240q17 0 28.5 11.5T600-440v120h40q26 0 47 15.5t29 40.5Z"/></svg>
-						<div>info</div>
+					<button 
+						className="lineupButton addDual"
+						onClick={ () => { window.location.href = "/portal/dual.html"; } }
+					>
+						Add Dual
 					</button>
-					
-					<button aria-label="External Event" onClick={ () => window.open(`https://arena.flowrestling.org/event/${ event.systemId }`) }>
-						{/* Brackets */}
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M560-160v-80h120q17 0 28.5-11.5T720-280v-80q0-38 22-69t58-44v-14q-36-13-58-44t-22-69v-80q0-17-11.5-28.5T680-720H560v-80h120q50 0 85 35t35 85v80q0 17 11.5 28.5T840-560h40v160h-40q-17 0-28.5 11.5T800-360v80q0 50-35 85t-85 35H560Zm-280 0q-50 0-85-35t-35-85v-80q0-17-11.5-28.5T120-400H80v-160h40q17 0 28.5-11.5T160-600v-80q0-50 35-85t85-35h120v80H280q-17 0-28.5 11.5T240-680v80q0 38-22 69t-58 44v14q36 13 58 44t22 69v80q0 17 11.5 28.5T280-240h120v80H280Z"/></svg>
-						<div>brackets</div>
-					</button>
-
-					</>
-					
-					: /track/i.test(event.eventSystem) ?
-
-					<button aria-label="External Event" onClick={ () => window.open(`https://www.trackwrestling.com/tw/${ event.eventType }/VerifyPassword.jsp?tournamentId=${ event.systemId }`) }>
-						{/* World */}
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480.067-100.001q-78.836 0-148.204-29.92-69.369-29.92-120.682-81.21-51.314-51.291-81.247-120.629-29.933-69.337-29.933-148.173t29.92-148.204q29.92-69.369 81.21-120.682 51.291-51.314 120.629-81.247 69.337-29.933 148.173-29.933t148.204 29.92q69.369 29.92 120.682 81.21 51.314 51.291 81.247 120.629 29.933 69.337 29.933 148.173t-29.92 148.204q-29.92 69.369-81.21 120.682-51.291 51.314-120.629 81.247-69.337 29.933-148.173 29.933ZM440-162v-78q-33 0-56.5-23.5T360-320v-40L168-552q-3 18-5.5 36t-2.5 36q0 121 79.5 212T440-162Zm276-102q20-22 36-47.5t26.5-53q10.5-27.5 16-56.5t5.5-59q0-98.29-54.308-179.53Q691.385-740.769 600-776.769V-760q0 33-23.5 56.5T520-680h-80v80q0 17-11.5 28.5T400-560h-80v80h240q17 0 28.5 11.5T600-440v120h40q26 0 47 15.5t29 40.5Z"/></svg>
-						<div>link</div>
-					</button>
-					
-					: ""
-					}
 				</div>
-			</div>
-			)}
+			</header>
 
+			<div className="agendaStream">
+				{ groupedWeeks.length === 0 ? (
+					<div className="noEvents">No events scheduled for this season.</div>
+				) : (
+					groupedWeeks.map(week => (
+						<div key={ week.mondayDate.getTime() } className="weekGroup">
+							<div className="weekHeader">
+								<h2>Week of { week.mondayDate.toLocaleDateString("en-US", { month: "short", day: "numeric" }) }</h2>
+								<div className="weekDivider"></div>
+							</div>
+
+							<div className="weekCards">
+								{ week.days.map(dayGroup => (
+									<div key={ dayGroup.date.getTime() } className="dayCard">
+										<div className="dayAccentBar"></div>
+										
+										<div className="dayDateColumn">
+											<div className="dayName">
+												{ dayGroup.date.toLocaleDateString("en-US", { weekday: "short" }) } { dayGroup.date.getDate() }
+											</div>
+											<div className="dayTime">
+												{ formatTimeString(dayGroup.date) }
+											</div>
+										</div>
+
+										<div className="dayEventsColumn">
+											{ dayGroup.events.map((event, idx) => {
+												const category = getEventCategory(event);
+												const isDual = category.toLowerCase() === "dual";
+
+												return (
+													<div 
+														key={ event.id || idx } 
+														data-testid={ event.id } 
+														className="eventRow"
+													>
+														<div className="eventMainDetails">
+															<div className="eventTitleHeader">
+																<span className={`eventBadge ${ isDual ? "dual" : "tournament" }`}>
+																	{ category }
+																</span>
+																<h3 className="eventName">{ event.name }</h3>
+															</div>
+
+															<div className="eventMeta">
+																{ event.location && (
+																	<span className="eventLocation">
+																		📍 { event.location }
+																	</span>
+																)}
+															</div>
+
+															{ isDual ? (
+																event.opponent && (
+																	<div className="opponentTag">
+																		<span className="oppDot"></span> Opponent: { event.opponent }
+																	</div>
+																)
+															) : (
+																Array.isArray(event.opponents) && event.opponents.length > 0 && (
+																	<div className="opponentPills">
+																		{ event.opponents.map((opp, i) => (
+																			<span key={ i } className="oppPill">{ opp }</span>
+																		))}
+																	</div>
+																)
+															)}
+														</div>
+
+														<div className="eventAction">
+															{ isDual ? (
+																<button 
+																	className="lineupButton view"
+																	onClick={ () => { window.location.href = `/portal/dual.html?id=${ event.id || "" }`; } }
+																>
+																	Manage Dual
+																</button>
+															) : (
+																<button 
+																	className="lineupButton view"
+																	onClick={ () => {
+																		if (/flo/i.test(event.eventSystem)) {
+																			window.open(`https://events.flowrestling.org/event/${ event.systemId }/summary`);
+																		} else if (/track/i.test(event.eventSystem)) {
+																			window.open(`https://www.trackwrestling.com/tw/${ event.eventType || "tournament" }/VerifyPassword.jsp?tournamentId=${ event.systemId }`);
+																		}
+																	}}
+																>
+																	View
+																</button>
+															)}
+														</div>
+													</div>
+												);
+											})}
+										</div>
+									</div>
+								))}
+							</div>
+						</div>
+					))
+				)}
+			</div>
 		</div>
+		}
 	</div>
 </div>
-	)
+	);
 };
 
 ReactDOM.createRoot(document.getElementById("root") || document.createElement("div")).render(<Schedule />);

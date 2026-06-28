@@ -414,7 +414,25 @@ router.get("/api/dualstatsload", authAPI, async (request, response) => {
 router.post("/api/dualstatsupload", authAPI, async (request, response) => {
 	if (request.busboy) {
 		const jobId = crypto.randomUUID();
-		jobs[jobId] = { status: "processing" };
+		jobs[jobId] = { 
+			status: "processing",
+			currentStage: "RECEIVING_FILE",
+			stageMessage: "Uploading scoresheet file...",
+			completedStages: [],
+			geminiStep: 0,
+			totalGeminiSteps: 3
+		};
+
+		const updateProgress = (stageKey, message, geminiStep) => {
+			if (jobs[jobId] && jobs[jobId].status === "processing") {
+				if (jobs[jobId].currentStage && !jobs[jobId].completedStages.includes(jobs[jobId].currentStage)) {
+					jobs[jobId].completedStages.push(jobs[jobId].currentStage);
+				}
+				jobs[jobId].currentStage = stageKey;
+				if (message) jobs[jobId].stageMessage = message;
+				if (typeof geminiStep === "number") jobs[jobId].geminiStep = geminiStep;
+			}
+		};
 
 		request.busboy.on("file", (fieldname, file, { filename, encoding, mimeType }) => {
 			const chunks = [];
@@ -430,7 +448,7 @@ router.post("/api/dualstatsupload", authAPI, async (request, response) => {
 			file.on("end", async () => {
 				const imageBuffer = Buffer.concat(chunks);
 
-				api.dualStatsUpload(imageBuffer, mimeType, request.serverPath)
+				api.dualStatsUpload(imageBuffer, mimeType, request.serverPath, updateProgress)
 					.then(results => {
 						if (results.error) {
 							jobs[jobId] = { status: "error", statusCode: results.status, error: results.error };

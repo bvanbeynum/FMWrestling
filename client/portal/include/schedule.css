@@ -1,59 +1,339 @@
-.schedule .calendarHeader {
-	display: grid;
-	align-items: center;
-	grid-template-columns: auto 100px auto;
-	margin: auto;
-}
+/* Schedule Agenda Page Styles (Mobile-First) */
 
-.schedule .calendarHeader button {
-	background: none;
-	border: none;
-}
-
-.schedule .monthName {
-	justify-content: center;
-}
-
-.schedule .calendar {
-	display: grid;
-	grid-template-columns: repeat(7, minmax(10px, 1fr));
-	list-style: none;
-	text-align: center;
-	padding: 0px;
-	margin: 0px auto;
-}
-
-.schedule .calendar li {
-	padding: 1px 8px;
-	margin: 4px 0px;
+/* Expand container width on wider screens instead of default 60vw restraint */
+.schedule.container {
+	display: block;
+	width: 100%;
+	max-width: 100%;
 	box-sizing: border-box;
+	padding-left: 1rem;
+	padding-right: 1rem;
+	margin-left: auto;
+	margin-right: auto;
 }
 
-.schedule .calendar .single {
-	background-color: rgb(242 192 41);
-	border-radius: 7px;
+@media (min-width: 640px) {
+	.schedule.container {
+		max-width: 92vw;
+	}
 }
 
-.schedule .calendar .start {
-	background-color: rgb(242 192 41);
-	border-top-left-radius: 7px;
-	border-bottom-left-radius: 7px;
+@media (min-width: 1024px) {
+	.schedule.container {
+		max-width: 85vw;
+	}
 }
 
-.schedule .calendar .middle {
-	background-color: rgb(255 222 124);
+@media (min-width: 1280px) {
+	.schedule.container {
+		max-width: 1200px;
+	}
 }
 
-.schedule .calendar .end {
-	background-color: rgb(242 192 41);
-	border-top-right-radius: 7px;
-	border-bottom-right-radius: 7px;
+@media (min-width: 1536px) {
+	.schedule.container {
+		max-width: 1400px;
+	}
 }
 
-.schedule .panel.flo {
-	border: 2px solid rgb(255 20 15);
+.scheduleHeader {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	margin-bottom: 1.5rem;
 }
 
-.schedule .panel.track {
-	border: 2px solid rgb(13 113 185);
+@media (min-width: 640px) {
+	.scheduleHeader {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+	}
+}
+
+.scheduleHeader h1 {
+	margin: 0;
+}
+
+.scheduleFilters {
+	display: flex;
+	gap: 0.75rem;
+	align-items: center;
+}
+
+.scheduleFilters select {
+	padding: 0.5rem 0.85rem;
+	border: 1px solid rgb(209 213 219);
+	border-radius: 8px;
+	background-color: #ffffff;
+	color: rgb(31 41 55);
+	font-size: 0.9rem;
+	font-weight: 500;
+	outline: none;
+	cursor: pointer;
+	box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+	transition: border-color 0.15s ease-in-out;
+}
+
+.scheduleFilters select:focus {
+	border-color: rgb(59 130 246);
+}
+
+/* Agenda Stream Layout */
+.agendaStream {
+	display: flex;
+	flex-direction: column;
+	gap: 2rem;
+	width: 100%;
+}
+
+.noEvents {
+	padding: 3rem 1rem;
+	text-align: center;
+	color: rgb(107 114 128);
+	font-size: 1.05rem;
+	background: #ffffff;
+	border-radius: 12px;
+	border: 1px solid rgb(229 231 235);
+}
+
+/* Week Group */
+.weekGroup {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.weekHeader {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+}
+
+.weekHeader h2 {
+	margin: 0;
+	font-size: 1.1rem;
+	font-weight: 700;
+	color: rgb(31 41 55);
+	white-space: nowrap;
+}
+
+.weekDivider {
+	flex: 1;
+	height: 1px;
+	background-color: rgb(229 231 235);
+}
+
+.weekCards {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+/* Day Group Card */
+.dayCard {
+	display: flex;
+	flex-direction: column;
+	background: #ffffff;
+	border: 1px solid rgb(229 231 235);
+	border-radius: 12px;
+	overflow: hidden;
+	box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
+}
+
+@media (min-width: 640px) {
+	.dayCard {
+		flex-direction: row;
+	}
+}
+
+.dayAccentBar {
+	width: 100%;
+	height: 4px;
+	background-color: #066aab;
+	flex-shrink: 0;
+}
+
+@media (min-width: 640px) {
+	.dayAccentBar {
+		width: 6px;
+		height: auto;
+	}
+}
+
+.dayDateColumn {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0.85rem 1.25rem;
+	background-color: rgb(249 250 251);
+	border-bottom: 1px solid rgb(229 231 235);
+}
+
+@media (min-width: 640px) {
+	.dayDateColumn {
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		min-width: 120px;
+		border-bottom: none;
+		border-right: 1px solid rgb(229 231 235);
+		padding: 1.25rem 1.25rem;
+	}
+}
+
+.dayName {
+	font-size: 1rem;
+	font-weight: 700;
+	color: rgb(15 23 42);
+}
+
+.dayTime {
+	font-size: 0.85rem;
+	color: rgb(107 114 128);
+	margin-top: 2px;
+}
+
+/* Day Events Column */
+.dayEventsColumn {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+}
+
+.eventRow {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	padding: 1.25rem 1.5rem;
+	border-bottom: 1px solid rgb(243 244 246);
+}
+
+.eventRow:last-child {
+	border-bottom: none;
+}
+
+@media (min-width: 640px) {
+	.eventRow {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+	}
+}
+
+.eventMainDetails {
+	display: flex;
+	flex-direction: column;
+	gap: 0.4rem;
+	flex: 1;
+}
+
+.eventTitleHeader {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+}
+
+.eventBadge {
+	display: inline-block;
+	padding: 3px 10px;
+	border-radius: 6px;
+	font-size: 0.75rem;
+	font-weight: 700;
+	text-transform: capitalize;
+	line-height: 1.2;
+}
+
+.eventBadge.dual {
+	background-color: rgb(15 23 42);
+	color: #ffffff;
+}
+
+.eventBadge.tournament {
+	background-color: rgb(245 158 11);
+	color: rgb(15 23 42);
+}
+
+.eventName {
+	margin: 0;
+	font-size: 1.1rem;
+	font-weight: 700;
+	color: rgb(17 24 39);
+}
+
+.eventMeta {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	font-size: 0.9rem;
+	color: rgb(107 114 128);
+}
+
+.eventLocation {
+	display: inline-flex;
+	align-items: center;
+}
+
+.opponentTag {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	background-color: rgb(243 244 246);
+	border-radius: 6px;
+	padding: 3px 10px;
+	font-size: 0.85rem;
+	color: rgb(55 65 81);
+	font-family: monospace;
+	width: fit-content;
+	margin-top: 4px;
+}
+
+.oppDot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background-color: rgb(239 68 68);
+	display: inline-block;
+}
+
+.opponentPills {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-top: 4px;
+}
+
+.oppPill {
+	background-color: rgb(243 244 246);
+	border-radius: 12px;
+	padding: 3px 12px;
+	font-size: 0.8rem;
+	color: rgb(55 65 81);
+	font-weight: 600;
+}
+
+/* Action Button matching opponentlive.jsx save button */
+.eventAction {
+	display: flex;
+	align-items: center;
+}
+
+button.lineupButton.view,
+button.lineupButton.addDual {
+	padding: 6px 18px;
+	color: white;
+	border-radius: 8px;
+	background-color: rgb(95 95 255);
+	border: 2px solid rgb(59 59 249);
+	font-weight: 600;
+	font-size: 0.9rem;
+	cursor: pointer;
+	transition: background-color 0.15s ease-in-out;
+}
+
+button.lineupButton.view:hover,
+button.lineupButton.addDual:hover {
+	background-color: rgb(75 75 245);
 }

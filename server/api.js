@@ -290,6 +290,14 @@ export default {
 			return output;
 		}
 
+		try {
+			const dualsResponse = await client.get(`${ serverPath }/data/dual`);
+			output.data.duals = dualsResponse.body.duals;
+		}
+		catch (error) {
+			output.data.duals = [];
+		}
+
 		output.status = 200;		
 		return output;
 	},
@@ -2515,7 +2523,7 @@ export default {
 		return output;		
 	},
 
-	dualStatsUpload: async (imageBuffer, mimetype, serverPath) => {
+	dualStatsUpload: async (imageBuffer, mimetype, serverPath, updateProgress = () => {}) => {
 		const output = { data: {} };
 
 		// Mock response for testing without API calls
@@ -2529,6 +2537,7 @@ export default {
 		const fileName = `${Date.now()}.${extension}`;
 		const filePath = path.join(process.cwd(), 'client', 'media', 'temp', fileName);
 
+		updateProgress("SAVING_IMAGE", "Saving uploaded scoresheet image...", 0);
 		try {
 			fs.writeFileSync(filePath, imageBuffer);
 		} catch (error) {
@@ -2567,6 +2576,7 @@ Do not return any other text or markup.
 				]
 			};
 
+			updateProgress("GEMINI_EXTRACT", "AI Step 1 of 3: Analyzing scoresheet image with Gemini Vision...", 1);
 			const response = await client.post(url).set(headers).send(data);
 			const jsonResponse = response.body;
 
@@ -2604,6 +2614,7 @@ Do not return any other text or markup.
 			output.status = 562;
 		}
 
+		updateProgress("LOOKUP_SCHOOL", "Searching school database for opponent...", 1);
 		let schools = [],
 			opponentSchool = null;
 		try {
@@ -2622,6 +2633,7 @@ Do not return any other text or markup.
 		// If the opponent school isn't found through basic string matching, use the Gemini API to find the closest match based on the list of schools
 		if (!opponentSchool) {
 			try {
+				updateProgress("LOOKUP_SCHOOL", "AI Step 2 of 3: Matching opponent school with Gemini...", 2);
 				const prompt = `The opponent name "${ output.data.stats.opponent }" was not found in the database. 
 					Based on the following list of schools, which school is the most likely match? 
 					If there is no good match, return null. ${ schools.map(school => school.name).join(", ") }`;
@@ -2664,6 +2676,7 @@ Do not return any other text or markup.
 				new Date(new Date().getFullYear(), 8, 1)
 				: new Date(new Date().getFullYear() - 1, 8, 1)
 			
+			updateProgress("LOAD_ROSTERS", "Loading wrestler team rosters for Fort Mill and opponent...", 2);
 			// Load the wrestlers for the found school & Fort Mill to find potential matches for the wrestlers based on their last event
 			let wrestlers = [];
 			try {
@@ -2732,6 +2745,7 @@ Wrestler Lookup Names: ${ wrestlers.map(wrestler => `${wrestler.name} (${ wrestl
 Return the matches as an array, [{ lookup: String, matchId: String }] where the lookup is the wrestler name from the wrestlers, and the matchId is the ID of the matched wrestler from the wrestler lookup names. If there is no good match, matchId should be null.`;
 
 			try {
+				updateProgress("GEMINI_MATCH_ROSTERS", "AI Step 3 of 3: Aligning wrestler names with database records...", 3);
 				const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${config.geminiAPIKey}`;
 				const headers = { "Content-Type": "application/json" };
 				const data = {
@@ -2751,7 +2765,6 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 				text = text.replace("```json", "").replace("```", "");
 				const wrestlerMatches = JSON.parse(text);
 				
-				console.log(`Wrestler matches from Gemini ${ wrestlerMatches.length } matches found`);
 				output.data.stats.wrestlers = output.data.stats.wrestlers.map(wrestler => {
 					const match = wrestlerMatches.find(match => match.lookup.toLowerCase() == wrestler.name.toLowerCase());
 					return {
@@ -2769,6 +2782,7 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 			}
 		}
 
+		updateProgress("FINALIZE_DATA", "Finalizing & loading whiteboard...", 3);
 		return output;
 	},
 	

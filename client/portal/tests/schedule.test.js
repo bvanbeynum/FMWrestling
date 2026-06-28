@@ -11,20 +11,23 @@ describe("Schedule component", () => {
 
 	const events = [{
 			id: "testid",
-			name: "Event test name",
-			date: new Date(new Date().setHours(0,0,0,0)).toISOString(),
-			location: "Test location"
+			name: "Tuesday Night Dual vs. Fort Mill",
+			date: new Date().toISOString(),
+			location: "Test location",
+			eventSystem: null
 		}],
 		floEvents = [{
 			id: "flo1",
-			name: "Flo Event",
-			date: new Date(new Date().setHours(0,0,0,0)).toISOString(),
-			location: "testing"
+			name: "Flo Tournament",
+			date: new Date().toISOString(),
+			location: "testing",
+			eventSystem: "flo"
 		}],
 		trackEvents = [{
 			id: "track1",
 			name: "Track event",
-			date: new Date()
+			date: new Date().toISOString(),
+			eventSystem: "track"
 		}],
 		loggedInUser = { id: "user1", privileges: ["scheduleView", "scheduleManage"] };
 
@@ -46,62 +49,26 @@ describe("Schedule component", () => {
 		cleanup();
 	});
 
-	it("initializes the components", async () => {
-
-		const startDate = new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-			endDate = new Date(startDate.getFullYear(), startDate.getMonth(), new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0).getDate());
-
-		// ******** Given ***************
-
-		// ******** When ****************
-
+	it("initializes the components and loads schedule data", async () => {
 		render(<Schedule />);
 
-		// ******** Then ****************
+		await waitFor(() => expect(global.fetch).toHaveBeenCalledWith(`/api/scheduleload`));
 
-		await waitFor(() => expect(global.fetch).toHaveBeenCalledWith(`/api/scheduleload?startdate=${ startDate.toLocaleDateString() }&enddate=${ endDate.toLocaleDateString() }`));
-
-		expect(await screen.findByText(new RegExp(new Date().toLocaleDateString("en-us", { month: "long" }), "i"))).toBeInTheDocument();
-
+		expect(await screen.findByRole("heading", { name: "Schedule" })).toBeInTheDocument();
 		expect(await screen.findByTestId(events[0].id)).toBeInTheDocument();
 		expect(await screen.findByTestId(floEvents[0].id)).toBeInTheDocument();
 	});
 
-	it("changes the month", async () => {
-
-		// ******** Given ***************
-
+	it("filters events by event type", async () => {
 		render(<Schedule />);
 
-		const nextMonthButton = await screen.findByRole("button", { name: "▶" }),
-			nextMonth = new Date(new Date().setMonth((new Date().getMonth() + 1) % 12)),
-			nextMonthLookup = new RegExp(nextMonth.toLocaleDateString("en-us", { month: "long" }), "i"),
-			filteredEvents = [{ id: "flo1", date: nextMonth } ],
-			startDate = new Date(nextMonth.getFullYear(),nextMonth.getMonth(),1),
-			endDate = new Date(nextMonth.getFullYear(), nextMonth.getMonth(), new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0).getDate());
+		await screen.findByTestId(events[0].id);
 
-		global.fetch = jest.fn()
-			.mockResolvedValue({
-				ok: true,
-				status: 200,
-				json: jest.fn().mockResolvedValue({
-					events: [],
-					floEvents: filteredEvents,
-					trackEvents: []
-				})
-			});
+		const typeSelect = screen.getByLabelText("Filter Event Type");
+		fireEvent.change(typeSelect, { target: { value: "Dual" } });
 
-		// ******** When ****************
-
-		fireEvent.click(nextMonthButton);
-
-		// ******** Then ****************
-
-		expect(await screen.findByText(nextMonthLookup)).toBeInTheDocument();
-		
-		await waitFor(() => expect(global.fetch).toHaveBeenCalledWith(`/api/scheduleload?startdate=${ startDate.toLocaleDateString() }&enddate=${ endDate.toLocaleDateString() }`));
-		expect(await screen.findByTestId(filteredEvents[0].id)).toBeInTheDocument();
-
+		expect(screen.getByTestId(events[0].id)).toBeInTheDocument();
+		expect(screen.queryByTestId(floEvents[0].id)).not.toBeInTheDocument();
 	});
 
 });
