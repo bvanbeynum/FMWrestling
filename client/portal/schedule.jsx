@@ -35,14 +35,23 @@ const Schedule = props => {
 						endDate: event.endDate ? new Date(event.endDate) : null
 					}));
 
-					const loadedDuals = (data.duals || []).map(dual => ({
-						id: dual.id || dual._id,
-						name: dual.opponent ? `Dual vs ${dual.opponent}` : "Dual Match",
-						opponent: dual.opponent,
-						date: new Date(dual.dualDate),
-						eventSystem: "dual",
-						type: "dual"
-					}));
+					// Prevent duplicate dual entries if the dual has been integrated as an event
+					const eventSystemIds = new Set(
+						loadedEvents
+							.filter(e => e.eventSystem === "WrestlingPortal" && e.systemId)
+							.map(e => e.systemId)
+					);
+
+					const loadedDuals = (data.duals || [])
+						.filter(dual => !eventSystemIds.has(dual.id || dual._id))
+						.map(dual => ({
+							id: dual.id || dual._id,
+							name: dual.opponent ? `Dual vs ${dual.opponent}` : "Dual Match",
+							opponent: dual.opponent,
+							date: new Date(dual.dualDate),
+							eventSystem: "dual",
+							type: "dual"
+						}));
 
 					const allEvents = [...loadedEvents, ...loadedDuals];
 					setLoggedInUser(data.loggedInUser);
@@ -63,7 +72,7 @@ const Schedule = props => {
 		if (system.includes("track") || system.includes("flo")) {
 			return "Tournament";
 		}
-		if (event.eventType === "dual" || name.includes("dual")) {
+		if ((event.eventType || "").toLowerCase() === "dual" || name.includes("dual")) {
 			return "Dual Meet";
 		}
 		return event.category || "Tournament";
@@ -348,7 +357,7 @@ const Schedule = props => {
 											{ isDual ? (
 												<button 
 													className="eventActionBtn dual"
-													onClick={ () => { window.location.href = `/portal/dual.html?id=${ event.id || "" }`; } }
+													onClick={ () => { window.location.href = `/portal/dual.html?id=${ event.systemId || event.id || "" }`; } }
 												>
 													MANAGE LINEUP &rarr;
 												</button>

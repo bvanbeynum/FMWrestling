@@ -296,6 +296,55 @@ describe("Dual data test", () => {
 		expect(response.data.duals).toHaveLength(0);
 	});
 
+	it("should create, update, and delete an event when a dual is created, updated, and deleted", async () => {
+		const testDate = new Date();
+		// 1. Create a new dual
+		const createResponse = await data.dualSave({
+			opponent: "Clover",
+			dualDate: testDate
+		});
+		expect(createResponse.status).toEqual(200);
+		const dualId = createResponse.data.id;
+
+		// 2. Verify that the event was created with the correct properties
+		const eventResponse = await data.eventGet({ includeExpired: true });
+		expect(eventResponse.status).toEqual(200);
+		const createdEvent = eventResponse.data.events.find(e => e.systemId === dualId.toString());
+		expect(createdEvent).toBeDefined();
+		expect(createdEvent.sqlId).toBeNull();
+		expect(createdEvent.eventSystem).toEqual("WrestlingPortal");
+		expect(createdEvent.eventType).toEqual("Dual");
+		expect(createdEvent.name).toEqual("Fort Mill vs Clover");
+		expect(new Date(createdEvent.date).toISOString()).toEqual(testDate.toISOString());
+		expect(createdEvent.location).toBeNull();
+		expect(createdEvent.state).toEqual("SC");
+
+		// 3. Update the dual
+		const newDate = new Date(testDate.getTime() + 86400000); // 1 day later
+		const updateResponse = await data.dualSave({
+			id: dualId,
+			opponent: "Rock Hill",
+			dualDate: newDate
+		});
+		expect(updateResponse.status).toEqual(200);
+
+		// 4. Verify that the event was updated
+		const eventResponse2 = await data.eventGet({ includeExpired: true });
+		const updatedEvent = eventResponse2.data.events.find(e => e.systemId === dualId.toString());
+		expect(updatedEvent).toBeDefined();
+		expect(updatedEvent.name).toEqual("Fort Mill vs Rock Hill");
+		expect(new Date(updatedEvent.date).toISOString()).toEqual(newDate.toISOString());
+
+		// 5. Delete the dual
+		const deleteResponse = await data.dualDelete(dualId);
+		expect(deleteResponse.status).toEqual(200);
+
+		// 6. Verify that the event was deleted
+		const eventResponse3 = await data.eventGet({ includeExpired: true });
+		const deletedEvent = eventResponse3.data.events.find(e => e.systemId === dualId.toString());
+		expect(deletedEvent).toBeUndefined();
+	}, 30000);
+
 });
 
 describe("Post data", () => {

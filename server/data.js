@@ -1628,6 +1628,18 @@ export default {
 				record.modified = new Date();
 
 				record = await record.save();
+
+				// Update corresponding event if it exists
+				await data.event.updateOne(
+					{ systemId: record._id.toString(), eventSystem: "WrestlingPortal" },
+					{
+						$set: {
+							name: "Fort Mill vs " + (record.opponent || ""),
+							date: record.dualDate,
+							modified: new Date()
+						}
+					}
+				).exec();
 			}
 			catch (error) {
 				output.status = 562;
@@ -1642,6 +1654,20 @@ export default {
 			let record = null;
 			try {
 				record = await (new data.dual({ ...saveObject, created: new Date(), modified: new Date() })).save();
+
+				// Create the associated event object
+				await (new data.event({
+					sqlId: null,
+					eventSystem: "WrestlingPortal",
+					systemId: record._id.toString(),
+					eventType: "Dual",
+					name: "Fort Mill vs " + (record.opponent || ""),
+					date: record.dualDate,
+					location: null,
+					state: "SC",
+					created: new Date(),
+					modified: new Date()
+				})).save();
 			}
 			catch (error) {
 				output.status = 563;
@@ -1667,6 +1693,7 @@ export default {
 
 		try {
 			await data.dual.deleteOne({ _id: id });
+			await data.event.deleteOne({ systemId: id.toString(), eventSystem: "WrestlingPortal" });
 		}
 		catch (error) {
 			output.status = 560;
