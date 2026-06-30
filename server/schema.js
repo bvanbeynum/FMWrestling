@@ -213,17 +213,6 @@ export default {
 		modified: Date
 	}),
 
-	scoreCall: mongoose.model("scorecall", {
-		abbreviation: String,
-		points: Number,
-		description: String,
-		isLostPoints: Boolean,
-		isTeamPoint: Boolean,
-		isComplete: Boolean,
-		created: Date,
-		modified: Date
-	}),
-
 	post: mongoose.model("post", {
 		content: String,
 		scope: String,

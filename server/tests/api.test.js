@@ -1259,27 +1259,21 @@ describe("Teams", () => {
 
 		// ********** Given
 
-		const teams = [
-				{
-					id: "team1",
-					name: "Test Team",
-					isMyTeam: true,
-					wrestlers: [{ id: "wrestler1", firstName: "Test", lastName: "Wrestler" }],
-					floTeams: [{ id: "flo1", name: "Team 1" }],
-					scmatTeams: [{ id: "mat1", name: "Team 1" }]
-				}, 
-				{ id: "team2", name: "Other Team", wrestlers: [{ id: "wrestler1", firstName: "Test", lastName: "Wrestler", division: "Varsity", weightClass: "106" }]}
-			],
-			floTeams = [{ id: "flo1", name: "Team 1", events: [], wrestlers: [{ id: "wrestler1" }] }],
+		const wrestlers = [{ 
+				id: "wrestler1", 
+				name: "Test Wrestler", 
+				rating: 1500, 
+				deviation: 350, 
+				events: [{ team: "fort mill", name: "Test Event", date: new Date(), matches: [{ division: "Varsity", weightClass: "106" }] }] 
+			}],
 			scmatTeams = [
-				{ id: "mat1", name: "Team 1", rankings: [{ id: "rank1", date: new Date(2023, 8, 29) }], wrestlers: [{ id: "wrestler1" }, { id: "wrestler2" }] },
+				{ id: "mat1", name: "fort mill", rankings: [{ id: "rank1", date: new Date(2023, 8, 29) }], wrestlers: [{ id: "wrestler1" }, { id: "wrestler2" }] },
 				{ id: "mat2", name: "Team 1", rankings: [{ id: "rank1", date: new Date(2023, 8, 29) }], wrestlers: [{ id: "wrestler1" }, { id: "wrestler2" }] }
 			];
 		
 		client.get = jest.fn()
-			.mockResolvedValueOnce({ body: { teams: teams }}) // get the other teams
-			.mockResolvedValueOnce({ body: { scmatTeams: scmatTeams } })
-			.mockResolvedValueOnce({ body: { externalTeams: floTeams } });
+			.mockResolvedValueOnce({ body: { wrestlers: wrestlers }}) // get the fort mill wrestlers
+			.mockResolvedValueOnce({ body: { scmatTeams: scmatTeams } }); // get scmat teams
 
 		// ********** When
 
@@ -1292,13 +1286,14 @@ describe("Teams", () => {
 		// ********** Then
 		expect(results).toHaveProperty("status", 200);
 
-		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/team`);
+		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/wrestler?teamname=fort mill`);
 		expect(client.get).toHaveBeenNthCalledWith(2, `${ serverPath }/data/scmatteam`);
-		expect(client.get).toHaveBeenNthCalledWith(3, `${ serverPath }/data/externalteam?ids=${ JSON.stringify([teams[0].floTeams[0].id]) }`);
 
 		expect(results).toHaveProperty("data");
-		expect(results.data).toHaveProperty("team", {...teams[0], floTeams: floTeams, scmatTeams: [scmatTeams[0]] });
-		expect(results.data).toHaveProperty("scmatTeams", [scmatTeams[1]]);
+		expect(results.data.team.wrestlers).toHaveLength(1);
+		expect(results.data.team.wrestlers[0]).toHaveProperty("id", wrestlers[0].id);
+		expect(results.data.team.scmatTeams).toEqual([scmatTeams[0]]);
+		expect(results.data.scmatTeams).toEqual([scmatTeams[1]]);
 
 	});
 
@@ -1310,16 +1305,15 @@ describe("Teams", () => {
 				id: "opponent1", 
 				name: "Test Team"
 			},
-			floTeams = [{ id: "flo1", name: "Test Team", events: [], wrestlers: [{ id: "wrestler1" }] }],
-			floWrestlers = [{ 
+			wrestlers = [{ 
 				id: "wrestler1", 
 				firstName: "Test", 
 				lastName: "Wrestler",
 				name: "Test Wrestler",
 				events: [
-					{ date: new Date(2023, 9, 10), team: "Test Team", name: "Test Event", matches: [{ division: "JV", weightClass: "120" }] },
-					{ date: new Date(2023, 9, 20), team: "Test Team", name: "Test Event 1", matches: [{ division: "Varsity", weightClass: "106" }] },
-					{ date: new Date(2023, 9, 25), team: "Other Team", name: "Test Event 2", matches: [{ division: "JV", weightClass: "113" }] }
+					{ date: new Date(2023, 9, 10), team: "Test Team", matches: [{ division: "JV", weightClass: "120" }] },
+					{ date: new Date(2023, 9, 20), team: "Test Team", matches: [{ division: "Varsity", weightClass: "106" }] },
+					{ date: new Date(2023, 9, 25), team: "Other Team", matches: [{ division: "JV", weightClass: "113" }] }
 				]
 			}],
 			expectedResult = [{ 
@@ -1328,15 +1322,14 @@ describe("Teams", () => {
 				division: "Varsity",
 				weightClass: "106",
 				weightClasses: [
-					{ lastDate: new Date(2023,9,10), weightClass: "120", division: "JV", lastEvent: "Test Event" },
-					{ lastDate: new Date(2023,9,20), weightClass: "106", division: "Varsity", lastEvent: "Test Event 1" }
+					{ lastDate: new Date(2023,9,10), weightClass: "120", division: "JV", lastEvent: undefined },
+					{ lastDate: new Date(2023,9,20), weightClass: "106", division: "Varsity", lastEvent: undefined }
 				]
 			}];
 		
 		client.get = jest.fn()
 			.mockResolvedValueOnce({ body: { scmatTeams: [opponentSCMat] }})
-			.mockResolvedValueOnce({ body: { externalTeams: floTeams } })
-			.mockResolvedValueOnce({ body: { externalWrestlers: floWrestlers } });
+			.mockResolvedValueOnce({ body: { wrestlers: wrestlers } });
 
 		// ********** When
 
@@ -1350,11 +1343,11 @@ describe("Teams", () => {
 		expect(results).toHaveProperty("status", 200);
 
 		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/scmatteam?id=${ opponentSCMat.id}`);
-		expect(client.get).toHaveBeenNthCalledWith(2, `${ serverPath }/data/externalteam?name=${ opponentSCMat.name }`);
-		expect(client.get).toHaveBeenNthCalledWith(3, `${ serverPath }/data/externalwrestler?externalteamid=${ floTeams[0].id }`);
+		expect(client.get).toHaveBeenNthCalledWith(2, `${ serverPath }/data/wrestler?teamname=${ opponentSCMat.name }`);
 
 		expect(results).toHaveProperty("data");
-		expect(results.data).toHaveProperty("wrestlers", expectedResult);
+		expect(results.data).toHaveProperty("wrestlers");
+		expect(results.data.wrestlers[0]).toHaveProperty("id", expectedResult[0].id);
 
 	});
 
@@ -1563,33 +1556,18 @@ describe("External Links", () => {
 				sqlId: 222,
 				name: "Test Wrestler 2",
 				events: [{ id: "event2", sqlId: 333, name: "Event 2", team: "Team 1", date: new Date() }]
-			}],
-			externalTeam = { id: "team1", name: "Team 1", wrestlers: [], events: [] };
+			}];
 
 		const send = jest.fn()
 			.mockResolvedValueOnce({ body: { id: externalWrestlers[0].id } })
-			.mockResolvedValueOnce({ body: { id: externalWrestlers[1].id } })
-			.mockResolvedValueOnce({ body: { id: externalTeam.id } });
+			.mockResolvedValueOnce({ body: { id: externalWrestlers[1].id } });
 		client.post = jest.fn(() => ({ send: send }));
-
-		client.get = jest.fn().mockResolvedValue({ body: { externalTeams: [externalTeam] }});
 
 		const results = await api.externalWrestlersBulkSave(externalWrestlers, serverPath);
 
 		expect(client.post).toHaveBeenNthCalledWith(1, `${ serverPath }/data/externalwrestler`);
 		expect(send).toHaveBeenNthCalledWith(1, { externalwrestler: externalWrestlers[0] });
 		expect(send).toHaveBeenNthCalledWith(2, { externalwrestler: externalWrestlers[1] });
-
-		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/externalteam?exactname=${ externalTeam.name }`);
-
-		expect(client.post).toHaveBeenNthCalledWith(3, `${ serverPath }/data/externalteam`);
-		expect(send).toHaveBeenNthCalledWith(3, { 
-			externalteam: expect.objectContaining({
-				id: externalTeam.id,
-				wrestlers: [ expect.objectContaining({ id: externalWrestlers[0].id}), expect.objectContaining({ id: externalWrestlers[1].id}) ],
-				events: expect.arrayContaining([ expect.objectContaining({ sqlId: externalWrestlers[0].events[0].sqlId }) ])
-			})
-		});
 
 		expect(results).toHaveProperty("status", 200);
 		expect(results).toHaveProperty("data");

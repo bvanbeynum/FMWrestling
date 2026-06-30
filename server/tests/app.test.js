@@ -243,74 +243,6 @@ describe("Data service", () => {
 		expect(response.body).toHaveProperty("status", "ok");
 	});
 
-	it("gets external team", async () => {
-
-		// ********** Given
-
-		const output = { externalTeams: [{ id: "testid" }]};
-
-		data.externalTeamGet = jest.fn().mockResolvedValue({
-			status: 200,
-			data: output
-		});
-
-		// ********** When
-		
-		const response = await request(app)
-			.get("/data/externalteam")
-			.expect(200);
-		
-		// ********** Then
-
-		expect(response.body).toHaveProperty("externalTeams");
-		expect(response.body.externalTeams).toHaveLength(1);
-	});
-
-	it("saves external team", async () => {
-		// ********** Given
-
-		const save = { name: "test team" },
-			output = { id: "testid" };
-
-		data.externalTeamSave = jest.fn().mockResolvedValue({
-			status: 200,
-			data: output
-		});
-
-		// ********** When
-		
-		const response = await request(app)
-			.post("/data/externalteam")
-			.send({ externalteam: save })
-			.expect(200);
-		
-		// ********** Then
-
-		expect(data.externalTeamSave).toHaveBeenCalledWith(save);
-		expect(response.body).toHaveProperty("id", output.id);
-	});
-
-	it("deletes external team", async () => {
-		// ********** Given
-
-		const externalTeamId = "testid";
-
-		data.externalTeamDelete = jest.fn().mockResolvedValue({
-			status: 200,
-			data: { status: "ok" }
-		});
-
-		// ********** When
-		
-		const response = await request(app)
-			.delete(`/data/externalteam?id=${ externalTeamId }`)
-			.expect(200);
-		
-		// ********** Then
-
-		expect(response.body).toHaveProperty("status", "ok");
-	});
-
 	it("gets external wrestler", async () => {
 
 		// ********** Given
@@ -808,7 +740,7 @@ describe("API service", () => {
 		// ********** Given
 
 		const output = {
-			team: { id: "team1",  name: "Test Team", externalTeams: [], scmatTeams: [] },
+			team: { id: "team1",  name: "Test Team", scmatTeams: [] },
 			scmatTeams: [{ id: "mat1", wrestlers: [], rankings: [] }]
 		};
 

@@ -82,41 +82,8 @@ router.delete("/data/devicerequest", authInternal, async (request, response) => 
 	response.end();
 });
 
-router.get("/data/scorecall", authInternal, async (request, response) => {
-	const results = await data.scoreCallGet(request.query.id);
-
-	if (results.error) {
-		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "641effd497f3b068a56265d9", message: `${ results.status }: ${results.error}` }}).then();
-	}
-
-	response.status(results.status).json(results.error ? { error: results.error } : results.data);
-	response.end();
-});
-
-router.post("/data/scorecall", authInternal, async (request, response) => {
-	const results = await data.scoreCallSave(request.body.scorecall);
-
-	if (results.error) {
-		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "641f007897f3b068a5626649", message: `${ results.status }: ${results.error}` }}).then();
-	}
-
-	response.status(results.status).json(results.error ? { error: results.error } : results.data);
-	response.end();
-});
-
-router.delete("/data/scorecall", authInternal, async (request, response) => {
-	const results = await data.scoreCallDelete(request.query.id);
-
-	if (results.error) {
-		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "641f008897f3b068a562664b", message: `${ results.status }: ${results.error}` }}).then();
-	}
-
-	response.status(results.status).json(results.error ? { error: results.error } : results.data);
-	response.end();
-});
-
 router.get("/data/wrestler", authInternal, async (request, response) => {
-		const sqlIdList = request.query.sqlids ? JSON.parse(request.query.sqlids) : null;
+	const sqlIdList = request.query.sqlids ? JSON.parse(request.query.sqlids) : null;
 		const filter = { 
 			id: request.query.id,
 			ids: request.query.ids ? JSON.parse(request.query.ids) : null,
@@ -421,7 +388,6 @@ router.get("/data/externalwrestler", authInternal, async (request, response) => 
 			max: request.query.max, 
 			teamName: request.query.teamname, 
 			teamPartial: request.query.teampartial,
-			externalTeamId: request.query.externalteamid, 
 			sqlId: request.query.sqlid,
 			sqlIds: sqlIdList,
 			select: request.query.select ? request.query.select.split(",") : null
