@@ -282,26 +282,6 @@ router.post("/api/externalwrestlersbulkdelete", authAPI, async (request, respons
 	response.status(results.status).json(results.error ? { error: results.data } : results.data);
 });
 
-router.post("/api/floeventsave", authAPI, async (request, response) => {
-	const results = await api.floEventSave(request.body.floEvent, request.serverPath);
-
-	if (results.error) {
-		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64ed25e226539d4ed2916e6e", message: `${ results.status }: ${results.error}` }}).then();
-	}
-
-	response.status(results.status).json(results.error ? { error: results.error } : results.data);
-});
-
-router.post("/api/trackeventsave", authAPI, async (request, response) => {
-	const results = await api.trackEventSave(request.body.trackEvent, request.serverPath);
-
-	if (results.error) {
-		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64efa04c26539d4ed297e773", message: `${ results.status }: ${results.error}` }}).then();
-	}
-
-	response.status(results.status).json(results.error ? { error: results.error } : results.data);
-});
-
 router.post("/api/scmatteambulksave", authAPI, async (request, response) => {
 	const results = await api.scmatTeamBulkSave(request.body.teamssave, request.serverPath);
 

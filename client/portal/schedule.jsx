@@ -27,9 +27,7 @@ const Schedule = props => {
 				})
 				.then(data => {
 					const loadedEvents = [
-						...(data.events || []),
-						...(data.floEvents || []),
-						...(data.trackEvents || [])
+						...(data.events || [])
 					].map(event => ({
 						...event,
 						type: event.eventSystem?.toLowerCase(),

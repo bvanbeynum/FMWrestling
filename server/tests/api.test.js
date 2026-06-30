@@ -354,20 +354,15 @@ describe("API Schedule", () => {
 				location: "test location",
 				created: new Date() 
 			}],
-			floEvents = [{
-				id: "flo1",
-				name: "Flo Event",
-				sqlId: 1233
-			}],
-			trackEvents = [{
-				id: "track1",
-				name: "Track event",
-				sqlId: 123
+			duals = [{
+				id: "dual1",
+				opponent: "Opponent Team",
+				dualDate: new Date()
 			}];
 		
 		client.get = jest.fn()
-			.mockResolvedValueOnce({ body: { floEvents: floEvents } }) // Get flo events
-			.mockResolvedValueOnce({ body: { trackEvents: trackEvents } }); // Get track events
+			.mockResolvedValueOnce({ body: { events: events } }) // Get events
+			.mockResolvedValueOnce({ body: { duals: duals } }); // Get duals
 
 		// ********** When
 
@@ -375,33 +370,27 @@ describe("API Schedule", () => {
 
 		// ********** Then
 
-		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/floevent`);
-		expect(client.get).toHaveBeenNthCalledWith(2, `${ serverPath }/data/trackevent`);
+		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/event`);
+		expect(client.get).toHaveBeenNthCalledWith(2, `${ serverPath }/data/dual`);
 
 		expect(results).toHaveProperty("status", 200);
 		expect(results).toHaveProperty("data");
-		expect(results.data).toHaveProperty("floEvents", floEvents);
-		expect(results.data).toHaveProperty("trackEvents", trackEvents);
-
-		// No expired posts
-		expect(results.data.events).toHaveLength(events.length);
-
-		// First post matches mock
-		expect(results.data.events[0]).toHaveProperty("id", events[0].id);
+		expect(results.data).toHaveProperty("events", events);
+		expect(results.data).toHaveProperty("duals", duals);
 	});
 
 	it("filters for only given dates", async () => {
 		// ********** Given
 
-		const floEvents = [
-				{ id: "flo1", date: new Date(2023,8,12) }
+		const events = [
+				{ id: "event1", date: new Date(2023,8,12) }
 			],
 			startDate = new Date(2023,8,1),
 			endDate = new Date(2023,9,1);
 		
 		client.get = jest.fn()
-			.mockResolvedValueOnce({ body: { floEvents: floEvents } }) // Get flo events
-			.mockResolvedValueOnce({ body: { trackEvents: [] } }); // Get track events
+			.mockResolvedValueOnce({ body: { events: events } }) // Get events
+			.mockResolvedValueOnce({ body: { duals: [] } }); // Get duals
 
 		// ********** When
 
@@ -409,14 +398,14 @@ describe("API Schedule", () => {
 
 		// ********** Then
 
-		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/floevent?startdate=${ startDate.toLocaleDateString() }&enddate=${ endDate.toLocaleDateString() }`);
-		expect(client.get).toHaveBeenNthCalledWith(2, `${ serverPath }/data/trackevent?startdate=${ startDate.toLocaleDateString() }&enddate=${ endDate.toLocaleDateString() }`);
+		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/event?startdate=${ startDate.toLocaleDateString() }&enddate=${ endDate.toLocaleDateString() }`);
+		expect(client.get).toHaveBeenNthCalledWith(2, `${ serverPath }/data/dual`);
 
 		expect(results).toHaveProperty("status", 200);
 		expect(results).toHaveProperty("data");
 
-		expect(results.data).toHaveProperty("floEvents", floEvents);
-		expect(results.data.floEvents).toHaveLength(1);
+		expect(results.data).toHaveProperty("events", events);
+		expect(results.data.events).toHaveLength(1);
 
 	});
 
@@ -1640,180 +1629,6 @@ describe("External Links", () => {
 		expect(results).toHaveProperty("status", 200);
 		expect(results).toHaveProperty("data");
 		expect(results.data).toHaveProperty("status", "ok");
-
-	});
-
-});
-
-describe("Flo Events", () => {
-
-	it("gets a flo event", async () => {
-
-		// ********** Given
-
-		const floEvents = [{
-			id: "flo1",
-			sqlId: 1234,
-			isFavorite: true,
-			lastUpdate: new Date(),
-			divisions: []
-		}];
-		
-		client.get = jest.fn()
-			.mockResolvedValueOnce({ body: { floEvents: floEvents }}) // Get the teams
-
-		// ********** When
-
-		const results = await api.floEventLoad(floEvents[0].id, serverPath, new Date(new Date().setMinutes(0,0,0,0)));
-
-		// ********** Then
-
-		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/floevent?id=${ floEvents[0].id }`);
-
-		expect(results).toHaveProperty("status", 200);
-		expect(results).toHaveProperty("data");
-
-		expect(results.data).toHaveProperty("floEvent");
-		expect(results.data.floEvent).toEqual(floEvents[0]);
-
-	});
-
-	it("gets favorite flo events", async () => {
-
-		// ********** Given
-
-		const floEvents = [{
-			id: "flo1",
-			sqlId: 1234,
-			isFavorite: true
-		},
-		{
-			id: "flo2",
-			sqlId: 6789,
-			isFavorite: false
-		}];
-		
-		client.get = jest.fn()
-			.mockResolvedValueOnce({ body: { floEvents: floEvents }}) // Get the teams
-
-		// ********** When
-
-		const results = await api.floEventFavorites(serverPath);
-
-		// ********** Then
-
-		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/floevent`);
-
-		expect(results).toHaveProperty("status", 200);
-		expect(results).toHaveProperty("data");
-
-		expect(results.data).toHaveProperty("floEvents");
-		expect(results.data.floEvents).toHaveLength(floEvents.filter(event => event.isFavorite).length);
-
-	});
-
-	it("saves flo Event", async () => {
-		
-		// ********** Given
-
-		const floEvent = { 
-			id: "test1", 
-			name: "Test Event", 
-			sqlId: 1234, 
-			divisions: [{
-				name: "division 1",
-				weightClasses: [{
-					name: "111",
-					pools: [{
-						matches: [{
-							matchNumber: "1",
-							round: "2",
-							mat: "2",
-							topWrestler: { name: "Wrestler 1", team: "Team 1", isWinner: true },
-							bottomWrestler: { name: "Wrestler 2", team: "Team 2" },
-							winType: "Dec"
-						}]
-					}]
-				}]
-			}]
-		};
-
-		const send = jest.fn().mockResolvedValue({
-			body: { id: floEvent.id }
-		});
-		client.post = jest.fn(() => ({
-			send: send
-		}));
-		
-		client.get = jest.fn()
-			.mockResolvedValueOnce({ body: { floEvents: [{ ...floEvent, divisions: [] }] }}) // Lookup the event
-
-		// ********** When
-
-		const results = await api.floEventSave(floEvent, serverPath);
-
-		// ********** Then
-
-		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/floevent?sqlid=${ floEvent.sqlId }`);
-		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/floevent`);
-
-		expect(send).toHaveBeenCalledWith({
-			floevent: expect.objectContaining({
-				updates: expect.arrayContaining([
-					expect.objectContaining({
-						updates: expect.arrayContaining([
-							expect.objectContaining({ updateType: "New Match"}),
-							expect.objectContaining({ updateType: "Wrestler Assignment"}),
-							expect.objectContaining({ updateType: "Match Completed"})
-						])
-					})
-				])
-			})
-		})
-
-		expect(results).toHaveProperty("status", 200);
-		expect(results).toHaveProperty("data");
-		expect(results.data).toHaveProperty("id", floEvent.id);
-
-	});
-
-});
-
-describe("Track Events", () => {
-
-	it("saves track event", async () => {
-		
-		// ********** Given
-
-		const trackEvent = { id: "test1", name: "Test Event", sqlId: 1234 };
-
-		const send = jest.fn().mockResolvedValue({
-			body: { id: trackEvent.id }
-		});
-		client.post = jest.fn(() => ({
-			send: send
-		}));
-		
-		client.get = jest.fn()
-			.mockResolvedValueOnce({ body: { trackEvents: [] }}) // Lookup the event
-
-		// ********** When
-
-		const results = await api.trackEventSave(trackEvent, serverPath);
-
-		// ********** Then
-
-		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/trackevent?sqlid=${ trackEvent.sqlId }`);
-		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/trackevent`);
-		expect(send).toHaveBeenCalledWith(
-			expect.objectContaining({
-				trackevent: expect.objectContaining({ name: trackEvent.name })
-			})
-		);
-
-		expect(results).toHaveProperty("status", 200);
-		expect(results).toHaveProperty("data");
-		expect(results.data).toHaveProperty("id", trackEvent.id);
 
 	});
 

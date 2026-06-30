@@ -15,15 +15,15 @@ describe("Schedule component", () => {
 			date: new Date().toISOString(),
 			location: "Test location",
 			eventSystem: null
-		}],
-		floEvents = [{
+		},
+		{
 			id: "flo1",
 			name: "Flo Tournament",
 			date: new Date().toISOString(),
 			location: "testing",
 			eventSystem: "flo"
-		}],
-		trackEvents = [{
+		},
+		{
 			id: "track1",
 			name: "Track event",
 			date: new Date().toISOString(),
@@ -37,8 +37,6 @@ describe("Schedule component", () => {
 			status: 200,
 			json: jest.fn().mockResolvedValue({
 				events: events,
-				floEvents: floEvents,
-				trackEvents: trackEvents,
 				loggedInUser: loggedInUser
 			})
 		});
@@ -56,7 +54,8 @@ describe("Schedule component", () => {
 
 		expect(await screen.findByRole("heading", { name: "Schedule" })).toBeInTheDocument();
 		expect(await screen.findByTestId(events[0].id)).toBeInTheDocument();
-		expect(await screen.findByTestId(floEvents[0].id)).toBeInTheDocument();
+		expect(await screen.findByTestId(events[1].id)).toBeInTheDocument();
+		expect(await screen.findByTestId(events[2].id)).toBeInTheDocument();
 	});
 
 	it("filters events by event type", async () => {
@@ -68,7 +67,8 @@ describe("Schedule component", () => {
 		fireEvent.change(typeSelect, { target: { value: "Dual" } });
 
 		expect(screen.getByTestId(events[0].id)).toBeInTheDocument();
-		expect(screen.queryByTestId(floEvents[0].id)).not.toBeInTheDocument();
+		expect(screen.queryByTestId(events[1].id)).not.toBeInTheDocument();
+		expect(screen.queryByTestId(events[2].id)).not.toBeInTheDocument();
 	});
 
 });
