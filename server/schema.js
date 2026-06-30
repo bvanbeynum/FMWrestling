@@ -110,48 +110,6 @@ export default {
 		modified: Date
 	}),
 
-	externalWrestler: mongoose.model("externalWrestler", {
-		sqlId: Number,
-		firstName: String,
-		lastName: String,
-		name: String,
-		eventCount: Number,
-		gRating: Number,
-		gDeviation: Number,
-		events: [{
-			sqlId: Number,
-			date: Date,
-			name: String,
-			team: String,
-			locationState: String,
-			matches: [{
-				division: String,
-				weightClass: String,
-				round: String,
-				vs: String,
-				vsTeam: String,
-				vsSqlId: Number,
-				isWinner: Boolean,
-				winType: String,
-				sort: Number
-			}]
-		}],
-		lineage: [[{ 
-			wrestler1SqlId: Number,
-			wrestler1Name: String,
-			wrestler1Team: String,
-			wrestler2SqlId: Number,
-			wrestler2Name: String,
-			wrestler2Team: String,
-			isWinner: Boolean,
-			sort: Number,
-			eventDate: Date
-		}]],
-		lastSQLUpdate: Date,
-		created: Date,
-		modified: Date
-	}),
-
 	wrestler: mongoose.model("wrestler", {
 		sqlId: Number,
 		name: String,
@@ -232,7 +190,35 @@ export default {
 		location: String,
 		state: String,
 		created: Date,
-		modified: Date
+		modified: Date,
+		summaryStats: {
+			totalMatches: Number,
+			averageGlicko: Number,
+			upsetPercentage: Number,
+			bonusPointPercentage: Number
+		},
+		matches: [{
+			matchSqlId: Number,
+			weightClass: String,
+			roundName: String,
+			winType: String,
+			isUpset: Boolean, 
+			winner: {
+				wrestlerSqlId: Number,
+				name: String,
+				team: String,
+				rating: Number,
+				deviation: Number
+			},
+			loser: {
+				wrestlerSqlId: Number,
+				name: String,
+				team: String,
+				rating: Number,
+				deviation: Number
+			}
+		}
+		]
 	}),
 
 	scmatTeam: mongoose.model("scmatteam", {
