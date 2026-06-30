@@ -1025,4 +1025,30 @@ describe("API service", () => {
 
 	});
 
+	it("saves events in bulk", async () => {
+		const events = [
+			{ sqlId: 1001, name: "Bulk Event 1" },
+			{ sqlId: 1002, name: "Bulk Event 2" }
+		];
+		const output = {
+			matchedCount: 0,
+			modifiedCount: 0,
+			upsertedCount: 2,
+			insertedCount: 0
+		};
+
+		api.eventsBulkSave = jest.fn().mockResolvedValue({
+			status: 200,
+			data: output
+		});
+
+		const response = await request(app)
+			.post("/api/eventsbulksave")
+			.send({ events })
+			.expect(200);
+
+		expect(api.eventsBulkSave).toHaveBeenCalledWith(events, expect.anything());
+		expect(response.body).toEqual(output);
+	});
+
 });

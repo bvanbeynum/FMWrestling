@@ -1456,6 +1456,64 @@ export default {
 		return output;
 	},
 
+	eventsBulkSave: async (events) => {
+		const output = {};
+
+		if (!events || !Array.isArray(events) || events.length === 0) {
+			output.status = 400;
+			output.error = "Missing or empty events array for bulk save";
+			return output;
+		}
+
+		const operations = [];
+
+		for (const event of events) {
+			if (event.sqlId === undefined || event.sqlId === null) {
+				output.status = 400;
+				output.error = "All events in bulk save must have a sqlId";
+				return output;
+			}
+
+			// Clean payload to prevent schema validation/immutability errors
+			const { id, _id, created, modified, ...updateFields } = event;
+
+			operations.push({
+				updateOne: {
+					filter: { sqlId: event.sqlId },
+					update: {
+						$set: {
+							...updateFields,
+							modified: new Date()
+						},
+						$setOnInsert: {
+							created: new Date()
+						}
+					},
+					upsert: true
+				}
+			});
+		}
+
+		try {
+			// ordered: false lets operations continue even if one fails
+			const result = await data.event.bulkWrite(operations, { ordered: false });
+
+			output.status = 200;
+			output.data = {
+				matchedCount: result.matchedCount,
+				modifiedCount: result.modifiedCount,
+				upsertedCount: result.upsertedCount,
+				insertedCount: result.insertedCount
+			};
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+		}
+
+		return output;
+	},
+
 	scmatTeamGet: async (userFilter = {}) => {
 		let filter = {},
 			output = {};

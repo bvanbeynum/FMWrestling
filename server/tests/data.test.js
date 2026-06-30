@@ -759,6 +759,67 @@ describe("Event data", () => {
 		);
 	});
 
+	describe("eventsBulkSave", () => {
+		it("should bulk save (upsert) events successfully using sqlId matching", async () => {
+			const bulkData = [
+				{ sqlId: 9001, name: "Bulk Event 1", location: "Loc 1", date: new Date() },
+				{ sqlId: 9002, name: "Bulk Event 2", location: "Loc 2", date: new Date() }
+			];
+
+			// 1. Initial Insert
+			const response = await data.eventsBulkSave(bulkData);
+			expect(response.status).toEqual(200);
+			expect(response.data).toHaveProperty("upsertedCount", 2);
+
+			// Verify they exist in DB
+			const getResponse = await data.eventGet({ sqlIds: [9001, 9002] });
+			expect(getResponse.status).toEqual(200);
+			expect(getResponse.data.events).toHaveLength(2);
+
+			const eventIds = getResponse.data.events.map(e => e.id);
+
+			// 2. Update one and Insert another
+			const updateData = [
+				{ sqlId: 9001, name: "Bulk Event 1 Updated", location: "Loc 1", date: new Date() },
+				{ sqlId: 9003, name: "Bulk Event 3", location: "Loc 3", date: new Date() }
+			];
+
+			const updateResponse = await data.eventsBulkSave(updateData);
+			expect(updateResponse.status).toEqual(200);
+			expect(updateResponse.data).toHaveProperty("matchedCount", 1);
+			expect(updateResponse.data).toHaveProperty("modifiedCount", 1);
+			expect(updateResponse.data).toHaveProperty("upsertedCount", 1);
+
+			// Verify the update
+			const getUpdatedResponse = await data.eventGet({ sqlId: 9001 });
+			expect(getUpdatedResponse.data.events[0].name).toEqual("Bulk Event 1 Updated");
+
+			// Clean up
+			const getResponse3 = await data.eventGet({ sqlIds: [9001, 9002, 9003] });
+			for (const event of getResponse3.data.events) {
+				await data.eventDelete(event.id);
+			}
+		});
+
+		it("should return 400 if any event lacks sqlId", async () => {
+			const invalidData = [
+				{ sqlId: 9004, name: "Valid" },
+				{ name: "Missing sqlId" }
+			];
+			const response = await data.eventsBulkSave(invalidData);
+			expect(response.status).toEqual(400);
+			expect(response.error).toContain("must have a sqlId");
+		});
+
+		it("should return 400 for empty or missing input", async () => {
+			const response1 = await data.eventsBulkSave([]);
+			expect(response1.status).toEqual(400);
+
+			const response2 = await data.eventsBulkSave(null);
+			expect(response2.status).toEqual(400);
+		});
+	});
+
 });
 
 describe("Team data", () => {

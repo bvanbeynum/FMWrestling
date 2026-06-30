@@ -1489,6 +1489,26 @@ export default {
 		return output;
 	},
 
+	eventsBulkSave: async (events, serverPath) => {
+		const output = {};
+
+		try {
+			const clientResponse = await client
+				.post(`${ serverPath }/data/event/bulk`)
+				.send({ events })
+				.then();
+			
+			output.status = clientResponse.status;
+			output.data = clientResponse.body;
+		}
+		catch (error) {
+			output.status = error.status || 500;
+			output.error = error.message;
+		}
+
+		return output;
+	},
+
 	scmatTeamSearch: async (name, serverPath) => {
 		const output = { data: {} };
 

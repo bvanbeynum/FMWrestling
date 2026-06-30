@@ -1690,4 +1690,29 @@ describe("SC Mat Teams", () => {
 
 	});
 
+	it("saves events in bulk", async () => {
+		const events = [
+			{ sqlId: 1001, name: "Bulk Event 1" },
+			{ sqlId: 1002, name: "Bulk Event 2" }
+		];
+
+		const send = jest.fn().mockResolvedValueOnce({
+			status: 200,
+			body: {
+				matchedCount: 0,
+				modifiedCount: 0,
+				upsertedCount: 2,
+				insertedCount: 0
+			}
+		});
+		client.post = jest.fn(() => ({ send: send }));
+
+		const results = await api.eventsBulkSave(events, serverPath);
+
+		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/event/bulk`);
+		expect(send).toHaveBeenCalledWith({ events });
+		expect(results).toHaveProperty("status", 200);
+		expect(results.data).toHaveProperty("upsertedCount", 2);
+	});
+
 });

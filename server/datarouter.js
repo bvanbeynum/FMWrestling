@@ -487,6 +487,22 @@ router.post("/data/event", authInternal, async (request, response) => {
 	}
 });
 
+router.post("/data/event/bulk", authInternal, async (request, response) => {
+	try {
+		const results = await data.eventsBulkSave(request.body.events);
+
+		if (results.error) {
+			// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64ed20be26539d4ed2915eed", message: `${ results.status }: ${results.error}` }}).then();
+		}
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		response.status(570).json({ error: error.message });
+	}
+});
+
 router.delete("/data/event", authInternal, async (request, response) => {
 	try {
 		const results = await data.eventDelete(request.query.id, request.query.sqlid);
