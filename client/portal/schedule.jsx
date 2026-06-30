@@ -60,13 +60,10 @@ const Schedule = props => {
 	const getEventCategory = (event) => {
 		const system = (event.eventSystem || "").toLowerCase();
 		const name = (event.name || "").toLowerCase();
-		if (system.includes("prep") || name.includes("prep")) {
-			return "Tournament Prep";
-		}
-		if (system.includes("track") || system.includes("flo") || system.includes("tournament")) {
+		if (system.includes("track") || system.includes("flo")) {
 			return "Tournament";
 		}
-		if (system.includes("dual") || event.type === "dual" || name.includes("dual")) {
+		if (event.eventType === "dual" || name.includes("dual")) {
 			return "Dual Meet";
 		}
 		return event.category || "Tournament";
