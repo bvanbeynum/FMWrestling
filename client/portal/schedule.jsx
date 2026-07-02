@@ -17,7 +17,13 @@ const Schedule = props => {
 
 	useEffect(() => {
 		if (!pageActive) {
-			fetch(`/api/scheduleload`)
+			const today = new Date();
+			const start = new Date(today.getFullYear() - 1, 0, 1);
+			const end = new Date(today.getFullYear() + 1, 11, 31);
+			const startStr = start.toISOString().split("T")[0];
+			const endStr = end.toISOString().split("T")[0];
+			
+			fetch(`/api/scheduleload?startdate=${startStr}&enddate=${endStr}`)
 				.then(response => {
 					if (response.ok) {
 						return response.json();
@@ -42,18 +48,7 @@ const Schedule = props => {
 							.map(e => e.systemId)
 					);
 
-					const loadedDuals = (data.duals || [])
-						.filter(dual => !eventSystemIds.has(dual.id || dual._id))
-						.map(dual => ({
-							id: dual.id || dual._id,
-							name: dual.opponent ? `Dual vs ${dual.opponent}` : "Dual Match",
-							opponent: dual.opponent,
-							date: new Date(dual.dualDate),
-							eventSystem: "dual",
-							type: "dual"
-						}));
-
-					const allEvents = [...loadedEvents, ...loadedDuals];
+					const allEvents = loadedEvents;
 					setLoggedInUser(data.loggedInUser);
 					setEvents(allEvents);
 					setPageActive(true);

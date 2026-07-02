@@ -50,7 +50,7 @@ describe("Schedule component", () => {
 	it("initializes the components and loads schedule data", async () => {
 		render(<Schedule />);
 
-		await waitFor(() => expect(global.fetch).toHaveBeenCalledWith(`/api/scheduleload`));
+		await waitFor(() => expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining(`/api/scheduleload`)));
 
 		expect(await screen.findByRole("heading", { name: "Schedule" })).toBeInTheDocument();
 		expect(await screen.findByTestId(events[0].id)).toBeInTheDocument();

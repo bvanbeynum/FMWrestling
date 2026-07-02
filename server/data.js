@@ -1632,14 +1632,26 @@ export default {
 
 	dualGet: async (userFilter = {}) => {
 		const filter = {},
+			select = {},
 			output = {};
 
 		if (userFilter.id) {
 			filter["_id"] = mongoose.Types.ObjectId.isValid(userFilter.id) ? userFilter.id : null;
 		}
+		if (userFilter.startDate && userFilter.endDate) {
+			const startDate = new Date(Date.parse(userFilter.startDate)),
+				endDate = new Date(Date.parse(userFilter.endDate));
+			filter.dualDate = {
+				$gte: startDate,
+				$lte: endDate
+			};
+		}
+		if (userFilter.select) {
+			select = userFilter.select.reduce((output, current) => ({...output, [current]: 1 }), {});
+		}
 
 		try {
-			const records = await data.dual.find(filter).lean().exec();
+			const records = await data.dual.find(filter).select(select).lean().exec();
 			output.status = 200;
 			output.data = { duals: records.map(({ _id, __v, ...data }) => ({ id: _id, ...data })) };
 		}

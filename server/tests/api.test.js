@@ -370,8 +370,8 @@ describe("API Schedule", () => {
 
 		// ********** Then
 
-		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/event`);
-		expect(client.get).toHaveBeenNthCalledWith(2, `${ serverPath }/data/dual`);
+		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/event?select=sqlId,eventSystem,systemId,eventType,name,date,endDate,location,state`);
+		expect(client.get).toHaveBeenNthCalledWith(2, `${ serverPath }/data/dual?select=dualDate,opponent,imagePath`);
 
 		expect(results).toHaveProperty("status", 200);
 		expect(results).toHaveProperty("data");
@@ -398,8 +398,8 @@ describe("API Schedule", () => {
 
 		// ********** Then
 
-		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/event?startdate=${ startDate.toLocaleDateString() }&enddate=${ endDate.toLocaleDateString() }`);
-		expect(client.get).toHaveBeenNthCalledWith(2, `${ serverPath }/data/dual`);
+		expect(client.get).toHaveBeenNthCalledWith(1, `${ serverPath }/data/event?startdate=${ startDate.toLocaleDateString() }&enddate=${ endDate.toLocaleDateString() }&select=sqlId,eventSystem,systemId,eventType,name,date,endDate,location,state`);
+		expect(client.get).toHaveBeenNthCalledWith(2, `${ serverPath }/data/dual?startdate=${ startDate.toLocaleDateString() }&enddate=${ endDate.toLocaleDateString() }&select=dualDate,opponent,imagePath`);
 
 		expect(results).toHaveProperty("status", 200);
 		expect(results).toHaveProperty("data");

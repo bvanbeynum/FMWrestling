@@ -575,7 +575,12 @@ router.delete("/data/scmatteam", authInternal, async (request, response) => {
 
 router.get("/data/dual", authInternal, async (request, response) => {
 	try {
-		const results = await data.dualGet({ id: request.query.id });
+		const results = await data.dualGet({ 
+			id: request.query.id,
+			startDate: request.query.startdate,
+			endDate: request.query.enddate,
+			select: request.query.select ? request.query.select.split(",") : null
+		});
 
 		if (results.error) {
 			// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6516c83bcf4fc75b630d16ea", message: `${ results.status }: ${results.error}` }}).then();

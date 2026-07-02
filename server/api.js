@@ -274,28 +274,27 @@ export default {
 
 	scheduleLoad: async (serverPath, startDate, endDate) => {
 		const output = { data: {} };
-		let dateFilter = "";
+		let eventParams = [];
 
 		if (startDate && endDate) {
-			dateFilter = `?startdate=${ startDate }&enddate=${ endDate }`;
+			eventParams.push(`startdate=${ startDate }`);
+			eventParams.push(`enddate=${ endDate }`);
 		}
 
+		const eventSelect = "sqlId,eventSystem,systemId,eventType,name,date,endDate,location,state";
+
+		eventParams.push(`select=${ eventSelect }`);
+
+		const eventUrl = `${ serverPath }/data/event?${ eventParams.join("&") }`;
+
 		try {
-			const clientResponse = await client.get(`${ serverPath }/data/event${ dateFilter }`);
+			const clientResponse = await client.get(eventUrl);
 			output.data.events = clientResponse.body.events;
 		}
 		catch (error) {
 			output.status = 562;
 			output.error = error.message;
 			return output;
-		}
-
-		try {
-			const dualsResponse = await client.get(`${ serverPath }/data/dual`);
-			output.data.duals = dualsResponse.body.duals;
-		}
-		catch (error) {
-			output.data.duals = [];
 		}
 
 		output.status = 200;		
