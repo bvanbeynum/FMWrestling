@@ -38,7 +38,7 @@ describe("Index component", () => {
 
 		await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/api/homeload"));
 
-		expect(await screen.findByText(/welcome/i)).toBeInTheDocument();
+		expect(await screen.findByRole("heading", { name: "Welcome" })).toBeInTheDocument();
 		expect(await screen.findByText(/home/i)).toBeInTheDocument();
 		
 	});

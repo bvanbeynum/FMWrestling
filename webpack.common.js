@@ -20,7 +20,8 @@ export default {
 		wrestlerSearch: "./client/portal/wrestlersearch.jsx",
 		wrestler: "./client/portal/wrestler.jsx",
 		duplicates: "./client/portal/duplicates.jsx",
-		noaccess: "./client/portal/noaccess.jsx"
+		noaccess: "./client/portal/noaccess.jsx",
+		tournamentsummary: "./client/portal/tournamentsummary.jsx"
 	},
 	plugins: [
 		new HtmlWebpackPlugin({ 
@@ -101,6 +102,16 @@ export default {
 				viewport: "width=device-width, initial-scale=1"
 			},
 			chunks: [ "schedule" ],
+			templateContent: "<html><body><div id='root'></div></body></html>"
+		}),
+		new HtmlWebpackPlugin({ 
+			filename: "./portal/tournamentsummary.html",
+			title: "Fort Mill Wrestling - Tournament Summary",
+			favicon: "./client/media/favicon.ico",
+			meta: {
+				viewport: "width=device-width, initial-scale=1"
+			},
+			chunks: [ "tournamentsummary" ],
 			templateContent: "<html><body><div id='root'></div></body></html>"
 		}),
 		new HtmlWebpackPlugin({ 

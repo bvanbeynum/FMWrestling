@@ -452,7 +452,8 @@ router.get("/data/event", authInternal, async (request, response) => {
 			startDate: request.query.startdate, 
 			endDate: request.query.enddate,
 			sqlIds: sqlIdList,
-			select: request.query.select ? request.query.select.split(",") : null
+			select: request.query.select ? request.query.select.split(",") : null,
+			excludeMatches: request.query.excludematches === "true"
 		};
 
 		const results = await data.eventGet(filter);

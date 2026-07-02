@@ -281,7 +281,7 @@ export default {
 			eventParams.push(`enddate=${ endDate }`);
 		}
 
-		const eventSelect = "sqlId,eventSystem,systemId,eventType,name,date,endDate,location,state";
+		const eventSelect = "sqlId,eventSystem,systemId,eventType,name,date,endDate,location,state,hasMatches";
 
 		eventParams.push(`select=${ eventSelect }`);
 
@@ -2626,6 +2626,24 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 		}
 
 		output.status = 200;
+		return output;
+	},
+
+	eventDetailsLoad: async (serverPath, eventId) => {
+		const output = { data: {} };
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/event?id=${ eventId }`);
+			if (clientResponse.body.events && clientResponse.body.events.length > 0) {
+				output.data.event = clientResponse.body.events[0];
+				output.status = 200;
+			} else {
+				output.status = 404;
+				output.error = "Event not found";
+			}
+		} catch (error) {
+			output.status = 500;
+			output.error = error.message;
+		}
 		return output;
 	}
 

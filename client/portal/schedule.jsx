@@ -357,18 +357,31 @@ const Schedule = props => {
 													MANAGE LINEUP &rarr;
 												</button>
 											) : (
-												<button 
-													className="eventActionBtn tournament"
-													onClick={ () => {
-														if (/flo/i.test(event.eventSystem)) {
-															window.open(`https://events.flowrestling.org/event/${ event.systemId }/summary`);
-														} else if (/track/i.test(event.eventSystem)) {
-															window.open(`https://www.trackwrestling.com/tw/${ event.eventType || "tournament" }/VerifyPassword.jsp?tournamentId=${ event.systemId }`);
-														}
-													}}
-												>
-													VIEW BRACKETS &rarr;
-												</button>
+												<>
+													{event.hasMatches ? (
+														<button 
+															className="eventActionBtn tournament"
+															onClick={ () => { window.location.href = `/portal/tournamentsummary.html?id=${ event.id }`; } }
+														>
+															VIEW EVENT &rarr;
+														</button>
+													) : (
+														(event.eventSystem === "Flo" || event.eventSystem === "Track" || /flo/i.test(event.eventSystem) || /track/i.test(event.eventSystem)) && (
+															<button 
+																className="eventActionBtn tournament"
+																onClick={ () => {
+																	if (/flo/i.test(event.eventSystem)) {
+																		window.open(`https://events.flowrestling.org/event/${ event.systemId }/summary`);
+																	} else if (/track/i.test(event.eventSystem)) {
+																		window.open(`https://www.trackwrestling.com/tw/${ event.eventType || "tournament" }/VerifyPassword.jsp?tournamentId=${ event.systemId }`);
+																	}
+																}}
+															>
+																VIEW BRACKETS &rarr;
+															</button>
+														)
+													)}
+												</>
 											)}
 										</div>
 									</div>

@@ -1343,12 +1343,26 @@ export default {
 		}
 		if (userFilter.select) {
 			select = userFilter.select.reduce((output, current) => ({...output, [current]: 1 }), {});
+			if (userFilter.select.includes("hasMatches")) {
+				select["matches"] = 1;
+			}
 		}
 
 		try {
 			const records = await data.event.find(filter).select(select).lean().exec();
 			output.status = 200;
-			output.data = { events: records.map(({ _id, __v, ...data }) => ({ id: _id, ...data })) };
+			output.data = { 
+				events: records.map(({ _id, __v, matches, ...data }) => {
+					const hasMatches = !!(matches && matches.length > 0);
+					const item = { id: _id, hasMatches, ...data };
+					if (!userFilter.excludeMatches && (!userFilter.select || userFilter.select.includes("matches"))) {
+						item.matches = matches || [];
+					} else {
+						delete item.matches;
+					}
+					return item;
+				}) 
+			};
 		}
 		catch (error) {
 			output.status = 560;

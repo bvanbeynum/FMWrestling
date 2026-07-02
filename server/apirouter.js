@@ -84,6 +84,14 @@ router.get("/api/scheduleload", authAPI, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : output);
 });
 
+router.get("/api/eventdetailsload", authAPI, async (request, response) => {
+	if (!request.query.id) {
+		return response.status(400).json({ error: "Missing event ID" });
+	}
+	const results = await api.eventDetailsLoad(request.serverPath, request.query.id);
+	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
+});
+
 router.get("/api/requestsload", authAPI, async (request, response) => {
 	const results = await api.requestsLoad(request.serverPath);
 

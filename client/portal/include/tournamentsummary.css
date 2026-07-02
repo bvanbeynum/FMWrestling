@@ -1,0 +1,263 @@
+/* Custom styles for Tournament Summary Regional Scouting Dashboard */
+
+:root {
+	--primary: #3246e5;
+	--secondary: #904d00;
+	--secondary-container: #fd8b00;
+	--tertiary: #3c5c93;
+	--background: #f8f9fa;
+	--surface: #ffffff;
+	--outline: #757687;
+	--on-surface: #191c1d;
+	--on-surface-variant: #444655;
+	--outline-variant: #c5c5d8;
+	--primary-fixed: #dfe0ff;
+	--rounded-sm: 0.25rem;
+	--rounded-lg: 0.5rem;
+}
+
+/* Base Layout & Header - Mobile First */
+.ts-container {
+	padding: 16px;
+	max-width: 1200px;
+	margin: 0 auto;
+	background-color: var(--background);
+	color: var(--on-surface);
+}
+
+.ts-header {
+	margin-bottom: 24px;
+	border-bottom: 2px solid var(--outline-variant);
+	padding-bottom: 16px;
+}
+
+.ts-title {
+	font-size: 28px;
+	font-weight: 700;
+	text-transform: uppercase;
+	color: var(--tertiary);
+	margin: 0 0 8px 0;
+	line-height: 1.1;
+}
+
+.ts-subtitle {
+	font-size: 14px;
+	color: var(--on-surface-variant);
+	margin: 0;
+}
+
+/* KPI Cards - Mobile First Stacked */
+.ts-kpis {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 16px;
+	margin-bottom: 24px;
+}
+
+@media (min-width: 576px) {
+	.ts-kpis {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+@media (min-width: 992px) {
+	.ts-kpis {
+		grid-template-columns: repeat(4, 1fr);
+	}
+}
+
+.ts-card {
+	background: var(--surface);
+	border: 1px solid var(--outline-variant);
+	border-radius: var(--rounded-sm);
+	padding: 16px;
+	border-left: 4px solid var(--primary);
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+}
+
+.ts-card.highlight {
+	border-left-color: var(--secondary-container);
+}
+
+.ts-card-label {
+	font-size: 12px;
+	font-weight: 500;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--on-surface-variant);
+	margin-bottom: 8px;
+}
+
+.ts-card-value {
+	font-size: 32px;
+	font-weight: 700;
+	color: var(--on-surface);
+	line-height: 1;
+}
+
+/* Dashboard Sections */
+.ts-sections-grid {
+	display: grid;
+	grid-template-columns: 100%;
+	gap: 24px;
+}
+
+@media (min-width: 992px) {
+	.ts-sections-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+	
+	.ts-section-full {
+		grid-column: span 2;
+	}
+}
+
+.ts-section {
+	background: var(--surface);
+	border: 1px solid var(--outline-variant);
+	border-radius: var(--rounded-sm);
+	padding: 16px;
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	overflow: hidden;
+}
+
+.ts-section-title {
+	font-size: 20px;
+	font-weight: 600;
+	text-transform: uppercase;
+	color: var(--tertiary);
+	margin: 0 0 16px 0;
+	border-bottom: 1px solid var(--outline-variant);
+	padding-bottom: 8px;
+}
+
+/* Scatter Plot Specific Styles */
+.ts-scatter-container {
+	position: relative;
+	width: 100%;
+}
+
+.ts-scatter-svg {
+	background: var(--surface);
+	display: block;
+	width: 100%;
+	height: auto;
+}
+
+.ts-tooltip {
+	position: absolute;
+	background: #2e3132;
+	color: #f0f1f2;
+	padding: 8px 12px;
+	border-radius: var(--rounded-sm);
+	font-size: 11px;
+	pointer-events: none;
+	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+	z-index: 100;
+	max-width: 250px;
+	line-height: 1.4;
+}
+
+/* Heatmap Box Plot Specific Styles */
+.ts-boxplot-list {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	width: 100%;
+	margin: 0 auto;
+}
+
+.ts-boxplot-row {
+	display: grid;
+	grid-template-columns: 70px 240px;
+	align-items: center;
+	gap: 12px;
+	height: 35px;
+}
+
+.ts-boxplot-chart {
+	width: 240px;
+	height: 35px;
+}
+
+/* Matrix Matrix Specific Styles */
+.ts-matrix-scroll-wrapper {
+	width: 100%;
+	overflow-x: auto;
+	border: 1px solid var(--outline-variant);
+}
+
+.ts-matrix-table {
+	width: 100%;
+	min-width: 650px;
+	border-collapse: collapse;
+	font-size: 12px;
+}
+
+.ts-matrix-table th {
+	background: var(--surface-container-low, #f3f4f5);
+	top: 0;
+	z-index: 10;
+	padding: 8px;
+	text-align: center;
+	border: 1px solid var(--outline-variant);
+	font-weight: 700;
+	text-transform: uppercase;
+}
+
+.ts-matrix-table td {
+	padding: 6px 8px;
+	border: 1px solid var(--outline-variant);
+	text-align: center;
+}
+
+.ts-matrix-team-cell {
+	position: sticky;
+	left: 0;
+	background: var(--surface);
+	z-index: 9;
+	text-align: left !important;
+	font-weight: 700;
+	min-width: 120px;
+	border-right: 2px solid var(--outline) !important;
+}
+
+.ts-matrix-value-cell {
+	color: #fff;
+	font-weight: 700;
+	transition: background-color 0.2s ease;
+}
+
+.ts-matrix-value-cell.empty {
+	background-color: var(--background);
+	color: var(--outline-variant);
+	font-weight: 400;
+}
+
+/* Back Link styling */
+.ts-back-link {
+	display: inline-flex;
+	align-items: center;
+	margin-bottom: 16px;
+	color: var(--primary);
+	text-decoration: none;
+	font-weight: 600;
+	font-size: 14px;
+	cursor: pointer;
+}
+
+.ts-back-link:hover {
+	text-decoration: underline;
+}
+
+.ts-empty-state {
+	text-align: center;
+	padding: 40px;
+	color: var(--on-surface-variant);
+	border: 1px dashed var(--outline);
+	border-radius: var(--rounded-sm);
+}
