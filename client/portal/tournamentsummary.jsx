@@ -300,7 +300,7 @@ const TournamentSummary = () => {
 								<text x="5" y="118" fontSize="8" fill="#757687" textAnchor="start">
 									{minGlicko.toFixed(0)} (Min)
 								</text>
-								<text x={peakX} y="118" fontSize="8" fill="#3c5c93" textAnchor="middle" fontWeight="bold">
+								<text x={peakX} y="118" fontSize="8" fill="#3c5c93" textAnchor="middle">
 									{avgGlicko.toFixed(0)} (Avg)
 								</text>
 								<text x="295" y="118" fontSize="8" fill="#757687" textAnchor="end">

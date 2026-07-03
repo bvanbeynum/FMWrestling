@@ -12,12 +12,11 @@
 	--outline: #e2e8f0;
 	--outline-variant: #cbd5e0;
 	
-	--font-headers: 'Archivo Narrow', sans-serif;
-	--font-body: 'Inter', sans-serif;
+	--font-headers: 'Russo One', sans-serif;
+	--font-body: 'Roboto', sans-serif;
 	
-	--rounded-xs: 4px;
-	--rounded-sm: 8px;
-	--rounded-md: 12px;
+	--rounded-sm: 4px;
+	--rounded-md: 8px;
 }
 
 body {
@@ -48,8 +47,8 @@ body {
 .title {
 	font-family: var(--font-headers);
 	font-size: 26px;
-	font-weight: 800;
-	color: var(--primary);
+	font-weight: 400;
+	color: rgb(10 66 115);
 	text-transform: uppercase;
 	letter-spacing: -0.01em;
 	margin: 10px 0 8px 0;
@@ -68,7 +67,7 @@ body {
 	color: var(--primary);
 	background-color: var(--surface);
 	border: 1.5px solid var(--outline);
-	border-radius: var(--rounded-xs);
+	border-radius: var(--rounded-sm);
 	padding: 6px 14px;
 	cursor: pointer;
 	outline: none;
@@ -122,7 +121,6 @@ body {
 .kpiVal {
 	font-family: var(--font-headers);
 	font-size: 22px;
-	font-weight: 800;
 	color: var(--primary);
 	line-height: 1.1;
 }
@@ -130,7 +128,6 @@ body {
 .kpiLbl {
 	font-family: var(--font-body);
 	font-size: 9.5px;
-	font-weight: 700;
 	color: #718096;
 	letter-spacing: 0.05em;
 	margin-top: 1px;
@@ -151,24 +148,23 @@ body {
 
 .intensityTitle {
 	font-family: var(--font-body);
-	font-size: 15px;
-	font-weight: 700;
-	color: #1a202c;
+	font-size: 18px;
 	margin: 0;
+	color: #2b6cb0;
 }
 
 .intensityStats {
 	display: flex;
-	flex-direction: column;
-	margin-top: 4px;
-	margin-bottom: 12px;
+	margin: 12px 0px;
+	gap: 8px;
 	text-align: left;
+	align-items: baseline;
 }
 
 .intensityVal {
-	font-family: var(--font-headers);
+	font-family: var(--font-body);
 	font-size: 22px;
-	font-weight: 800;
+	font-weight: bold;
 	color: var(--secondary-variant);
 	line-height: 1;
 }
@@ -224,6 +220,9 @@ body {
 	padding: 14px 16px;
 	box-shadow: 0 1px 3px rgba(0,0,0,0.02);
 	position: relative;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
 }
 
 .insightCard.upset {
@@ -240,12 +239,11 @@ body {
 
 .insightTag {
 	display: inline-block;
-	font-family: var(--font-headers);
 	font-size: 11px;
-	font-weight: 700;
+	font-weight: bold;
 	letter-spacing: 0.04em;
 	padding: 3px 8px;
-	border-radius: 3px;
+	border-radius: 2px;
 }
 
 .insightTag.upset {
@@ -272,10 +270,6 @@ body {
 	flex: 1;
 }
 
-.wrestler.win {
-	font-weight: 700;
-}
-
 .wrestlerName {
 	font-family: var(--font-body);
 	font-size: 14px;
@@ -294,15 +288,11 @@ body {
 }
 
 .vs {
-	font-family: var(--font-headers);
 	font-size: 12px;
 	font-weight: 800;
 	color: var(--secondary-variant);
-	background: #fff8f0;
 	padding: 2px 6px;
-	border-radius: var(--rounded-xs);
 	text-transform: uppercase;
-	border: 1px solid #ffe8d6;
 	margin: 0 4px;
 }
 
