@@ -4,62 +4,104 @@ import Nav from "./nav.jsx";
 import "./include/index.css";
 import "./include/schedule.css";
 
+const getSeasonOptions = (date) => {
+	const currentYear = date.getFullYear();
+	const currentMonth = date.getMonth(); // 0-indexed, so 8 is September
+	let startYear;
+	if (currentMonth >= 8) { // Sept - Dec
+		startYear = currentYear;
+	} else { // Jan - Aug
+		startYear = currentYear - 1;
+	}
+	
+	const formatSeason = (start) => {
+		const sShort = start.toString().slice(-2);
+		const eShort = (start + 1).toString().slice(-2);
+		return {
+			name: `${sShort}-${eShort}`,
+			startDate: `${start}-09-01`,
+			endDate: `${start + 1}-08-31`
+		};
+	};
+
+	return [
+		formatSeason(startYear),      // Current season
+		formatSeason(startYear - 1)   // Previous season
+	];
+};
+
 const Schedule = props => {
+	const seasonOptions = getSeasonOptions(new Date());
 	const [ pageActive, setPageActive ] = useState(false);
 	const [ isLoading, setIsLoading ] = useState(true);
 	const [ loggedInUser, setLoggedInUser ] = useState(null);
 	const [ events, setEvents ] = useState([]);
 
+	const [ selectedState, setSelectedState ] = useState("SC");
+	const [ selectedSeason, setSelectedSeason ] = useState(seasonOptions[0].name);
 	const [ selectedEventType, setSelectedEventType ] = useState("All");
 	
 	const [ viewDate, setViewDate ] = useState(new Date());
 	const [ selectedDate, setSelectedDate ] = useState(new Date());
 
 	useEffect(() => {
-		if (!pageActive) {
-			const today = new Date();
-			const start = new Date(today.getFullYear() - 1, 0, 1);
-			const end = new Date(today.getFullYear() + 1, 11, 31);
-			const startStr = start.toISOString().split("T")[0];
-			const endStr = end.toISOString().split("T")[0];
-			
-			fetch(`/api/scheduleload?startdate=${startStr}&enddate=${endStr}`)
-				.then(response => {
-					if (response.ok) {
-						return response.json();
-					} else {
-						throw Error(response.statusText);
-					}
-				})
-				.then(data => {
-					const loadedEvents = [
-						...(data.events || [])
-					].map(event => ({
-						...event,
-						type: event.eventSystem?.toLowerCase(),
-						date: new Date(event.date),
-						endDate: event.endDate ? new Date(event.endDate) : null
-					}));
-
-					// Prevent duplicate dual entries if the dual has been integrated as an event
-					const eventSystemIds = new Set(
-						loadedEvents
-							.filter(e => e.eventSystem === "WrestlingPortal" && e.systemId)
-							.map(e => e.systemId)
-					);
-
-					const allEvents = loadedEvents;
-					setLoggedInUser(data.loggedInUser);
-					setEvents(allEvents);
-					setPageActive(true);
-					setIsLoading(false);
-				})
-				.catch(error => {
-					console.warn(error);
-					setIsLoading(false);
-				});
+		setIsLoading(true);
+		const seasonOpt = seasonOptions.find(opt => opt.name === selectedSeason) || seasonOptions[0];
+		const startStr = seasonOpt.startDate;
+		const endStr = seasonOpt.endDate;
+		
+		let url = `/api/scheduleload?startdate=${startStr}&enddate=${endStr}`;
+		if (selectedState !== "All") {
+			url += `&state=${selectedState}`;
 		}
-	}, []);
+		
+		fetch(url)
+			.then(response => {
+				if (response.ok) {
+					return response.json();
+				} else {
+					throw Error(response.statusText);
+				}
+			})
+			.then(data => {
+				const loadedEvents = [
+					...(data.events || [])
+				].map(event => ({
+					...event,
+					type: event.eventSystem?.toLowerCase(),
+					date: new Date(event.date),
+					endDate: event.endDate ? new Date(event.endDate) : null
+				}));
+
+				// Prevent duplicate dual entries if the dual has been integrated as an event
+				const eventSystemIds = new Set(
+					loadedEvents
+						.filter(e => e.eventSystem === "WrestlingPortal" && e.systemId)
+						.map(e => e.systemId)
+				);
+
+				const allEvents = loadedEvents;
+				setLoggedInUser(data.loggedInUser);
+				setEvents(allEvents);
+				setPageActive(true);
+				setIsLoading(false);
+
+				const sDate = new Date(Date.parse(startStr));
+				const eDate = new Date(Date.parse(endStr));
+				const today = new Date();
+				if (today >= sDate && today <= eDate) {
+					setViewDate(today);
+					setSelectedDate(today);
+				} else {
+					setViewDate(sDate);
+					setSelectedDate(sDate);
+				}
+			})
+			.catch(error => {
+				console.warn(error);
+				setIsLoading(false);
+			});
+	}, [selectedState, selectedSeason]);
 
 	const getEventCategory = (event) => {
 		const system = (event.eventSystem || "").toLowerCase();
@@ -147,17 +189,12 @@ const Schedule = props => {
 		e.date && e.date.getFullYear() === viewDate.getFullYear() && e.date.getMonth() === viewDate.getMonth()
 	);
 
-	const formatTimeString = (date, endDate) => {
+	const formatTimeString = (date) => {
 		if (!date || isNaN(date.getTime())) return "All Day";
 		const hours = date.getHours();
 		const minutes = date.getMinutes();
 		if (hours === 0 && minutes === 0) return "All Day";
-		const startStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-		if (endDate && !isNaN(endDate.getTime())) {
-			const endStr = endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-			return `${startStr} - ${endStr}`;
-		}
-		return startStr;
+		return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 	};
 
 	const monthNamesShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -194,6 +231,28 @@ const Schedule = props => {
 					</div>
 
 					<div className="scheduleFilters">
+						<select 
+							value={ selectedState } 
+							onChange={ e => setSelectedState(e.target.value) }
+							aria-label="Filter State"
+						>
+							<option value="SC">SC</option>
+							<option value="NC">NC</option>
+							<option value="GA">GA</option>
+							<option value="TN">TN</option>
+							<option value="All">All States</option>
+						</select>
+
+						<select 
+							value={ selectedSeason } 
+							onChange={ e => setSelectedSeason(e.target.value) }
+							aria-label="Filter Season"
+						>
+							{seasonOptions.map(opt => (
+								<option key={opt.name} value={opt.name}>{opt.name}</option>
+							))}
+						</select>
+
 						<select 
 							value={ selectedEventType } 
 							onChange={ e => setSelectedEventType(e.target.value) }
@@ -257,7 +316,7 @@ const Schedule = props => {
 									<div className="dayIndicators">
 										{ dayEvents.length > 0 && (
 											<div className={`eventCountPill ${ isSelected ? "selected" : "" }`}>
-												{ dayEvents.length } { dayEvents.length === 1 ? "event" : "events" }
+												{ dayEvents.length }<span className="pillText">{ dayEvents.length === 1 ? " event" : " events" }</span>
 											</div>
 										)}
 									</div>
@@ -265,11 +324,6 @@ const Schedule = props => {
 							);
 						})}
 					</div>
-				</div>
-
-				<div className="calendarLegend">
-					<span className="legendItem"><span className="dot tournament"></span> TOURNAMENT</span>
-					<span className="legendItem"><span className="dot dual"></span> DUAL MEET</span>
 				</div>
 
 				<div className="eventsStreamSection">
@@ -313,7 +367,7 @@ const Schedule = props => {
 												{ category.toUpperCase() }
 											</span>
 											<span className={`eventTime ${ badgeClass }`}>
-												{ formatTimeString(event.date, event.endDate) }
+												{ formatTimeString(event.date) }
 											</span>
 										</div>
 

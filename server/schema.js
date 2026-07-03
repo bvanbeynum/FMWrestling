@@ -179,47 +179,55 @@ export default {
 		expires: Date
 	}),
 
-	event: mongoose.model("event", {
-		sqlId: Number,
-		eventSystem: String,
-		systemId: String,
-		eventType: String,
-		name: String,
-		date: Date,
-		endDate: Date,
-		location: String,
-		state: String,
-		created: Date,
-		modified: Date,
-		summaryStats: {
-			totalMatches: Number,
-			averageGlicko: Number,
-			upsetPercentage: Number,
-			bonusPointPercentage: Number
-		},
-		matches: [{
-			matchSqlId: Number,
-			weightClass: String,
-			roundName: String,
-			winType: String,
-			isUpset: Boolean, 
-			winner: {
-				wrestlerSqlId: Number,
-				name: String,
-				team: String,
-				rating: Number,
-				deviation: Number
+	event: (() => {
+		const schema = new mongoose.Schema({
+			sqlId: Number,
+			eventSystem: String,
+			systemId: String,
+			eventType: String,
+			name: String,
+			date: Date,
+			endDate: Date,
+			location: String,
+			state: String,
+			created: Date,
+			modified: Date,
+			summaryStats: {
+				totalMatches: Number,
+				averageGlicko: Number,
+				upsetPercentage: Number,
+				bonusPointPercentage: Number
 			},
-			loser: {
-				wrestlerSqlId: Number,
-				name: String,
-				team: String,
-				rating: Number,
-				deviation: Number
-			}
-		}
-		]
-	}),
+			matches: [{
+				matchSqlId: Number,
+				division: String,
+				weightClass: String,
+				roundName: String,
+				winType: String,
+				isUpset: Boolean, 
+				winner: {
+					wrestlerSqlId: Number,
+					name: String,
+					team: String,
+					rating: Number,
+					deviation: Number
+				},
+				loser: {
+					wrestlerSqlId: Number,
+					name: String,
+					team: String,
+					rating: Number,
+					deviation: Number
+				}
+			}]
+		});
+		schema.index({ state: 1, date: 1 });
+		schema.index({ state: 1, endDate: 1 });
+		schema.index({ date: 1 });
+		schema.index({ endDate: 1 });
+		return mongoose.model("event", schema);
+	})(),
+
 
 	scmatTeam: mongoose.model("scmatteam", {
 		name: String,

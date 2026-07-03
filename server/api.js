@@ -272,13 +272,16 @@ export default {
 		}
 	},
 
-	scheduleLoad: async (serverPath, startDate, endDate) => {
+	scheduleLoad: async (serverPath, startDate, endDate, state) => {
 		const output = { data: {} };
 		let eventParams = [];
 
 		if (startDate && endDate) {
 			eventParams.push(`startdate=${ startDate }`);
 			eventParams.push(`enddate=${ endDate }`);
+		}
+		if (state) {
+			eventParams.push(`state=${ state }`);
 		}
 
 		const eventSelect = "sqlId,eventSystem,systemId,eventType,name,date,endDate,location,state,hasMatches";
@@ -2632,9 +2635,86 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 	eventDetailsLoad: async (serverPath, eventId) => {
 		const output = { data: {} };
 		try {
-			const clientResponse = await client.get(`${ serverPath }/data/event?id=${ eventId }`);
-			if (clientResponse.body.events && clientResponse.body.events.length > 0) {
-				output.data.event = clientResponse.body.events[0];
+			const eventResponse = await client.get(`${ serverPath }/data/event?id=${ eventId }`);
+			if (eventResponse.body.events && eventResponse.body.events.length > 0) {
+				const event = eventResponse.body.events[0];
+				
+				// 1. Extract wrestler SQL IDs
+				const wrestlerSqlIds = new Set();
+				(event.matches || []).forEach(m => {
+					if (m.winner && m.winner.wrestlerSqlId) wrestlerSqlIds.add(m.winner.wrestlerSqlId);
+					if (m.loser && m.loser.wrestlerSqlId) wrestlerSqlIds.add(m.loser.wrestlerSqlId);
+				});
+
+				// 2. Query wrestler profiles from the data layer
+				const wrestlerDivisionMap = new Map();
+				if (wrestlerSqlIds.size > 0) {
+					try {
+						const wrestlerResponse = await client.get(`${ serverPath }/data/wrestler?sqlids=${JSON.stringify(Array.from(wrestlerSqlIds))}`);
+						const wrestlers = wrestlerResponse.body.wrestlers || [];
+						wrestlers.forEach(w => {
+							if (w.division) wrestlerDivisionMap.set(w.sqlId, w.division);
+						});
+					} catch (e) {
+						console.error("API error fetching wrestlers in eventDetailsLoad:", e);
+					}
+				}
+
+				// 3. Resolve division for each match
+				(event.matches || []).forEach(m => {
+					if (!m.division) {
+						if (m.winner && m.winner.wrestlerSqlId && wrestlerDivisionMap.has(m.winner.wrestlerSqlId)) {
+							m.division = wrestlerDivisionMap.get(m.winner.wrestlerSqlId);
+						} else if (m.loser && m.loser.wrestlerSqlId && wrestlerDivisionMap.has(m.loser.wrestlerSqlId)) {
+							m.division = wrestlerDivisionMap.get(m.loser.wrestlerSqlId);
+						} else {
+							const wc = (m.weightClass || "").toLowerCase();
+							if (wc.startsWith("jv") || wc.includes(" jv") || wc.includes("jv ")) {
+								m.division = "JV";
+							} else if (wc.includes("middle school") || wc.startsWith("ms")) {
+								m.division = "Middle School";
+							} else if (wc.includes("girls") || wc.startsWith("g-") || wc.startsWith("girls-")) {
+								m.division = "Girls";
+							} else {
+								m.division = "Varsity";
+							}
+						}
+					}
+				});
+
+				// 4. Extract team names
+				const teamNamesSet = new Set();
+				(event.matches || []).forEach(m => {
+					if (m.winner?.team) teamNamesSet.add(m.winner.team);
+					if (m.loser?.team) teamNamesSet.add(m.loser.team);
+				});
+				const teamNames = Array.from(teamNamesSet).filter(Boolean);
+
+				// 5. Query schools matching team names
+				let familiarTeamsList = [];
+				if (teamNames.length > 0) {
+					try {
+						const schoolResponse = await client.get(`${ serverPath }/data/school?names=${JSON.stringify(teamNames)}`);
+						const schools = schoolResponse.body.schools || [];
+
+						const schoolNamesSet = new Set();
+						schools.forEach(s => {
+							if (s.name) schoolNamesSet.add(s.name.toLowerCase().trim());
+							if (s.lookupNames) {
+								s.lookupNames.forEach(name => {
+									if (name) schoolNamesSet.add(name.toLowerCase().trim());
+								});
+							}
+						});
+
+						familiarTeamsList = teamNames.filter(t => schoolNamesSet.has(t.toLowerCase().trim()));
+					} catch (e) {
+						console.error("API error fetching schools in eventDetailsLoad:", e);
+					}
+				}
+				event.familiarTeams = familiarTeamsList;
+
+				output.data.event = event;
 				output.status = 200;
 			} else {
 				output.status = 404;

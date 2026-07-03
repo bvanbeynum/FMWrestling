@@ -1,263 +1,423 @@
-/* Custom styles for Tournament Summary Regional Scouting Dashboard */
-
+/* Variables & Design Tokens */
 :root {
 	--primary: #3246e5;
-	--secondary: #904d00;
-	--secondary-container: #fd8b00;
-	--tertiary: #3c5c93;
-	--background: #f8f9fa;
+	--primary-variant: #3246e5;
+	--on-primary: #ffffff;
+	
+	--secondary: #ed8936;
+	--secondary-variant: #dd6b20;
+	
+	--background: #f7fafc;
 	--surface: #ffffff;
-	--outline: #757687;
-	--on-surface: #191c1d;
-	--on-surface-variant: #444655;
-	--outline-variant: #c5c5d8;
-	--primary-fixed: #dfe0ff;
-	--rounded-sm: 0.25rem;
-	--rounded-lg: 0.5rem;
+	--outline: #e2e8f0;
+	--outline-variant: #cbd5e0;
+	
+	--font-headers: 'Archivo Narrow', sans-serif;
+	--font-body: 'Inter', sans-serif;
+	
+	--rounded-xs: 4px;
+	--rounded-sm: 8px;
+	--rounded-md: 12px;
 }
 
-/* Base Layout & Header - Mobile First */
-.ts-container {
-	padding: 16px;
-	max-width: 1200px;
-	margin: 0 auto;
+body {
+	font-family: var(--font-body);
 	background-color: var(--background);
 	color: var(--on-surface);
-}
-
-.ts-header {
-	margin-bottom: 24px;
-	border-bottom: 2px solid var(--outline-variant);
-	padding-bottom: 16px;
-}
-
-.ts-title {
-	font-size: 28px;
-	font-weight: 700;
-	text-transform: uppercase;
-	color: var(--tertiary);
-	margin: 0 0 8px 0;
-	line-height: 1.1;
-}
-
-.ts-subtitle {
-	font-size: 14px;
-	color: var(--on-surface-variant);
 	margin: 0;
+	padding: 0;
 }
 
-/* KPI Cards - Mobile First Stacked */
-.ts-kpis {
-	display: grid;
-	grid-template-columns: 1fr;
-	gap: 16px;
-	margin-bottom: 24px;
-}
-
-@media (min-width: 576px) {
-	.ts-kpis {
-		grid-template-columns: repeat(2, 1fr);
-	}
-}
-
-@media (min-width: 992px) {
-	.ts-kpis {
-		grid-template-columns: repeat(4, 1fr);
-	}
-}
-
-.ts-card {
-	background: var(--surface);
-	border: 1px solid var(--outline-variant);
-	border-radius: var(--rounded-sm);
+.container {
 	padding: 16px;
-	border-left: 4px solid var(--primary);
+	padding-bottom: 72px; /* space for the fixed bottom nav */
+	max-width: 480px; /* target mobile width first matching event.png */
+	margin: 0 auto;
+	box-sizing: border-box;
+}
+
+/* Header & Dropdown */
+.header {
 	display: flex;
 	flex-direction: column;
+	align-items: center;
+	margin-bottom: 20px;
+	text-align: center;
+}
+
+.title {
+	font-family: var(--font-headers);
+	font-size: 26px;
+	font-weight: 800;
+	color: var(--primary);
+	text-transform: uppercase;
+	letter-spacing: -0.01em;
+	margin: 10px 0 8px 0;
+}
+
+.selectorContainer {
+	width: 100%;
+	display: flex;
 	justify-content: center;
 }
 
-.ts-card.highlight {
-	border-left-color: var(--secondary-container);
+.divisionDropdown {
+	font-family: var(--font-body);
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--primary);
+	background-color: var(--surface);
+	border: 1.5px solid var(--outline);
+	border-radius: var(--rounded-xs);
+	padding: 6px 14px;
+	cursor: pointer;
+	outline: none;
+	width: auto;
+	min-width: 140px;
+	text-align: center;
+	transition: border-color 0.2s ease;
 }
 
-.ts-card-label {
-	font-size: 12px;
-	font-weight: 500;
-	text-transform: uppercase;
-	letter-spacing: 0.05em;
-	color: var(--on-surface-variant);
-	margin-bottom: 8px;
+.divisionDropdown:focus {
+	border-color: var(--primary-variant);
 }
 
-.ts-card-value {
-	font-size: 32px;
+/* KPI Summary Cards Grid */
+.kpis {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 12px;
+	margin-bottom: 24px;
+}
+
+.kpiCard {
+	background: var(--surface);
+	border: 1.5px solid var(--outline);
+	border-radius: var(--rounded-sm);
+	padding: 16px 14px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+	gap: 8px;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+	border-left: 4.5px solid var(--primary-variant);
+}
+
+.kpiIcon {
+	color: var(--primary-variant);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	opacity: 0.85;
+}
+
+.kpiBody {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.kpiVal {
+	font-family: var(--font-headers);
+	font-size: 22px;
+	font-weight: 800;
+	color: var(--primary);
+	line-height: 1.1;
+}
+
+.kpiLbl {
+	font-family: var(--font-body);
+	font-size: 9.5px;
 	font-weight: 700;
-	color: var(--on-surface);
+	color: #718096;
+	letter-spacing: 0.05em;
+	margin-top: 1px;
+}
+
+/* Tournament Intensity Curve Card */
+.intensitySection {
+	margin-bottom: 24px;
+}
+
+.intensityCard {
+	background: var(--surface);
+	border: 1.5px solid var(--outline);
+	border-radius: var(--rounded-md);
+	padding: 16px;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+
+.intensityTitle {
+	font-family: var(--font-body);
+	font-size: 15px;
+	font-weight: 700;
+	color: #1a202c;
+	margin: 0;
+}
+
+.intensityStats {
+	display: flex;
+	flex-direction: column;
+	margin-top: 4px;
+	margin-bottom: 12px;
+	text-align: left;
+}
+
+.intensityVal {
+	font-family: var(--font-headers);
+	font-size: 22px;
+	font-weight: 800;
+	color: var(--secondary-variant);
 	line-height: 1;
 }
 
-/* Dashboard Sections */
-.ts-sections-grid {
-	display: grid;
-	grid-template-columns: 100%;
-	gap: 24px;
+.intensityLbl {
+	font-family: var(--font-body);
+	font-size: 9px;
+	font-weight: 700;
+	color: #718096;
+	letter-spacing: 0.05em;
+	margin-top: 2px;
 }
 
-@media (min-width: 992px) {
-	.ts-sections-grid {
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-	}
-	
-	.ts-section-full {
-		grid-column: span 2;
-	}
-}
-
-.ts-section {
-	background: var(--surface);
-	border: 1px solid var(--outline-variant);
+.curveContainer {
+	background: #f8fafc;
 	border-radius: var(--rounded-sm);
-	padding: 16px;
-	display: flex;
-	flex-direction: column;
-	min-width: 0;
-	overflow: hidden;
-}
-
-.ts-section-title {
-	font-size: 20px;
-	font-weight: 600;
-	text-transform: uppercase;
-	color: var(--tertiary);
-	margin: 0 0 16px 0;
-	border-bottom: 1px solid var(--outline-variant);
-	padding-bottom: 8px;
-}
-
-/* Scatter Plot Specific Styles */
-.ts-scatter-container {
+	padding: 12px 8px 6px 8px;
+	border: 1px solid #edf2f7;
 	position: relative;
-	width: 100%;
+	margin-top: 8px;
 }
 
-.ts-scatter-svg {
-	background: var(--surface);
-	display: block;
+.curveSvg {
 	width: 100%;
 	height: auto;
+	display: block;
 }
 
-.ts-tooltip {
-	position: absolute;
-	background: #2e3132;
-	color: #f0f1f2;
-	padding: 8px 12px;
-	border-radius: var(--rounded-sm);
-	font-size: 11px;
-	pointer-events: none;
-	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-	z-index: 100;
-	max-width: 250px;
-	line-height: 1.4;
+/* Insights Section */
+.insightsSection {
+	margin-bottom: 24px;
 }
 
-/* Heatmap Box Plot Specific Styles */
-.ts-boxplot-list {
+.sectionTitle {
+	font-family: var(--font-body);
+	font-size: 18px;
+	font-weight: 700;
+	color: #2b6cb0;
+	margin: 0 0 14px 0;
+	padding-bottom: 4px;
+}
+
+.insightsList {
 	display: flex;
 	flex-direction: column;
-	gap: 6px;
-	width: 100%;
-	margin: 0 auto;
-}
-
-.ts-boxplot-row {
-	display: grid;
-	grid-template-columns: 70px 240px;
-	align-items: center;
 	gap: 12px;
-	height: 35px;
 }
 
-.ts-boxplot-chart {
-	width: 240px;
-	height: 35px;
-}
-
-/* Matrix Matrix Specific Styles */
-.ts-matrix-scroll-wrapper {
-	width: 100%;
-	overflow-x: auto;
-	border: 1px solid var(--outline-variant);
-}
-
-.ts-matrix-table {
-	width: 100%;
-	min-width: 650px;
-	border-collapse: collapse;
-	font-size: 12px;
-}
-
-.ts-matrix-table th {
-	background: var(--surface-container-low, #f3f4f5);
-	top: 0;
-	z-index: 10;
-	padding: 8px;
-	text-align: center;
-	border: 1px solid var(--outline-variant);
-	font-weight: 700;
-	text-transform: uppercase;
-}
-
-.ts-matrix-table td {
-	padding: 6px 8px;
-	border: 1px solid var(--outline-variant);
-	text-align: center;
-}
-
-.ts-matrix-team-cell {
-	position: sticky;
-	left: 0;
+.insightCard {
 	background: var(--surface);
-	z-index: 9;
-	text-align: left !important;
-	font-weight: 700;
-	min-width: 120px;
-	border-right: 2px solid var(--outline) !important;
-}
-
-.ts-matrix-value-cell {
-	color: #fff;
-	font-weight: 700;
-	transition: background-color 0.2s ease;
-}
-
-.ts-matrix-value-cell.empty {
-	background-color: var(--background);
-	color: var(--outline-variant);
-	font-weight: 400;
-}
-
-/* Back Link styling */
-.ts-back-link {
-	display: inline-flex;
-	align-items: center;
-	margin-bottom: 16px;
-	color: var(--primary);
-	text-decoration: none;
-	font-weight: 600;
-	font-size: 14px;
-	cursor: pointer;
-}
-
-.ts-back-link:hover {
-	text-decoration: underline;
-}
-
-.ts-empty-state {
-	text-align: center;
-	padding: 40px;
-	color: var(--on-surface-variant);
-	border: 1px dashed var(--outline);
+	border: 1.5px solid var(--outline);
 	border-radius: var(--rounded-sm);
+	padding: 14px 16px;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+	position: relative;
+}
+
+.insightCard.upset {
+	border-left: 4px solid var(--secondary);
+}
+
+.insightCard.keyMatchup {
+	border-left: 4px solid var(--primary);
+}
+
+.insightHeader {
+	margin-bottom: 10px;
+}
+
+.insightTag {
+	display: inline-block;
+	font-family: var(--font-headers);
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	padding: 3px 8px;
+	border-radius: 3px;
+}
+
+.insightTag.upset {
+	background-color: #2b4c7e;
+	color: #ffffff;
+}
+
+.insightTag.matchup {
+	background-color: var(--primary);
+	color: #ffffff;
+}
+
+.insightMatchup {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding-right: 28px;
+	position: relative;
+}
+
+.wrestler {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+}
+
+.wrestler.win {
+	font-weight: 700;
+}
+
+.wrestlerName {
+	font-family: var(--font-body);
+	font-size: 14px;
+	color: #1a202c;
+}
+
+.wrestler.win .wrestlerName {
+	color: var(--primary);
+}
+
+.wrestlerGlicko {
+	font-family: var(--font-body);
+	font-size: 11px;
+	color: #718096;
+	margin-top: 1px;
+}
+
+.vs {
+	font-family: var(--font-headers);
+	font-size: 12px;
+	font-weight: 800;
+	color: var(--secondary-variant);
+	background: #fff8f0;
+	padding: 2px 6px;
+	border-radius: var(--rounded-xs);
+	text-transform: uppercase;
+	border: 1px solid #ffe8d6;
+	margin: 0 4px;
+}
+
+.matchMeta {
+	font-family: var(--font-body);
+	font-size: 11px;
+	font-weight: 500;
+	color: #718096;
+	margin-top: 4px;
+	text-transform: uppercase;
+	letter-spacing: 0.02em;
+}
+
+/* Familiar Faces Section */
+.facesSection {
+	margin-bottom: 20px;
+}
+
+.facesList {
+	background: var(--surface);
+	border: 1.5px solid var(--outline);
+	border-left: 4.5px solid var(--primary);
+	border-radius: var(--rounded-sm);
+	overflow: hidden;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+
+.faceRow {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 12px 16px;
+	border-bottom: 1.5px solid #f0f4f8;
+}
+
+.faceRow:last-child {
+	border-bottom: none;
+}
+
+.faceInfo {
+	display: flex;
+	flex-direction: column;
+}
+
+.faceSchool {
+	font-family: var(--font-body);
+	font-size: 15px;
+	font-weight: 700;
+	color: #1a202c;
+}
+
+.faceWrestlers {
+	font-family: var(--font-body);
+	font-size: 12px;
+	color: #718096;
+	margin-top: 1px;
+}
+
+.faceIcon {
+	color: #cbd5e0;
+	display: flex;
+	align-items: center;
+}
+
+/* Empty State / Loading State */
+.emptyState {
+	text-align: center;
+	padding: 24px;
+	background: var(--surface);
+	border: 1.5px dashed var(--outline-variant);
+	border-radius: var(--rounded-md);
+	color: var(--on-surface-variant);
+	font-size: 14px;
+}
+
+/* Desktop sizing adaptation */
+@media (min-width: 768px) {
+	.container {
+		max-width: 600px;
+	}
+}
+
+/* Sticky Bottom Navigation Bar */
+.bottomNav {
+	position: fixed;
+	bottom: 0;
+	left: 0;
+	width: 100%;
+	height: 56px;
+	background-color: var(--surface);
+	border-top: 1.5px solid #e2e8f0;
+	display: flex;
+	justify-content: space-around;
+	align-items: center;
+	z-index: 1000;
+}
+
+.navItem {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	color: #718096;
+	font-size: 11px;
+	font-weight: 500;
+	cursor: pointer;
+	text-decoration: none;
+	flex: 1;
+	padding: 6px 0;
+	transition: color 0.2s ease;
+}
+
+.navItem.active {
+	color: var(--primary);
+}
+
+.navItem svg {
+	margin-bottom: 3px;
 }

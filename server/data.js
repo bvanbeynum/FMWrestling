@@ -491,6 +491,13 @@ export default {
 			const searchName = userFilter.name.toLowerCase();
 			filter.searchName = { $regex: new RegExp(searchName) };
 		}
+		if (userFilter.names) {
+			const regexes = userFilter.names.map(name => new RegExp("^" + name.trim().replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&') + "$", "i"));
+			filter["$or"] = [
+				{ name: { $in: regexes } },
+				{ lookupNames: { $in: regexes } }
+			];
+		}
 		if (userFilter.select) {
 			select = userFilter.select.reduce((output, current) => ({...output, [current]: 1 }), {});
 		}
@@ -1341,10 +1348,17 @@ export default {
 		if (userFilter.sqlIds) {
 			filter.sqlId = { $in: userFilter.sqlIds };
 		}
+		if (userFilter.state) {
+			filter.state = userFilter.state;
+		}
 		if (userFilter.select) {
 			select = userFilter.select.reduce((output, current) => ({...output, [current]: 1 }), {});
 			if (userFilter.select.includes("hasMatches")) {
-				select["matches"] = 1;
+				if (userFilter.select.includes("matches")) {
+					select["matches"] = 1;
+				} else {
+					select["matches"] = { $slice: 1 };
+				}
 			}
 		}
 

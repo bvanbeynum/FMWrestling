@@ -21,6 +21,7 @@ describe("TournamentSummary component", () => {
 			upsetPercentage: 14.2,
 			bonusPointPercentage: 52.8
 		},
+		familiarTeams: ["Fort Mill", "Catawba Ridge"],
 		matches: [
 			{
 				matchSqlId: 558902,
@@ -28,6 +29,7 @@ describe("TournamentSummary component", () => {
 				roundName: "Quarter-Finals",
 				winType: "F",
 				isUpset: true,
+				division: "Varsity",
 				winner: {
 					wrestlerSqlId: 88492,
 					name: "Leo Thompson",
@@ -76,43 +78,81 @@ describe("TournamentSummary component", () => {
 		// Verify event title
 		expect(await screen.findByRole("heading", { name: "Palmetto State Classic" })).toBeInTheDocument();
 
-		// Verify KPI numeric content
-		expect(screen.getByText("450")).toBeInTheDocument();
-		expect(screen.getByText("1545.2")).toBeInTheDocument();
-		expect(screen.getByText("14.2%")).toBeInTheDocument();
-		expect(screen.getByText("52.8%")).toBeInTheDocument();
+		// Verify KPI numeric content for Varsity division
+		expect(screen.getByText("DIVISIONS")).toBeInTheDocument();
+		expect(screen.getByText("WT CLASSES")).toBeInTheDocument();
+		expect(screen.getByText("TEAMS")).toBeInTheDocument();
+		expect(screen.getByText("WRESTLERS")).toBeInTheDocument();
 	});
 
-	it("verifies scatter plot rendering for upsets", async () => {
+	it("verifies tournament intensity curve rendering", async () => {
 		render(<TournamentSummary />);
 
 		await waitFor(() => expect(global.fetch).toHaveBeenCalled());
 
-		// Verify "The Upset Radar" heading
-		expect(screen.getByRole("heading", { name: "The Upset Radar" })).toBeInTheDocument();
+		// Verify "Tournament Intensity" heading
+		expect(screen.getByRole("heading", { name: "Tournament Intensity" })).toBeInTheDocument();
 
-		// Verify presence of elements (SVG container and differential chart details)
-		const diffText = screen.getByText("Upset Differential");
-		expect(diffText).toBeInTheDocument();
+		// Verify presence of Average Glicko metric (avg of 1420.5 and 1650 is 1535.25, rounded to 1535)
+		expect(screen.getByText("1535")).toBeInTheDocument();
+		expect(screen.getByText("AVG GLICKO")).toBeInTheDocument();
 	});
 
-	it("verifies box plot rendering for weight spread", async () => {
+	it("verifies insights section rendering for upsets", async () => {
 		render(<TournamentSummary />);
 
 		await waitFor(() => expect(global.fetch).toHaveBeenCalled());
 
-		// Verify Weight Class list labels
-		expect(screen.getByText("138 lbs")).toBeInTheDocument();
-		expect(screen.getByText("1650")).toBeInTheDocument(); // Median text value overlay
+		// Verify "Insights" heading
+		expect(screen.getByRole("heading", { name: "Insights" })).toBeInTheDocument();
+
+		// Verify Upset details
+		expect(screen.getByText("MAJOR UPSET")).toBeInTheDocument();
+		expect(screen.getByText("W: Leo Thompson")).toBeInTheDocument();
+		expect(screen.getByText("Marcus Wright")).toBeInTheDocument();
 	});
 
-	it("verifies team matrix wins tally", async () => {
+	it("verifies familiar faces section rendering", async () => {
 		render(<TournamentSummary />);
 
 		await waitFor(() => expect(global.fetch).toHaveBeenCalled());
 
-		// Verify Team vs Weight Class list
-		expect(screen.getByText("Team Name")).toBeInTheDocument();
+		// Verify "Familiar Faces" heading
+		expect(screen.getByRole("heading", { name: "Familiar Faces" })).toBeInTheDocument();
+
+		// Verify presence of school names
 		expect(screen.getByText("Fort Mill")).toBeInTheDocument();
+		expect(screen.getByText("Catawba Ridge")).toBeInTheDocument();
+	});
+
+	it("verifies division dropdown behavior based on division count", async () => {
+		// Mock with 1 division (Varsity)
+		const { rerender } = render(<TournamentSummary />);
+		await waitFor(() => expect(global.fetch).toHaveBeenCalled());
+		expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+
+		// Rerender with multiple divisions
+		const mockEventMultiDivs = {
+			...mockEvent,
+			matches: [
+				...mockEvent.matches,
+				{
+					...mockEvent.matches[0],
+					matchSqlId: 999999,
+					division: "JV"
+				}
+			]
+		};
+		global.fetch.mockResolvedValueOnce({
+			ok: true,
+			status: 200,
+			json: jest.fn().mockResolvedValue({
+				event: mockEventMultiDivs,
+				loggedInUser: loggedInUser
+			})
+		});
+
+		rerender(<TournamentSummary />);
+		await waitFor(() => expect(screen.getByRole("combobox")).toBeInTheDocument());
 	});
 });

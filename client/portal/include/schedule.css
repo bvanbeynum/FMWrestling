@@ -216,6 +216,10 @@ button.lineupButton.addDual:hover {
 	line-height: 1;
 }
 
+.eventCountPill .pillText {
+	display: none;
+}
+
 .eventCountPill.selected {
 	background-color: #ffffff;
 	color: #3246e5;
@@ -284,6 +288,10 @@ button.lineupButton.addDual:hover {
 	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
 	display: flex;
 	flex-direction: column;
+	width: 100%;
+	max-width: 100%;
+	min-width: 0;
+	box-sizing: border-box;
 }
 
 .eventAccentBar {
@@ -308,6 +316,8 @@ button.lineupButton.addDual:hover {
 
 .eventCardHeader {
 	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
 	justify-content: space-between;
 	align-items: center;
 	margin-bottom: 0.75rem;
@@ -356,6 +366,8 @@ button.lineupButton.addDual:hover {
 	font-size: 1.15rem;
 	font-weight: 700;
 	color: #0f172a;
+	word-break: break-word;
+	overflow-wrap: break-word;
 }
 
 .eventMetaDetails {
@@ -371,6 +383,8 @@ button.lineupButton.addDual:hover {
 	display: inline-flex;
 	align-items: center;
 	gap: 4px;
+	word-break: break-word;
+	overflow-wrap: break-word;
 }
 
 .eventPills {
@@ -378,11 +392,34 @@ button.lineupButton.addDual:hover {
 }
 
 .eventCardDivider {
-	display: none; /* Hidden on mobile mockup, shown on desktop */
+	display: block;
+	height: 1px;
+	background-color: #f1f5f9;
+	margin: 1rem 0 0.75rem 0;
 }
 
 .eventCardFooter {
-	display: none; /* Hidden on mobile mockup, shown on desktop */
+	display: flex;
+	justify-content: flex-end;
+	align-items: center;
+}
+
+.eventActionBtn {
+	background: transparent;
+	border: none;
+	font-size: 0.85rem;
+	font-weight: 800;
+	color: #2563eb;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	letter-spacing: 0.04em;
+	transition: color 0.15s ease;
+}
+
+.eventActionBtn:hover {
+	color: #1d4ed8;
 }
 
 
@@ -499,6 +536,10 @@ button.lineupButton.addDual:hover {
 		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 	}
 
+	.eventCountPill .pillText {
+		display: inline;
+	}
+
 	.eventCountPill.selected {
 		background-color: #ffffff;
 		color: #3246e5;
@@ -585,34 +626,11 @@ button.lineupButton.addDual:hover {
 	}
 
 	.eventCardDivider {
-		display: block;
-		height: 1px;
-		background-color: #f1f5f9;
 		margin: 1.25rem 0 1rem 0;
 	}
 
-	.eventCardFooter {
-		display: flex;
-		justify-content: flex-end;
-		align-items: center;
-	}
-
-	.eventActionBtn {
-		background: transparent;
-		border: none;
-		font-size: 0.85rem;
-		font-weight: 800;
-		color: #2563eb;
-		cursor: pointer;
-		display: inline-flex;
-		align-items: center;
-		gap: 4px;
-		letter-spacing: 0.04em;
-		transition: color 0.15s ease;
-	}
-
-	.eventActionBtn:hover {
-		color: #1d4ed8;
+	.eventBadge {
+		display: none;
 	}
 }
 

@@ -150,6 +150,7 @@ router.get("/data/school", authInternal, async (request, response) => {
 		const filter = { 
 			id: request.query.id, 
 			name: request.query.name,
+			names: request.query.names ? JSON.parse(request.query.names) : null,
 			select: request.query.select ? request.query.select.split(",") : null
 		};
 
@@ -453,7 +454,8 @@ router.get("/data/event", authInternal, async (request, response) => {
 			endDate: request.query.enddate,
 			sqlIds: sqlIdList,
 			select: request.query.select ? request.query.select.split(",") : null,
-			excludeMatches: request.query.excludematches === "true"
+			excludeMatches: request.query.excludematches === "true",
+			state: request.query.state
 		};
 
 		const results = await data.eventGet(filter);
