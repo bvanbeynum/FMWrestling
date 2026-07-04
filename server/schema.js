@@ -192,12 +192,6 @@ export default {
 			state: String,
 			created: Date,
 			modified: Date,
-			summaryStats: {
-				totalMatches: Number,
-				averageGlicko: Number,
-				upsetPercentage: Number,
-				bonusPointPercentage: Number
-			},
 			matches: [{
 				matchSqlId: Number,
 				division: String,
