@@ -25,6 +25,36 @@ const TournamentSummary = () => {
 	const [loggedInUser, setLoggedInUser] = useState(null);
 	const [event, setEvent] = useState(null);
 	const [selectedDivision, setSelectedDivision] = useState("");
+	const [activeView, setActiveView] = useState("overview");
+	const [selectedTeam, setSelectedTeam] = useState("");
+
+	// Auto-select a default team when division or event changes (declared before early returns)
+	useEffect(() => {
+		if (!event) return;
+		const matchesList = event.matches || [];
+		const divisionMatches = matchesList.filter(match => (match.division || "Varsity") === selectedDivision);
+
+		const teamsSet = new Set();
+		divisionMatches.forEach(match => {
+			if (match.winner?.team) {
+				teamsSet.add(match.winner.team);
+			}
+			if (match.loser?.team) {
+				teamsSet.add(match.loser.team);
+			}
+		});
+		const divisionTeams = Array.from(teamsSet).sort();
+
+		if (divisionTeams.length > 0) {
+			if (!selectedTeam || !divisionTeams.includes(selectedTeam)) {
+				const familiarTeamsSet = new Set((event.familiarTeams || []).map(teamName => teamName.toLowerCase().trim()));
+				const familiarTeam = divisionTeams.find(teamName => familiarTeamsSet.has(teamName.toLowerCase().trim()));
+				setSelectedTeam(familiarTeam || divisionTeams[0]);
+			}
+		} else {
+			setSelectedTeam("");
+		}
+	}, [selectedDivision, event]);
 
 	// Read event ID from query parameters
 	const queryParams = new URLSearchParams(window.location.search);
@@ -276,6 +306,117 @@ const TournamentSummary = () => {
 	const minPlacerPct = placerPctArr.length > 0 ? Math.min(...placerPctArr) : 0;
 	const maxPlacerPct = placerPctArr.length > 0 ? Math.max(...placerPctArr) : 0;
 
+	// Derivate unique teams for the division dropdown
+	const uniqueTeamsSet = new Set();
+	filteredMatches.forEach(match => {
+		if (match.winner?.team) {
+			uniqueTeamsSet.add(match.winner.team);
+		}
+		if (match.loser?.team) {
+			uniqueTeamsSet.add(match.loser.team);
+		}
+	});
+	const uniqueTeams = Array.from(uniqueTeamsSet).sort();
+
+	// Filter division matches by selected team
+	const teamMatches = filteredMatches.filter(match => match.winner?.team === selectedTeam || match.loser?.team === selectedTeam);
+
+	// Calculate wrestler count for selected team
+	const teamWrestlersSet = new Set();
+	teamMatches.forEach(match => {
+		if (match.winner?.team === selectedTeam && match.winner.wrestlerSqlId) {
+			teamWrestlersSet.add(match.winner.wrestlerSqlId);
+		}
+		if (match.loser?.team === selectedTeam && match.loser.wrestlerSqlId) {
+			teamWrestlersSet.add(match.loser.wrestlerSqlId);
+		}
+	});
+	const teamWrestlersCount = teamWrestlersSet.size;
+
+	// Calculate wins and win rate for selected team
+	const teamWinsCount = teamMatches.filter(match => match.winner?.team === selectedTeam).length;
+	const totalTeamMatchesCount = teamMatches.length;
+	const teamWinPct = totalTeamMatchesCount > 0 ? (teamWinsCount / totalTeamMatchesCount) * 100 : 0;
+
+	// Calculate placers and placer percentage for selected team
+	const teamPlacersSet = new Set();
+	teamMatches.forEach(match => {
+		if (isPlacementRound(match.roundName)) {
+			if (match.winner?.team === selectedTeam && match.winner.wrestlerSqlId) {
+				teamPlacersSet.add(match.winner.wrestlerSqlId);
+			}
+			if (match.loser?.team === selectedTeam && match.loser.wrestlerSqlId) {
+				teamPlacersSet.add(match.loser.wrestlerSqlId);
+			}
+		}
+	});
+	const teamPlacersCount = teamPlacersSet.size;
+	const teamPlacerPct = teamWrestlersCount > 0 ? (teamPlacersCount / teamWrestlersCount) * 100 : 0;
+
+	// Calculate upset count for selected team
+	const teamUpsetsCount = teamMatches.filter(match => 
+		match.winner?.team === selectedTeam &&
+		match.winner?.rating && 
+		match.loser?.rating && 
+		match.winner.rating < match.loser.rating - (match.loser.deviation || 0) &&
+		!(match.winType && (match.winType.toLowerCase().includes("for") || match.winType.toLowerCase() === "nc"))
+	).length;
+
+	// Group and compile individual statistics for wrestlers of the selected team
+	const wrestlerStatsMap = {};
+	teamMatches.forEach(match => {
+		const winnerId = match.winner?.wrestlerSqlId;
+		const loserId = match.loser?.wrestlerSqlId;
+
+		if (winnerId && match.winner?.team === selectedTeam) {
+			if (!wrestlerStatsMap[winnerId]) {
+				wrestlerStatsMap[winnerId] = {
+					wrestlerSqlId: winnerId,
+					name: match.winner.name,
+					rating: match.winner.rating,
+					deviation: match.winner.deviation,
+					wins: 0,
+					losses: 0,
+					upsets: 0
+				};
+			}
+			wrestlerStatsMap[winnerId].wins += 1;
+
+			const isUpsetMatch = match.winner.rating && match.loser.rating && 
+				match.winner.rating < match.loser.rating - (match.loser.deviation || 0) &&
+				!(match.winType && (match.winType.toLowerCase().includes("for") || match.winType.toLowerCase() === "nc"));
+			if (isUpsetMatch) {
+				wrestlerStatsMap[winnerId].upsets += 1;
+			}
+		}
+
+		if (loserId && match.loser?.team === selectedTeam) {
+			if (!wrestlerStatsMap[loserId]) {
+				wrestlerStatsMap[loserId] = {
+					wrestlerSqlId: loserId,
+					name: match.loser.name,
+					rating: match.loser.rating,
+					deviation: match.loser.deviation,
+					wins: 0,
+					losses: 0,
+					upsets: 0
+				};
+			}
+			wrestlerStatsMap[loserId].losses += 1;
+		}
+	});
+
+	const wrestlersList = Object.values(wrestlerStatsMap);
+	wrestlersList.sort((firstWrestler, secondWrestler) => (secondWrestler.rating || 0) - (firstWrestler.rating || 0));
+
+	const wrestlerWinsArr = wrestlersList.map(wrestler => wrestler.wins);
+	const minWrestlerWins = wrestlerWinsArr.length > 0 ? Math.min(...wrestlerWinsArr) : 0;
+	const maxWrestlerWins = wrestlerWinsArr.length > 0 ? Math.max(...wrestlerWinsArr) : 0;
+
+	const wrestlerUpsetsArr = wrestlersList.map(wrestler => wrestler.upsets);
+	const minWrestlerUpsets = wrestlerUpsetsArr.length > 0 ? Math.min(...wrestlerUpsetsArr) : 0;
+	const maxWrestlerUpsets = wrestlerUpsetsArr.length > 0 ? Math.max(...wrestlerUpsetsArr) : 0;
+
 	return (
 		<div className="page">
 			<Nav loggedInUser={loggedInUser} />
@@ -284,222 +425,349 @@ const TournamentSummary = () => {
 				{/* Header */}
 				<header className="header">
 					<h1 className="title">{event.name}</h1>
-					{uniqueDivisions.length > 1 && (
-						<div className="divisionContainer">
+					<div className="divisionContainer" style={{ display: "flex", gap: "8px", justifyContent: "center", flexWrap: "wrap" }}>
+						{uniqueDivisions.length > 1 && (
 							<select
 								className="divisionDropdown"
 								value={selectedDivision}
-								onChange={(e) => setSelectedDivision(e.target.value)}
+								onChange={(changeEvent) => setSelectedDivision(changeEvent.target.value)}
 							>
-								{uniqueDivisions.map((div, idx) => (
-									<option key={idx} value={div}>{div}</option>
+								{uniqueDivisions.map((division, index) => (
+									<option key={index} value={division}>{division}</option>
 								))}
 							</select>
-						</div>
-					)}
+						)}
+						{activeView === "teams" && uniqueTeams.length > 0 && (
+							<select
+								className="divisionDropdown"
+								value={selectedTeam}
+								onChange={(changeEvent) => setSelectedTeam(changeEvent.target.value)}
+							>
+								{uniqueTeams.map((teamName, index) => (
+									<option key={index} value={teamName}>{teamName}</option>
+								))}
+							</select>
+						)}
+					</div>
 				</header>
 
-				{/* KPI summary cards */}
-				<section className="kpis">
-					<div className="kpiCard">
-						<div className="kpiIcon">
-							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-								<polygon points="12 2 22 8.5 2 8.5" />
-								<rect x="3" y="14" width="7" height="7" />
-								<circle cx="17.5" cy="17.5" r="3.5" />
-							</svg>
-						</div>
-						<div className="kpiBody">
-							<span className="kpiVal">{uniqueDivisions.length}</span>
-							<span className="kpiLbl">DIVISIONS</span>
-						</div>
-					</div>
-					<div className="kpiCard">
-						<div className="kpiIcon">
-							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-								<path d="M12 3v18M12 7l-8-2M12 7l8-2M4 5v4a4 4 0 0 0 8 0V5M20 5v4a4 4 0 0 1-8 0V5M4 19h16" />
-							</svg>
-						</div>
-						<div className="kpiBody">
-							<span className="kpiVal">{wtClassesCount}</span>
-							<span className="kpiLbl">WT CLASSES</span>
-						</div>
-					</div>
-					<div className="kpiCard">
-						<div className="kpiIcon">
-							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-								<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-								<circle cx="9" cy="7" r="4" />
-								<path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-								<path d="M16 3.13a4 4 0 0 1 0 7.75" />
-							</svg>
-						</div>
-						<div className="kpiBody">
-							<span className="kpiVal">{teamsCount}</span>
-							<span className="kpiLbl">TEAMS</span>
-						</div>
-					</div>
-					<div className="kpiCard">
-						<div className="kpiIcon">
-							<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-								<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-								<circle cx="12" cy="7" r="4" />
-							</svg>
-						</div>
-						<div className="kpiBody">
-							<span className="kpiVal">{wrestlersCount}</span>
-							<span className="kpiLbl">WRESTLERS</span>
-						</div>
-					</div>
-				</section>
-
-				{/* Tournament Intensity Card */}
-				<section className="intensitySection">
-					<div className="intensityCard">
-						<h3 className="intensityTitle">Tournament Intensity</h3>
-						<div className="intensityStats">
-							<span className="intensityVal">{avgGlicko.toFixed(0)}</span>
-							<span className="intensityLbl">AVG GLICKO</span>
-						</div>
-						<div className="curveContainer">
-							<svg viewBox="0 0 300 120" className="curveSvg">
-								<defs>
-									<linearGradient id="curveGradient" x1="0" y1="0" x2="0" y2="1">
-										<stop offset="0%" stopColor="#fd8b00" stopOpacity="0.4" />
-										<stop offset="100%" stopColor="#fd8b00" stopOpacity="0.0" />
-									</linearGradient>
-								</defs>
-								{/* Shaded Area under Curve (closed path) */}
-								<path d={areaD} fill="url(#curveGradient)" />
-								{/* Curve Path (open path without bottom baseline stroke) */}
-								<path d={lineD} fill="none" stroke="#fd8b00" strokeWidth="1" />
-								{/* Average Marker dashed line */}
-								<line
-									x1={peakX}
-									y1="110"
-									x2={peakX}
-									y2={peakY}
-									stroke="#3c5c93"
-									strokeWidth="1.5"
-									strokeDasharray="3 3"
-								/>
-								{/* Axis labels */}
-								<text x="5" y="118" fontSize="8" fill="#757687" textAnchor="start">
-									{minGlicko.toFixed(0)} (Min)
-								</text>
-								<text x={peakX} y="118" fontSize="8" fill="#3c5c93" textAnchor="middle">
-									{avgGlicko.toFixed(0)} (Avg)
-								</text>
-								<text x="295" y="118" fontSize="8" fill="#757687" textAnchor="end">
-									{maxGlicko.toFixed(0)} (Max)
-								</text>
-							</svg>
-						</div>
-					</div>
-				</section>
-
-				{/* Insights section */}
-				<section className="insightsSection">
-					<h2 className="sectionTitle">Insights</h2>
-					{topUpsets.length === 0 && topKeyMatches.length === 0 ? (
-						<div className="emptyState">No insights found for this division.</div>
-					) : (
-						<div className="insightsList">
-							{topUpsets.map((match, idx) => (
-								<div className="insightCard upset" key={`upset-${idx}`}>
-									<div className="insightHeader">
-										<span className="insightTag upset">MAJOR UPSET</span>
-									</div>
-									<div className="insightMatchup">
-										<div className="wrestler win">
-											<span className="wrestlerName">W: {match.winner.name}</span>
-											<span className="wrestlerGlicko">Glicko: {match.winner.rating?.toFixed(0)}</span>
-										</div>
-										<span className="vs">{match.winType}</span>
-										<div className="wrestler">
-											<span className="wrestlerName">{match.loser.name}</span>
-											<span className="wrestlerGlicko">Glicko: {match.loser.rating?.toFixed(0)}</span>
-										</div>
-									</div>
-									<div className="matchMeta">
-										{match.division || "Varsity"} • {isNaN(match.weightClass) ? match.weightClass : `${match.weightClass} lbs`} • {match.roundName || "N/A"}
-									</div>
+				{/* Overview View */}
+				{activeView === "overview" && (
+					<>
+						{/* KPI summary cards */}
+						<section className="kpis">
+							<div className="kpiCard">
+								<div className="kpiIcon">
+									<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+										<polygon points="12 2 22 8.5 2 8.5" />
+										<rect x="3" y="14" width="7" height="7" />
+										<circle cx="17.5" cy="17.5" r="3.5" />
+									</svg>
 								</div>
-							))}
-							{topKeyMatches.map((match, idx) => (
-								<div className="insightCard keyMatchup" key={`key-${idx}`}>
-									<div className="insightHeader">
-										<span className="insightTag matchup">KEY MATCHUP</span>
-									</div>
-									<div className="insightMatchup">
-										<div className="wrestler win">
-											<span className="wrestlerName">W: {match.winner.name}</span>
-											<span className="wrestlerGlicko">Glicko: {match.winner.rating?.toFixed(0)}</span>
-										</div>
-										<span className="vs">{match.winType}</span>
-										<div className="wrestler">
-											<span className="wrestlerName">{match.loser.name}</span>
-											<span className="wrestlerGlicko">Glicko: {match.loser.rating?.toFixed(0)}</span>
-										</div>
-									</div>
-									<div className="matchMeta">
-										{match.division || "Varsity"} • {isNaN(match.weightClass) ? match.weightClass : `${match.weightClass} lbs`} • {match.roundName || "N/A"}
-									</div>
+								<div className="kpiBody">
+									<span className="kpiVal">{uniqueDivisions.length}</span>
+									<span className="kpiLbl">DIVISIONS</span>
 								</div>
-							))}
-						</div>
-					)}
-				</section>
+							</div>
+							<div className="kpiCard">
+								<div className="kpiIcon">
+									<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+										<path d="M12 3v18M12 7l-8-2M12 7l8-2M4 5v4a4 4 0 0 0 8 0V5M20 5v4a4 4 0 0 1-8 0V5M4 19h16" />
+									</svg>
+								</div>
+								<div className="kpiBody">
+									<span className="kpiVal">{wtClassesCount}</span>
+									<span className="kpiLbl">WT CLASSES</span>
+								</div>
+							</div>
+							<div className="kpiCard">
+								<div className="kpiIcon">
+									<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+										<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+										<circle cx="9" cy="7" r="4" />
+										<path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+										<path d="M16 3.13a4 4 0 0 1 0 7.75" />
+									</svg>
+								</div>
+								<div className="kpiBody">
+									<span className="kpiVal">{teamsCount}</span>
+									<span className="kpiLbl">TEAMS</span>
+								</div>
+							</div>
+							<div className="kpiCard">
+								<div className="kpiIcon">
+									<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+										<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+										<circle cx="12" cy="7" r="4" />
+									</svg>
+								</div>
+								<div className="kpiBody">
+									<span className="kpiVal">{wrestlersCount}</span>
+									<span className="kpiLbl">WRESTLERS</span>
+								</div>
+							</div>
+						</section>
 
-				{/* Familiar Faces section */}
-				<section className="facesSection">
-					<h2 className="sectionTitle">Familiar Faces</h2>
-					{teamsList.length === 0 ? (
-						<div className="emptyState">No school teams found in this division.</div>
-					) : (
-						<div className="teamsTableContainer">
-							<table className="teamsTable">
-								<thead>
-									<tr>
-										<th>Team</th>
-										<th style={{ textAlign: "center" }}>Wrestlers</th>
-										<th style={{ textAlign: "center" }}>Wins (Win %)</th>
-										<th style={{ textAlign: "center" }}>Placers (%)</th>
-									</tr>
-								</thead>
-								<tbody>
-									{teamsList.map((t, idx) => (
-										<tr key={idx} className={t.isFamiliar ? "familiarRow" : ""}>
-											<td className="teamNameCell">
-												{t.team}
-											</td>
-											<td className="heatmapCell" style={{ backgroundColor: getHeatMapColor(t.wrestlerCount, minWrestlers, maxWrestlers) }}>
-												<span className="heatmapCellInner">
-													{t.wrestlerCount}
-												</span>
-											</td>
-											<td className="heatmapCell" style={{ backgroundColor: getHeatMapColor(t.winPct, minWinPct, maxWinPct) }}>
-												<span className="heatmapCellInner">
-													{t.wins} ({Math.round(t.winPct * 100)}%)
-												</span>
-											</td>
-											<td className="heatmapCell" style={{ backgroundColor: getHeatMapColor(t.placerPct, minPlacerPct, maxPlacerPct) }}>
-												<span className="heatmapCellInner">
-													{t.placerCount} ({Math.round(t.placerPct * 100)}%)
-												</span>
-											</td>
-										</tr>
+						{/* Tournament Intensity Card */}
+						<section className="intensitySection">
+							<div className="intensityCard">
+								<h3 className="intensityTitle">Tournament Intensity</h3>
+								<div className="intensityStats">
+									<span className="intensityVal">{avgGlicko.toFixed(0)}</span>
+									<span className="intensityLbl">AVG GLICKO</span>
+								</div>
+								<div className="curveContainer">
+									<svg viewBox="0 0 300 120" className="curveSvg">
+										<defs>
+											<linearGradient id="curveGradient" x1="0" y1="0" x2="0" y2="1">
+												<stop offset="0%" stopColor="#fd8b00" stopOpacity="0.4" />
+												<stop offset="100%" stopColor="#fd8b00" stopOpacity="0.0" />
+											</linearGradient>
+										</defs>
+										{/* Shaded Area under Curve (closed path) */}
+										<path d={areaD} fill="url(#curveGradient)" />
+										{/* Curve Path (open path without bottom baseline stroke) */}
+										<path d={lineD} fill="none" stroke="#fd8b00" strokeWidth="1" />
+										{/* Average Marker dashed line */}
+										<line
+											x1={peakX}
+											y1="110"
+											x2={peakX}
+											y2={peakY}
+											stroke="#3c5c93"
+											strokeWidth="1.5"
+											strokeDasharray="3 3"
+										/>
+										{/* Axis labels */}
+										<text x="5" y="118" fontSize="8" fill="#757687" textAnchor="start">
+											{minGlicko.toFixed(0)} (Min)
+										</text>
+										<text x={peakX} y="118" fontSize="8" fill="#3c5c93" textAnchor="middle">
+											{avgGlicko.toFixed(0)} (Avg)
+										</text>
+										<text x="295" y="118" fontSize="8" fill="#757687" textAnchor="end">
+											{maxGlicko.toFixed(0)} (Max)
+										</text>
+									</svg>
+								</div>
+							</div>
+						</section>
+
+						{/* Insights section */}
+						<section className="insightsSection">
+							<h2 className="sectionTitle">Insights</h2>
+							{topUpsets.length === 0 && topKeyMatches.length === 0 ? (
+								<div className="emptyState">No insights found for this division.</div>
+							) : (
+								<div className="insightsList">
+									{topUpsets.map((match, index) => (
+										<div className="insightCard upset" key={`upset-${index}`}>
+											<div className="insightHeader">
+												<span className="insightTag upset">MAJOR UPSET</span>
+											</div>
+											<div className="insightMatchup">
+												<div className="wrestler win">
+													<span className="wrestlerName">W: {match.winner.name}</span>
+													<span className="wrestlerGlicko">Glicko: {match.winner.rating?.toFixed(0)}</span>
+												</div>
+												<span className="vs">{match.winType}</span>
+												<div className="wrestler">
+													<span className="wrestlerName">{match.loser.name}</span>
+													<span className="wrestlerGlicko">Glicko: {match.loser.rating?.toFixed(0)}</span>
+												</div>
+											</div>
+											<div className="matchMeta">
+												{match.division || "Varsity"} • {isNaN(match.weightClass) ? match.weightClass : `${match.weightClass} lbs`} • {match.roundName || "N/A"}
+											</div>
+										</div>
 									))}
-								</tbody>
-							</table>
-						</div>
-					)}
-				</section>
+									{topKeyMatches.map((match, index) => (
+										<div className="insightCard keyMatchup" key={`key-${index}`}>
+											<div className="insightHeader">
+												<span className="insightTag matchup">KEY MATCHUP</span>
+											</div>
+											<div className="insightMatchup">
+												<div className="wrestler win">
+													<span className="wrestlerName">W: {match.winner.name}</span>
+													<span className="wrestlerGlicko">Glicko: {match.winner.rating?.toFixed(0)}</span>
+												</div>
+												<span className="vs">{match.winType}</span>
+												<div className="wrestler">
+													<span className="wrestlerName">{match.loser.name}</span>
+													<span className="wrestlerGlicko">Glicko: {match.loser.rating?.toFixed(0)}</span>
+												</div>
+											</div>
+											<div className="matchMeta">
+												{match.division || "Varsity"} • {isNaN(match.weightClass) ? match.weightClass : `${match.weightClass} lbs`} • {match.roundName || "N/A"}
+											</div>
+										</div>
+									))}
+								</div>
+							)}
+						</section>
+
+						{/* Familiar Faces section */}
+						<section className="facesSection">
+							<h2 className="sectionTitle">Familiar Faces</h2>
+							{teamsList.length === 0 ? (
+								<div className="emptyState">No school teams found in this division.</div>
+							) : (
+								<div className="teamsTableContainer">
+									<table className="teamsTable">
+										<thead>
+											<tr>
+												<th>Team</th>
+												<th style={{ textAlign: "center" }}>Wrestlers</th>
+												<th style={{ textAlign: "center" }}>Wins (Win %)</th>
+												<th style={{ textAlign: "center" }}>Placers (%)</th>
+											</tr>
+										</thead>
+										<tbody>
+											{teamsList.map((team, index) => (
+												<tr key={index} className={team.isFamiliar ? "familiarRow" : ""}>
+													<td className="teamNameCell">
+														{team.team}
+													</td>
+													<td className="heatmapCell" style={{ backgroundColor: getHeatMapColor(team.wrestlerCount, minWrestlers, maxWrestlers) }}>
+														<span className="heatmapCellInner">
+															{team.wrestlerCount}
+														</span>
+													</td>
+													<td className="heatmapCell" style={{ backgroundColor: getHeatMapColor(team.winPct, minWinPct, maxWinPct) }}>
+														<span className="heatmapCellInner">
+															{team.wins} ({Math.round(team.winPct * 100)}%)
+														</span>
+													</td>
+													<td className="heatmapCell" style={{ backgroundColor: getHeatMapColor(team.placerPct, minPlacerPct, maxPlacerPct) }}>
+														<span className="heatmapCellInner">
+															{team.placerCount} ({Math.round(team.placerPct * 100)}%)
+														</span>
+													</td>
+												</tr>
+											))}
+										</tbody>
+									</table>
+								</div>
+							)}
+						</section>
+					</>
+				)}
+
+				{/* Teams View */}
+				{activeView === "teams" && (
+					<>
+						{/* KPI summary cards */}
+						<section className="kpis">
+							<div className="kpiCard">
+								<div className="kpiIcon">
+									<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+										<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+										<circle cx="9" cy="7" r="4" />
+									</svg>
+								</div>
+								<div className="kpiBody">
+									<span className="kpiVal">{teamWrestlersCount}</span>
+									<span className="kpiLbl">WRESTLERS</span>
+								</div>
+							</div>
+							<div className="kpiCard">
+								<div className="kpiIcon">
+									<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+										<circle cx="12" cy="8" r="7" />
+										<polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" />
+									</svg>
+								</div>
+								<div className="kpiBody">
+									<span className="kpiVal">{teamWinsCount}</span>
+									<span className="kpiLbl">WINS ({Math.round(teamWinPct)}%)</span>
+								</div>
+							</div>
+							<div className="kpiCard">
+								<div className="kpiIcon">
+									<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+										<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+									</svg>
+								</div>
+								<div className="kpiBody">
+									<span className="kpiVal">{teamPlacersCount}</span>
+									<span className="kpiLbl">PLACERS ({Math.round(teamPlacerPct)}%)</span>
+								</div>
+							</div>
+							<div className="kpiCard">
+								<div className="kpiIcon">
+									<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+										<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+									</svg>
+								</div>
+								<div className="kpiBody">
+									<span className="kpiVal">{teamUpsetsCount}</span>
+									<span className="kpiLbl">UPSETS</span>
+								</div>
+							</div>
+						</section>
+
+						{/* Wrestlers Heatmap Table */}
+						<section className="facesSection">
+							<h2 className="sectionTitle">{selectedTeam} Wrestler Standings</h2>
+							{wrestlersList.length === 0 ? (
+								<div className="emptyState">No wrestlers found for this team.</div>
+							) : (
+								<div className="teamsTableContainer">
+									<table className="teamsTable">
+										<thead>
+											<tr>
+												<th>Wrestler</th>
+												<th style={{ textAlign: "center" }}>Rating / Dev</th>
+												<th style={{ textAlign: "center" }}>Wins</th>
+												<th style={{ textAlign: "center" }}>Upsets</th>
+											</tr>
+										</thead>
+										<tbody>
+											{wrestlersList.map((wrestler, index) => (
+												<tr key={index}>
+													<td className="teamNameCell">
+														{wrestler.name}
+													</td>
+													<td style={{ textAlign: "center", color: "#4a5568" }}>
+														<div style={{ fontWeight: 600 }}>{wrestler.rating ? Math.round(wrestler.rating) : "N/A"}</div>
+														{wrestler.deviation !== undefined && (
+															<div style={{ fontSize: "10px", color: "#718096" }}>
+																±{Math.round(wrestler.deviation)}
+															</div>
+														)}
+													</td>
+													<td className="heatmapCell" style={{ backgroundColor: getHeatMapColor(wrestler.wins, minWrestlerWins, maxWrestlerWins) }}>
+														<span className="heatmapCellInner">
+															{wrestler.wins}
+														</span>
+													</td>
+													<td className="heatmapCell" style={{ backgroundColor: getHeatMapColor(wrestler.upsets, minWrestlerUpsets, maxWrestlerUpsets) }}>
+														<span className="heatmapCellInner">
+															{wrestler.upsets}
+														</span>
+													</td>
+												</tr>
+											))}
+										</tbody>
+									</table>
+								</div>
+							)}
+						</section>
+					</>
+				)}
+
+				{/* Weight Classes View */}
+				{activeView === "weight_classes" && (
+					<div className="emptyState">
+						<h3>Weight Classes View</h3>
+						<p style={{ color: "#718096", margin: "8px 0 0 0" }}>Coming Soon!</p>
+					</div>
+				)}
 			</div>
 
 			{/* Sticky Bottom Navigation Bar */}
 			<div className="bottomNav">
-				<div className="navItem active">
+				<div className={`navItem ${activeView === "overview" ? "active" : ""}`} onClick={() => setActiveView("overview")}>
 					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
 						<rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
 						<line x1="9" y1="3" x2="9" y2="21" />
@@ -509,7 +777,7 @@ const TournamentSummary = () => {
 					</svg>
 					<span>Overview</span>
 				</div>
-				<div className="navItem">
+				<div className={`navItem ${activeView === "teams" ? "active" : ""}`} onClick={() => setActiveView("teams")}>
 					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
 						<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
 						<circle cx="9" cy="7" r="4" />
@@ -518,7 +786,7 @@ const TournamentSummary = () => {
 					</svg>
 					<span>Teams</span>
 				</div>
-				<div className="navItem">
+				<div className={`navItem ${activeView === "weight_classes" ? "active" : ""}`} onClick={() => setActiveView("weight_classes")}>
 					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
 						<path d="M12 3v18M12 7l-8-2M12 7l8-2M4 5v4a4 4 0 0 0 8 0V5M20 5v4a4 4 0 0 1-8 0V5M4 19h16" />
 					</svg>
