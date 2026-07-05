@@ -4,6 +4,21 @@ import Nav from "./nav.jsx";
 import "./include/index.css";
 import "./include/tournamentsummary.css";
 
+const isPlacementRound = (roundName) => {
+	if (!roundName) return false;
+	const name = roundName.toLowerCase().trim();
+	if (name.includes("place")) return true;
+	if (name.includes("quarter") || name.includes("semi")) return false;
+	return name === "finals" || name === "championship" || name.includes("consi-final") || name.includes("consolation final") || name === "final";
+};
+
+const getHeatMapColor = (val, min, max) => {
+	if (max === min) return "hsl(120, 75%, 90%)";
+	const pct = Math.min(Math.max((val - min) / (max - min), 0), 1);
+	const hue = pct * 120;
+	return `hsl(${hue}, 75%, 90%)`;
+};
+
 const TournamentSummary = () => {
 	const [pageActive, setPageActive] = useState(false);
 	const [isLoading, setIsLoading] = useState(true);
@@ -169,25 +184,97 @@ const TournamentSummary = () => {
 	keyMatches.sort((a, b) => (b.winner.rating + b.loser.rating) - (a.winner.rating + a.loser.rating));
 	const topKeyMatches = keyMatches.slice(0, 5);
 
-	// Calculate Familiar Faces (teams in filtered matches that exist in event.familiarTeams schools collection)
-	const teamWrestlers = {};
+	// Calculate Team Statistics for the heat map
+	const teamStatsMap = {};
 	filteredMatches.forEach(m => {
-		if (m.winner?.team && m.winner?.wrestlerSqlId) {
-			if (!teamWrestlers[m.winner.team]) teamWrestlers[m.winner.team] = new Set();
-			teamWrestlers[m.winner.team].add(m.winner.wrestlerSqlId);
+		const wTeam = m.winner?.team;
+		const lTeam = m.loser?.team;
+		const wId = m.winner?.wrestlerSqlId;
+		const lId = m.loser?.wrestlerSqlId;
+
+		if (wTeam) {
+			if (!teamStatsMap[wTeam]) {
+				teamStatsMap[wTeam] = {
+					team: wTeam,
+					wrestlers: new Set(),
+					wins: 0,
+					losses: 0,
+					placers: new Set()
+				};
+			}
+			if (wId) teamStatsMap[wTeam].wrestlers.add(wId);
+			teamStatsMap[wTeam].wins += 1;
+
+			if (isPlacementRound(m.roundName)) {
+				if (wId) teamStatsMap[wTeam].placers.add(wId);
+			}
 		}
-		if (m.loser?.team && m.loser?.wrestlerSqlId) {
-			if (!teamWrestlers[m.loser.team]) teamWrestlers[m.loser.team] = new Set();
-			teamWrestlers[m.loser.team].add(m.loser.wrestlerSqlId);
+
+		if (lTeam) {
+			if (!teamStatsMap[lTeam]) {
+				teamStatsMap[lTeam] = {
+					team: lTeam,
+					wrestlers: new Set(),
+					wins: 0,
+					losses: 0,
+					placers: new Set()
+				};
+			}
+			if (lId) teamStatsMap[lTeam].wrestlers.add(lId);
+			teamStatsMap[lTeam].losses += 1;
+
+			if (isPlacementRound(m.roundName)) {
+				if (lId) teamStatsMap[lTeam].placers.add(lId);
+			}
 		}
 	});
 
 	const familiarTeamsSet = new Set((event.familiarTeams || []).map(t => t.toLowerCase().trim()));
 
-	const familiarFaces = Object.entries(teamWrestlers)
-		.map(([team, wrestlerSet]) => ({ team, count: wrestlerSet.size }))
-		.filter(face => familiarTeamsSet.has(face.team.toLowerCase().trim()))
-		.sort((a, b) => b.count - a.count);
+	const teamsList = Object.values(teamStatsMap).map(stats => {
+		const wrestlerCount = stats.wrestlers.size;
+		const totalMatches = stats.wins + stats.losses;
+		const winPct = totalMatches > 0 ? (stats.wins / totalMatches) : 0;
+		const placerCount = stats.placers.size;
+		const placerPct = wrestlerCount > 0 ? (placerCount / wrestlerCount) : 0;
+		const isFamiliar = familiarTeamsSet.has(stats.team.toLowerCase().trim());
+
+		return {
+			team: stats.team,
+			wrestlerCount,
+			wins: stats.wins,
+			losses: stats.losses,
+			totalMatches,
+			winPct,
+			placerCount,
+			placerPct,
+			isFamiliar
+		};
+	});
+
+	// Sort by wrestlerCount descending, then by winPct descending, then by team name alphabetically
+	teamsList.sort((a, b) => {
+		if (b.wrestlerCount !== a.wrestlerCount) {
+			return b.wrestlerCount - a.wrestlerCount;
+		}
+		if (b.winPct !== a.winPct) {
+			return b.winPct - a.winPct;
+		}
+		return a.team.localeCompare(b.team);
+	});
+
+	// Calculate Min & Max for Heatmaps
+	const wCountArr = teamsList.map(t => t.wrestlerCount);
+	const minWrestlers = wCountArr.length > 0 ? Math.min(...wCountArr) : 0;
+	const maxWrestlers = wCountArr.length > 0 ? Math.max(...wCountArr) : 0;
+
+	const winPctArr = teamsList.map(t => t.winPct);
+	const minWinPct = winPctArr.length > 0 ? Math.min(...winPctArr) : 0;
+	const maxWinPct = winPctArr.length > 0 ? Math.max(...winPctArr) : 0;
+
+	const placerPctArr = teamsList.map(t => t.placerPct);
+	const minPlacerPct = placerPctArr.length > 0 ? Math.min(...placerPctArr) : 0;
+	const maxPlacerPct = placerPctArr.length > 0 ? Math.max(...placerPctArr) : 0;
 
 	return (
 		<div className="page">
@@ -198,7 +285,7 @@ const TournamentSummary = () => {
 				<header className="header">
 					<h1 className="title">{event.name}</h1>
 					{uniqueDivisions.length > 1 && (
-						<div className="selectorContainer">
+						<div className="divisionContainer">
 							<select
 								className="divisionDropdown"
 								value={selectedDivision}
@@ -285,7 +372,7 @@ const TournamentSummary = () => {
 								{/* Shaded Area under Curve (closed path) */}
 								<path d={areaD} fill="url(#curveGradient)" />
 								{/* Curve Path (open path without bottom baseline stroke) */}
-								<path d={lineD} fill="none" stroke="#fd8b00" strokeWidth="2.5" />
+								<path d={lineD} fill="none" stroke="#fd8b00" strokeWidth="1" />
 								{/* Average Marker dashed line */}
 								<line
 									x1={peakX}
@@ -367,24 +454,44 @@ const TournamentSummary = () => {
 				{/* Familiar Faces section */}
 				<section className="facesSection">
 					<h2 className="sectionTitle">Familiar Faces</h2>
-					{familiarFaces.length === 0 ? (
-						<div className="emptyState">No matching school teams found in this division.</div>
+					{teamsList.length === 0 ? (
+						<div className="emptyState">No school teams found in this division.</div>
 					) : (
-						<div className="facesList">
-							{familiarFaces.map((face, idx) => (
-								<div className="faceRow" key={idx}>
-									<div className="faceInfo">
-										<span className="faceSchool">{face.team}</span>
-										<span className="faceWrestlers">{face.count} Wrestlers</span>
-									</div>
-									<div className="faceIcon">
-										<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-											<path d="M22 10v6M2 10l10-5 10 5-10 5z" />
-											<path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5" />
-										</svg>
-									</div>
-								</div>
-							))}
+						<div className="teamsTableContainer">
+							<table className="teamsTable">
+								<thead>
+									<tr>
+										<th>Team</th>
+										<th style={{ textAlign: "center" }}>Wrestlers</th>
+										<th style={{ textAlign: "center" }}>Wins (Win %)</th>
+										<th style={{ textAlign: "center" }}>Placers (%)</th>
+									</tr>
+								</thead>
+								<tbody>
+									{teamsList.map((t, idx) => (
+										<tr key={idx} className={t.isFamiliar ? "familiarRow" : ""}>
+											<td className="teamNameCell">
+												{t.team}
+											</td>
+											<td className="heatmapCell" style={{ backgroundColor: getHeatMapColor(t.wrestlerCount, minWrestlers, maxWrestlers) }}>
+												<span className="heatmapCellInner">
+													{t.wrestlerCount}
+												</span>
+											</td>
+											<td className="heatmapCell" style={{ backgroundColor: getHeatMapColor(t.winPct, minWinPct, maxWinPct) }}>
+												<span className="heatmapCellInner">
+													{t.wins} ({Math.round(t.winPct * 100)}%)
+												</span>
+											</td>
+											<td className="heatmapCell" style={{ backgroundColor: getHeatMapColor(t.placerPct, minPlacerPct, maxPlacerPct) }}>
+												<span className="heatmapCellInner">
+													{t.placerCount} ({Math.round(t.placerPct * 100)}%)
+												</span>
+											</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
 						</div>
 					)}
 				</section>

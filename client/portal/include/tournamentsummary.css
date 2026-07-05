@@ -54,7 +54,7 @@ body {
 	margin: 10px 0 8px 0;
 }
 
-.selectorContainer {
+.divisionContainer {
 	width: 100%;
 	display: flex;
 	justify-content: center;
@@ -311,50 +311,93 @@ body {
 	margin-bottom: 20px;
 }
 
-.facesList {
+.teamsTableContainer {
+	width: 100%;
 	background: var(--surface);
 	border: 1.5px solid var(--outline);
-	border-left: 4.5px solid var(--primary);
-	border-radius: var(--rounded-sm);
-	overflow: hidden;
+	border-radius: var(--rounded-md);
+	overflow-x: auto;
 	box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+	margin-top: 10px;
 }
 
-.faceRow {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	padding: 12px 16px;
-	border-bottom: 1.5px solid #f0f4f8;
+.teamsTable {
+	width: 100%;
+	border-collapse: collapse;
+	text-align: left;
+	font-family: var(--font-body);
+	font-size: 12px;
 }
 
-.faceRow:last-child {
+.teamsTable th {
+	background-color: #f8fafc;
+	color: #4a5568;
+	font-weight: 700;
+	padding: 10px 12px;
+	border-bottom: 2px solid var(--outline);
+	text-transform: uppercase;
+	font-size: 10px;
+	letter-spacing: 0.05em;
+	white-space: nowrap;
+}
+
+.teamsTable td {
+	padding: 8px 12px;
+	border-bottom: 1px solid #edf2f7;
+	vertical-align: middle;
+	white-space: normal;
+}
+
+.teamsTable tr:last-child td {
 	border-bottom: none;
 }
 
-.faceInfo {
-	display: flex;
-	flex-direction: column;
+.teamsTable tr.familiarRow {
+	background-color: #f7fafc;
 }
 
-.faceSchool {
-	font-family: var(--font-body);
-	font-size: 15px;
+.teamsTable td.teamNameCell {
+	font-weight: 600;
+	color: #2d3748;
+	white-space: normal;
+	word-break: break-word;
+}
+
+.familiarRow .teamNameCell {
+	color: var(--primary);
+	font-weight: 700;
+}
+
+.familiarBadge {
+	display: inline-flex;
+	align-items: center;
+	background-color: #ebf8ff;
+	color: #2b6cb0;
+	font-size: 9px;
+	font-weight: 700;
+	padding: 2px 6px;
+	border-radius: 4px;
+	margin-left: 6px;
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+	border: 1px solid #bee3f8;
+}
+
+.heatmapCell {
+	text-align: center;
+	padding: 4px !important;
+	white-space: nowrap;
+}
+
+.heatmapCellInner {
+	display: block;
+	padding: 6px 4px;
+	border-radius: var(--rounded-sm);
 	font-weight: 700;
 	color: #1a202c;
-}
-
-.faceWrestlers {
-	font-family: var(--font-body);
-	font-size: 12px;
-	color: #718096;
-	margin-top: 1px;
-}
-
-.faceIcon {
-	color: #cbd5e0;
-	display: flex;
-	align-items: center;
+	font-size: 11px;
+	text-align: center;
+	border: 1px solid rgba(0,0,0,0.06);
 }
 
 /* Empty State / Loading State */
