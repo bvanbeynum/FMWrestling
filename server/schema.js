@@ -199,6 +199,7 @@ export default {
 				roundName: String,
 				winType: String,
 				isUpset: Boolean, 
+				sort: Number,
 				winner: {
 					wrestlerSqlId: Number,
 					name: String,

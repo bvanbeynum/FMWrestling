@@ -969,6 +969,11 @@ export default {
 
 		try {
 			const records = await data.event.find(filter).lean().exec();
+			records.forEach(eventRecord => {
+				if (eventRecord.matches) {
+					eventRecord.matches.sort((matchA, matchB) => (matchA.sort || 0) - (matchB.sort || 0));
+				}
+			});
 			output.status = 200;
 			output.data = { events: records.map(({ _id, __v, ...data }) => ({ id: _id, ...data })) };
 		}
@@ -1370,7 +1375,7 @@ export default {
 					const hasMatches = !!(matches && matches.length > 0);
 					const item = { id: _id, hasMatches, ...data };
 					if (!userFilter.excludeMatches && (!userFilter.select || userFilter.select.includes("matches"))) {
-						item.matches = matches || [];
+						item.matches = [...(matches || [])].sort((matchA, matchB) => (matchA.sort || 0) - (matchB.sort || 0));
 					} else {
 						delete item.matches;
 					}

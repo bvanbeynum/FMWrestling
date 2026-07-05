@@ -27,13 +27,32 @@ const TournamentSummary = () => {
 	const [selectedDivision, setSelectedDivision] = useState("");
 	const [activeView, setActiveView] = useState("overview");
 	const [selectedTeam, setSelectedTeam] = useState("");
+	const [selectedWeightClass, setSelectedWeightClass] = useState("");
 
-	// Auto-select a default team when division or event changes (declared before early returns)
+	// Auto-select a default team and weight class when division or event changes (declared before early returns)
 	useEffect(() => {
 		if (!event) return;
 		const matchesList = event.matches || [];
 		const divisionMatches = matchesList.filter(match => (match.division || "Varsity") === selectedDivision);
 
+		// Resolve unique weight classes for this division
+		const weightClassesSet = new Set();
+		divisionMatches.forEach(match => {
+			if (match.weightClass) {
+				weightClassesSet.add(match.weightClass);
+			}
+		});
+		const divisionWeightClasses = Array.from(weightClassesSet).sort();
+
+		if (divisionWeightClasses.length > 0) {
+			if (!selectedWeightClass || !divisionWeightClasses.includes(selectedWeightClass)) {
+				setSelectedWeightClass(divisionWeightClasses[0]);
+			}
+		} else {
+			setSelectedWeightClass("");
+		}
+
+		// Resolve unique teams for this division
 		const teamsSet = new Set();
 		divisionMatches.forEach(match => {
 			if (match.winner?.team) {
@@ -126,7 +145,7 @@ const TournamentSummary = () => {
 		);
 	}
 
-	const matches = event.matches || [];
+	const matches = [...(event.matches || [])].sort((firstMatch, secondMatch) => (firstMatch.sort || 0) - (secondMatch.sort || 0));
 
 	// Get all unique divisions in matches list
 	const uniqueDivisions = Array.from(new Set(matches.map(m => m.division || "Varsity"))).filter(Boolean);
@@ -417,6 +436,202 @@ const TournamentSummary = () => {
 	const minWrestlerUpsets = wrestlerUpsetsArr.length > 0 ? Math.min(...wrestlerUpsetsArr) : 0;
 	const maxWrestlerUpsets = wrestlerUpsetsArr.length > 0 ? Math.max(...wrestlerUpsetsArr) : 0;
 
+	// Resolve unique weight classes for the selected division
+	const uniqueWeightClassesSet = new Set();
+	filteredMatches.forEach(match => {
+		if (match.weightClass) {
+			uniqueWeightClassesSet.add(match.weightClass);
+		}
+	});
+	const uniqueWeightClasses = Array.from(uniqueWeightClassesSet).sort();
+
+	// Filter matches by weight class
+	const weightClassMatches = filteredMatches.filter(match => match.weightClass === selectedWeightClass);
+
+	// Calculate wrestler count for selected weight class
+	const weightClassWrestlersSet = new Set();
+	weightClassMatches.forEach(match => {
+		if (match.winner?.wrestlerSqlId) {
+			weightClassWrestlersSet.add(match.winner.wrestlerSqlId);
+		}
+		if (match.loser?.wrestlerSqlId) {
+			weightClassWrestlersSet.add(match.loser.wrestlerSqlId);
+		}
+	});
+	const weightClassWrestlersCount = weightClassWrestlersSet.size;
+
+	// Calculate rounds count for selected weight class
+	const weightClassRoundsSet = new Set();
+	weightClassMatches.forEach(match => {
+		if (match.roundName) {
+			weightClassRoundsSet.add(match.roundName);
+		}
+	});
+	const weightClassRoundsCount = weightClassRoundsSet.size;
+
+	// Calculate upsets count for selected weight class
+	const weightClassUpsetsCount = weightClassMatches.filter(match => 
+		match.winner?.rating && 
+		match.loser?.rating && 
+		match.winner.rating < match.loser.rating - (match.loser.deviation || 0) &&
+		!(match.winType && (match.winType.toLowerCase().includes("for") || match.winType.toLowerCase() === "nc"))
+	).length;
+
+	// Resolve winner (1st place or most wins) for the weight class
+	let bracketWinnerName = "N/A";
+	const championshipMatch = weightClassMatches.find(match => {
+		if (!match.roundName) return false;
+		const roundNameLower = match.roundName.toLowerCase().trim();
+		return roundNameLower === "finals" || 
+			roundNameLower === "championship" || 
+			roundNameLower === "final" || 
+			roundNameLower.includes("1st place") || 
+			roundNameLower.includes("1st-place");
+	});
+
+	if (championshipMatch?.winner?.name) {
+		bracketWinnerName = championshipMatch.winner.name;
+	} else {
+		const winsMap = {};
+		weightClassMatches.forEach(match => {
+			if (match.winner?.name) {
+				winsMap[match.winner.name] = (winsMap[match.winner.name] || 0) + 1;
+			}
+		});
+		let maxWins = 0;
+		let wrestlerWithMostWins = "";
+		Object.entries(winsMap).forEach(([wrestlerName, winsCount]) => {
+			if (winsCount > maxWins) {
+				maxWins = winsCount;
+				wrestlerWithMostWins = wrestlerName;
+			}
+		});
+		if (wrestlerWithMostWins) {
+			bracketWinnerName = wrestlerWithMostWins;
+		}
+	}
+
+	// Group and compile stats for wrestlers in this weight class
+	const weightClassWrestlerStatsMap = {};
+	weightClassMatches.forEach(match => {
+		const winnerId = match.winner?.wrestlerSqlId;
+		const loserId = match.loser?.wrestlerSqlId;
+
+		if (winnerId) {
+			if (!weightClassWrestlerStatsMap[winnerId]) {
+				weightClassWrestlerStatsMap[winnerId] = {
+					wrestlerSqlId: winnerId,
+					name: match.winner.name,
+					rating: match.winner.rating,
+					deviation: match.winner.deviation,
+					seed: match.winner.seed,
+					wins: 0,
+					losses: 0,
+					lastRound: "N/A"
+				};
+			}
+			weightClassWrestlerStatsMap[winnerId].wins += 1;
+			weightClassWrestlerStatsMap[winnerId].lastRound = match.roundName || "N/A";
+			if (match.winner.seed !== undefined && match.winner.seed !== null) {
+				weightClassWrestlerStatsMap[winnerId].seed = match.winner.seed;
+			}
+		}
+
+		if (loserId) {
+			if (!weightClassWrestlerStatsMap[loserId]) {
+				weightClassWrestlerStatsMap[loserId] = {
+					wrestlerSqlId: loserId,
+					name: match.loser.name,
+					rating: match.loser.rating,
+					deviation: match.loser.deviation,
+					seed: match.loser.seed,
+					wins: 0,
+					losses: 0,
+					lastRound: "N/A"
+				};
+			}
+			weightClassWrestlerStatsMap[loserId].losses += 1;
+			weightClassWrestlerStatsMap[loserId].lastRound = match.roundName || "N/A";
+			if (match.loser.seed !== undefined && match.loser.seed !== null) {
+				weightClassWrestlerStatsMap[loserId].seed = match.loser.seed;
+			}
+		}
+	});
+
+	// Helper to resolve numerical placement rank of a wrestler in the weight class matches
+	const getWrestlerPlacementRank = (wrestlerSqlId, matchesList) => {
+		for (let index = matchesList.length - 1; index >= 0; index--) {
+			const match = matchesList[index];
+			if (!match.roundName) continue;
+			const roundNameLower = match.roundName.toLowerCase().trim();
+
+			// 1st / 2nd Place
+			if (roundNameLower === "finals" || 
+				roundNameLower === "championship" || 
+				roundNameLower === "final" || 
+				roundNameLower.includes("1st place") || 
+				roundNameLower.includes("1st-place")) {
+				if (match.winner?.wrestlerSqlId === wrestlerSqlId) return 1;
+				if (match.loser?.wrestlerSqlId === wrestlerSqlId) return 2;
+			}
+
+			// 3rd / 4th Place
+			if (roundNameLower.includes("3rd place") || 
+				roundNameLower.includes("3rd-place") || 
+				roundNameLower === "consi-final" || 
+				roundNameLower === "consolation final" || 
+				roundNameLower.includes("consi-final")) {
+				if (match.winner?.wrestlerSqlId === wrestlerSqlId) return 3;
+				if (match.loser?.wrestlerSqlId === wrestlerSqlId) return 4;
+			}
+
+			// 5th / 6th Place
+			if (roundNameLower.includes("5th place") || 
+				roundNameLower.includes("5th-place")) {
+				if (match.winner?.wrestlerSqlId === wrestlerSqlId) return 5;
+				if (match.loser?.wrestlerSqlId === wrestlerSqlId) return 6;
+			}
+
+			// 7th / 8th Place
+			if (roundNameLower.includes("7th place") || 
+				roundNameLower.includes("7th-place")) {
+				if (match.winner?.wrestlerSqlId === wrestlerSqlId) return 7;
+				if (match.loser?.wrestlerSqlId === wrestlerSqlId) return 8;
+			}
+		}
+		return 999; // Unplaced / N/A
+	};
+
+	const weightClassWrestlersList = Object.values(weightClassWrestlerStatsMap);
+
+	// Sort wrestlers by place (rank) ascending, then by wins descending, then by rating descending
+	weightClassWrestlersList.sort((firstWrestler, secondWrestler) => {
+		const firstRank = getWrestlerPlacementRank(firstWrestler.wrestlerSqlId, weightClassMatches);
+		const secondRank = getWrestlerPlacementRank(secondWrestler.wrestlerSqlId, weightClassMatches);
+
+		if (firstRank !== secondRank) {
+			return firstRank - secondRank;
+		}
+
+		if (secondWrestler.wins !== firstWrestler.wins) {
+			return secondWrestler.wins - firstWrestler.wins;
+		}
+
+		return (secondWrestler.rating || 0) - (firstWrestler.rating || 0);
+	});
+
+	const weightClassWinsArr = weightClassWrestlersList.map(wrestler => wrestler.wins);
+	const minWeightClassWins = weightClassWinsArr.length > 0 ? Math.min(...weightClassWinsArr) : 0;
+	const maxWeightClassWins = weightClassWinsArr.length > 0 ? Math.max(...weightClassWinsArr) : 0;
+
+	// Check if any wrestler has seed information available
+	const hasAnySeeds = weightClassWrestlersList.some(wrestler => 
+		wrestler.seed !== undefined && 
+		wrestler.seed !== null && 
+		wrestler.seed !== "" && 
+		String(wrestler.seed).trim() !== ""
+	);
+
 	return (
 		<div className="page">
 			<Nav loggedInUser={loggedInUser} />
@@ -445,6 +660,17 @@ const TournamentSummary = () => {
 							>
 								{uniqueTeams.map((teamName, index) => (
 									<option key={index} value={teamName}>{teamName}</option>
+								))}
+							</select>
+						)}
+						{activeView === "weight_classes" && uniqueWeightClasses.length > 0 && (
+							<select
+								className="divisionDropdown"
+								value={selectedWeightClass}
+								onChange={(changeEvent) => setSelectedWeightClass(changeEvent.target.value)}
+							>
+								{uniqueWeightClasses.map((weightClassName, index) => (
+									<option key={index} value={weightClassName}>{weightClassName}</option>
 								))}
 							</select>
 						)}
@@ -758,10 +984,123 @@ const TournamentSummary = () => {
 
 				{/* Weight Classes View */}
 				{activeView === "weight_classes" && (
-					<div className="emptyState">
-						<h3>Weight Classes View</h3>
-						<p style={{ color: "#718096", margin: "8px 0 0 0" }}>Coming Soon!</p>
-					</div>
+					<>
+						{/* Weight Class KPIs */}
+						<section className="kpis">
+							<div className="kpiCard">
+								<div className="kpiIcon">
+									<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+										<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+										<circle cx="9" cy="7" r="4" />
+									</svg>
+								</div>
+								<div className="kpiBody">
+									<span className="kpiVal">{weightClassWrestlersCount}</span>
+									<span className="kpiLbl">WRESTLERS</span>
+								</div>
+							</div>
+							<div className="kpiCard">
+								<div className="kpiIcon">
+									<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+										<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+										<line x1="4" y1="22" x2="4" y2="15" />
+									</svg>
+								</div>
+								<div className="kpiBody">
+									<span className="kpiVal">{weightClassRoundsCount}</span>
+									<span className="kpiLbl">ROUNDS</span>
+								</div>
+							</div>
+							<div className="kpiCard">
+								<div className="kpiIcon">
+									<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+										<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+									</svg>
+								</div>
+								<div className="kpiBody">
+									<span className="kpiVal">{weightClassUpsetsCount}</span>
+									<span className="kpiLbl">UPSETS</span>
+								</div>
+							</div>
+							<div className="kpiCard">
+								<div className="kpiIcon">
+									<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+										<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+									</svg>
+								</div>
+								<div className="kpiBody">
+									<span className="kpiVal" style={{ fontSize: bracketWinnerName.length > 12 ? "12px" : "15px", whiteSpace: "nowrap" }}>
+										{bracketWinnerName}
+									</span>
+									<span className="kpiLbl">WINNER</span>
+								</div>
+							</div>
+						</section>
+
+						{/* Standings Heatmap Table */}
+						<section className="facesSection">
+							<h2 className="sectionTitle">{selectedWeightClass} Standings</h2>
+							{weightClassWrestlersList.length === 0 ? (
+								<div className="emptyState">No wrestlers found in this weight class.</div>
+							) : (
+								<div className="teamsTableContainer">
+									<table className="teamsTable">
+										<thead>
+											<tr>
+												{hasAnySeeds && <th style={{ textAlign: "center", width: "40px" }}>Seed</th>}
+												<th>Wrestler</th>
+												<th style={{ textAlign: "center" }}>Rating / Dev</th>
+												<th style={{ textAlign: "center" }}>Wins</th>
+												<th>Last Round</th>
+											</tr>
+										</thead>
+										<tbody>
+											{weightClassWrestlersList.map((wrestler, index) => {
+												const rank = getWrestlerPlacementRank(wrestler.wrestlerSqlId, weightClassMatches);
+												const placementOrdinals = ["", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"];
+												const rankDisplay = rank === 999 ? "—" : placementOrdinals[rank] || `${rank}th`;
+												const seedDisplay = wrestler.seed !== undefined && wrestler.seed !== null ? wrestler.seed : "—";
+
+												return (
+													<tr key={index}>
+														{hasAnySeeds && (
+															<td style={{ textAlign: "center", fontWeight: "bold", color: "#718096" }}>
+																{seedDisplay}
+															</td>
+														)}
+														<td className="teamNameCell">
+															{wrestler.name}
+															{rankDisplay !== "—" && (
+																<span className="familiarBadge" style={{ backgroundColor: "#e6fffa", color: "#319795", borderColor: "#b2f5ea" }}>
+																	{rankDisplay} Place
+																</span>
+															)}
+														</td>
+														<td style={{ textAlign: "center", color: "#4a5568" }}>
+															<div style={{ fontWeight: 600 }}>{wrestler.rating ? Math.round(wrestler.rating) : "N/A"}</div>
+															{wrestler.deviation !== undefined && (
+																<div style={{ fontSize: "10px", color: "#718096" }}>
+																	±{Math.round(wrestler.deviation)}
+																</div>
+															)}
+														</td>
+														<td className="heatmapCell" style={{ backgroundColor: getHeatMapColor(wrestler.wins, minWeightClassWins, maxWeightClassWins) }}>
+															<span className="heatmapCellInner">
+																{wrestler.wins}
+															</span>
+														</td>
+														<td style={{ color: "#4a5568", fontSize: "11px", fontWeight: "500" }}>
+															{wrestler.lastRound}
+														</td>
+													</tr>
+												);
+											})}
+										</tbody>
+									</table>
+								</div>
+							)}
+						</section>
+					</>
 				)}
 			</div>
 
