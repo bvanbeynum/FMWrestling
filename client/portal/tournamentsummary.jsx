@@ -394,6 +394,7 @@ const TournamentSummary = () => {
 					name: match.winner.name,
 					rating: match.winner.rating,
 					deviation: match.winner.deviation,
+					weightClass: match.weightClass,
 					wins: 0,
 					losses: 0,
 					upsets: 0
@@ -416,6 +417,7 @@ const TournamentSummary = () => {
 					name: match.loser.name,
 					rating: match.loser.rating,
 					deviation: match.loser.deviation,
+					weightClass: match.weightClass,
 					wins: 0,
 					losses: 0,
 					upsets: 0
@@ -631,6 +633,23 @@ const TournamentSummary = () => {
 		wrestler.seed !== "" && 
 		String(wrestler.seed).trim() !== ""
 	);
+
+	// Group matches by round name in descending order
+	const sortedMatchesDescending = [...weightClassMatches].sort((firstMatch, secondMatch) => (secondMatch.sort || 0) - (firstMatch.sort || 0));
+	const matchesByRound = [];
+	const roundIndexMap = {};
+
+	sortedMatchesDescending.forEach(match => {
+		const roundName = match.roundName || "N/A";
+		if (roundIndexMap[roundName] === undefined) {
+			roundIndexMap[roundName] = matchesByRound.length;
+			matchesByRound.push({
+				roundName: roundName,
+				matches: []
+			});
+		}
+		matchesByRound[roundIndexMap[roundName]].matches.push(match);
+	});
 
 	return (
 		<div className="page">
@@ -851,7 +870,14 @@ const TournamentSummary = () => {
 										<tbody>
 											{teamsList.map((team, index) => (
 												<tr key={index} className={team.isFamiliar ? "familiarRow" : ""}>
-													<td className="teamNameCell">
+													<td
+														className="teamNameCell"
+														style={{ cursor: "pointer" }}
+														onClick={() => {
+															setSelectedTeam(team.team);
+															setActiveView("teams");
+														}}
+													>
 														{team.team}
 													</td>
 													<td className="heatmapCell" style={{ backgroundColor: getHeatMapColor(team.wrestlerCount, minWrestlers, maxWrestlers) }}>
@@ -951,8 +977,22 @@ const TournamentSummary = () => {
 										<tbody>
 											{wrestlersList.map((wrestler, index) => (
 												<tr key={index}>
-													<td className="teamNameCell">
-														{wrestler.name}
+													<td
+														className="teamNameCell"
+														style={{ cursor: "pointer" }}
+														onClick={() => {
+															if (wrestler.weightClass) {
+																setSelectedWeightClass(wrestler.weightClass);
+																setActiveView("weight_classes");
+															}
+														}}
+													>
+														<div>{wrestler.name}</div>
+														{wrestler.weightClass && (
+															<div style={{ fontSize: "10.5px", color: "#718096", fontWeight: "normal", marginTop: "2.5px" }}>
+																{isNaN(wrestler.weightClass) ? wrestler.weightClass : `${wrestler.weightClass} lbs`}
+															</div>
+														)}
 													</td>
 													<td style={{ textAlign: "center", color: "#4a5568" }}>
 														<div style={{ fontWeight: 600 }}>{wrestler.rating ? Math.round(wrestler.rating) : "N/A"}</div>
@@ -1097,6 +1137,86 @@ const TournamentSummary = () => {
 											})}
 										</tbody>
 									</table>
+								</div>
+							)}
+						</section>
+
+						{/* Matches list by round */}
+						<section className="facesSection" style={{ marginTop: "24px" }}>
+							<h2 className="sectionTitle">Matches</h2>
+							{matchesByRound.length === 0 ? (
+								<div className="emptyState">No matches found.</div>
+							) : (
+								<div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+									{matchesByRound.map((roundGroup, roundIndex) => (
+										<div key={roundIndex} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+											{/* Round separator header */}
+											<div style={{
+												fontFamily: "var(--font-headers)",
+												fontSize: "12px",
+												color: "var(--primary)",
+												borderBottom: "1.5px solid var(--outline)",
+												paddingBottom: "4px",
+												marginTop: "8px",
+												textTransform: "uppercase",
+												letterSpacing: "0.05em"
+											}}>
+												{roundGroup.roundName}
+											</div>
+											{/* Matches in this round */}
+											<div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+												{roundGroup.matches.map((match, matchIndex) => {
+													return (
+														<div 
+															key={matchIndex} 
+															className="insightCard" 
+															style={{ 
+																padding: "10px 12px", 
+																borderLeft: "4px solid var(--primary-variant)",
+																gap: "4px"
+															}}
+														>
+															<div className="insightMatchup">
+																{(() => {
+																	const isUpsetMatch = match.winner?.rating && match.loser?.rating && 
+																		match.winner.rating < match.loser.rating - (match.loser.deviation || 0) &&
+																		!(match.winType && (match.winType.toLowerCase().includes("for") || match.winType.toLowerCase() === "nc"));
+																	return (
+																		<>
+																			<div className="wrestler win" style={{ display: "flex", flexDirection: "column" }}>
+																				<span className="wrestlerName" style={{ fontWeight: "bold", color: "var(--primary)" }}>
+																					W: {match.winner?.name || "Unknown"}
+																				</span>
+																				<span style={{ fontSize: "10px", color: "#718096", marginTop: "1px" }}>
+																					{match.winner?.team || "Unknown"} • {match.winner?.rating ? `Rating: ${Math.round(match.winner.rating)}` : "No Rating"}
+																				</span>
+																			</div>
+																			<span className="vs" style={{ fontSize: "11px", backgroundColor: "#edf2f7", borderRadius: "4px", padding: "4px 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
+																				<span style={{ fontWeight: "600" }}>{match.winType || "VS"}</span>
+																				{isUpsetMatch && (
+																					<span style={{ fontSize: "8px", fontWeight: "800", backgroundColor: "var(--secondary)", color: "#ffffff", padding: "1px 4px", borderRadius: "2px", letterSpacing: "0.03em" }}>
+																						UPSET
+																					</span>
+																				)}
+																			</span>
+																			<div className="wrestler" style={{ display: "flex", flexDirection: "column" }}>
+																				<span className="wrestlerName" style={{ color: "#4a5568" }}>
+																					{match.loser?.name || "Unknown"}
+																				</span>
+																				<span style={{ fontSize: "10px", color: "#718096", marginTop: "1px" }}>
+																					{match.loser?.team || "Unknown"} • {match.loser?.rating ? `Rating: ${Math.round(match.loser.rating)}` : "No Rating"}
+																				</span>
+																			</div>
+																		</>
+																	);
+																})()}
+															</div>
+														</div>
+													);
+												})}
+											</div>
+										</div>
+									))}
 								</div>
 							)}
 						</section>
