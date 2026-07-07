@@ -419,108 +419,95 @@ const Schedule = props => {
 			</div>
 		) : (
 			<div className={`schedule container ${ pageActive ? "active" : "" }`}>
-				<h1 className="visually-hidden">Schedule</h1>
-
-				<header className="scheduleHeader">
-					<div className="headerTitleGroup">
-						<h2 className="calendarMonthTitleDesktop">
-							{ activeView === "team" ? "SCHEDULE" : `${monthNamesFull[viewDate.getMonth()].toUpperCase()} ${viewDate.getFullYear()}` }
-						</h2>
-						{activeView === "team" ? (
-							<p className="monthEventsCount">
-								{ filteredTeamEvents.length } { filteredTeamEvents.length === 1 ? "Event" : "Events" } scheduled
-							</p>
-						) : (
-							<p className="monthEventsCount">
-								{ viewedMonthEvents.length } { viewedMonthEvents.length === 1 ? "Event" : "Events" } this month
-							</p>
-						)}
-					</div>
-
-					<div className="scheduleFilters">
-						{activeView === "team" ? (
-							<>
-								<select 
-									value={ selectedSeason } 
-									onChange={ changeEvent => setSelectedSeason(changeEvent.target.value) }
-									aria-label="Filter Season"
-								>
-									{seasonOptions.map(option => (
-										<option key={option.name} value={option.name}>{option.name}</option>
-									))}
-								</select>
-
-								<select 
-									value={ selectedDivision } 
-									onChange={ changeEvent => setSelectedDivision(changeEvent.target.value) }
-									aria-label="Filter Division"
-								>
-									<option value="All">All Divisions</option>
-									<option value="Varsity">Varsity</option>
-									<option value="JV">JV</option>
-									<option value="Middle School">Middle School</option>
-								</select>
-
-								{ loggedInUser?.privileges?.includes("scheduleManage") && (
-									<button 
-										className="lineupButton addDual"
-										onClick={ openAddModal }
-									>
-										Add Event
-									</button>
-								)}
-							</>
-						) : (
-							<>
-								<select 
-									value={ selectedState } 
-									onChange={ changeEvent => setSelectedState(changeEvent.target.value) }
-									aria-label="Filter State"
-								>
-									<option value="SC">SC</option>
-									<option value="NC">NC</option>
-									<option value="GA">GA</option>
-									<option value="TN">TN</option>
-									<option value="All">All States</option>
-								</select>
-
-								<select 
-									value={ selectedSeason } 
-									onChange={ changeEvent => setSelectedSeason(changeEvent.target.value) }
-									aria-label="Filter Season"
-								>
-									{seasonOptions.map(option => (
-										<option key={option.name} value={option.name}>{option.name}</option>
-									))}
-								</select>
-
-								<select 
-									value={ selectedEventType } 
-									onChange={ changeEvent => setSelectedEventType(changeEvent.target.value) }
-									aria-label="Filter Event Type"
-								>
-									<option value="All">All Events</option>
-									<option value="Tournament">Tournament</option>
-									<option value="Dual">Dual</option>
-								</select>
-
-								<div className="monthNavGroup">
-									<button onClick={ handlePrevMonth } aria-label="Previous Month" className="navArrowBtn">&lt;</button>
-									<button onClick={ handleNextMonth } aria-label="Next Month" className="navArrowBtn">&gt;</button>
-								</div>
-
-								{ loggedInUser?.privileges?.includes("scheduleManage") && (
-									<button 
-										className="lineupButton addDual"
-										onClick={ () => { window.location.href = "/portal/dual.html"; } }
-									>
-										Add Dual
-									</button>
-								)}
-							</>
-						)}
-					</div>
+				<header>
+					<h1>
+						{ activeView === "team" ? "Schedule" : `${monthNamesFull[viewDate.getMonth()]} ${viewDate.getFullYear()}` }
+					</h1>
 				</header>
+
+				<div className="scheduleFilters">
+					{activeView === "team" ? (
+						<>
+							<select 
+								value={ selectedSeason } 
+								onChange={ changeEvent => setSelectedSeason(changeEvent.target.value) }
+								aria-label="Filter Season"
+							>
+								{seasonOptions.map(option => (
+									<option key={option.name} value={option.name}>{option.name}</option>
+								))}
+							</select>
+
+							<select 
+								value={ selectedDivision } 
+								onChange={ changeEvent => setSelectedDivision(changeEvent.target.value) }
+								aria-label="Filter Division"
+							>
+								<option value="All">All Divisions</option>
+								<option value="Varsity">Varsity</option>
+								<option value="JV">JV</option>
+								<option value="Middle School">Middle School</option>
+							</select>
+
+							{ loggedInUser?.privileges?.includes("scheduleManage") && (
+								<button 
+									className="lineupButton addDual"
+									onClick={ openAddModal }
+								>
+									Add Event
+								</button>
+							)}
+						</>
+					) : (
+						<>
+							<select 
+								value={ selectedState } 
+								onChange={ changeEvent => setSelectedState(changeEvent.target.value) }
+								aria-label="Filter State"
+							>
+								<option value="SC">SC</option>
+								<option value="NC">NC</option>
+								<option value="GA">GA</option>
+								<option value="TN">TN</option>
+								<option value="All">All States</option>
+							</select>
+
+							<select 
+								value={ selectedSeason } 
+								onChange={ changeEvent => setSelectedSeason(changeEvent.target.value) }
+								aria-label="Filter Season"
+							>
+								{seasonOptions.map(option => (
+									<option key={option.name} value={option.name}>{option.name}</option>
+								))}
+							</select>
+
+							<select 
+								value={ selectedEventType } 
+								onChange={ changeEvent => setSelectedEventType(changeEvent.target.value) }
+								aria-label="Filter Event Type"
+							>
+								<option value="All">All Events</option>
+								<option value="Tournament">Tournament</option>
+								<option value="Dual">Dual</option>
+							</select>
+
+							<div className="monthNavGroup">
+								<button onClick={ handlePrevMonth } aria-label="Previous Month" className="navArrowBtn">&lt;</button>
+								<button onClick={ handleNextMonth } aria-label="Next Month" className="navArrowBtn">&gt;</button>
+							</div>
+
+							{ loggedInUser?.privileges?.includes("scheduleManage") && (
+								<button 
+									className="lineupButton addDual"
+									onClick={ () => { window.location.href = "/portal/dual.html"; } }
+								>
+									Add Dual
+								</button>
+							)}
+						</>
+					)}
+				</div>
 
 				{activeView === "team" ? (
 					filteredTeamEvents.length === 0 ? (
