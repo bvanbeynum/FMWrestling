@@ -69,6 +69,11 @@ const Schedule = props => {
 	const [ formLinkedEventName, setFormLinkedEventName ] = useState("");
 	const [ formLinkedDualId, setFormLinkedDualId ] = useState("");
 
+	const [ schools, setSchools ] = useState([]);
+	const [ opponentSelectGroup, setOpponentSelectGroup ] = useState([]);
+	const [ formEventType, setFormEventType ] = useState("Tournament");
+	const [ formOpponentId, setFormOpponentId ] = useState("");
+
 	const [ eventSearchQuery, setEventSearchQuery ] = useState("");
 	const [ eventSearchResults, setEventSearchResults ] = useState([]);
 	
@@ -116,6 +121,21 @@ const Schedule = props => {
 				setEvents(loadedEvents);
 				setTeamEvents(loadedTeamEvents);
 				setDualsList(responseData.duals || []);
+
+				// Process schools dropdown grouped by classification and region
+				const schoolList = responseData.schools || [];
+				setSchools(schoolList);
+				const groups = [...new Set(schoolList.sort((a, b) => 
+					a.classification !== b.classification ? (a.classification > b.classification ? -1 : 1)
+					: a.region !== b.region ? (a.region > b.region ? 1 : -1)
+					: a.name > b.name ? 1 : -1
+				).map(s => `${s.classification || "NA"} - ${s.region || "NA"}`))]
+				.map(groupName => ({
+					name: groupName,
+					schools: schoolList.filter(s => `${s.classification || "NA"} - ${s.region || "NA"}` === groupName)
+				}));
+				setOpponentSelectGroup(groups);
+
 				setPageActive(true);
 				setIsLoading(false);
 
@@ -280,6 +300,8 @@ const Schedule = props => {
 	const openAddModal = () => {
 		setModalMode("add");
 		setEditingEventId(null);
+		setFormEventType("Tournament");
+		setFormOpponentId("");
 		setFormName("");
 		setFormDivision("Varsity");
 		setFormDate(selectedDate ? selectedDate.toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10));
@@ -297,6 +319,8 @@ const Schedule = props => {
 	const openEditModal = (teamEventItem) => {
 		setModalMode("edit");
 		setEditingEventId(teamEventItem.id);
+		setFormEventType(teamEventItem.eventType || (teamEventItem.dualId ? "Dual" : "Tournament"));
+		setFormOpponentId("");
 		setFormName(teamEventItem.name || "");
 		setFormDivision(teamEventItem.division || "Varsity");
 		setFormDate(teamEventItem.date ? new Date(teamEventItem.date).toISOString().slice(0, 10) : "");
@@ -341,13 +365,25 @@ const Schedule = props => {
 		setFormLinkedEventName("");
 	};
 
+	const handleFormOpponentChange = (e) => {
+		const schId = e.target.value;
+		setFormOpponentId(schId);
+		const found = schools.find(s => String(s.id) === String(schId) || String(s._id) === String(schId));
+		if (found) {
+			setFormName(`Fort Mill vs ${found.name}`);
+		} else {
+			setFormName("");
+		}
+	};
+
 	const handleFormSubmit = (submitEvent) => {
 		submitEvent.preventDefault();
 		const teamEventObject = {
+			eventType: formEventType,
 			name: formName,
 			division: formDivision,
 			date: formDate ? new Date(formDate) : null,
-			endDate: formEndDate ? new Date(formEndDate) : null,
+			endDate: formEventType === "Tournament" && formEndDate ? new Date(formEndDate) : null,
 			startTime: formStartTime,
 			location: formLocation,
 			eventId: formLinkedEventId || null,
@@ -358,10 +394,15 @@ const Schedule = props => {
 			teamEventObject.id = editingEventId;
 		}
 
-		fetch("/api/teameventsave", {
+		const opponentRecord = schools.find(s => String(s.id) === String(formOpponentId));
+
+		fetch("/api/schedulesave", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ teamEvent: teamEventObject })
+			body: JSON.stringify({ 
+				teamEvent: teamEventObject,
+				opponent: opponentRecord ? opponentRecord.name : ""
+			})
 		})
 		.then(apiResponse => {
 			if (apiResponse.ok) {
@@ -500,9 +541,9 @@ const Schedule = props => {
 							{ loggedInUser?.privileges?.includes("scheduleManage") && (
 								<button 
 									className="lineupButton addDual"
-									onClick={ () => { window.location.href = "/portal/dual.html"; } }
+									onClick={ openAddModal }
 								>
-									Add Dual
+									Add Event
 								</button>
 							)}
 						</>
@@ -555,25 +596,46 @@ const Schedule = props => {
 																		{loggedInUser?.privileges?.includes("scheduleManage") && (
 																			<button 
 																				className="timelineEditBtn" 
-																				onClick={() => openEditModal(teamEventItem)}
+																				onClick={() => {
+																					if (teamEventItem.eventType?.toLowerCase() === "dual" || teamEventItem.dualId) {
+																						window.location.href = `/portal/dual.html?id=${teamEventItem.dualId}`;
+																					} else {
+																						openEditModal(teamEventItem);
+																					}
+																				}}
 																			>
 																				Edit
 																			</button>
 																		)}
-																		{(teamEventItem.eventId || teamEventItem.dualId) && (
-																			<button
-																				className="timelineViewBtn"
-																				onClick={() => {
-																					if (teamEventItem.dualId) {
-																						window.location.href = `/portal/dual.html?id=${teamEventItem.dualId}`;
-																					} else {
-																						window.location.href = `/portal/tournamentsummary.html?id=${teamEventItem.eventId}`;
-																					}
-																				}}
-																			>
-																				View
-																			</button>
-																		)}
+																		{(() => {
+																			const isDual = teamEventItem.eventType?.toLowerCase() === "dual" || teamEventItem.dualId;
+																			if (isDual) {
+																				return (
+																					<button
+																						className="timelineViewBtn"
+																						onClick={() => {
+																							window.location.href = `/portal/dual.html?id=${teamEventItem.dualId}`;
+																						}}
+																					>
+																						View
+																					</button>
+																				);
+																			} else {
+																				if (teamEventItem.eventId) {
+																					return (
+																						<button
+																							className="timelineViewBtn"
+																							onClick={() => {
+																								window.location.href = `/portal/tournamentsummary.html?id=${teamEventItem.eventId}`;
+																							}}
+																						>
+																							View
+																						</button>
+																					);
+																				}
+																				return null;
+																			}
+																		})()}
 																	</div>
 																</div>
 															);
@@ -798,6 +860,42 @@ const Schedule = props => {
 				</header>
 
 				<form onSubmit={handleFormSubmit} className="modalForm">
+					{/* Event Type */}
+					<div className="formGroup">
+						<label htmlFor="eventTypeSelect">Event Type *</label>
+						<select
+							id="eventTypeSelect"
+							value={formEventType}
+							onChange={changeEvent => setFormEventType(changeEvent.target.value)}
+							disabled={modalMode === "edit"}
+						>
+							<option value="Tournament">Tournament</option>
+							<option value="Dual">Dual</option>
+						</select>
+					</div>
+
+					{/* Opponent Selection (Duals only) */}
+					{formEventType === "Dual" && (
+						<div className="formGroup">
+							<label htmlFor="eventOpponentSelect">Opponent *</label>
+							<select
+								id="eventOpponentSelect"
+								value={formOpponentId}
+								onChange={handleFormOpponentChange}
+								required
+							>
+								<option value="">Choose Opponent...</option>
+								{opponentSelectGroup.map((group, gIdx) => (
+									<optgroup key={gIdx} label={group.name}>
+										{group.schools.map((sch, sIdx) => (
+											<option key={sIdx} value={sch.id}>{sch.name}</option>
+										))}
+									</optgroup>
+								))}
+							</select>
+						</div>
+					)}
+
 					{/* 1. Name */}
 					<div className="formGroup">
 						<label htmlFor="eventName">Event Name *</label>
@@ -836,15 +934,17 @@ const Schedule = props => {
 								required 
 							/>
 						</div>
-						<div className="formGroup">
-							<label htmlFor="eventEndDate">End Date (Optional)</label>
-							<input 
-								type="date" 
-								id="eventEndDate" 
-								value={formEndDate} 
-								onChange={changeEvent => setFormEndDate(changeEvent.target.value)} 
-							/>
-						</div>
+						{formEventType === "Tournament" && (
+							<div className="formGroup">
+								<label htmlFor="eventEndDate">End Date (Optional)</label>
+								<input 
+									type="date" 
+									id="eventEndDate" 
+									value={formEndDate} 
+									onChange={changeEvent => setFormEndDate(changeEvent.target.value)} 
+								/>
+							</div>
+						)}
 					</div>
 
 					{/* 4. Start Time */}
@@ -875,58 +975,62 @@ const Schedule = props => {
 						/>
 					</div>
 
-					<div className="modalDivider"></div>
-					<h4 className="modalSubTitle">Linked Integrations</h4>
+					{formEventType === "Tournament" && (
+						<>
+							<div className="modalDivider"></div>
+							<h4 className="modalSubTitle">Linked Integrations</h4>
 
-					{/* 6. Autocomplete Event Link */}
-					<div className="formGroup autocompleteGroup">
-						<label htmlFor="eventLinkSearch">Link General Event (Optional)</label>
-						{formLinkedEventId ? (
-							<div className="selectedIntegrationBadge">
-								<span>🏆 Linked: {formLinkedEventName}</span>
-								<button type="button" className="unlinkBtn" onClick={unlinkGeneralEvent}>Remove Link</button>
-							</div>
-						) : (
-							<>
-								<input 
-									type="text" 
-									id="eventLinkSearch" 
-									placeholder="Type at least 3 chars to search general events..." 
-									value={eventSearchQuery} 
-									onChange={handleEventSearchChange}
-								/>
-								{eventSearchResults.length > 0 && (
-									<ul className="autocompleteResultsList">
-										{eventSearchResults.map(eventItem => (
-											<li 
-												key={eventItem.id} 
-												onClick={() => linkGeneralEvent(eventItem)}
-											>
-												{eventItem.name} ({new Date(eventItem.date).toLocaleDateString()})
-											</li>
-										))}
-									</ul>
+							{/* 6. Autocomplete Event Link */}
+							<div className="formGroup autocompleteGroup">
+								<label htmlFor="eventLinkSearch">Link to Tournament (Optional)</label>
+								{formLinkedEventId ? (
+									<div className="selectedIntegrationBadge">
+										<span>🏆 Linked: {formLinkedEventName}</span>
+										<button type="button" className="unlinkBtn" onClick={unlinkGeneralEvent}>Remove Link</button>
+									</div>
+								) : (
+									<>
+										<input 
+											type="text" 
+											id="eventLinkSearch" 
+											placeholder="Type at least 3 chars to search general events..." 
+											value={eventSearchQuery} 
+											onChange={handleEventSearchChange}
+										/>
+										{eventSearchResults.length > 0 && (
+											<ul className="autocompleteResultsList">
+												{eventSearchResults.map(eventItem => (
+													<li 
+														key={eventItem.id} 
+														onClick={() => linkGeneralEvent(eventItem)}
+													>
+														{eventItem.name} ({new Date(eventItem.date).toLocaleDateString()})
+													</li>
+												))}
+											</ul>
+										)}
+									</>
 								)}
-							</>
-						)}
-					</div>
+							</div>
 
-					{/* 7. Dual Dropdown Link */}
-					<div className="formGroup">
-						<label htmlFor="eventDualLink">Link Dual Match (Optional)</label>
-						<select 
-							id="eventDualLink" 
-							value={formLinkedDualId} 
-							onChange={changeEvent => setFormLinkedDualId(changeEvent.target.value)}
-						>
-							<option value="">None</option>
-							{dualsList.map(dualItem => (
-								<option key={dualItem.id} value={dualItem.id}>
-									🤼 vs. {dualItem.opponent} ({new Date(dualItem.dualDate).toLocaleDateString()})
-								</option>
-							))}
-						</select>
-					</div>
+							{/* 7. Dual Dropdown Link */}
+							<div className="formGroup">
+								<label htmlFor="eventDualLink">Link Dual Match (Optional)</label>
+								<select 
+									id="eventDualLink" 
+									value={formLinkedDualId} 
+									onChange={changeEvent => setFormLinkedDualId(changeEvent.target.value)}
+								>
+									<option value="">None</option>
+									{dualsList.map(dualItem => (
+										<option key={dualItem.id} value={dualItem.id}>
+											🤼 vs. {dualItem.opponent} ({new Date(dualItem.dualDate).toLocaleDateString()})
+										</option>
+									))}
+								</select>
+							</div>
+						</>
+					)}
 
 					{/* 8. Action Footer */}
 					<footer className="modalActionFooter">

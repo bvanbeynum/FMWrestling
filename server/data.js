@@ -1737,7 +1737,17 @@ export default {
 					{ systemId: record._id.toString(), eventSystem: "WrestlingPortal" },
 					{
 						$set: {
-							name: "Fort Mill vs " + (record.opponent || ""),
+							date: record.dualDate,
+							modified: new Date()
+						}
+					}
+				).exec();
+
+				// Sync updates to corresponding teamEvent if it exists
+				await data.teamEvent.updateMany(
+					{ dualId: record._id },
+					{
+						$set: {
 							date: record.dualDate,
 							modified: new Date()
 						}
@@ -1757,20 +1767,6 @@ export default {
 			let record = null;
 			try {
 				record = await (new data.dual({ ...saveObject, created: new Date(), modified: new Date() })).save();
-
-				// Create the associated event object
-				await (new data.event({
-					sqlId: null,
-					eventSystem: "WrestlingPortal",
-					systemId: record._id.toString(),
-					eventType: "Dual",
-					name: "Fort Mill vs " + (record.opponent || ""),
-					date: record.dualDate,
-					location: null,
-					state: "SC",
-					created: new Date(),
-					modified: new Date()
-				})).save();
 			}
 			catch (error) {
 				output.status = 563;
@@ -1797,6 +1793,7 @@ export default {
 		try {
 			await data.dual.deleteOne({ _id: id });
 			await data.event.deleteOne({ systemId: id.toString(), eventSystem: "WrestlingPortal" });
+			await data.teamEvent.deleteMany({ dualId: id });
 		}
 		catch (error) {
 			output.status = 560;

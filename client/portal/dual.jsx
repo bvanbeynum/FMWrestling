@@ -170,26 +170,6 @@ const Dual = () => {
 			return;
 		}
 
-		// Populate initial 14 standard weight classes if empty
-		if (wrestlers.length === 0) {
-			const initialWrestlers = [];
-			WEIGHT_CLASSES.forEach(wt => {
-				initialWrestlers.push({
-					name: "",
-					weight: wt,
-					results: 0,
-					scores: { takedowns: 0, escapes: 0, reversals: 0, nearfalls: 0 }
-				});
-				initialWrestlers.push({
-					name: "",
-					weight: wt,
-					results: 0,
-					scores: { takedowns: 0, escapes: 0, reversals: 0, nearfalls: 0 }
-				});
-			});
-			setWrestlers(initialWrestlers);
-		}
-
 		setIsStarted(true);
 	};
 
@@ -546,8 +526,8 @@ const Dual = () => {
 						<div className="whiteboard-opponent-label">opponent</div>
 					</div>
 
-					{/* Initial View Action Buttons */}
-					{ !isStarted && (
+					{/* Action Buttons */}
+					{ !isStarted ? (
 						<div className="dual-setup-actions">
 							<button type="submit" className="btn-primary">
 								Start Dual Scoresheet
@@ -560,15 +540,28 @@ const Dual = () => {
 							>
 								{ isUploading ? "Uploading..." : "Upload Scoresheet" }
 							</button>
-
-							<input 
-								ref={ fileInputRef } 
-								type="file" 
-								onChange={ handleFileChange } 
-								className="hidden-file-input" 
-							/>
 						</div>
+					) : (
+						!imagePath && (
+							<div className="dual-setup-actions" style={{ marginTop: '15px' }}>
+								<button 
+									type="button" 
+									className="btn-secondary"
+									onClick={ () => fileInputRef.current.click() }
+									disabled={ isUploading }
+								>
+									{ isUploading ? "Uploading..." : "Upload Scoresheet" }
+								</button>
+							</div>
+						)
 					)}
+
+					<input 
+						ref={ fileInputRef } 
+						type="file" 
+						onChange={ handleFileChange } 
+						className="hidden-file-input" 
+					/>
 				</form>
 			</div>
 

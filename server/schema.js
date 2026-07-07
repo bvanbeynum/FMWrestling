@@ -270,6 +270,7 @@ export default {
 		dualId: mongoose.Schema.Types.ObjectId,
 		division: String,
 		location: String,
+		eventType: String,
 		created: Date,
 		modified: Date
 	})

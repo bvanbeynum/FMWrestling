@@ -308,6 +308,21 @@ export default {
 				console.error("Error preloading duals in scheduleLoad:", dualError.message);
 				output.data.duals = [];
 			}
+
+			// 5. Fetch schools / opponent options directly
+			try {
+				const schoolResponse = await client.get(`${ serverPath }/data/school`);
+				output.data.schools = (schoolResponse.body.schools || [])
+					.map(school => ({
+						id: school.id || school._id,
+						name: school.name,
+						classification: school.classification,
+						region: school.region
+					}));
+			} catch (schoolError) {
+				console.error("Error preloading schools in scheduleLoad:", schoolError.message);
+				output.data.schools = [];
+			}
 		}
 		catch (error) {
 			output.status = 562;
@@ -2742,8 +2757,71 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 		return output;
 	},
 
-	teamEventSave: async (teamEventObject, serverPath) => {
+	scheduleSave: async (teamEventObject, opponentName, serverPath) => {
 		const output = {};
+
+		// Orchestrate Dual creation if this is a new Dual teamEvent
+		if (teamEventObject.eventType === "Dual" && !teamEventObject.id && !teamEventObject.dualId) {
+			try {
+				// Parse date and time to construct local Date object
+				const dateObj = new Date(teamEventObject.date);
+				const year = dateObj.getFullYear();
+				const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+				const day = String(dateObj.getDate()).padStart(2, '0');
+				const dateString = `${year}-${month}-${day}`;
+
+				let combinedDateTime;
+				if (teamEventObject.startTime) {
+					const [time, modifier] = teamEventObject.startTime.split(' ');
+					let [hours, minutes] = time.split(':');
+					if (hours === '12') hours = '00';
+					if (modifier === 'PM') hours = String(parseInt(hours, 10) + 12).padStart(2, '0');
+					combinedDateTime = new Date(`${dateString}T${hours}:${minutes}:00`);
+				} else {
+					combinedDateTime = new Date(`${dateString}T00:00:00`);
+				}
+
+				// 1. Create dual record with empty wrestlers list for manual entry
+				const dualObject = {
+					opponent: opponentName,
+					dualDate: combinedDateTime.toISOString(),
+					wrestlers: [],
+					imagePath: null
+				};
+				const saveDualResponse = await client.post(`${ serverPath }/data/dual`).send({ dual: dualObject });
+				const newDualId = saveDualResponse.body?.id;
+
+				if (!newDualId) {
+					throw new Error("Failed to create dual record");
+				}
+
+				// 2. Create associated event record
+				const eventObject = {
+					sqlId: null,
+					eventSystem: "WrestlingPortal",
+					systemId: newDualId.toString(),
+					eventType: "Dual",
+					name: teamEventObject.name || "Fort Mill vs " + (opponentName || ""),
+					date: combinedDateTime.toISOString(),
+					location: teamEventObject.location || null,
+					state: "SC"
+				};
+				const saveEventResponse = await client.post(`${ serverPath }/data/event`).send({ event: eventObject });
+				const newEventId = saveEventResponse.body?.id;
+
+				// 3. Link records to teamEvent
+				teamEventObject.dualId = newDualId;
+				if (newEventId) {
+					teamEventObject.eventId = newEventId;
+				}
+			} catch (error) {
+				output.status = 562;
+				output.error = `Error orchestrating dual creation: ${error.message}`;
+				return output;
+			}
+		}
+
+		// Save the teamEvent record
 		try {
 			const saveResponse = await client.post(`${ serverPath }/data/teamevent`).send({ teamEvent: teamEventObject });
 			output.status = saveResponse.status;

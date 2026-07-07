@@ -533,12 +533,12 @@ router.post("/api/duplicatesmerge", authAPI, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : results.data );
 });
 
-router.post("/api/teameventsave", authAPI, async (request, response) => {
+router.post("/api/schedulesave", authAPI, async (request, response) => {
 	if (!request.user || !request.user.privileges || !request.user.privileges.includes("scheduleManage")) {
 		return response.status(401).json({ error: "Unauthorized" });
 	}
 
-	const results = await api.teamEventSave(request.body.teamEvent, request.serverPath);
+	const results = await api.scheduleSave(request.body.teamEvent, request.body.opponent, request.serverPath);
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 });
 
