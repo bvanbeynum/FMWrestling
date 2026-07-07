@@ -57,9 +57,6 @@ const Dual = () => {
 	const [ imagePath, setImagePath ] = useState(null);
 	const [ selectedFile, setSelectedFile ] = useState(null);
 
-	// UI Controls State
-	const [ showScorecardImage, setShowScorecardImage ] = useState(false);
-
 	// Granular Upload Progress State
 	const [ uploadProgress, setUploadProgress ] = useState({
 		currentStage: "RECEIVING_FILE",
@@ -148,7 +145,6 @@ const Dual = () => {
 
 		setWrestlers(dual.wrestlers || []);
 		setImagePath(dual.imagePath ? `/media/temp/${dual.imagePath}` : null);
-		setShowScorecardImage(false);
 		setIsStarted(true);
 	};
 
@@ -318,7 +314,6 @@ const Dual = () => {
 				console.error("Save error:", data.error);
 				alert("Failed to save dual meet.");
 			} else {
-				alert("Dual saved successfully!");
 				window.location.href = "/portal/schedule.html";
 			}
 		})
@@ -584,8 +579,8 @@ const Dual = () => {
 							{ imagePath && (
 								<button 
 									type="button"
-									className={ `action-btn scorecard-btn ${ showScorecardImage ? "active" : "" }` }
-									onClick={ () => setShowScorecardImage(!showScorecardImage) }
+									className="action-btn scorecard-btn"
+									onClick={ () => window.open(imagePath, "_blank") }
 								>
 									{/* Check / Image Icon */}
 									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Zm40-80h480L570-480 450-320l-90-120-120 160Zm-40 80v-560 560Z"/></svg>
@@ -823,21 +818,7 @@ const Dual = () => {
 					</div>
 				</div>
 
-				{/* Scorecard Image Viewer Panel */}
-				{ showScorecardImage && imagePath && (
-					<div className="scorecard-image-card">
-						<h3>Stat Sheet Scorecard Image</h3>
-						<div className="image-scroll-box">
-							<img 
-								src={ imagePath } 
-								alt="Stat Sheet Scorecard" 
-								className="scorecard-img" 
-								style={{ width: `100%` }}
-								onClick={ () => window.open(imagePath, "_blank") }
-							/>
-						</div>
-					</div>
-				)}
+
 			</>
 			)}
 
