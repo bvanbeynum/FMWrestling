@@ -610,16 +610,19 @@ const Schedule = props => {
 																		{(() => {
 																			const isDual = teamEventItem.eventType?.toLowerCase() === "dual" || teamEventItem.dualId;
 																			if (isDual) {
-																				return (
-																					<button
-																						className="timelineViewBtn"
-																						onClick={() => {
-																							window.location.href = `/portal/dual.html?id=${teamEventItem.dualId}`;
-																						}}
-																					>
-																						View
-																					</button>
-																				);
+																				if (!loggedInUser?.privileges?.includes("scheduleManage")) {
+																					return (
+																						<button
+																							className="timelineViewBtn"
+																							onClick={() => {
+																								window.location.href = `/portal/dual.html?id=${teamEventItem.dualId}`;
+																							}}
+																						>
+																							View
+																						</button>
+																					);
+																				}
+																				return null;
 																			} else {
 																				if (teamEventItem.eventId) {
 																					return (
