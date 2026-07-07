@@ -446,7 +446,23 @@ router.post("/api/dualstatsupload", authAPI, async (request, response) => {
 			file.on("end", async () => {
 				const imageBuffer = Buffer.concat(chunks);
 
-				api.dualStatsUpload(imageBuffer, mimeType, request.serverPath, updateProgress)
+				let detectedMimeType = mimeType;
+				if (filename) {
+					const lowerName = filename.toLowerCase();
+					if (lowerName.endsWith(".heic")) {
+						detectedMimeType = "image/heic";
+					} else if (lowerName.endsWith(".heif")) {
+						detectedMimeType = "image/heif";
+					} else if (lowerName.endsWith(".png")) {
+						detectedMimeType = "image/png";
+					} else if (lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg")) {
+						detectedMimeType = "image/jpeg";
+					} else if (lowerName.endsWith(".webp")) {
+						detectedMimeType = "image/webp";
+					}
+				}
+
+				api.dualStatsUpload(imageBuffer, detectedMimeType, request.serverPath, updateProgress)
 					.then(results => {
 						if (results.error) {
 							jobs[jobId] = { status: "error", statusCode: results.status, error: results.error };

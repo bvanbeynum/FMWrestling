@@ -2287,6 +2287,7 @@ Do not return any other text or markup.
 		} catch (error) {
 			output.error = error.message;
 			output.status = 562;
+			return output;
 		}
 
 		updateProgress("LOOKUP_SCHOOL", "Searching school database for opponent...", 1);
