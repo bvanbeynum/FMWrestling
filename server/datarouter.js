@@ -632,4 +632,45 @@ router.delete("/data/dual", authInternal, async (request, response) => {
 	}
 });
 
+router.get("/data/teamevent", authInternal, async (request, response) => {
+	try {
+		const results = await data.teamEventGet({
+			id: request.query.id,
+			startDate: request.query.startdate,
+			endDate: request.query.enddate,
+			division: request.query.division
+		});
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		response.status(570).json({ error: error.message });
+	}
+});
+
+router.post("/data/teamevent", authInternal, async (request, response) => {
+	try {
+		const results = await data.teamEventSave(request.body.teamEvent);
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		response.status(570).json({ error: error.message });
+	}
+});
+
+router.delete("/data/teamevent", authInternal, async (request, response) => {
+	try {
+		const results = await data.teamEventDelete(request.query.id);
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		response.status(570).json({ error: error.message });
+	}
+});
+
 export default router;

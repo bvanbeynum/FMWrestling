@@ -259,6 +259,19 @@ export default {
 		}],
 		created: Date,
 		modified: Date
+	}),
+
+	teamEvent: mongoose.model("teamevent", {
+		name: String,
+		date: Date,
+		endDate: Date,
+		startTime: String,
+		eventId: mongoose.Schema.Types.ObjectId,
+		dualId: mongoose.Schema.Types.ObjectId,
+		division: String,
+		location: String,
+		created: Date,
+		modified: Date
 	})
 	
 };

@@ -1807,6 +1807,131 @@ export default {
 		output.status = 200;
 		output.data = { status: "ok" };
 		return output;
+	},
+
+	teamEventGet: async (userFilter = {}) => {
+		let filter = {},
+			output = {};
+
+		if (userFilter.id) {
+			filter["_id"] = mongoose.Types.ObjectId.isValid(userFilter.id) ? userFilter.id : null;
+		}
+		if (userFilter.startDate && userFilter.endDate) {
+			const startDate = new Date(Date.parse(userFilter.startDate)),
+				endDate = new Date(Date.parse(userFilter.endDate));
+			
+			filter.date = {
+				$gte: startDate,
+				$lte: endDate
+			};
+		}
+		if (userFilter.division && userFilter.division !== "All") {
+			filter.division = userFilter.division;
+		}
+
+		try {
+			const records = await data.teamEvent.find(filter).lean().exec();
+			output.status = 200;
+			output.data = { teamEvents: records.map(({ _id, __v, ...remainingFields }) => ({ id: _id, ...remainingFields })) };
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+		}
+
+		return output;
+	},
+
+	teamEventSave: async (saveObject) => {
+		const output = {};
+
+		if (!saveObject) {
+			output.status = 550;
+			output.error = "Missing object to save";
+			return output;
+		}
+
+		if (saveObject.id) {
+			let record = null;
+			try {
+				record = await data.teamEvent.findById(saveObject.id).exec();
+			}
+			catch (error) {
+				output.status = 560;
+				output.error = error.message;
+				return output;
+			}
+
+			if (!record) {
+				output.status = 561;
+				output.error = "Record not found";
+				return output;
+			}
+
+			try {
+				Object.keys(saveObject).forEach(field => {
+					if (field !== "id" && field !== "_id") {
+						if ((field === "eventId" || field === "dualId") && saveObject[field]) {
+							record[field] = mongoose.Types.ObjectId.isValid(saveObject[field]) ? new mongoose.Types.ObjectId(saveObject[field]) : null;
+						} else {
+							record[field] = saveObject[field];
+						}
+					}
+				});
+				record.modified = new Date();
+				record = await record.save();
+			}
+			catch (error) {
+				output.status = 562;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			output.data = { id: record._id };
+		}
+		else {
+			let record = null;
+			try {
+				const toSave = { ...saveObject, created: new Date(), modified: new Date() };
+				if (toSave.eventId) toSave.eventId = mongoose.Types.ObjectId.isValid(toSave.eventId) ? new mongoose.Types.ObjectId(toSave.eventId) : null;
+				if (toSave.dualId) toSave.dualId = mongoose.Types.ObjectId.isValid(toSave.dualId) ? new mongoose.Types.ObjectId(toSave.dualId) : null;
+				record = await (new data.teamEvent(toSave)).save();
+			}
+			catch (error) {
+				output.status = 563;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			output.data = { id: record._id };
+		}
+
+		return output;
+	},
+
+	teamEventDelete: async (recordId) => {
+		const output = {};
+
+		if (!recordId || !mongoose.Types.ObjectId.isValid(recordId)) {
+			output.status = 550;
+			output.error = "Missing ID to delete";
+			return output;
+		}
+
+		try {
+			await data.teamEvent.deleteOne({ _id: recordId });
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		output.data = { status: "ok" };
+		return output;
 	}
 
 };

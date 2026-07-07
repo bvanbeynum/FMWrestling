@@ -156,12 +156,6 @@ export default {
 						domain: domain,
 						browser: userAgent
 					}
-				},
-			email = {
-					from: "\"The Wrestling Mill\" <thebeynumco@gmail.com>",
-					to: config.email.user,
-					subject: "Wrestling Mill Access Requested",
-					html: `Access requested from:<br>${userName} (${userEmail})<br><br>Details<br>Domain: ${ domain }<br>IP: ${ ipAddress }<br>Browser:<br>${ JSON.stringify(userAgent).replace(/,/g, "<br>") }<br><br><a href="http://${ domain }">http://${ domain }</a>`
 				};
 			
 		try {
@@ -172,33 +166,6 @@ export default {
 			output.error = error.message;
 			return output;
 		}
-
-		// try {
-		// 	const oauth = new google.auth.OAuth2(config.email.clientId, config.email.clientSecret, config.email.redirectURL);
-		// 	oauth.setCredentials({ refresh_token: config.email.refreshToken });
-		// 	const gmailToken = oauth.getAccessToken();
-			
-		// 	const service = nodemailer.createTransport({
-		// 		service: "gmail",
-		// 		auth: {
-		// 			type: "OAuth2",
-		// 			user: config.email.user,
-		// 			clientId: config.email.clientId,
-		// 			clientSecret: config.email.clientSecret,
-		// 			refreshToken: config.email.refreshToken,
-		// 			accessToken: gmailToken
-		// 		}
-		// 	});
-
-		// 	const sendMailAsync = (email) => new Promise(resolve => service.sendMail(email, (error) => resolve(error)));
-		// 	const error = await sendMailAsync(email);
-		// 	service.close();
-			
-		// 	if (error) {
-		// 		output.error = error.message;
-		// 	}
-		// }
-		// catch { }
 
 		output.status = 200;
 		output.cookie = encryptedToken;
@@ -289,10 +256,58 @@ export default {
 		eventParams.push(`select=${ eventSelect }`);
 
 		const eventUrl = `${ serverPath }/data/event?${ eventParams.join("&") }`;
+		const teamEventUrl = `${ serverPath }/data/teamevent?${ startDate && endDate ? `startdate=${startDate}&enddate=${endDate}` : "" }`;
 
 		try {
+			// 1. Fetch general events
 			const clientResponse = await client.get(eventUrl);
 			output.data.events = clientResponse.body.events;
+
+			// 2. Fetch team events
+			const teamEventResponse = await client.get(teamEventUrl);
+			const teamEvents = teamEventResponse.body.teamEvents || [];
+
+			// 3. Resolve joins for each teamEventItem object in the business layer
+			const joinedTeamEvents = [];
+			for (const teamEventItem of teamEvents) {
+				let joinedEvent = { ...teamEventItem };
+
+				if (teamEventItem.eventId) {
+					try {
+						const detailsResponse = await client.get(`${ serverPath }/data/event?id=${ teamEventItem.eventId }`);
+						if (detailsResponse.body.events && detailsResponse.body.events.length > 0) {
+							joinedEvent.event = detailsResponse.body.events[0];
+						}
+					} catch (joinError) {
+						console.error(`Error joining event ${teamEventItem.eventId} in scheduleLoad:`, joinError.message);
+					}
+				}
+
+				if (teamEventItem.dualId) {
+					try {
+						const dualResponse = await client.get(`${ serverPath }/data/dual?id=${ teamEventItem.dualId }`);
+						if (dualResponse.body.duals && dualResponse.body.duals.length > 0) {
+							joinedEvent.dual = dualResponse.body.duals[0];
+						}
+					} catch (joinError) {
+						console.error(`Error joining dual ${teamEventItem.dualId} in scheduleLoad:`, joinError.message);
+					}
+				}
+
+				joinedTeamEvents.push(joinedEvent);
+			}
+
+			output.data.teamEvents = joinedTeamEvents;
+
+			// 4. Fetch dual meets in the season
+			const dualUrl = `${ serverPath }/data/dual?${ startDate && endDate ? `startdate=${startDate}&enddate=${endDate}` : "" }`;
+			try {
+				const dualResponse = await client.get(dualUrl);
+				output.data.duals = dualResponse.body.duals || [];
+			} catch (dualError) {
+				console.error("Error preloading duals in scheduleLoad:", dualError.message);
+				output.data.duals = [];
+			}
 		}
 		catch (error) {
 			output.status = 562;
@@ -2722,6 +2737,32 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 			}
 		} catch (error) {
 			output.status = 500;
+			output.error = error.message;
+		}
+		return output;
+	},
+
+	teamEventSave: async (teamEventObject, serverPath) => {
+		const output = {};
+		try {
+			const saveResponse = await client.post(`${ serverPath }/data/teamevent`).send({ teamEvent: teamEventObject });
+			output.status = saveResponse.status;
+			output.data = saveResponse.body;
+		} catch (error) {
+			output.status = 562;
+			output.error = error.message;
+		}
+		return output;
+	},
+
+	teamEventDelete: async (recordId, serverPath) => {
+		const output = {};
+		try {
+			const deleteResponse = await client.delete(`${ serverPath }/data/teamevent?id=${ recordId }`);
+			output.status = deleteResponse.status;
+			output.data = deleteResponse.body;
+		} catch (error) {
+			output.status = 562;
 			output.error = error.message;
 		}
 		return output;
