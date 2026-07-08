@@ -401,15 +401,15 @@ router.get("/api/opponenteventselect", authAPI, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : results.data );
 });
 
-// ***************** Dual Stats ********************
+// ***************** Duals ********************
 
-router.get("/api/dualstatsload", authAPI, async (request, response) => {
-	const results = await api.dualStatsLoad(request.serverPath);
+router.get("/api/dualload", authAPI, async (request, response) => {
+	const results = await api.dualLoad(request.serverPath);
 
 	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
 });
 
-router.post("/api/dualstatsupload", authAPI, async (request, response) => {
+router.post("/api/dualupload", authAPI, async (request, response) => {
 	if (request.busboy) {
 		const jobId = crypto.randomUUID();
 		jobs[jobId] = { 
@@ -462,7 +462,7 @@ router.post("/api/dualstatsupload", authAPI, async (request, response) => {
 					}
 				}
 
-				api.dualStatsUpload(imageBuffer, detectedMimeType, request.serverPath, updateProgress)
+				api.dualUpload(imageBuffer, detectedMimeType, request.serverPath, updateProgress)
 					.then(results => {
 						if (results.error) {
 							jobs[jobId] = { status: "error", statusCode: results.status, error: results.error };
@@ -490,7 +490,7 @@ router.post("/api/dualstatsupload", authAPI, async (request, response) => {
 	}
 });
 
-router.get("/api/dualstatsupload/:jobId", authAPI, (request, response) => {
+router.get("/api/dualupload/:jobId", authAPI, (request, response) => {
 	const jobId = request.params.jobId;
 	const job = jobs[jobId];
 
@@ -507,8 +507,8 @@ router.get("/api/dualstatsupload/:jobId", authAPI, (request, response) => {
 	}
 });
 
-router.post("/api/dualstatssave", authAPI, async (request, response) => {
-	const results = await api.dualStatsSave(request.body.dual, request.serverPath);
+router.post("/api/dualsave", authAPI, async (request, response) => {
+	const results = await api.dualSave(request.body.dual, request.serverPath);
 
 	if (results.error) {
 		console.log(`Error ${results.status}: ${ results.error }`);
@@ -517,8 +517,8 @@ router.post("/api/dualstatssave", authAPI, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : results.data );
 });
 
-router.post("/api/dualstatsdelete", authAPI, async (request, response) => {
-	const results = await api.dualStatsDelete(request.body.id, request.serverPath);
+router.post("/api/dualdelete", authAPI, async (request, response) => {
+	const results = await api.dualDelete(request.body.id, request.serverPath);
 
 	if (results.error) {
 		console.log(`Error ${results.status}: ${ results.error }`);

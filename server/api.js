@@ -2181,7 +2181,7 @@ export default {
 		return output;		
 	},
 
-	dualStatsLoad: async (serverPath) => {
+	dualLoad: async (serverPath) => {
 		const output = { data: {} };
 
 		try {
@@ -2198,7 +2198,7 @@ export default {
 		return output;		
 	},
 
-	dualStatsUpload: async (imageBuffer, mimetype, serverPath, updateProgress = () => {}) => {
+	dualUpload: async (imageBuffer, mimetype, serverPath, updateProgress = () => {}) => {
 		const output = { data: {} };
 
 		// Mock response for testing without API calls
@@ -2462,7 +2462,7 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 		return output;
 	},
 	
-	dualStatsSave: async (dual, serverPath) => {
+	dualSave: async (dual, serverPath) => {
 		const output = {};
 
 		try {
@@ -2488,7 +2488,7 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 		}
 	},
 
-	dualStatsDelete: async (dualId, serverPath) => {
+	dualDelete: async (dualId, serverPath) => {
 		const output = {};
 
 		try {

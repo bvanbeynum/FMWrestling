@@ -71,7 +71,7 @@ const Dual = () => {
 	useEffect(() => {
 		if (!pageActive) {
 			Promise.all([
-				fetch("/api/dualstatsload").then(res => res.ok ? res.json() : Promise.reject(res.statusText)),
+				fetch("/api/dualload").then(res => res.ok ? res.json() : Promise.reject(res.statusText)),
 				fetch("/api/opponenteventload").then(res => res.ok ? res.json() : Promise.reject(res.statusText))
 			])
 			.then(([dualData, schoolData]) => {
@@ -169,10 +169,10 @@ const Dual = () => {
 		setIsStarted(true);
 	};
 
-	// File upload flow matching dualstats.jsx
+	// File upload flow for processing scoresheets
 	const pollJobStatus = (jobId) => {
 		const interval = setInterval(() => {
-			fetch(`/api/dualstatsupload/${jobId}`)
+			fetch(`/api/dualupload/${jobId}`)
 				.then(res => res.json())
 				.then(data => {
 					if (data.status === "processing") {
@@ -228,7 +228,7 @@ const Dual = () => {
 			const formData = new FormData();
 			formData.append("file", file);
 
-			fetch("/api/dualstatsupload", {
+			fetch("/api/dualupload", {
 				method: "POST",
 				body: formData,
 			})
@@ -303,7 +303,7 @@ const Dual = () => {
 			wrestlers
 		};
 
-		fetch("/api/dualstatssave", {
+		fetch("/api/dualsave", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ dual: dualData })
@@ -326,7 +326,7 @@ const Dual = () => {
 
 	const handleDeleteDual = () => {
 		if (confirm("Are you sure you want to delete this dual meet?")) {
-			fetch("/api/dualstatsdelete", {
+			fetch("/api/dualdelete", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ id: dualId })
