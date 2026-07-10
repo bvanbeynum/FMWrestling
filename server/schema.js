@@ -246,19 +246,26 @@ export default {
 		dualDate: Date,
 		opponent: String,
 		imagePath: String,
-		wrestlers: [{
-			name: String,
-			weight: String,
-			results: Number,
-			scores: {
-				takedowns: Number,
-				escapes: Number,
-				reversals: Number,
-				nearfalls: Number
-			}
-		}],
 		created: Date,
-		modified: Date
+		modified: Date,
+		division: String,
+		matches: [{
+			matchSqlId: Number,
+			weightClass: String,
+			winType: String,
+			sort: Number,
+			wrestlers: [{
+				name: String,
+				team: String,
+				isWinner: Boolean,
+				scores: {
+					takedowns: Number,
+					escapes: Number,
+					reversals: Number,
+					nearfalls: Number
+				}
+			}]
+		}]
 	}),
 
 	teamEvent: mongoose.model("teamevent", {

@@ -245,7 +245,7 @@ describe("Dual data test", () => {
 
 	it("should create a new object", async () => {
 		const response = await data.dualSave({
-			name: "Test dual",
+			opponent: "Test opponent",
 			division: "test division"
 		});
 
@@ -266,7 +266,7 @@ describe("Dual data test", () => {
 			expect.arrayContaining([
 				expect.objectContaining({
 					id: createdId,
-					name: "Test dual",
+					opponent: "Test opponent",
 					division: "test division"
 				})
 			])

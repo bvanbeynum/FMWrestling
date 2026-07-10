@@ -6,6 +6,58 @@ import nodemailer from "nodemailer";
 import fs, { stat } from "fs";
 import path from "path";
 
+const isGeminiQuotaError = (error) => {
+	if (error.status === 429) return true;
+	if (error.response) {
+		if (error.response.status === 429) return true;
+		if (error.response.body && error.response.body.error) {
+			const code = error.response.body.error.code;
+			const status = error.response.body.error.status;
+			if (code === 429 || status === "RESOURCE_EXHAUSTED") return true;
+		}
+		if (error.response.text) {
+			try {
+				const parsed = JSON.parse(error.response.text);
+				if (parsed && parsed.error && (parsed.error.code === 429 || parsed.error.status === "RESOURCE_EXHAUSTED")) {
+					return true;
+				}
+			} catch (parseError) {}
+		}
+	}
+	const errorText = error.response ? (error.response.text || JSON.stringify(error.response.body || "")) : "";
+	const combinedText = `${error.message || ""} ${errorText}`.toLowerCase();
+	if (combinedText.includes("quota exceeded") || combinedText.includes("resource_exhausted") || combinedText.includes("quota")) {
+		return true;
+	}
+	return false;
+};
+
+const isGeminiOverloadedError = (error) => {
+	if (error.status === 503) return true;
+	if (error.response) {
+		if (error.response.status === 503) return true;
+		if (error.response.body && error.response.body.error) {
+			const code = error.response.body.error.code;
+			const status = error.response.body.error.status;
+			if (code === 503 || status === "UNAVAILABLE") return true;
+		}
+		if (error.response.text) {
+			try {
+				const parsed = JSON.parse(error.response.text);
+				if (parsed && parsed.error && (parsed.error.code === 503 || parsed.error.status === "UNAVAILABLE")) {
+					return true;
+				}
+			} catch (parseError) {}
+		}
+	}
+	const errorText = error.response ? (error.response.text || JSON.stringify(error.response.body || "")) : "";
+	const combinedText = `${error.message || ""} ${errorText}`.toLowerCase();
+	if (combinedText.includes("high demand") || combinedText.includes("unavailable") || combinedText.includes("overloaded") || combinedText.includes("503")) {
+		return true;
+	}
+	return false;
+};
+
 export default {
 
 	setRequestVars: (protocol, host) => {
@@ -2220,25 +2272,48 @@ export default {
 			output.error = `Error saving file: ${error.message}`;
 			return output;
 		}
-		console.log(`File saved to ${ filePath }`);
 
 		try {
 			const imageBytes = imageBuffer.toString("base64");
 
 			const prompt = `
 This image contains the visitor name at the top, as well as a table with a row for each wrestler with the wrestler score shorthand, and the match results.
-Extract
+Extract:
 * The opponent name at the top of the sheet.
-* An array of wrestler data
-	* The wrestler name
-	* The wrestler's weight class
-	* An array of the wrestler's scores (the format should be character then digit. e.g. N4, T3, E1. single characters or digits should be ignored)
-	* The match results score - there should only be one score per weight class. If one is blank, then treat it as 0.
-Return the data as a JSON object with a key for the opponent name, and an array of objects with a key for the wrestler name, a key for the match results score, and an array of scores {opponent: String, wrestlers: [name: String, weight: String, results: Number, scores: Array<String>]}.
-Do not return any other text or markup. 
+* An array of matches:
+	* The weight class (e.g. 106, 113, etc.)
+	* If the result was a pin / fall (usually indicated with F)
+	* An array of the two wrestlers in the match:
+		* Wrestler name
+		* Team (either "Fort Mill" or the extracted visitor opponent name)
+		* isWinner (true if this wrestler won the match, false otherwise - sometimes can be indicated with a circle)
+		* An array of wrestler's scores/actions (e.g. N4, T3, E1. Single characters or digits should be ignored)
+		* Match Results (team points for the match, either 0, 3, 4, 5, or 6)
+Return the data as a JSON object with:
+{
+  "opponent": "Opponent Name",
+  "matches": [{
+    "weightClass": "106",
+    "isFall": true,
+    "wrestlers": [{
+      "name": "Wrestler Name",
+      "team": "Fort Mill",
+      "isWinner": true,
+      "scores": ["T2", "N3"],
+	  "matchResults": 3
+    }, {
+      "name": "Wrestler Name 2",
+      "team": "Opponent Name",
+      "isWinner": false,
+      "scores": [],
+	  "matchResults": 0
+    }]
+  }]
+}
+Do not return any other text or markup.
 `;
 
-			const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${config.geminiAPIKey}`;
+			const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${config.geminiAPIKey}`;
 			const headers = { "Content-Type": "application/json" };
 			const data = {
 				"contents": [
@@ -2260,33 +2335,62 @@ Do not return any other text or markup.
 			const statsData = JSON.parse(text);
 
 			output.data.stats = {
-					...statsData,
-					wrestlers: statsData.wrestlers.map(wrestler => ({
-							...wrestler,
-							scores: wrestler.scores
-								.reduce((output, score) => {
-									const prefix = score.substring(0, 1);
-									output[prefix.toLowerCase()] += 1;
-									return output;
-								}, { t: 0, e: 0, n: 0, r: 0 })
-						}))
-						.map(wrestler => ({
-							...wrestler,
-							scores: {
-								takedowns: wrestler.scores.t,
-								escapes: wrestler.scores.e,
-								nearfalls: wrestler.scores.n,
-								reversals: wrestler.scores.r
-							}
-						}))
-				};
-			console.log(`Extracted ${ output.data.stats.wrestlers.length } wrestlers from stats sheet for opponent ${ output.data.stats.opponent }`);
+				opponent: statsData.opponent,
+				matches: (statsData.matches || []).map((match, matchIndex) => {
+					const scores = match.wrestlers.map(wrestler => wrestler.matchResults || 0);
+
+					return {
+						matchSqlId: null,
+						weightClass: match.weightClass,
+						winType: match.isFall ? "F"
+							: (match.wrestlers || []).map(wrestler => wrestler.name?.toLowerCase()).includes("forf") ? "FF"
+							: scores.includes(3) ? "Dec"
+							: scores.includes(4) ? "MD"
+							: scores.includes(5) ? "TF"
+							: null,
+						sort: matchIndex + 1,
+						wrestlers: (match.wrestlers || []).map(wrestler => {
+
+							const scoreCounts = (wrestler.scores || []).reduce((acc, score) => {
+								const prefix = score.substring(0, 1).toLowerCase();
+								if (prefix === "t" || prefix === "e" || prefix === "n" || prefix === "r") {
+									acc[prefix] += 1;
+								}
+								return acc;
+							}, { t: 0, e: 0, n: 0, r: 0 });
+
+							return {
+								name: wrestler.name,
+								team: wrestler.team,
+								isWinner: !!wrestler.isWinner,
+								scores: {
+									takedowns: scoreCounts.t,
+									escapes: scoreCounts.e,
+									nearfalls: scoreCounts.n,
+									reversals: scoreCounts.r
+								}
+							};
+						})
+					}
+				})
+			};
 
 			output.data.fileName = fileName;
 			output.status = 200;
 		} catch (error) {
-			output.error = error.message;
+			console.log(JSON.stringify(error, null, 2))
+			if (isGeminiQuotaError(error)) {
+				output.status = 429;
+				output.error = "AI quota for the day has been exceeded";
+				return output;
+			}
+			if (isGeminiOverloadedError(error)) {
+				output.status = 503;
+				output.error = "AI service is temporarily overloaded. Please try again later.";
+				return output;
+			}
 			output.status = 562;
+			output.error = `Error analyzing image: ${error.message}`;
 			return output;
 		}
 
@@ -2298,11 +2402,10 @@ Do not return any other text or markup.
 			schools = clientResponse.body.schools;
 			// First try to find the opponent school through basic string matching, ignoring case, whitespace, and non-alphanumeric characters
 			opponentSchool = schools.find(school => school.name.toLowerCase().replace(/\s/g, "").replace(/[^a-z]/gi, "") == output.data.stats.opponent.toLowerCase().replace(/\s/g, "").replace(/[^a-z]/gi, ""));
-			console.log(`Basic string matching found opponent school: ${ opponentSchool ? opponentSchool.name : "No match found" }`);
 		}
 		catch (error) {
 			output.status = 564;
-			output.error = error.message;
+			output.error = `Error loading school database: ${error.message}`;
 			return output;
 		}
 
@@ -2333,8 +2436,17 @@ Do not return any other text or markup.
 				text = text.replace(/["']/g, "").trim();
 
 				opponentSchool = schools.find(school => school.name.toLowerCase() == text.toLowerCase());
-				console.log(`Gemini matching found opponent school: ${ opponentSchool ? opponentSchool.name : "No match found" }`);
 			} catch (error) {
+				if (isGeminiQuotaError(error)) {
+					output.status = 429;
+					output.error = "AI quota for the day has been exceeded";
+					return output;
+				}
+				if (isGeminiOverloadedError(error)) {
+					output.status = 503;
+					output.error = "AI service is temporarily overloaded. Please try again later.";
+					return output;
+				}
 				output.status = 565;
 				output.error = `Error finding opponent school: ${error.message}`;
 				return output;
@@ -2408,15 +2520,23 @@ Do not return any other text or markup.
 			}
 			catch (error) {
 				output.status = 567;
-				output.error = error.message;
+				output.error = `Error loading opponent wrestler team rosters: ${error.message}`;
 				return output;
 			}
-			console.log(`Wrestlers loaded for matching: ${ wrestlers.length } wrestlers found`);
 
-			// Use the list of wrestlers to find potential matches for the wrestlers in the stats based on name matching, and add potential wrestler IDs to the stats data
+			const ocrWrestlerNames = [];
+			(output.data.stats.matches || []).forEach(match => {
+				(match.wrestlers || []).forEach(wrestler => {
+					if (wrestler.name && wrestler.name !== "Forfeit" && wrestler.name !== "FF") {
+						ocrWrestlerNames.push(wrestler.name);
+					}
+				});
+			});
+
+			// Use the list of wrestlers to find potential matches for the wrestlers in the stats based on name matching
 			const prompt = `Based on the following list of wrestlers, which wrestler is the most likely match for each wrestler in the stats data?
 If there is no good match for a wrestler, return null for that wrestler. 
-Wrestlers: ${ output.data.stats.wrestlers.map(wrestler => wrestler.name).join(", ") }
+Wrestlers: ${ ocrWrestlerNames.join(", ") }
 Wrestler Lookup Names: ${ wrestlers.map(wrestler => `${wrestler.name} (${ wrestler.id})`).join(", ") }
 Return the matches as an array, [{ lookup: String, matchId: String }] where the lookup is the wrestler name from the wrestlers, and the matchId is the ID of the matched wrestler from the wrestler lookup names. If there is no good match, matchId should be null.`;
 
@@ -2441,17 +2561,30 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 				text = text.replace("```json", "").replace("```", "");
 				const wrestlerMatches = JSON.parse(text);
 				
-				output.data.stats.wrestlers = output.data.stats.wrestlers.map(wrestler => {
-					const match = wrestlerMatches.find(match => match.lookup.toLowerCase() == wrestler.name.toLowerCase());
+				output.data.stats.matches = output.data.stats.matches.map(match => {
 					return {
-						...wrestler,
-						lookup: wrestler.name,
-						name: wrestlers.find(wrestler => match && wrestler.id == match.matchId)?.name || wrestler.name,
-						id: match && match.matchId ? wrestlers.find(wrestler => wrestler.id == match.matchId)?.id : null,
-						match: match 
+						...match,
+						wrestlers: (match.wrestlers || []).map(wrestler => {
+							const nameMatch = wrestlerMatches.find(match => match.lookup.toLowerCase() === wrestler.name.toLowerCase());
+							const dbWrestler = wrestlers.find(wrestler => nameMatch && wrestler.id == nameMatch.matchId);
+							return {
+								...wrestler,
+								name: dbWrestler ? dbWrestler.name : wrestler.name
+							};
+						})
 					};
 				});
 			} catch (error) {
+				if (isGeminiQuotaError(error)) {
+					output.status = 429;
+					output.error = "AI quota for the day has been exceeded";
+					return output;
+				}
+				if (isGeminiOverloadedError(error)) {
+					output.status = 503;
+					output.error = "AI service is temporarily overloaded. Please try again later.";
+					return output;
+				}
 				output.status = 568;
 				output.error = `Error matching wrestlers: ${error.message}`;
 				return output;
@@ -2782,11 +2915,12 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 					combinedDateTime = new Date(`${dateString}T00:00:00`);
 				}
 
-				// 1. Create dual record with empty wrestlers list for manual entry
+				// 1. Create dual record with empty matches list for manual entry
 				const dualObject = {
 					opponent: opponentName,
 					dualDate: combinedDateTime.toISOString(),
-					wrestlers: [],
+					division: teamEventObject.division || "Varsity",
+					matches: [],
 					imagePath: null
 				};
 				const saveDualResponse = await client.post(`${ serverPath }/data/dual`).send({ dual: dualObject });
