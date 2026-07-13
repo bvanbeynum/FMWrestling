@@ -255,6 +255,7 @@ export default {
 			winType: String,
 			sort: Number,
 			wrestlers: [{
+				wrestlerId: String,
 				name: String,
 				team: String,
 				isWinner: Boolean,
