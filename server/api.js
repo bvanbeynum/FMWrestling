@@ -5,6 +5,8 @@ import { google } from "googleapis";
 import nodemailer from "nodemailer";
 import fs, { stat } from "fs";
 import path from "path";
+import { getDualWrestlers } from "./middleware.js";
+
 
 const isGeminiQuotaError = (error) => {
 	if (error.status === 429) return true;
@@ -2233,8 +2235,8 @@ export default {
 		return output;		
 	},
 
-	dualLoad: async (serverPath) => {
-		const output = { data: {} };
+	dualLoad: async (dualId, serverPath) => {
+		const output = { data: { duals: [], fortMillWrestlers: [], opponentWrestlers: [] } };
 
 		try {
 			const clientResponse = await client.get(`${ serverPath }/data/dual`);
@@ -2246,8 +2248,26 @@ export default {
 			return output;
 		}
 
+		if (dualId) {
+			const targetDual = (output.data.duals || []).find(dual => dual.id === dualId || dual._id === dualId);
+			if (targetDual && targetDual.opponent) {
+				let opponentSchool = null;
+				try {
+					const schoolResponse = await client.get(`${ serverPath }/data/school`);
+					const schools = schoolResponse.body.schools || [];
+					opponentSchool = schools.find(school => school.name === targetDual.opponent);
+				} catch (schoolError) {
+					console.error(`Error searching school: ${schoolError.message}`);
+				}
+
+				const wrestlersData = await getDualWrestlers(opponentSchool, serverPath);
+				output.data.fortMillWrestlers = wrestlersData.fortMillWrestlers;
+				output.data.opponentWrestlers = wrestlersData.opponentWrestlers;
+			}
+		}
+
 		output.status = 200;
-		return output;		
+		return output;
 	},
 
 	dualUpload: async (imageBuffer, mimetype, serverPath, updateProgress = () => {}) => {
@@ -2458,69 +2478,15 @@ Do not return any other text or markup.
 			output.data.stats.opponent = opponentSchool.name;
 			output.data.stats.opponentId = opponentSchool.id;
 
-			const schoolNames = opponentSchool.lookupNames;
-
-			const seasonStart = new Date() > new Date(new Date().getFullYear(), 11, 1) ?
-				new Date(new Date().getFullYear(), 8, 1)
-				: new Date(new Date().getFullYear() - 1, 8, 1)
-			
 			updateProgress("LOAD_ROSTERS", "Loading wrestler team rosters for Fort Mill and opponent...", 2);
-			// Load the wrestlers for the found school & Fort Mill to find potential matches for the wrestlers based on their last event
 			let wrestlers = [];
 			try {
-				const clientResponse = await client.get(`${ serverPath }/data/wrestler?teamname=fort mill`);
-				
-				wrestlers = clientResponse.body.wrestlers
-					.map(wrestler => {
-						const lastTeamEventDate = wrestler.events
-							.filter(event => /^fort mill$/gi.test(event.team) && event.matches && !isNaN(event.matches[0].weightClass.replace("lbs", "").trim()))
-							.map(event => new Date(event.date))
-							.sort((eventA, eventB) => +eventB - +eventA)
-							.find(() => true);
-						
-						return {
-							id: wrestler.id,
-							name: wrestler.name,
-							lastEventDate: lastTeamEventDate
-						}
-					})
-					.filter(wrestler => wrestler.lastEventDate && wrestler.lastEventDate >= seasonStart)
-					.map(({ lastEventDate, ...wrestler }) => wrestler);	
+				const wrestlersData = await getDualWrestlers(opponentSchool, serverPath);
+				wrestlers = wrestlersData.fortMillWrestlers.concat(wrestlersData.opponentWrestlers);
 			}
 			catch (error) {
 				output.status = 566;
-				output.error = error.message;
-				return output;
-			}
-
-			try {
-				const clientResponse = await client.get(`${ serverPath }/data/wrestler?teamname=${ opponentSchool.name }`);
-				const opponentWrestlers = clientResponse.body.wrestlers;
-
-				wrestlers = wrestlers.concat(opponentWrestlers
-					.filter(wrestler => wrestler.events.some(event => /^sc$/gi.test(event.locationState))) // Wrestler has wrestled in SC
-					.map(wrestler => {
-						const lastTeamEventDate = wrestler.events
-							.filter(event => schoolNames.includes(event.team) && event.matches && !isNaN(event.matches[0].weightClass.replace("lbs", "").trim()))
-							.map(event => new Date(event.date))
-							.sort((eventA, eventB) => +eventB - +eventA)
-							.find(() => true);
-
-						return {
-							id: wrestler.id,
-							name: wrestler.name,
-							lastEventDate: lastTeamEventDate
-						};
-					})
-					.filter(wrestler => 
-						wrestler.lastEventDate // Has a last event
-						&& wrestler.lastEventDate >= seasonStart // Last event within the last school year
-					)
-					.map(({ lastEventDate, ...wrestler }) => wrestler));
-			}
-			catch (error) {
-				output.status = 567;
-				output.error = `Error loading opponent wrestler team rosters: ${error.message}`;
+				output.error = `Error loading wrestler team rosters: ${error.message}`;
 				return output;
 			}
 

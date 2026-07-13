@@ -40,12 +40,12 @@ const Dual = () => {
 	const [ loggedInUser, setLoggedInUser ] = useState(null);
 
 	// Setup / Filtering State
-	const [ schools, setSchools ] = useState([]);
-	const [ opponentSelectGroup, setOpponentSelectGroup ] = useState([]);
-	const [ selectedOpponentId, setSelectedOpponentId ] = useState("");
 	const [ opponent, setOpponent ] = useState("");
 	const [ dualDate, setDualDate ] = useState("");
 	const [ dualTime, setDualTime ] = useState("");
+	const [ fortMillWrestlers, setFortMillWrestlers ] = useState([]);
+	const [ opponentWrestlers, setOpponentWrestlers ] = useState([]);
+	const [ activeSearch, setActiveSearch ] = useState({ matchIndex: null, isHome: null, query: "" });
 
 	// Workflow state flag: true when scoresheet is active
 	const [ isStarted, setIsStarted ] = useState(false);
@@ -71,39 +71,30 @@ const Dual = () => {
 
 	useEffect(() => {
 		if (!pageActive) {
-			Promise.all([
-				fetch("/api/dualload").then(res => res.ok ? res.json() : Promise.reject(res.statusText)),
-				fetch("/api/opponenteventload").then(res => res.ok ? res.json() : Promise.reject(res.statusText))
-			])
-			.then(([dualData, schoolData]) => {
+			const urlParams = new URLSearchParams(window.location.search);
+			const targetId = urlParams.get("id");
+			let dualLoadUrl = "/api/dualload";
+			if (targetId) {
+				dualLoadUrl += `?id=${targetId}`;
+			}
+
+			fetch(dualLoadUrl)
+			.then(res => res.ok ? res.json() : Promise.reject(res.statusText))
+			.then(dualData => {
 				const loadedDuals = (dualData.duals || []).map(dual => ({
 					...dual,
 					dualDateObj: new Date(dual.dualDate)
 				}));
+
 				setDuals(loadedDuals);
 				setLoggedInUser(dualData.loggedInUser);
+				setFortMillWrestlers(dualData.fortMillWrestlers || []);
+				setOpponentWrestlers(dualData.opponentWrestlers || []);
 
-				// Process schools dropdown grouped by classification and region
-				const schoolList = schoolData.schools || [];
-				setSchools(schoolList);
-				const groups = [...new Set(schoolList.sort((a, b) => 
-					a.classification !== b.classification ? (a.classification > b.classification ? -1 : 1)
-					: a.region !== b.region ? (a.region > b.region ? 1 : -1)
-					: a.name > b.name ? 1 : -1
-				).map(s => `${s.classification || "NA"} - ${s.region || "NA"}`))]
-				.map(groupName => ({
-					name: groupName,
-					schools: schoolList.filter(s => `${s.classification || "NA"} - ${s.region || "NA"}` === groupName)
-				}));
-				setOpponentSelectGroup(groups);
-
-				// Check URL query parameters for ?id=
-				const urlParams = new URLSearchParams(window.location.search);
-				const targetId = urlParams.get("id");
 				if (targetId) {
 					const matched = loadedDuals.find(d => d.id === targetId || d._id === targetId);
 					if (matched) {
-						loadDualData(matched, schoolList);
+						loadDualData(matched);
 					}
 				}
 
@@ -117,48 +108,32 @@ const Dual = () => {
 		}
 	}, []);
 
-	const loadDualData = (dual, schoolList = schools) => {
+	const loadDualData = (dual) => {
 		setDualId(dual.id || dual._id);
-		const oppName = dual.opponent || "";
-		setOpponent(oppName);
+		const opponentName = dual.opponent || "";
+		setOpponent(opponentName);
 		
-		const matchedSchool = schoolList.find(s => s.name === oppName);
-		if (matchedSchool) {
-			setSelectedOpponentId(String(matchedSchool.id || matchedSchool._id));
-		}
-		
-		const extractTime = (dObj) => {
-			const m = dObj.getMinutes();
-			const roundedMins = m < 15 ? '00' : (m < 45 ? '30' : '00');
-			let h = dObj.getHours();
-			if (m >= 45) h = (h + 1) % 24;
-			return `${String(h).padStart(2, '0')}:${roundedMins}`;
+		const extractTime = (dateObject) => {
+			const minutes = dateObject.getMinutes();
+			const roundedMinutes = minutes < 15 ? '00' : (minutes < 45 ? '30' : '00');
+			let hours = dateObject.getHours();
+			if (minutes >= 45) hours = (hours + 1) % 24;
+			return `${String(hours).padStart(2, '0')}:${roundedMinutes}`;
 		};
 
 		if (dual.dualDateObj && !isNaN(dual.dualDateObj.getTime())) {
 			setDualDate(dual.dualDateObj.toISOString().split("T")[0]);
 			setDualTime(extractTime(dual.dualDateObj));
 		} else if (dual.dualDate) {
-			const d = new Date(dual.dualDate);
-			setDualDate(d.toISOString().split("T")[0]);
-			setDualTime(extractTime(d));
+			const date = new Date(dual.dualDate);
+			setDualDate(date.toISOString().split("T")[0]);
+			setDualTime(extractTime(date));
 		}
 
 		setMatches(dual.matches || []);
 		setDivision(dual.division || "Varsity");
 		setImagePath(dual.imagePath ? `/media/temp/${dual.imagePath}` : null);
 		setIsStarted(true);
-	};
-
-	const handleOpponentSelectChange = (e) => {
-		const schId = e.target.value;
-		setSelectedOpponentId(schId);
-		const found = schools.find(s => String(s.id) === String(schId) || String(s._id) === String(schId));
-		if (found) {
-			setOpponent(found.name);
-		} else {
-			setOpponent("");
-		}
 	};
 
 	const handleStartScoresheet = (e) => {
@@ -186,15 +161,9 @@ const Dual = () => {
 							totalGeminiSteps: data.totalGeminiSteps || 3
 						});
 					} else if (data.status === "completed") {
-						const oppName = (data.stats && data.stats.opponent) || "";
 						const parsedMatches = (data.stats && data.stats.matches) || [];
 						const fileName = data.fileName || "";
 
-						if (oppName) {
-							setOpponent(oppName);
-							const found = schools.find(school => school.name === oppName);
-							if (found) setSelectedOpponentId(String(found.id || found._id));
-						}
 						if (parsedMatches.length > 0) {
 							setMatches(parsedMatches);
 						}
@@ -216,13 +185,13 @@ const Dual = () => {
 							...match,
 							wrestlers: (match.wrestlers || []).map(wrestler => ({
 								...wrestler,
-								team: wrestler.team.toLowerCase() === "fort mill" ? "Fort Mill" : (oppName || "Visitor")
+								team: wrestler.team.toLowerCase() === "fort mill" ? "Fort Mill" : (opponent || "Visitor")
 							}))
 						}));
 
 						const dualData = {
 							id: dualId,
-							opponent: oppName,
+							opponent: opponent,
 							imagePath: fileName || null,
 							dualDate: combinedDateTime,
 							division: division,
@@ -327,24 +296,58 @@ const Dual = () => {
 			}
 		}
 
-		const wIdx = isHome ? 
-			match.wrestlers.findIndex(w => w.team.toLowerCase() === "fort mill") : 
-			match.wrestlers.findIndex(w => w.team.toLowerCase() !== "fort mill");
+		const wrestlerIndex = isHome ? 
+			match.wrestlers.findIndex(wrestler => wrestler.team.toLowerCase() === "fort mill") : 
+			match.wrestlers.findIndex(wrestler => wrestler.team.toLowerCase() !== "fort mill");
 			
-		if (wIdx === -1) return;
+		if (wrestlerIndex === -1) return;
 
 		if (isScore) {
-			match.wrestlers[wIdx].scores = { ...match.wrestlers[wIdx].scores, [field]: Number(value) || 0 };
+			match.wrestlers[wrestlerIndex].scores = { ...match.wrestlers[wrestlerIndex].scores, [field]: Number(value) || 0 };
 		} else if (field === "isWinner") {
 			// Select winner and reset the other wrestler's winner status
-			match.wrestlers.forEach((w, idx) => {
-				w.isWinner = (idx === wIdx) ? !!value : false;
+			match.wrestlers.forEach((wrestler, wrestlerItemIndex) => {
+				wrestler.isWinner = (wrestlerItemIndex === wrestlerIndex) ? !!value : false;
 			});
 		} else {
-			match.wrestlers[wIdx][field] = value;
+			match.wrestlers[wrestlerIndex][field] = value;
+			if (field === "name") {
+				match.wrestlers[wrestlerIndex].wrestlerId = null;
+			}
 		}
 		
 		setMatches(updatedMatches);
+	};
+
+	const handleSelectWrestler = (matchIndex, isHome, wrestler) => {
+		const updatedMatches = [...matches];
+		const match = updatedMatches[matchIndex];
+		
+		if (!match.wrestlers || match.wrestlers.length === 0) {
+			match.wrestlers = [
+				{ name: "", team: "Fort Mill", isWinner: false, scores: { takedowns: 0, escapes: 0, reversals: 0, nearfalls: 0 } },
+				{ name: "", team: opponent || "Visitor", isWinner: false, scores: { takedowns: 0, escapes: 0, reversals: 0, nearfalls: 0 } }
+			];
+		} else if (match.wrestlers.length === 1) {
+			const existing = match.wrestlers[0];
+			if (existing.team.toLowerCase() === "fort mill") {
+				match.wrestlers.push({ name: "", team: opponent || "Visitor", isWinner: false, scores: { takedowns: 0, escapes: 0, reversals: 0, nearfalls: 0 } });
+			} else {
+				match.wrestlers.unshift({ name: "", team: "Fort Mill", isWinner: false, scores: { takedowns: 0, escapes: 0, reversals: 0, nearfalls: 0 } });
+			}
+		}
+
+		const wrestlerIndex = isHome ? 
+			match.wrestlers.findIndex(item => item.team.toLowerCase() === "fort mill") : 
+			match.wrestlers.findIndex(item => item.team.toLowerCase() !== "fort mill");
+			
+		if (wrestlerIndex !== -1) {
+			match.wrestlers[wrestlerIndex].name = wrestler.name;
+			match.wrestlers[wrestlerIndex].wrestlerId = wrestler.id || wrestler._id;
+			setMatches(updatedMatches);
+		}
+
+		setActiveSearch({ matchIndex: null, isHome: null, query: "" });
 	};
 
 	const handleMatchChange = (matchIndex, field, value) => {
@@ -625,25 +628,10 @@ const Dual = () => {
 						</div>
 					</div>
 
-					{/* Opponent Row */}
+					{/* Opponent Row (Read Only) */}
 					<div className="whiteboard-opponent-container">
-						<div className="whiteboard-opponent-select-wrap">
-							<select 
-								className="whiteboard-opponent-select"
-								value={ selectedOpponentId } 
-								onChange={ handleOpponentSelectChange } 
-								required
-							>
-								<option value="">Choose Opponent...</option>
-								{ opponentSelectGroup.map((group, gIdx) => (
-									<optgroup key={ gIdx } label={ group.name }>
-										{ group.schools.map((sch, sIdx) => (
-											<option key={ sIdx } value={ sch.id }>{ sch.name }</option>
-										))}
-									</optgroup>
-								))}
-							</select>
-							<span className="whiteboard-select-arrow">▼</span>
+						<div className="whiteboard-opponent-name-display">
+							{ opponent || "Visitor" }
 						</div>
 						<div className="whiteboard-opponent-label">opponent</div>
 					</div>
@@ -738,190 +726,245 @@ const Dual = () => {
 
 							return (
 								<div className="weight-card" key={ mIdx }>
-									{/* Weight Card Header (Mobile view selector + trash) */}
+									{/* Weight Card Header (WT select) */}
 									<div className="weight-card-header">
 										<div className="weight-label-group">
 											<span className="mobile-weight-title">WEIGHT</span>
 											<select 
 												className="weight-select"
 												value={ wt }
-												onChange={ e => handleWeightClassChange(wt, e.target.value) }
+												onChange={ event => handleWeightClassChange(wt, event.target.value) }
 											>
-												{ WEIGHT_CLASSES.map(wOption => (
-													<option key={ wOption } value={ wOption }>{ wOption }</option>
+												{ WEIGHT_CLASSES.map(weightClassOption => (
+													<option key={ weightClassOption } value={ weightClassOption }>{ weightClassOption }</option>
 												))}
 											</select>
 										</div>
+									</div>
 
-										<div className="wintype-label-group" style={{ marginLeft: "15px" }}>
-											<span className="mobile-wintype-title" style={{ fontSize: "10px", color: "var(--outline)", display: "block" }}>WIN TYPE</span>
-											<select 
-												className="wintype-select"
-												value={ match.winType || "DEC" }
-												onChange={ e => handleMatchChange(mIdx, "winType", e.target.value) }
-												style={{ background: "none", border: "1px solid var(--outline-variant)", padding: "2px 5px", fontSize: "12px", borderRadius: "var(--rounded)" }}
-											>
-												<option value="DEC">DEC</option>
-												<option value="MD">MD</option>
-												<option value="TF">TF</option>
-												<option value="F">F</option>
-												<option value="FF">FF</option>
-												<option value="DEF">DEF</option>
-												<option value="DQ">DQ</option>
-											</select>
-										</div>
-
-										<button 
-											className="btn-delete-row" 
-											onClick={ () => handleDeleteWeightClass(wt) }
-											title="Delete Weight Class"
+									{/* Win Type Column (rendered separately) */}
+									<div className="wintype-card-col">
+										<span className="mobile-wintype-title" style={{ fontSize: "10px", color: "var(--outline)", display: "block" }}>WIN TYPE</span>
+										<select 
+											className="wintype-select"
+											value={ match.winType || "DEC" }
+											onChange={ event => handleMatchChange(mIdx, "winType", event.target.value) }
+											style={{ background: "none", border: "1px solid var(--outline-variant)", padding: "2px 5px", fontSize: "12px", borderRadius: "var(--rounded)" }}
 										>
-											<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M280-120q-33 0-56.5-23.5T200-200v-520h-40v-80h200v-40h240v40h200v80h-40v520q0 33-23.5 56.5T680-120H280Zm400-600H280v520h400v-520ZM360-280h80v-360h-80v360Zm160 0h80v-360h-80v360ZM280-720v520-520Z"/></svg>
-										</button>
+											<option value="DEC">DEC</option>
+											<option value="MD">MD</option>
+											<option value="TF">TF</option>
+											<option value="F">F</option>
+											<option value="FF">FF</option>
+											<option value="DEF">DEF</option>
+											<option value="DQ">DQ</option>
+										</select>
 									</div>
 
 									{/* Wrestler Blocks Container */}
 									<div className="weight-card-body">
 										<div className="wrestler-row">
 											<div className="wrestler-name-row">
-												<span className="small-badge home">FM</span>
-												<input 
-													type="text" 
-													className="edit-input-text" 
-													value={ homeItem.name }
-													onChange={ e => handleWrestlerChange(mIdx, true, "name", false, e.target.value) }
-													placeholder="Home Wrestler"
-												/>
-												<label className="winner-label" style={{ display: "flex", alignItems: "center", marginLeft: "10px", gap: "4px", cursor: "pointer" }}>
-													<input
-														type="radio"
-														name={`winner-${mIdx}`}
-														checked={ !!homeItem.isWinner }
-														onChange={ e => handleWrestlerChange(mIdx, true, "isWinner", false, e.target.checked) }
-													/>
-													<span style={{ fontSize: "11px", fontWeight: "600", color: homeItem.isWinner ? "var(--primary)" : "var(--outline)" }}>Win</span>
-												</label>
+												<div className="wrestler-name-col">
+													<span className="small-badge home">FM</span>
+													<div className="wrestler-input-wrapper">
+														<input 
+															type="text" 
+															className="edit-input-text" 
+															value={ homeItem.name }
+															onChange={ event => {
+																const value = event.target.value;
+																handleWrestlerChange(mIdx, true, "name", false, value);
+																setActiveSearch({ matchIndex: mIdx, isHome: true, query: value });
+															}}
+															onFocus={ event => {
+																setActiveSearch({ matchIndex: mIdx, isHome: true, query: event.target.value });
+															}}
+															onBlur={ () => setTimeout(() => setActiveSearch({ matchIndex: null, isHome: null, query: "" }), 200) }
+															placeholder="Home Wrestler"
+														/>
+														{ activeSearch.matchIndex === mIdx && activeSearch.isHome === true && activeSearch.query.length >= 1 && (
+															<ul className="wrestler-autocomplete-list">
+																{ fortMillWrestlers
+																	.filter(wrestler => wrestler.name.toLowerCase().includes(activeSearch.query.toLowerCase()))
+																	.map(wrestler => (
+																		<li 
+																			key={ wrestler.id || wrestler._id }
+																			onMouseDown={ () => handleSelectWrestler(mIdx, true, wrestler) }
+																		>
+																			{ wrestler.name }
+																		</li>
+																	))
+																}
+															</ul>
+														)}
+													</div>
+												</div>
+												<div className="winner-col">
+													<label className="winner-label" style={{ display: "flex", alignItems: "center", gap: "4px", cursor: "pointer" }}>
+														<input
+															type="radio"
+															name={`winner-${mIdx}`}
+															checked={ !!homeItem.isWinner }
+															onChange={ event => handleWrestlerChange(mIdx, true, "isWinner", false, event.target.checked) }
+														/>
+														<span style={{ fontSize: "11px", fontWeight: "600", color: homeItem.isWinner ? "var(--primary)" : "var(--outline)" }}>Win</span>
+													</label>
+												</div>
 											</div>
 											
-											<div className="stat-boxes-group">
-												{/* Takedowns Column */}
-												<div className="stat-box">
-													<span className="stat-label">T</span>
-													<input 
-														type="number" 
-														className="stat-input" 
-														value={ homeItem.scores?.takedowns || 0 } 
-														onChange={ e => handleWrestlerChange(mIdx, true, "takedowns", true, e.target.value) }
-													/>
-												</div>
-												
-												{/* Nearfalls Column */}
-												<div className="stat-box">
-													<span className="stat-label">N</span>
-													<input 
-														type="number" 
-														className="stat-input" 
-														value={ homeItem.scores?.nearfalls || 0 } 
-														onChange={ e => handleWrestlerChange(mIdx, true, "nearfalls", true, e.target.value) }
-													/>
-												</div>
+											<div className="stats-col">
+												<div className="stat-boxes-group">
+													{/* Takedowns Column */}
+													<div className="stat-box">
+														<span className="stat-label">T</span>
+														<input 
+															type="number" 
+															className="stat-input" 
+															value={ homeItem.scores?.takedowns || 0 } 
+															onChange={ event => handleWrestlerChange(mIdx, true, "takedowns", true, event.target.value) }
+														/>
+													</div>
+													
+													{/* Nearfalls Column */}
+													<div className="stat-box">
+														<span className="stat-label">N</span>
+														<input 
+															type="number" 
+															className="stat-input" 
+															value={ homeItem.scores?.nearfalls || 0 } 
+															onChange={ event => handleWrestlerChange(mIdx, true, "nearfalls", true, event.target.value) }
+														/>
+													</div>
 
-												{/* Reversals Column */}
-												<div className="stat-box">
-													<span className="stat-label">R</span>
-													<input 
-														type="number" 
-														className="stat-input" 
-														value={ homeItem.scores?.reversals || 0 } 
-														onChange={ e => handleWrestlerChange(mIdx, true, "reversals", true, e.target.value) }
-													/>
-												</div>
-												
-												{/* Escapes Column */}
-												<div className="stat-box">
-													<span className="stat-label">E</span>
-													<input 
-														type="number" 
-														className="stat-input" 
-														value={ homeItem.scores?.escapes || 0 } 
-														onChange={ e => handleWrestlerChange(mIdx, true, "escapes", true, e.target.value) }
-													/>
+													{/* Reversals Column */}
+													<div className="stat-box">
+														<span className="stat-label">R</span>
+														<input 
+															type="number" 
+															className="stat-input" 
+															value={ homeItem.scores?.reversals || 0 } 
+															onChange={ event => handleWrestlerChange(mIdx, true, "reversals", true, event.target.value) }
+														/>
+													</div>
+													
+													{/* Escapes Column */}
+													<div className="stat-box">
+														<span className="stat-label">E</span>
+														<input 
+															type="number" 
+															className="stat-input" 
+															value={ homeItem.scores?.escapes || 0 } 
+															onChange={ event => handleWrestlerChange(mIdx, true, "escapes", true, event.target.value) }
+														/>
+													</div>
 												</div>
 											</div>
 										</div>
 
 										<div className="wrestler-row">
 											<div className="wrestler-name-row">
-												<span className="small-badge visitor">{ visitorInitial }</span>
-												<input 
-													type="text" 
-													className="edit-input-text" 
-													value={ visitorItem.name }
-													onChange={ e => handleWrestlerChange(mIdx, false, "name", false, e.target.value) }
-													placeholder="Visitor Wrestler"
-												/>
-												<label className="winner-label" style={{ display: "flex", alignItems: "center", marginLeft: "10px", gap: "4px", cursor: "pointer" }}>
-													<input
-														type="radio"
-														name={`winner-${mIdx}`}
-														checked={ !!visitorItem.isWinner }
-														onChange={ e => handleWrestlerChange(mIdx, false, "isWinner", false, e.target.checked) }
-													/>
-													<span style={{ fontSize: "11px", fontWeight: "600", color: visitorItem.isWinner ? "var(--secondary)" : "var(--outline)" }}>Win</span>
-												</label>
+												<div className="wrestler-name-col">
+													<span className="small-badge visitor">{ visitorInitial }</span>
+													<div className="wrestler-input-wrapper">
+														<input 
+															type="text" 
+															className="edit-input-text" 
+															value={ visitorItem.name }
+															onChange={ event => {
+																const value = event.target.value;
+																handleWrestlerChange(mIdx, false, "name", false, value);
+																setActiveSearch({ matchIndex: mIdx, isHome: false, query: value });
+															}}
+															onFocus={ event => {
+																setActiveSearch({ matchIndex: mIdx, isHome: false, query: event.target.value });
+															}}
+															onBlur={ () => setTimeout(() => setActiveSearch({ matchIndex: null, isHome: null, query: "" }), 200) }
+															placeholder="Visitor Wrestler"
+														/>
+														{ activeSearch.matchIndex === mIdx && activeSearch.isHome === false && activeSearch.query.length >= 1 && (
+															<ul className="wrestler-autocomplete-list">
+																{ opponentWrestlers
+																	.filter(wrestler => wrestler.name.toLowerCase().includes(activeSearch.query.toLowerCase()))
+																	.map(wrestler => (
+																		<li 
+																			key={ wrestler.id || wrestler._id }
+																			onMouseDown={ () => handleSelectWrestler(mIdx, false, wrestler) }
+																		>
+																			{ wrestler.name }
+																		</li>
+																	))
+																}
+															</ul>
+														)}
+													</div>
+												</div>
+												<div className="winner-col">
+													<label className="winner-label" style={{ display: "flex", alignItems: "center", gap: "4px", cursor: "pointer" }}>
+														<input
+															type="radio"
+															name={`winner-${mIdx}`}
+															checked={ !!visitorItem.isWinner }
+															onChange={ event => handleWrestlerChange(mIdx, false, "isWinner", false, event.target.checked) }
+														/>
+														<span style={{ fontSize: "11px", fontWeight: "600", color: visitorItem.isWinner ? "var(--secondary)" : "var(--outline)" }}>Win</span>
+													</label>
+												</div>
 											</div>
 											
-											<div className="stat-boxes-group">
-												{/* Takedowns Column */}
-												<div className="stat-box">
-													<span className="stat-label">T</span>
-													<input 
-														type="number" 
-														className="stat-input visitor" 
-														value={ visitorItem.scores?.takedowns || 0 } 
-														onChange={ e => handleWrestlerChange(mIdx, false, "takedowns", true, e.target.value) }
-													/>
-												</div>
-												
-												{/* Nearfalls Column */}
-												<div className="stat-box">
-													<span className="stat-label">N</span>
-													<input 
-														type="number" 
-														className="stat-input visitor" 
-														value={ visitorItem.scores?.nearfalls || 0 } 
-														onChange={ e => handleWrestlerChange(mIdx, false, "nearfalls", true, e.target.value) }
-													/>
-												</div>
+											<div className="stats-col">
+												<div className="stat-boxes-group">
+													{/* Takedowns Column */}
+													<div className="stat-box">
+														<span className="stat-label">T</span>
+														<input 
+															type="number" 
+															className="stat-input visitor" 
+															value={ visitorItem.scores?.takedowns || 0 } 
+															onChange={ event => handleWrestlerChange(mIdx, false, "takedowns", true, event.target.value) }
+														/>
+													</div>
+													
+													{/* Nearfalls Column */}
+													<div className="stat-box">
+														<span className="stat-label">N</span>
+														<input 
+															type="number" 
+															className="stat-input visitor" 
+															value={ visitorItem.scores?.nearfalls || 0 } 
+															onChange={ event => handleWrestlerChange(mIdx, false, "nearfalls", true, event.target.value) }
+														/>
+													</div>
 
-												{/* Reversals Column */}
-												<div className="stat-box">
-													<span className="stat-label">R</span>
-													<input 
-														type="number" 
-														className="stat-input visitor" 
-														value={ visitorItem.scores?.reversals || 0 } 
-														onChange={ e => handleWrestlerChange(mIdx, false, "reversals", true, e.target.value) }
-													/>
-												</div>
+													{/* Reversals Column */}
+													<div className="stat-box">
+														<span className="stat-label">R</span>
+														<input 
+															type="number" 
+															className="stat-input visitor" 
+															value={ visitorItem.scores?.reversals || 0 } 
+															onChange={ event => handleWrestlerChange(mIdx, false, "reversals", true, event.target.value) }
+														/>
+													</div>
 
-												{/* Escapes Column */}
-												<div className="stat-box">
-													<span className="stat-label">E</span>
-													<input 
-														type="number" 
-														className="stat-input visitor" 
-														value={ visitorItem.scores?.escapes || 0 } 
-														onChange={ e => handleWrestlerChange(mIdx, false, "escapes", true, e.target.value) }
-													/>
+													{/* Escapes Column */}
+													<div className="stat-box">
+														<span className="stat-label">E</span>
+														<input 
+															type="number" 
+															className="stat-input visitor" 
+															value={ visitorItem.scores?.escapes || 0 } 
+															onChange={ event => handleWrestlerChange(mIdx, false, "escapes", true, event.target.value) }
+														/>
+													</div>
 												</div>
 											</div>
 										</div>
 
 									</div>
 									
-									{/* Desktop Delete Trash Column */}
-									<div className="btn-delete-row-desktop-wrap">
+									{/* Responsive Unified Delete Column */}
+									<div className="btn-delete-row-wrap">
 										<button 
 											className="btn-delete-row" 
 											onClick={ () => handleDeleteWeightClass(wt) }

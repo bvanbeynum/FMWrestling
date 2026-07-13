@@ -277,15 +277,16 @@
 	box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 	padding: 16px;
 	margin-bottom: 16px;
+	display: grid;
+	grid-template-columns: 1fr 1fr auto;
+	gap: 12px;
 }
 
 .weight-card-header {
+	grid-column: 1;
+	grid-row: 1;
 	display: flex;
-	justify-content: space-between;
 	align-items: center;
-	padding-bottom: 12px;
-	margin-bottom: 14px;
-	border-bottom: 1px solid #e9ecef;
 }
 
 .weight-label-group {
@@ -312,6 +313,22 @@
 	cursor: pointer;
 }
 
+.wintype-card-col {
+	grid-column: 2;
+	grid-row: 1;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+}
+
+.btn-delete-row-wrap {
+	grid-column: 3;
+	grid-row: 1;
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+}
+
 .btn-delete-row {
 	background: none;
 	border: none;
@@ -327,6 +344,8 @@
 }
 
 .weight-card-body {
+	grid-column: 1 / 4;
+	grid-row: 2;
 	display: flex;
 	flex-direction: column;
 }
@@ -350,6 +369,23 @@
 	align-items: center;
 	gap: 10px;
 	margin-bottom: 12px;
+}
+
+.wrestler-name-col {
+	flex-grow: 1;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.winner-col {
+	display: flex;
+	align-items: center;
+	margin-left: auto;
+}
+
+.stats-col {
+	width: 100%;
 }
 
 .small-badge {
@@ -644,8 +680,10 @@ input[type=number] {
 		box-shadow: none;
 		padding: 12px 0;
 		margin-bottom: 0;
-		display: flex;
+		display: grid;
+		grid-template-columns: 12% 32% 10% 12% 32% 6%; /* WT | Wrestlers | Winner | Win Type | Stats | Actions */
 		align-items: center;
+		gap: 0;
 	}
 
 	.weight-card:hover {
@@ -653,65 +691,104 @@ input[type=number] {
 	}
 
 	.weight-card-header {
+		grid-column: 1;
+		grid-row: 1 / 3;
+		display: flex;
+		justify-content: flex-start;
 		border: none;
 		padding: 0;
 		margin: 0;
-		width: 12%;
-		flex-shrink: 0;
 	}
 
 	.mobile-weight-title {
 		display: none;
 	}
 
-	.btn-delete-row-desktop-wrap {
-		width: 6%;
+	.wintype-card-col {
+		grid-column: 4;
+		grid-row: 1 / 3;
 		display: flex;
 		justify-content: center;
 	}
 
-	.weight-card-header .btn-delete-row {
-		display: none;
+	.mobile-wintype-title {
+		display: none !important;
+	}
+
+	.btn-delete-row-wrap {
+		grid-column: 6;
+		grid-row: 1 / 3;
+		display: flex;
+		justify-content: center;
 	}
 
 	.weight-card-body {
-		flex-grow: 1;
-		align-items: center;
-		width: 82%;
-		flex-direction: column;
-	}
-
-	.wrestler-block {
-		width: 100%;
-	}
-
-	.wrestler-block-divider {
-		display: none;
+		grid-column: 2 / 6;
+		grid-row: 1 / 3;
+		display: contents; /* Allows nested rows to align with main grid */
 	}
 
 	.wrestler-row {
-		display: flex;
-		margin-bottom: 10px;
+		display: contents;
 	}
 
 	.wrestler-name-row {
-		margin-bottom: 0;
-		width: 53%;
+		display: contents;
 	}
 
-	.wrestler-stats-row {
+	/* Home Wrestler columns placement */
+	.wrestler-row:first-child .wrestler-name-col {
+		grid-column: 2;
+		grid-row: 1;
 		display: flex;
-		width: 100%;
+		align-items: center;
+		padding: 5px 10px 5px 0;
+	}
+	.wrestler-row:first-child .winner-col {
+		grid-column: 3;
+		grid-row: 1;
+		display: flex;
+		justify-content: center;
+	}
+	.wrestler-row:first-child .stats-col {
+		grid-column: 5;
+		grid-row: 1;
+		display: flex;
+		align-items: center;
 	}
 
+	/* Visitor Wrestler columns placement */
+	.wrestler-row:last-child .wrestler-name-col {
+		grid-column: 2;
+		grid-row: 2;
+		display: flex;
+		align-items: center;
+		padding: 5px 10px 5px 0;
+	}
+	.wrestler-row:last-child .winner-col {
+		grid-column: 3;
+		grid-row: 2;
+		display: flex;
+		justify-content: center;
+	}
+	.wrestler-row:last-child .stats-col {
+		grid-column: 5;
+		grid-row: 2;
+		display: flex;
+		align-items: center;
+	}
+
+	/* Stats Input alignment inside column */
 	.stat-boxes-group {
-		width: 60%;
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		width: 100%;
+		gap: 10px;
 		margin-left: 0;
 	}
 
 	.stat-box {
-		width: 15.5%;
-		height: auto;
+		width: 100%;
 		background: transparent;
 		border: none;
 		padding: 0;
@@ -719,50 +796,6 @@ input[type=number] {
 
 	.stat-label {
 		display: none;
-	}
-
-	.match-score-box {
-		width: 28%;
-		height: auto;
-		background: transparent;
-		border: none;
-	}
-
-	/* Layout restructuring inside body for paired alignment */
-	.desktop-row-wrap {
-		display: flex;
-		align-items: center;
-		width: 100%;
-	}
-
-	.desktop-wrestlers-col {
-		width: 46.3%;
-		display: flex;
-		flex-direction: column;
-		gap: 10px;
-	}
-
-	.desktop-stat-col {
-		width: 9.75%;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 10px;
-	}
-
-	.desktop-score-col {
-		width: 12.2%;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 10px;
-	}
-
-	.desktop-stat-col div,
-	.desktop-score-col div {
-		width: 100%;
-		display: flex;
-		justify-content: center;
 	}
 
 	.scoresheet-footer {
@@ -958,4 +991,51 @@ input[type=number] {
 		font-size: 1em;
 	}
 }
+
+.whiteboard-opponent-name-display {
+	width: 100%;
+	font-size: 1.25em;
+	font-weight: 800;
+	color: #0A2540;
+	padding-bottom: 4px;
+	border-bottom: 2px solid #0A2540;
+	text-transform: uppercase;
+}
+
+/* Autocomplete list styling */
+.wrestler-input-wrapper {
+	position: relative;
+	width: 100%;
+}
+
+.wrestler-autocomplete-list {
+	position: absolute;
+	top: 100%;
+	left: 0;
+	width: 100%;
+	max-height: 200px;
+	overflow-y: auto;
+	background: #ffffff;
+	border: 1px solid #ced4da;
+	border-radius: 6px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+	list-style: none;
+	padding: 0;
+	margin: 4px 0 0 0;
+	z-index: 1000;
+}
+
+.wrestler-autocomplete-list li {
+	padding: 8px 12px;
+	font-size: 0.95em;
+	color: #212529;
+	cursor: pointer;
+	text-align: left;
+	transition: background-color 0.15s ease-in-out;
+}
+
+.wrestler-autocomplete-list li:hover {
+	background-color: #f1f3f5;
+}
+
 
