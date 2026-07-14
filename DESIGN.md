@@ -50,33 +50,33 @@ colors:
   surface-variant: '#e1e3e4'
 typography:
   display-lg:
-    fontFamily: Archivo Narrow
+    fontFamily: Russo One
     fontSize: 36px
     fontWeight: '700'
     lineHeight: '1.1'
     letterSpacing: -0.02em
   headline-md:
-    fontFamily: Archivo Narrow
+    fontFamily: Russo One
     fontSize: 24px
     fontWeight: '600'
     lineHeight: '1.2'
   headline-sm:
-    fontFamily: Archivo Narrow
+    fontFamily: Russo One
     fontSize: 18px
     fontWeight: '600'
     lineHeight: '1.2'
   body-lg:
-    fontFamily: Inter
+    fontFamily: Roboto
     fontSize: 16px
     fontWeight: '600'
     lineHeight: '1.5'
   body-md:
-    fontFamily: Inter
+    fontFamily: Roboto
     fontSize: 14px
     fontWeight: '400'
     lineHeight: '1.5'
   label-sm:
-    fontFamily: Inter
+    fontFamily: Roboto
     fontSize: 12px
     fontWeight: '500'
     lineHeight: '1'
@@ -116,8 +116,8 @@ The palette is derived from collegiate and professional sports aesthetics.
 ## Typography
 
 The typography system relies on a dual-font strategy:
-- **Archivo Narrow** provides a condensed, impactful "scoreboard" aesthetic for headers and dates, maximizing horizontal space in dense grid layouts.
-- **Inter** handles the functional heavy lifting for body text, metadata, and labels, ensuring legibility at small sizes within event cards.
+- **Russo One** provides a condensed, impactful "scoreboard" aesthetic for headers and dates, maximizing horizontal space in dense grid layouts.
+- **Roboto** handles the functional heavy lifting for body text, metadata, and labels, ensuring legibility at small sizes within event cards.
 
 Headlines should utilize uppercase styling to reinforce the athletic, authoritative tone.
 

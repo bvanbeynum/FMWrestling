@@ -2945,6 +2945,45 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 			output.error = error.message;
 		}
 		return output;
+	},
+
+	dualReportLoad: async (season, serverPath) => {
+		const output = { data: { duals: [], seasonName: "", hasPreviousSeasonData: false } };
+		try {
+			let startYear;
+			if (season && /^\d{2}-\d{2}$/.test(season)) {
+				const startYearShort = parseInt(season.split("-")[0], 10);
+				startYear = 2000 + startYearShort;
+			} else {
+				const today = new Date();
+				const year = today.getFullYear();
+				startYear = today.getMonth() >= 8 ? year : year - 1;
+			}
+			const endYear = startYear + 1;
+			
+			const startDateString = `${startYear}-09-01`;
+			const endDateString = `${endYear}-08-31`;
+			
+			const seasonDualsResponse = await client.get(`${ serverPath }/data/dual?startdate=${startDateString}&enddate=${endDateString}`);
+			output.data.duals = seasonDualsResponse.body.duals || [];
+			
+			const shortStart = startYear.toString().slice(-2);
+			const shortEnd = endYear.toString().slice(-2);
+			output.data.seasonName = `${shortStart}-${shortEnd}`;
+
+			// Fetch duals from the previous season to determine if baseline comparison should be shown
+			const prevSeasonStart = `${startYear - 1}-09-01`;
+			const prevSeasonEnd = `${startYear}-08-31`;
+			const prevSeasonResponse = await client.get(`${ serverPath }/data/dual?startdate=${prevSeasonStart}&enddate=${prevSeasonEnd}`);
+			const prevSeasonDuals = prevSeasonResponse.body.duals || [];
+			output.data.hasPreviousSeasonData = prevSeasonDuals.length > 0;
+			
+			output.status = 200;
+		} catch (error) {
+			output.status = 500;
+			output.error = error.message;
+		}
+		return output;
 	}
 
 };

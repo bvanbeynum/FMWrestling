@@ -20,7 +20,8 @@ export default {
 		wrestler: "./client/portal/wrestler.jsx",
 		duplicates: "./client/portal/duplicates.jsx",
 		noaccess: "./client/portal/noaccess.jsx",
-		tournamentsummary: "./client/portal/tournamentsummary.jsx"
+		tournamentsummary: "./client/portal/tournamentsummary.jsx",
+		dualreport: "./client/portal/dualreport.jsx"
 	},
 	plugins: [
 		new HtmlWebpackPlugin({ 
@@ -81,6 +82,16 @@ export default {
 				viewport: "width=device-width, initial-scale=1"
 			},
 			chunks: [ "dual" ],
+			templateContent: "<html><body><div id='root'></div></body></html>"
+		}),
+		new HtmlWebpackPlugin({ 
+			filename: "./portal/dualreport.html",
+			title: "Fort Mill Wrestling - Team Season Overview",
+			favicon: "./client/media/favicon.ico",
+			meta: {
+				viewport: "width=device-width, initial-scale=1"
+			},
+			chunks: [ "dualreport" ],
 			templateContent: "<html><body><div id='root'></div></body></html>"
 		}),
 		new HtmlWebpackPlugin({ 
