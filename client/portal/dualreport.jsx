@@ -459,7 +459,6 @@ const processWeightClassData = (dualsList) => {
 
 const WinsPointsComboChart = ({ data }) => {
 	const [hoveredIndex, setHoveredIndex] = useState(null);
-	const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
 
 	const maxWinsValue = Math.max(...data.map(function (dataPoint) { return dataPoint.wins; }), 5);
 	const maxPointsValue = Math.max(...data.map(function (dataPoint) { return dataPoint.points; }), 30);
@@ -481,15 +480,6 @@ const WinsPointsComboChart = ({ data }) => {
 	const tickLinesCount = 5;
 	const leftAxisTicks = Array.from({ length: tickLinesCount + 1 }, (unusedValue, indexValue) => Math.round((maxWinsValue / tickLinesCount) * indexValue));
 	const rightAxisTicks = Array.from({ length: tickLinesCount + 1 }, (unusedValue, indexValue) => Math.round((maxPointsValue / tickLinesCount) * indexValue));
-
-	const handleMouseMoveEvent = (event, indexValue) => {
-		const targetRect = event.currentTarget.getBoundingClientRect();
-		setTooltipPosition({
-			x: event.clientX - targetRect.left,
-			y: event.clientY - targetRect.top - 10
-		});
-		setHoveredIndex(indexValue);
-	};
 
 	return (
 		<div className="diverging-chart-wrapper" style={{ position: "relative" }}>
@@ -544,7 +534,8 @@ const WinsPointsComboChart = ({ data }) => {
 							rx={2}
 							style={{ cursor: "pointer", transition: "fill-opacity 0.2s" }}
 							fillOpacity={hoveredIndex === indexValue ? 0.8 : 1}
-							onMouseMove={(eventObject) => handleMouseMoveEvent(eventObject, indexValue)}
+							onMouseEnter={() => setHoveredIndex(indexValue)}
+							onTouchStart={() => setHoveredIndex(indexValue)}
 							onMouseLeave={() => setHoveredIndex(null)}
 						/>
 					);
@@ -562,7 +553,8 @@ const WinsPointsComboChart = ({ data }) => {
 						stroke="#ffffff"
 						strokeWidth={1.5}
 						style={{ cursor: "pointer", transition: "all 0.15s ease" }}
-						onMouseMove={(eventObject) => handleMouseMoveEvent(eventObject, indexValue)}
+						onMouseEnter={() => setHoveredIndex(indexValue)}
+						onTouchStart={() => setHoveredIndex(indexValue)}
 						onMouseLeave={() => setHoveredIndex(null)}
 					/>
 				))}
@@ -573,15 +565,13 @@ const WinsPointsComboChart = ({ data }) => {
 					className="combo-chart-tooltip"
 					style={{
 						position: "absolute",
-						top: `${tooltipPosition.y}px`,
-						left: `${tooltipPosition.x}px`
+						top: `calc(${(getYRightCoordinate(data[hoveredIndex].points) / chartTotalHeight) * 100}% - 10px)`,
+						left: `${(getXCoordinate(hoveredIndex) / chartTotalWidth) * 100}%`
 					}}
 				>
-					Weight: {data[hoveredIndex].weightClass}
-					<br />
-					Wins: {data[hoveredIndex].wins}
-					<br />
-					Points Contributed: {data[hoveredIndex].points}
+					<div>Weight: {data[hoveredIndex].weightClass}</div>
+					<div>Wins: {data[hoveredIndex].wins}</div>
+					<div>Points Contributed: {data[hoveredIndex].points}</div>
 				</div>
 			)}
 		</div>
