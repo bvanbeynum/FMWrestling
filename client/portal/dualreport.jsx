@@ -91,8 +91,8 @@ const DivergingBarChart = ({ dualsList }) => {
 			<svg viewBox={`0 0 ${chartWidth} ${chartHeight}`}>
 				<line x1={centerXCoordinate} y1={25} x2={centerXCoordinate} y2={chartHeight - 15} stroke="var(--outline)" strokeWidth={1.5} strokeDasharray="3,3" />
 				
-				<text x={centerXCoordinate - 15} y={18} textAnchor="end" fontFamily="var(--font-headers)" fontSize="12px" fontWeight="700" fill="var(--secondary)">POINTS AGAINST</text>
-				<text x={centerXCoordinate + 15} y={18} textAnchor="start" fontFamily="var(--font-headers)" fontSize="12px" fontWeight="700" fill="var(--primary)">POINTS FOR</text>
+				<text x={centerXCoordinate - 15} y={18} textAnchor="end" fontFamily="var(--font-body)" fontSize="12px" fontWeight="700" fill="var(--secondary)">POINTS AGAINST</text>
+				<text x={centerXCoordinate + 15} y={18} textAnchor="start" fontFamily="var(--font-body)" fontSize="12px" fontWeight="700" fill="var(--primary)">POINTS FOR</text>
 
 				{dualScoresList.map((scoreItem, indexVal) => {
 					const yCoordinate = 45 + indexVal * rowHeight;
@@ -104,7 +104,6 @@ const DivergingBarChart = ({ dualsList }) => {
 								textAnchor="middle" 
 								fontFamily="var(--font-body)" 
 								fontSize="13px" 
-								fontWeight="600" 
 								fill="var(--on-surface)"
 							>
 								{scoreItem.opponent}
@@ -124,7 +123,6 @@ const DivergingBarChart = ({ dualsList }) => {
 								textAnchor="end" 
 								fontFamily="var(--font-headers)" 
 								fontSize="13px" 
-								fontWeight="700"
 								fill="var(--secondary)"
 							>
 								{scoreItem.opponentScore}
@@ -144,7 +142,6 @@ const DivergingBarChart = ({ dualsList }) => {
 								textAnchor="start" 
 								fontFamily="var(--font-headers)" 
 								fontSize="13px" 
-								fontWeight="700"
 								fill="var(--primary)"
 							>
 								{scoreItem.teamScore}
@@ -216,10 +213,9 @@ const ScatterPlot = ({ dualsList }) => {
 					textAnchor="middle" 
 					fontFamily="var(--font-headers)" 
 					fontSize="12px" 
-					fontWeight="700"
 					fill="var(--on-surface-variant)"
 				>
-					POINTS FOR (FORT MILL)
+					POINTS FOR
 				</text>
 
 				<text 
@@ -228,10 +224,9 @@ const ScatterPlot = ({ dualsList }) => {
 					textAnchor="middle" 
 					fontFamily="var(--font-headers)" 
 					fontSize="12px" 
-					fontWeight="700"
 					fill="var(--on-surface-variant)"
 				>
-					OPPONENT POINTS AGAINST
+					POINTS AGAINST
 				</text>
 
 				<line 
@@ -276,7 +271,7 @@ const ScatterPlot = ({ dualsList }) => {
 					style={{
 						position: "absolute",
 						top: `${convertToYCoordinate(plotDataPoints[hoveredIndex].teamScore) - 48}px`,
-						left: `${convertToXCoordinate(plotDataPoints[hoveredIndex].opponentScore) + 12}px`,
+						left: `${convertToXCoordinate(plotDataPoints[hoveredIndex].opponentScore) }px`,
 						backgroundColor: "var(--inverse-surface)",
 						color: "var(--inverse-on-surface)",
 						padding: "6px 10px",
