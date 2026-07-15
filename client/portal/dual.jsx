@@ -362,6 +362,7 @@ const Dual = () => {
 	};
 
 	const handleAddWeightClass = () => {
+		if (matches.length >= 14) return;
 		const usedWeights = new Set(matches.map(m => m.weightClass));
 		const nextWt = WEIGHT_CLASSES.find(w => !usedWeights.has(w)) || WEIGHT_CLASSES[0];
 
@@ -583,6 +584,19 @@ const Dual = () => {
 		</div>
 		:
 		<div className="dual-container">
+			<header>
+				<h1>{ opponent || "Visitor" }</h1>
+			</header>
+
+			<div style={{ display: 'flex', justifyContent: 'center', margin: '20px 0' }}>
+				<button 
+					type="button"
+					className="lineupButton addDual" 
+					onClick={ () => window.location.href = "/portal/schedule.html" }
+				>
+					Return
+				</button>
+			</div>
 
 			{/* Whiteboard Mockup Header Card */}
 			<div className="whiteboard-header-card">
@@ -626,14 +640,6 @@ const Dual = () => {
 								<option value="Girls">Girls</option>
 							</select>
 						</div>
-					</div>
-
-					{/* Opponent Row (Read Only) */}
-					<div className="whiteboard-opponent-container">
-						<div className="whiteboard-opponent-name-display">
-							{ opponent || "Visitor" }
-						</div>
-						<div className="whiteboard-opponent-label">opponent</div>
 					</div>
 
 					{/* Action Buttons */}
@@ -684,13 +690,15 @@ const Dual = () => {
 						<h2>Dual Meet Scoresheet</h2>
 
 						<div className="scoresheet-actions">
-							<button 
-								type="button"
-								className="btn-add-row" 
-								onClick={ handleAddWeightClass }
-							>
-								+ Add Weight Class
-							</button>
+							{matches.length < 14 && (
+								<button 
+									type="button"
+									className="btn-add-row" 
+									onClick={ handleAddWeightClass }
+								>
+									+ Add Weight Class
+								</button>
+							)}
 							{ imagePath && (
 								<button 
 									type="button"
@@ -982,13 +990,15 @@ const Dual = () => {
 					
 					<div className="scoresheet-header">
 						<div className="scoresheet-actions">
-							<button 
-								type="button"
-								className="btn-add-row" 
-								onClick={ handleAddWeightClass }
-							>
-								+ Add Weight Class
-							</button>
+							{matches.length < 14 && (
+								<button 
+									type="button"
+									className="btn-add-row" 
+									onClick={ handleAddWeightClass }
+								>
+									+ Add Weight Class
+								</button>
+							)}
 							{ imagePath && (
 								<button 
 									type="button"

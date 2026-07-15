@@ -1038,4 +1038,22 @@ input[type=number] {
 	background-color: #f1f3f5;
 }
 
+/* Return button styling matching schedule.jsx's Add Event button */
+.lineupButton.addDual {
+	padding: 0.5rem 1.25rem;
+	color: #ffffff;
+	border-radius: 8px;
+	background-color: #2563eb;
+	border: none;
+	font-weight: 600;
+	font-size: 0.9rem;
+	cursor: pointer;
+	transition: background-color 0.15s ease-in-out;
+}
+
+.lineupButton.addDual:hover {
+	background-color: #1d4ed8;
+}
+
+
 
