@@ -353,6 +353,402 @@ const MatchDetailMatrix = ({ dualsList }) => {
 	);
 };
 
+
+const WEIGHT_CLASSES = ["106", "113", "120", "126", "132", "138", "144", "150", "157", "165", "175", "190", "215", "285"];
+
+const processWeightClassData = (dualsList) => {
+	const completedDuals = dualsList.filter(function (dualItem) {
+		return dualItem.matches && dualItem.matches.length > 0;
+	});
+
+	const statsMap = {};
+	WEIGHT_CLASSES.forEach(function (weightClass) {
+		statsMap[weightClass] = {
+			weightClass: weightClass,
+			wins: 0,
+			points: 0,
+			totalMatches: 0,
+			wrestlers: {} // wrestlerName -> { name, wins, losses, points }
+		};
+	});
+
+	completedDuals.forEach(function (dualItem) {
+		(dualItem.matches || []).forEach(function (matchItem) {
+			const weightClass = matchItem.weightClass;
+			if (!statsMap[weightClass]) {
+				return;
+			}
+
+			const winType = (matchItem.winType || "").toUpperCase();
+			let matchPoints = 3; // fallback default
+			if (winType === "DEC") {
+				matchPoints = 3;
+			} else if (winType === "MD") {
+				matchPoints = 4;
+			} else if (winType === "TF") {
+				matchPoints = 5;
+			} else if (["F", "FF", "FOR", "DQ", "DEF"].includes(winType)) {
+				matchPoints = 6;
+			}
+
+			const fortMillWrestler = (matchItem.wrestlers || []).find(function (wrestlerItem) {
+				return wrestlerItem.team.toLowerCase() === "fort mill";
+			});
+
+			if (fortMillWrestler) {
+				const wrestlerName = fortMillWrestler.name || "Unknown Wrestler";
+				if (!statsMap[weightClass].wrestlers[wrestlerName]) {
+					statsMap[weightClass].wrestlers[wrestlerName] = {
+						name: wrestlerName,
+						wins: 0,
+						losses: 0,
+						points: 0
+					};
+				}
+
+				statsMap[weightClass].totalMatches += 1;
+				if (fortMillWrestler.isWinner) {
+					statsMap[weightClass].wins += 1;
+					statsMap[weightClass].points += matchPoints;
+					statsMap[weightClass].wrestlers[wrestlerName].wins += 1;
+					statsMap[weightClass].wrestlers[wrestlerName].points += matchPoints;
+				} else {
+					statsMap[weightClass].wrestlers[wrestlerName].losses += 1;
+				}
+			}
+		});
+	});
+
+	return WEIGHT_CLASSES.map(function (weightClass) {
+		const weightClassData = statsMap[weightClass];
+		const wrestlerList = Object.values(weightClassData.wrestlers).map(function (wrestlerItem) {
+			const totalMatches = wrestlerItem.wins + wrestlerItem.losses;
+			return {
+				...wrestlerItem,
+				winPercentage: totalMatches > 0 ? (wrestlerItem.wins / totalMatches) * 100 : 0,
+				percentageOfPoints: weightClassData.points > 0 ? (wrestlerItem.points / weightClassData.points) * 100 : 0
+			};
+		});
+
+		// Determine leading wrestler based on wins, then win %, then points
+		let sortedWrestlersList = wrestlerList;
+		let leaderName = null;
+		if (wrestlerList.length > 0) {
+			sortedWrestlersList = [...wrestlerList].sort(function (firstWrestler, secondWrestler) {
+				if (secondWrestler.wins !== firstWrestler.wins) {
+					return secondWrestler.wins - firstWrestler.wins;
+				}
+				if (secondWrestler.winPercentage !== firstWrestler.winPercentage) {
+					return secondWrestler.winPercentage - firstWrestler.winPercentage;
+				}
+				return secondWrestler.points - firstWrestler.points;
+			});
+			leaderName = sortedWrestlersList[0].name;
+		}
+
+		return {
+			weightClass: weightClass,
+			wins: weightClassData.wins,
+			points: weightClassData.points,
+			totalMatches: weightClassData.totalMatches,
+			wrestlers: sortedWrestlersList,
+			leaderName: leaderName
+		};
+	});
+};
+
+const WinsPointsComboChart = ({ data }) => {
+	const [hoveredIndex, setHoveredIndex] = useState(null);
+	const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+
+	const maxWinsValue = Math.max(...data.map(function (dataPoint) { return dataPoint.wins; }), 5);
+	const maxPointsValue = Math.max(...data.map(function (dataPoint) { return dataPoint.points; }), 30);
+
+	const chartTotalWidth = 600;
+	const chartTotalHeight = 300;
+	const paddingConfig = { top: 30, right: 50, bottom: 40, left: 50 };
+	const chartContentWidth = chartTotalWidth - paddingConfig.left - paddingConfig.right;
+	const chartContentHeight = chartTotalHeight - paddingConfig.top - paddingConfig.bottom;
+
+	const getXCoordinate = (indexValue) => paddingConfig.left + (indexValue + 0.5) * (chartContentWidth / data.length);
+	const getYLeftCoordinate = (winsValue) => paddingConfig.top + chartContentHeight - (winsValue / maxWinsValue) * chartContentHeight;
+	const getYRightCoordinate = (pointsValue) => paddingConfig.top + chartContentHeight - (pointsValue / maxPointsValue) * chartContentHeight;
+
+	const pointsPathData = data.map(function (dataPoint, indexValue) {
+		return `${indexValue === 0 ? 'M' : 'L'} ${getXCoordinate(indexValue)} ${getYRightCoordinate(dataPoint.points)}`;
+	}).join(' ');
+
+	const tickLinesCount = 5;
+	const leftAxisTicks = Array.from({ length: tickLinesCount + 1 }, (unusedValue, indexValue) => Math.round((maxWinsValue / tickLinesCount) * indexValue));
+	const rightAxisTicks = Array.from({ length: tickLinesCount + 1 }, (unusedValue, indexValue) => Math.round((maxPointsValue / tickLinesCount) * indexValue));
+
+	const handleMouseMoveEvent = (event, indexValue) => {
+		const targetRect = event.currentTarget.getBoundingClientRect();
+		setTooltipPosition({
+			x: event.clientX - targetRect.left,
+			y: event.clientY - targetRect.top - 10
+		});
+		setHoveredIndex(indexValue);
+	};
+
+	return (
+		<div className="diverging-chart-wrapper" style={{ position: "relative" }}>
+			<svg viewBox={`0 0 ${chartTotalWidth} ${chartTotalHeight}`}>
+				{/* Gridlines */}
+				{leftAxisTicks.map((unusedValue, indexValue) => {
+					const yCoordinate = paddingConfig.top + chartContentHeight - (indexValue / tickLinesCount) * chartContentHeight;
+					return <line key={indexValue} x1={paddingConfig.left} y1={yCoordinate} x2={chartTotalWidth - paddingConfig.right} y2={yCoordinate} stroke="var(--outline)" strokeWidth={0.5} strokeDasharray="3,3" />;
+				})}
+
+				{/* Axis Lines */}
+				<line x1={paddingConfig.left} y1={paddingConfig.top} x2={paddingConfig.left} y2={paddingConfig.top + chartContentHeight} stroke="var(--outline)" strokeWidth={1.5} />
+				<line x1={chartTotalWidth - paddingConfig.right} y1={paddingConfig.top} x2={chartTotalWidth - paddingConfig.right} y2={paddingConfig.top + chartContentHeight} stroke="var(--outline)" strokeWidth={1.5} />
+				<line x1={paddingConfig.left} y1={paddingConfig.top + chartContentHeight} x2={chartTotalWidth - paddingConfig.right} y2={paddingConfig.top + chartContentHeight} stroke="var(--outline)" strokeWidth={1.5} />
+
+				{/* Axis Titles */}
+				<text x={20} y={paddingConfig.top - 12} fontFamily="var(--font-body)" fontSize="16px" fontWeight="700" fill="#3246e5" textAnchor="middle">WINS</text>
+				<text x={chartTotalWidth - 15} y={paddingConfig.top - 12} fontFamily="var(--font-body)" fontSize="16px" fontWeight="700" fill="#fd8b00" textAnchor="middle">PTS</text>
+
+				{/* Left Axis Labels (Wins) */}
+				{leftAxisTicks.map((tickValue, indexValue) => {
+					const yCoordinate = paddingConfig.top + chartContentHeight - (indexValue / tickLinesCount) * chartContentHeight;
+					return <text key={indexValue} x={paddingConfig.left - 10} y={yCoordinate + 4} textAnchor="end" fontFamily="var(--font-headers)" fontSize="15px" fill="var(--on-surface-variant)">{tickValue}</text>;
+				})}
+
+				{/* Right Axis Labels (Points) */}
+				{rightAxisTicks.map((tickValue, indexValue) => {
+					const yCoordinate = paddingConfig.top + chartContentHeight - (indexValue / tickLinesCount) * chartContentHeight;
+					return <text key={indexValue} x={chartTotalWidth - paddingConfig.right + 10} y={yCoordinate + 4} textAnchor="start" fontFamily="var(--font-headers)" fontSize="15px" fill="var(--on-surface-variant)">{tickValue}</text>;
+				})}
+
+				{/* X Axis Labels */}
+				{data.map((dataPoint, indexValue) => (
+					<text key={dataPoint.weightClass} x={getXCoordinate(indexValue)} y={paddingConfig.top + chartContentHeight + 20} textAnchor="middle" fontFamily="var(--font-headers)" fontSize="15px" fill="var(--on-surface-variant)">{dataPoint.weightClass}</text>
+				))}
+
+				{/* Bar Chart (Wins) */}
+				{data.map((dataPoint, indexValue) => {
+					const barElementWidth = 16;
+					const barElementHeight = (dataPoint.wins / maxWinsValue) * chartContentHeight;
+					const xCoordinate = getXCoordinate(indexValue) - barElementWidth / 2;
+					const yCoordinate = paddingConfig.top + chartContentHeight - barElementHeight;
+
+					return (
+						<rect
+							key={dataPoint.weightClass}
+							x={xCoordinate}
+							y={yCoordinate}
+							width={barElementWidth}
+							height={barElementHeight}
+							fill="#3246e5"
+							rx={2}
+							style={{ cursor: "pointer", transition: "fill-opacity 0.2s" }}
+							fillOpacity={hoveredIndex === indexValue ? 0.8 : 1}
+							onMouseMove={(eventObject) => handleMouseMoveEvent(eventObject, indexValue)}
+							onMouseLeave={() => setHoveredIndex(null)}
+						/>
+					);
+				})}
+
+				{/* Line Chart (Points) */}
+				<path d={pointsPathData} fill="none" stroke="#fd8b00" strokeWidth={2.5} style={{ pointerEvents: "none" }} />
+				{data.map((dataPoint, indexValue) => (
+					<circle
+						key={dataPoint.weightClass}
+						cx={getXCoordinate(indexValue)}
+						cy={getYRightCoordinate(dataPoint.points)}
+						r={hoveredIndex === indexValue ? 7 : 5}
+						fill="#fd8b00"
+						stroke="#ffffff"
+						strokeWidth={1.5}
+						style={{ cursor: "pointer", transition: "all 0.15s ease" }}
+						onMouseMove={(eventObject) => handleMouseMoveEvent(eventObject, indexValue)}
+						onMouseLeave={() => setHoveredIndex(null)}
+					/>
+				))}
+			</svg>
+
+			{hoveredIndex !== null && (
+				<div
+					className="combo-chart-tooltip"
+					style={{
+						position: "absolute",
+						top: `${tooltipPosition.y}px`,
+						left: `${tooltipPosition.x}px`
+					}}
+				>
+					Weight: {data[hoveredIndex].weightClass}
+					<br />
+					Wins: {data[hoveredIndex].wins}
+					<br />
+					Points Contributed: {data[hoveredIndex].points}
+				</div>
+			)}
+		</div>
+	);
+};
+
+const PointsHorizontalBarChart = ({ data }) => {
+	const sortedData = [...data].sort((firstPoint, secondPoint) => +firstPoint.weightClass - +secondPoint.weightClass);
+	const maxPointsValue = Math.max(...sortedData.map(function (dataPoint) { return dataPoint.points; }), 10);
+
+	const chartTotalWidth = 500;
+	const barRowHeight = 15;
+	const barRowSpacing = 12;
+	const paddingConfig = { top: 10, right: 40, bottom: 20, left: 45 };
+
+	const chartContentHeight = sortedData.length * (barRowHeight + barRowSpacing);
+	const chartTotalHeight = chartContentHeight + paddingConfig.top + paddingConfig.bottom;
+	const chartContentWidth = chartTotalWidth - paddingConfig.left - paddingConfig.right;
+
+	const getBarWidth = (pointsValue) => (pointsValue / maxPointsValue) * chartContentWidth;
+
+	return (
+		<div className="points-horizontal-chart-wrapper">
+			<svg viewBox={`0 0 ${chartTotalWidth} ${chartTotalHeight}`}>
+				<line x1={paddingConfig.left} y1={paddingConfig.top} x2={paddingConfig.left} y2={paddingConfig.top + chartContentHeight} stroke="var(--outline)" strokeWidth={1.5} />
+
+				{sortedData.map((dataPoint, indexValue) => {
+					const yCoordinate = paddingConfig.top + indexValue * (barRowHeight + barRowSpacing);
+					const barWidthValue = getBarWidth(dataPoint.points);
+
+					return (
+						<g key={dataPoint.weightClass} className="chart-row">
+							<text
+								x={paddingConfig.left - 8}
+								y={yCoordinate + barRowHeight / 2 + 5}
+								textAnchor="end"
+								fontFamily="var(--font-headers)"
+								fontSize="15px"
+								fill="var(--on-surface-variant)"
+							>
+								{dataPoint.weightClass}
+							</text>
+
+							<rect
+								x={paddingConfig.left}
+								y={yCoordinate}
+								width={Math.max(barWidthValue, 2)}
+								height={barRowHeight}
+								fill="#fd8b00"
+								rx={2}
+							/>
+
+							<text
+								x={paddingConfig.left + barWidthValue + 8}
+								y={yCoordinate + barRowHeight / 2 + 5}
+								textAnchor="start"
+								fontFamily="var(--font-body)"
+								fontSize="15px"
+								fontWeight="700"
+								fill="var(--on-surface)"
+							>
+								{dataPoint.points}
+							</text>
+						</g>
+					);
+				})}
+			</svg>
+		</div>
+	);
+};
+
+const IntraClassComparisonCards = ({ data }) => {
+	return (
+		<div className="weight-comparison-grid">
+			{data.map(function (weightClassData) {
+				return (
+					<div key={weightClassData.weightClass} className="weight-comparison-card">
+						<h4 className="weight-comparison-card-title">
+							<span>{weightClassData.weightClass} LBS</span>
+							{weightClassData.leaderName && (
+								<span style={{ fontSize: "11px", fontWeight: "normal", textTransform: "none", color: "var(--on-surface-variant)" }}>
+									{weightClassData.wrestlers.length} Athlete(s)
+								</span>
+							)}
+						</h4>
+						<div className="weight-comparison-card-body">
+							{weightClassData.wrestlers.length === 0 ? (
+								<div className="no-wrestlers-placeholder">No active records</div>
+							) : (
+								weightClassData.wrestlers.map(function (wrestlerItem) {
+									const isLeader = wrestlerItem.name === weightClassData.leaderName;
+									const winPercentage = wrestlerItem.winPercentage;
+									const totalMatches = wrestlerItem.wins + wrestlerItem.losses;
+									let colorClass = "";
+									if (totalMatches > 0) {
+										if (winPercentage > 75) {
+											colorClass = "win-pct-high";
+										} else if (winPercentage >= 50) {
+											colorClass = "win-pct-mid";
+										} else {
+											colorClass = "win-pct-low";
+										}
+									}
+									return (
+										<div
+											key={wrestlerItem.name}
+											className={`wrestler-comparison-row ${isLeader ? 'is-leader-row' : ''} ${colorClass}`}
+										>
+											<div className="wrestler-identity">
+												<span className="wrestler-name-label">{wrestlerItem.name}</span>
+												<span className="wrestler-record-label">
+													Record: {wrestlerItem.wins}-{wrestlerItem.losses}
+												</span>
+												{isLeader && (
+													<span className="wrestler-leader-badge">★ LEADER</span>
+												)}
+											</div>
+											<div className="wrestler-metrics-summary">
+												<div className="wrestler-metric-item">
+													<span className="wrestler-metric-val">
+														{wrestlerItem.winPercentage.toFixed(1)}%
+													</span>
+													<span className="wrestler-metric-lbl">Win %</span>
+												</div>
+												<div className="wrestler-metric-item">
+													<span className="wrestler-metric-val">
+														{wrestlerItem.points}
+													</span>
+													<span className="wrestler-metric-lbl">Pts For</span>
+												</div>
+											</div>
+										</div>
+									);
+								})
+							)}
+						</div>
+					</div>
+				);
+			})}
+		</div>
+	);
+};
+
+const WeightClassOverview = ({ dualsList }) => {
+	const aggregatedData = processWeightClassData(dualsList);
+
+	return (
+		<div className="weight-class-overview-container">
+			<div className="report-charts-row">
+				<div className="report-chart-card">
+					<h3 className="chart-card-title">Wins & Points Combo</h3>
+					<WinsPointsComboChart data={aggregatedData} />
+				</div>
+				<div className="report-chart-card">
+					<h3 className="chart-card-title">Scoring Power by Weight</h3>
+					<PointsHorizontalBarChart data={aggregatedData} />
+				</div>
+			</div>
+
+			<div className="weight-matrix-section">
+				<h3 className="matrix-section-title">Intra-Class Comparison</h3>
+				<IntraClassComparisonCards data={aggregatedData} />
+			</div>
+		</div>
+	);
+};
+
 const DualReport = () => {
 	const seasonOptions = getSeasonOptions(new Date());
 	
@@ -363,6 +759,7 @@ const DualReport = () => {
 	const [seasonName, setSeasonName] = useState("");
 	const [hasPreviousSeasonData, setHasPreviousSeasonData] = useState(false);
 	const [selectedSeason, setSelectedSeason] = useState(seasonOptions[1].name);
+	const [activeView, setActiveView] = useState("overview");
 
 	useEffect(() => {
 		setIsLoading(true);
@@ -473,69 +870,78 @@ const DualReport = () => {
 							</div>
 						</div>
 
-						{/* KPIs Cards Section */}
-						<div className="report-kpis-grid">
-							<div className="report-kpi-card">
-								<span className="kpi-label">DUAL RECORD</span>
-								<span className="kpi-value-text Russo">{totalWinsCount} - {totalLossesCount}</span>
-							</div>
+						{activeView === "overview" ? (
+							<>
+								{/* KPIs Cards Section */}
+								<div className="report-kpis-grid">
+									<div className="report-kpi-card">
+										<span className="kpi-label">DUAL RECORD</span>
+										<span className="kpi-value-text Russo">{totalWinsCount} - {totalLossesCount}</span>
+									</div>
 
-							<div className="report-kpi-card">
-								<span className="kpi-label">WIN PERCENTAGE</span>
-								<span className="kpi-value-text Russo">{winPercentageRatio.toFixed(1)}%</span>
-								{hasPreviousSeasonData && (
-									<span className={`kpi-comparison-variance ${variancePercentage >= 0 ? "positive-val" : "negative-val"}`}>
-										{formattedVariance} vs {startYearFullValue - 1} baseline
-									</span>
-								)}
-							</div>
+									<div className="report-kpi-card">
+										<span className="kpi-label">WIN PERCENTAGE</span>
+										<span className="kpi-value-text Russo">{winPercentageRatio.toFixed(1)}%</span>
+										{hasPreviousSeasonData && (
+											<span className={`kpi-comparison-variance ${variancePercentage >= 0 ? "positive-val" : "negative-val"}`}>
+												{formattedVariance} vs {startYearFullValue - 1} baseline
+											</span>
+										)}
+									</div>
 
-							<div className="report-kpi-card">
-								<span className="kpi-label">POINTS FOR / AGAINST</span>
-								<span className="kpi-value-text Russo">{totalPointsForSum} / {totalPointsAgainstSum}</span>
-							</div>
+									<div className="report-kpi-card">
+										<span className="kpi-label">POINTS FOR / AGAINST</span>
+										<span className="kpi-value-text Russo">{totalPointsForSum} / {totalPointsAgainstSum}</span>
+									</div>
 
-							<div className="report-kpi-card">
-								<span className="kpi-label">NEXT DUAL</span>
-								<span className="kpi-value-text Russo" style={{ fontSize: nextUpcomingDual ? "20px" : "28px", textAlign: "center" }}>
-									{nextUpcomingDual ? nextUpcomingDual.opponent : "None Scheduled"}
-								</span>
-								<span className="kpi-comparison-variance" style={{ color: "var(--on-surface-variant)" }}>
-									{nextUpcomingDual ? new Date(nextUpcomingDual.dualDate).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "No upcoming meets"}
-								</span>
-							</div>
-						</div>
-
-						{/* Charts Row */}
-						<div className="report-charts-row">
-							<div className="report-chart-card">
-								<h3 className="chart-card-title">Points Differential</h3>
-								<DivergingBarChart dualsList={duals} />
-								<div className="chart-net-indicator-wrapper">
-									<span className="net-label">NET OVERALL POINTS</span>
-									<span className={`net-value-count Russo ${netPointsDifferenceVal >= 0 ? "positive-val" : "negative-val"}`}>
-										{netPointsDifferenceVal > 0 ? "+" : ""}{netPointsDifferenceVal}
-									</span>
+									<div className="report-kpi-card">
+										<span className="kpi-label">NEXT DUAL</span>
+										<span className="kpi-value-text Russo" style={{ fontSize: nextUpcomingDual ? "20px" : "28px", textAlign: "center" }}>
+											{nextUpcomingDual ? nextUpcomingDual.opponent : "None Scheduled"}
+										</span>
+										<span className="kpi-comparison-variance" style={{ color: "var(--on-surface-variant)" }}>
+											{nextUpcomingDual ? new Date(nextUpcomingDual.dualDate).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "No upcoming meets"}
+										</span>
+									</div>
 								</div>
-							</div>
 
-							<div className="report-chart-card">
-								<h3 className="chart-card-title">Matchup Scoring Trends</h3>
-								<ScatterPlot dualsList={duals} />
-							</div>
-						</div>
+								{/* Charts Row */}
+								<div className="report-charts-row">
+									<div className="report-chart-card">
+										<h3 className="chart-card-title">Points Differential</h3>
+										<DivergingBarChart dualsList={duals} />
+										<div className="chart-net-indicator-wrapper">
+											<span className="net-label">NET OVERALL POINTS</span>
+											<span className={`net-value-count Russo ${netPointsDifferenceVal >= 0 ? "positive-val" : "negative-val"}`}>
+												{netPointsDifferenceVal > 0 ? "+" : ""}{netPointsDifferenceVal}
+											</span>
+										</div>
+									</div>
 
-						{/* Match detail table matrix section */}
-						<div className="report-matrix-section">
-							<h3 className="matrix-section-title">Match Detail Matrix</h3>
-							<MatchDetailMatrix dualsList={duals} />
-						</div>
+									<div className="report-chart-card">
+										<h3 className="chart-card-title">Matchup Scoring Trends</h3>
+										<ScatterPlot dualsList={duals} />
+									</div>
+								</div>
+
+								{/* Match detail table matrix section */}
+								<div className="report-matrix-section">
+									<h3 className="matrix-section-title">Match Detail Matrix</h3>
+									<MatchDetailMatrix dualsList={duals} />
+								</div>
+							</>
+						) : activeView === "weight_classes" ? (
+							<WeightClassOverview dualsList={duals} />
+						) : null}
 
 					</div>
 
 					{/* Sticky Bottom Navigation Bar */}
 					<div className="bottomNav">
-						<div className="navItem active">
+						<div 
+							className={`navItem ${activeView === "overview" ? "active" : ""}`}
+							onClick={() => setActiveView("overview")}
+						>
 							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
 								<rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
 								<line x1="9" y1="3" x2="9" y2="21" />
@@ -545,13 +951,19 @@ const DualReport = () => {
 							</svg>
 							<span>Overview</span>
 						</div>
-						<div className="navItem">
+						<div 
+							className={`navItem ${activeView === "weight_classes" ? "active" : ""}`}
+							onClick={() => setActiveView("weight_classes")}
+						>
 							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
 								<path d="M12 3v18M12 7l-8-2M12 7l8-2M4 5v4a4 4 0 0 0 8 0V5M20 5v4a4 4 0 0 1-8 0V5M4 19h16" />
 							</svg>
 							<span>Weight Classes</span>
 						</div>
-						<div className="navItem">
+						<div 
+							className="navItem"
+							onClick={() => { window.location = "/portal/wrestlersearch.html"; }}
+						>
 							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
 								<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
 								<circle cx="9" cy="7" r="4" />
@@ -560,7 +972,10 @@ const DualReport = () => {
 							</svg>
 							<span>Wrestlers</span>
 						</div>
-						<div className="navItem">
+						<div 
+							className="navItem"
+							onClick={() => { window.location = "/portal/schedule.html"; }}
+						>
 							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
 								<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
 								<path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />

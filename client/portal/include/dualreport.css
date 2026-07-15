@@ -212,7 +212,7 @@
 }
 
 /* SVG Chart Specific Styles */
-.diverging-chart-wrapper, .scatter-plot-wrapper {
+.diverging-chart-wrapper, .scatter-plot-wrapper, .points-horizontal-chart-wrapper {
 	width: 100%;
 	display: block;
 }
@@ -225,7 +225,7 @@
 	margin: 0 auto;
 }
 
-.scatter-plot-wrapper svg {
+.scatter-plot-wrapper svg, .points-horizontal-chart-wrapper svg {
 	width: 100%;
 	max-width: 500px;
 	height: auto;
@@ -377,3 +377,211 @@
 .navItem svg {
 	margin-bottom: 3px;
 }
+
+/* Weight Class View Styles - Responsive & Mobile-First */
+.weight-class-overview-container {
+	animation: fadeInAnimation 0.25s ease-in-out;
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+@keyframes fadeInAnimation {
+	from { opacity: 0; transform: translateY(8px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+
+/* Card-based Weight Class Comparison Section */
+.weight-comparison-grid {
+	display: grid;
+	grid-template-columns: 1fr; /* Mobile first: single column */
+	gap: 16px;
+	margin-top: 16px;
+	width: 100%;
+}
+
+.weight-comparison-card {
+	background: var(--surface);
+	border: 1px solid var(--outline);
+	border-radius: var(--rounded-md);
+	padding: 16px;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+	box-sizing: border-box;
+	display: flex;
+	flex-direction: column;
+}
+
+.weight-comparison-card-title {
+	font-family: var(--font-headers);
+	font-size: 16px;
+	font-weight: 700;
+	color: var(--primary);
+	border-bottom: 2px solid var(--outline);
+	padding-bottom: 8px;
+	margin-top: 0;
+	margin-bottom: 12px;
+	text-transform: uppercase;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.weight-comparison-card-body {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.wrestler-comparison-row {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	padding: 8px 10px;
+	border-radius: var(--rounded-sm);
+	border: 1px solid transparent;
+	font-family: var(--font-body);
+	background-color: var(--background);
+	gap: 12px;
+}
+
+/* Style for the leading wrestler */
+.wrestler-comparison-row.is-leader-row {
+	border: 1.5px solid var(--primary);
+	border-left: 5px solid var(--primary);
+}
+
+/* Win Percentage Color Scale Backgrounds */
+.wrestler-comparison-row.win-pct-high {
+	background-color: #e6f4ea !important; /* Soft Premium Green */
+}
+.wrestler-comparison-row.win-pct-high .wrestler-name-label,
+.wrestler-comparison-row.win-pct-high .wrestler-record-label,
+.wrestler-comparison-row.win-pct-high .wrestler-metric-val,
+.wrestler-comparison-row.win-pct-high .wrestler-metric-lbl {
+	color: #137333 !important;
+}
+
+.wrestler-comparison-row.win-pct-mid {
+	background-color: #fef7e0 !important; /* Soft Premium Yellow */
+}
+.wrestler-comparison-row.win-pct-mid .wrestler-name-label,
+.wrestler-comparison-row.win-pct-mid .wrestler-record-label,
+.wrestler-comparison-row.win-pct-mid .wrestler-metric-val,
+.wrestler-comparison-row.win-pct-mid .wrestler-metric-lbl {
+	color: #b06000 !important;
+}
+
+.wrestler-comparison-row.win-pct-low {
+	background-color: #fce8e6 !important; /* Soft Premium Red */
+}
+.wrestler-comparison-row.win-pct-low .wrestler-name-label,
+.wrestler-comparison-row.win-pct-low .wrestler-record-label,
+.wrestler-comparison-row.win-pct-low .wrestler-metric-val,
+.wrestler-comparison-row.win-pct-low .wrestler-metric-lbl {
+	color: #c5221f !important;
+}
+
+.wrestler-identity {
+	display: flex;
+	flex-direction: column;
+}
+
+.wrestler-name-label {
+	font-weight: 700;
+	font-size: 13px;
+	color: var(--on-surface);
+}
+
+.wrestler-record-label {
+	font-size: 11px;
+	color: var(--on-surface-variant);
+	font-weight: 600;
+	margin-top: 2px;
+}
+
+.wrestler-leader-badge {
+	font-family: var(--font-headers);
+	font-size: 9px;
+	color: var(--primary);
+	background-color: #ffffff;
+	padding: 1px 4px;
+	border-radius: 2px;
+	border: 1px solid var(--primary);
+	margin-top: 4px;
+	width: fit-content;
+}
+
+.wrestler-metrics-summary {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 16px;
+}
+
+.wrestler-metric-item {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+}
+
+.wrestler-metric-val {
+	font-family: var(--font-headers);
+	font-size: 13px;
+	font-weight: 700;
+	color: var(--on-surface);
+}
+
+.wrestler-metric-lbl {
+	font-size: 9px;
+	color: var(--on-surface-variant);
+	text-transform: uppercase;
+	margin-top: 2px;
+}
+
+.wrestler-comparison-row.is-leader-row .wrestler-metric-val {
+	color: var(--primary);
+}
+
+.no-wrestlers-placeholder {
+	font-family: var(--font-body);
+	font-size: 12px;
+	font-style: italic;
+	color: var(--on-surface-variant);
+	padding: 12px 0;
+	text-align: center;
+}
+
+/* Tooltip Styles */
+.combo-chart-tooltip {
+	position: absolute;
+	background-color: var(--inverse-surface);
+	color: var(--inverse-on-surface);
+	padding: 8px 12px;
+	border-radius: var(--rounded-sm);
+	font-size: 11px;
+	font-family: var(--font-body);
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+	z-index: 50;
+	pointer-events: none;
+	transform: translate(-50%, -100%);
+}
+
+.combo-chart-tooltip strong {
+	font-family: var(--font-headers);
+	color: #ffffff;
+}
+
+/* Desktop override to support multi-column layouts */
+@media (min-width: 768px) {
+	.weight-comparison-grid {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+@media (min-width: 1024px) {
+	.weight-comparison-grid {
+		grid-template-columns: repeat(3, 1fr);
+	}
+}
+
