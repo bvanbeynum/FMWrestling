@@ -91,8 +91,8 @@ const DivergingBarChart = ({ dualsList }) => {
 			<svg viewBox={`0 0 ${chartWidth} ${chartHeight}`}>
 				<line x1={centerXCoordinate} y1={25} x2={centerXCoordinate} y2={chartHeight - 15} stroke="var(--outline)" strokeWidth={1.5} strokeDasharray="3,3" />
 				
-				<text x={centerXCoordinate - 15} y={18} textAnchor="end" fontFamily="var(--font-body)" fontSize="12px" fontWeight="700" fill="var(--secondary)">POINTS AGAINST</text>
-				<text x={centerXCoordinate + 15} y={18} textAnchor="start" fontFamily="var(--font-body)" fontSize="12px" fontWeight="700" fill="var(--primary)">POINTS FOR</text>
+				<text x={centerXCoordinate - 15} y={18} textAnchor="end" fontFamily="var(--font-body)" fontSize="18px" fontWeight="700" fill="var(--secondary)">POINTS AGAINST</text>
+				<text x={centerXCoordinate + 15} y={18} textAnchor="start" fontFamily="var(--font-body)" fontSize="18px" fontWeight="700" fill="var(--primary)">POINTS FOR</text>
 
 				{dualScoresList.map((scoreItem, indexVal) => {
 					const yCoordinate = 45 + indexVal * rowHeight;
@@ -103,7 +103,7 @@ const DivergingBarChart = ({ dualsList }) => {
 								y={yCoordinate - 6} 
 								textAnchor="middle" 
 								fontFamily="var(--font-body)" 
-								fontSize="13px" 
+								fontSize="15px" 
 								fill="var(--on-surface)"
 							>
 								{scoreItem.opponent}
@@ -122,7 +122,7 @@ const DivergingBarChart = ({ dualsList }) => {
 								y={yCoordinate + 17} 
 								textAnchor="end" 
 								fontFamily="var(--font-headers)" 
-								fontSize="13px" 
+								fontSize="18px" 
 								fill="var(--secondary)"
 							>
 								{scoreItem.opponentScore}
@@ -141,7 +141,7 @@ const DivergingBarChart = ({ dualsList }) => {
 								y={yCoordinate + 17} 
 								textAnchor="start" 
 								fontFamily="var(--font-headers)" 
-								fontSize="13px" 
+								fontSize="18px" 
 								fill="var(--primary)"
 							>
 								{scoreItem.teamScore}

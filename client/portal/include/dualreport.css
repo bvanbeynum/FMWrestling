@@ -299,6 +299,7 @@
 	font-size: 13px;
 	color: var(--on-surface);
 	background-color: var(--surface);
+	column-gap: .5rem
 }
 
 .matrix-table-row:hover {
