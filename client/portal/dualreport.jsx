@@ -454,8 +454,11 @@ const DualReport = () => {
 				) : (
 					<>
 					<div className={`dualreport container ${pageActive ? "active" : ""}`}>
-						<header className="report-header">
-							<h1 className="report-title">Team Season Overview</h1>
+						<header>
+							<h1>Team Season Overview</h1>
+						</header>
+
+						<div style={{ display: 'flex', justifyContent: 'center', margin: '20px 0' }}>
 							<div className="season-selector-wrapper">
 								<select 
 									value={selectedSeason} 
@@ -468,7 +471,7 @@ const DualReport = () => {
 									))}
 								</select>
 							</div>
-						</header>
+						</div>
 
 						{/* KPIs Cards Section */}
 						<div className="report-kpis-grid">
