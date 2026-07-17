@@ -32,6 +32,13 @@ const formatTimeDisplay = (timeStr) => {
 	return `${h}:${m} ${period}`;
 };
 
+const formatDate = (dateStr) => {
+	if (!dateStr) return "";
+	const date = new Date(dateStr);
+	if (isNaN(date.getTime())) return "";
+	return (date.getMonth() + 1) + "/" + date.getDate() + "/" + date.getFullYear();
+};
+
 const Dual = () => {
 
 	const [ pageActive, setPageActive ] = useState(false);
@@ -778,7 +785,7 @@ const Dual = () => {
 													<div className="wrestler-input-wrapper">
 														<input 
 															type="text" 
-															className="edit-input-text" 
+															className={`edit-input-text ${homeItem.name && homeItem.name.trim() ? (homeItem.wrestlerId ? "input-linked" : "input-freeform") : ""}`}
 															value={ homeItem.name }
 															onChange={ event => {
 																const value = event.target.value;
@@ -791,6 +798,22 @@ const Dual = () => {
 															onBlur={ () => setTimeout(() => setActiveSearch({ matchIndex: null, isHome: null, query: "" }), 200) }
 															placeholder="Home Wrestler"
 														/>
+														{homeItem.name && homeItem.name.trim() && (
+															<span 
+																className="wrestler-status-indicator" 
+																title={homeItem.wrestlerId ? "Associated with roster" : "Free form entry"}
+															>
+																{homeItem.wrestlerId ? (
+																	<svg className="wrestler-status-icon linked" viewBox="0 0 24 24" fill="currentColor">
+																		<path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+																	</svg>
+																) : (
+																	<svg className="wrestler-status-icon freeform" viewBox="0 0 24 24" fill="currentColor">
+																		<path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+																	</svg>
+																)}
+															</span>
+														)}
 														{ activeSearch.matchIndex === mIdx && activeSearch.isHome === true && activeSearch.query.length >= 1 && (
 															<ul className="wrestler-autocomplete-list">
 																{ fortMillWrestlers
@@ -799,8 +822,17 @@ const Dual = () => {
 																		<li 
 																			key={ wrestler.id || wrestler._id }
 																			onMouseDown={ () => handleSelectWrestler(mIdx, true, wrestler) }
+																			className="autocomplete-item"
 																		>
-																			{ wrestler.name }
+																			<div className="autocomplete-name">{ wrestler.name }</div>
+																			{(wrestler.weightClass || wrestler.division || wrestler.rating || wrestler.lastEventDate) && (
+																				<div className="autocomplete-details">
+																					{wrestler.weightClass ? `${wrestler.weightClass} lbs` : ""}
+																					{wrestler.division ? ` • ${wrestler.division}` : ""}
+																					{wrestler.rating ? ` • Rating: ${wrestler.rating}` : ""}
+																					{wrestler.lastEventDate ? ` • Last Event: ${formatDate(wrestler.lastEventDate)}` : ""}
+																				</div>
+																			)}
 																		</li>
 																	))
 																}
@@ -877,7 +909,7 @@ const Dual = () => {
 													<div className="wrestler-input-wrapper">
 														<input 
 															type="text" 
-															className="edit-input-text" 
+															className={`edit-input-text ${visitorItem.name && visitorItem.name.trim() ? (visitorItem.wrestlerId ? "input-linked" : "input-freeform") : ""}`}
 															value={ visitorItem.name }
 															onChange={ event => {
 																const value = event.target.value;
@@ -890,6 +922,22 @@ const Dual = () => {
 															onBlur={ () => setTimeout(() => setActiveSearch({ matchIndex: null, isHome: null, query: "" }), 200) }
 															placeholder="Visitor Wrestler"
 														/>
+														{visitorItem.name && visitorItem.name.trim() && (
+															<span 
+																className="wrestler-status-indicator" 
+																title={visitorItem.wrestlerId ? "Associated with roster" : "Free form entry"}
+															>
+																{visitorItem.wrestlerId ? (
+																	<svg className="wrestler-status-icon linked" viewBox="0 0 24 24" fill="currentColor">
+																		<path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+																	</svg>
+																) : (
+																	<svg className="wrestler-status-icon freeform" viewBox="0 0 24 24" fill="currentColor">
+																		<path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+																	</svg>
+																)}
+															</span>
+														)}
 														{ activeSearch.matchIndex === mIdx && activeSearch.isHome === false && activeSearch.query.length >= 1 && (
 															<ul className="wrestler-autocomplete-list">
 																{ opponentWrestlers
@@ -898,8 +946,17 @@ const Dual = () => {
 																		<li 
 																			key={ wrestler.id || wrestler._id }
 																			onMouseDown={ () => handleSelectWrestler(mIdx, false, wrestler) }
+																			className="autocomplete-item"
 																		>
-																			{ wrestler.name }
+																			<div className="autocomplete-name">{ wrestler.name }</div>
+																			{(wrestler.weightClass || wrestler.division || wrestler.rating || wrestler.lastEventDate) && (
+																				<div className="autocomplete-details">
+																					{wrestler.weightClass ? `${wrestler.weightClass} lbs` : ""}
+																					{wrestler.division ? ` • ${wrestler.division}` : ""}
+																					{wrestler.rating ? ` • Rating: ${wrestler.rating}` : ""}
+																					{wrestler.lastEventDate ? ` • Last Event: ${formatDate(wrestler.lastEventDate)}` : ""}
+																				</div>
+																			)}
 																		</li>
 																	))
 																}

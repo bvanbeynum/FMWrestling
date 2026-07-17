@@ -412,7 +412,7 @@
 
 .edit-input-text {
 	flex-grow: 1;
-	padding: 8px 12px;
+	padding: 8px 30px 8px 12px;
 	border: 1px solid #ced4da;
 	border-radius: 6px;
 	font-size: 0.95em;
@@ -1008,6 +1008,41 @@ input[type=number] {
 	width: 100%;
 }
 
+.wrestler-status-indicator {
+	position: absolute;
+	right: 8px;
+	top: 50%;
+	transform: translateY(-50%);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 5;
+	pointer-events: auto;
+}
+
+.wrestler-status-icon {
+	width: 16px;
+	height: 16px;
+}
+
+.wrestler-status-icon.linked {
+	color: #2e7d32;
+}
+
+.wrestler-status-icon.freeform {
+	color: #ef6c00;
+}
+
+.edit-input-text.input-linked:focus {
+	border-color: #2e7d32;
+	box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.15);
+}
+
+.edit-input-text.input-freeform:focus {
+	border-color: #ef6c00;
+	box-shadow: 0 0 0 2px rgba(239, 108, 0, 0.15);
+}
+
 .wrestler-autocomplete-list {
 	position: absolute;
 	top: 100%;
@@ -1025,16 +1060,35 @@ input[type=number] {
 	z-index: 1000;
 }
 
-.wrestler-autocomplete-list li {
+.wrestler-autocomplete-list li.autocomplete-item {
 	padding: 8px 12px;
-	font-size: 0.95em;
-	color: #212529;
 	cursor: pointer;
 	text-align: left;
 	transition: background-color 0.15s ease-in-out;
+	display: flex;
+	flex-direction: column;
+	border-bottom: 1px solid #f1f3f5;
+	line-height: 1.2;
 }
 
-.wrestler-autocomplete-list li:hover {
+.wrestler-autocomplete-list li.autocomplete-item:last-child {
+	border-bottom: none;
+}
+
+.autocomplete-name {
+	font-weight: 600;
+	color: #0A2540;
+	font-size: 0.95em;
+}
+
+.autocomplete-details {
+	font-size: 0.78em;
+	color: #6c757d;
+	margin-top: 3px;
+	font-weight: 500;
+}
+
+.wrestler-autocomplete-list li.autocomplete-item:hover {
 	background-color: #f1f3f5;
 }
 

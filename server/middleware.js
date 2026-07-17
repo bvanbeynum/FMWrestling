@@ -44,20 +44,31 @@ export const getDualWrestlers = async (opponentSchool, serverPath) => {
 		const wrestlers = clientResponse.body.wrestlers || [];
 		result.fortMillWrestlers = wrestlers
 			.map(wrestler => {
-				const lastTeamEventDate = wrestler.events
+				const matchingEvents = wrestler.events
 					.filter(event => /^fort mill$/gi.test(event.team) && event.matches && !isNaN(event.matches[0].weightClass.replace("lbs", "").trim()))
-					.map(event => new Date(event.date))
-					.sort((eventA, eventB) => +eventB - +eventA)
-					.find(() => true);
+					.sort((eventA, eventB) => new Date(eventB.date) - new Date(eventA.date));
+
+				const lastEvent = matchingEvents[0];
+				const lastTeamEventDate = lastEvent ? new Date(lastEvent.date) : null;
+				let lastWeightClass = null;
+				let lastDivision = null;
+
+				if (lastEvent && lastEvent.matches && lastEvent.matches.length > 0) {
+					const matchWt = lastEvent.matches[0].weightClass;
+					lastWeightClass = matchWt ? matchWt.replace("lbs", "").trim() : null;
+					lastDivision = lastEvent.matches[0].division || lastEvent.division || null;
+				}
 				
 				return {
 					id: wrestler.id,
 					name: wrestler.name,
+					rating: wrestler.rating ? Math.round(wrestler.rating) : null,
+					weightClass: lastWeightClass,
+					division: lastDivision,
 					lastEventDate: lastTeamEventDate
 				};
 			})
 			.filter(wrestler => wrestler.lastEventDate && wrestler.lastEventDate >= seasonStart)
-			.map(({ lastEventDate, ...wrestler }) => wrestler)
 			.sort((firstWrestler, secondWrestler) => firstWrestler.name.localeCompare(secondWrestler.name));
 	}
 	catch (error) {
@@ -74,15 +85,27 @@ export const getDualWrestlers = async (opponentSchool, serverPath) => {
 			result.opponentWrestlers = opponentWrestlers
 				.filter(wrestler => wrestler.events.some(event => /^sc$/gi.test(event.locationState)))
 				.map(wrestler => {
-					const lastTeamEventDate = wrestler.events
+					const matchingEvents = wrestler.events
 						.filter(event => schoolNames.includes(event.team) && event.matches && !isNaN(event.matches[0].weightClass.replace("lbs", "").trim()))
-						.map(event => new Date(event.date))
-						.sort((eventA, eventB) => +eventB - +eventA)
-						.find(() => true);
+						.sort((eventA, eventB) => new Date(eventB.date) - new Date(eventA.date));
+
+					const lastEvent = matchingEvents[0];
+					const lastTeamEventDate = lastEvent ? new Date(lastEvent.date) : null;
+					let lastWeightClass = null;
+					let lastDivision = null;
+
+					if (lastEvent && lastEvent.matches && lastEvent.matches.length > 0) {
+						const matchWt = lastEvent.matches[0].weightClass;
+						lastWeightClass = matchWt ? matchWt.replace("lbs", "").trim() : null;
+						lastDivision = lastEvent.matches[0].division || lastEvent.division || null;
+					}
 
 					return {
 						id: wrestler.id,
 						name: wrestler.name,
+						rating: wrestler.rating ? Math.round(wrestler.rating) : null,
+						weightClass: lastWeightClass,
+						division: lastDivision,
 						lastEventDate: lastTeamEventDate
 					};
 				})
@@ -90,7 +113,6 @@ export const getDualWrestlers = async (opponentSchool, serverPath) => {
 					wrestler.lastEventDate
 					&& wrestler.lastEventDate >= seasonStart
 				)
-				.map(({ lastEventDate, ...wrestler }) => wrestler)
 				.sort((firstWrestler, secondWrestler) => firstWrestler.name.localeCompare(secondWrestler.name));
 		}
 		catch (error) {
