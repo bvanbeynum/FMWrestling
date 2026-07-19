@@ -319,49 +319,7 @@ export default {
 
 			// 2. Fetch team events
 			const teamEventResponse = await client.get(teamEventUrl);
-			const teamEvents = teamEventResponse.body.teamEvents || [];
-
-			// 3. Resolve joins for each teamEventItem object in the business layer
-			const joinedTeamEvents = [];
-			for (const teamEventItem of teamEvents) {
-				let joinedEvent = { ...teamEventItem };
-
-				if (teamEventItem.eventId) {
-					try {
-						const detailsResponse = await client.get(`${ serverPath }/data/event?id=${ teamEventItem.eventId }`);
-						if (detailsResponse.body.events && detailsResponse.body.events.length > 0) {
-							joinedEvent.event = detailsResponse.body.events[0];
-						}
-					} catch (joinError) {
-						console.error(`Error joining event ${teamEventItem.eventId} in scheduleLoad:`, joinError.message);
-					}
-				}
-
-				if (teamEventItem.dualId) {
-					try {
-						const dualResponse = await client.get(`${ serverPath }/data/dual?id=${ teamEventItem.dualId }`);
-						if (dualResponse.body.duals && dualResponse.body.duals.length > 0) {
-							joinedEvent.dual = dualResponse.body.duals[0];
-						}
-					} catch (joinError) {
-						console.error(`Error joining dual ${teamEventItem.dualId} in scheduleLoad:`, joinError.message);
-					}
-				}
-
-				joinedTeamEvents.push(joinedEvent);
-			}
-
-			output.data.teamEvents = joinedTeamEvents;
-
-			// 4. Fetch dual meets in the season
-			const dualUrl = `${ serverPath }/data/dual?${ startDate && endDate ? `startdate=${startDate}&enddate=${endDate}` : "" }`;
-			try {
-				const dualResponse = await client.get(dualUrl);
-				output.data.duals = dualResponse.body.duals || [];
-			} catch (dualError) {
-				console.error("Error preloading duals in scheduleLoad:", dualError.message);
-				output.data.duals = [];
-			}
+			output.data.teamEvents = teamEventResponse.body.teamEvents || [];
 
 			// 5. Fetch schools / opponent options directly
 			try {
@@ -383,7 +341,7 @@ export default {
 			output.error = error.message;
 			return output;
 		}
-
+		
 		output.status = 200;		
 		return output;
 	},

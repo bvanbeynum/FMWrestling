@@ -45,7 +45,6 @@ const Schedule = props => {
 	const [ loggedInUser, setLoggedInUser ] = useState(null);
 	const [ events, setEvents ] = useState([]);
 	const [ teamEvents, setTeamEvents ] = useState([]);
-	const [ dualsList, setDualsList ] = useState([]);
 
 	const [ selectedState, setSelectedState ] = useState("SC");
 	const [ selectedSeason, setSelectedSeason ] = useState(seasonOptions[1].name);
@@ -120,7 +119,6 @@ const Schedule = props => {
 				setLoggedInUser(responseData.loggedInUser);
 				setEvents(loadedEvents);
 				setTeamEvents(loadedTeamEvents);
-				setDualsList(responseData.duals || []);
 
 				// Process schools dropdown grouped by classification and region
 				const schoolList = responseData.schools || [];
@@ -1014,23 +1012,6 @@ const Schedule = props => {
 										)}
 									</>
 								)}
-							</div>
-
-							{/* 7. Dual Dropdown Link */}
-							<div className="formGroup">
-								<label htmlFor="eventDualLink">Link Dual Match (Optional)</label>
-								<select 
-									id="eventDualLink" 
-									value={formLinkedDualId} 
-									onChange={changeEvent => setFormLinkedDualId(changeEvent.target.value)}
-								>
-									<option value="">None</option>
-									{dualsList.map(dualItem => (
-										<option key={dualItem.id} value={dualItem.id}>
-											🤼 vs. {dualItem.opponent} ({new Date(dualItem.dualDate).toLocaleDateString()})
-										</option>
-									))}
-								</select>
 							</div>
 						</>
 					)}
