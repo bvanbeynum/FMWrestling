@@ -77,20 +77,15 @@
 }
 
 /* KPIs Cards Grid */
+/* KPIs Cards Grid */
 .report-kpis-grid {
 	display: grid;
-	grid-template-columns: repeat(4, 1fr);
-	gap: 16px;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 20px;
 	margin-bottom: 30px;
 }
 
-@media (max-width: 900px) {
-	.report-kpis-grid {
-		grid-template-columns: repeat(2, 1fr);
-	}
-}
-
-@media (max-width: 480px) {
+@media (max-width: 768px) {
 	.report-kpis-grid {
 		grid-template-columns: 1fr;
 	}
@@ -99,30 +94,41 @@
 .report-kpi-card {
 	background: var(--surface);
 	border: 1px solid var(--outline);
-	border-radius: var(--rounded-sm);
-	padding: 14px 10px;
+	border-left: 6px solid var(--primary);
+	border-radius: var(--rounded-md);
+	padding: 16px 20px;
 	display: flex;
 	flex-direction: column;
-	align-items: center;
+	align-items: flex-start;
 	justify-content: center;
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 	position: relative;
 }
 
 .kpi-label {
 	font-family: var(--font-body);
-	font-size: 11px;
+	font-size: 13px;
 	font-weight: 700;
-	color: var(--on-surface-variant);
+	color: #64748b;
 	letter-spacing: 0.05em;
-	margin-bottom: 6px;
+	margin-bottom: 8px;
 	text-transform: uppercase;
 }
 
 .kpi-value-text {
-	font-size: 24px;
-	color: #4f62ff;
-	font-weight: 700;
+	font-size: 32px;
+	color: #1b365d;
+	font-weight: 800;
+	line-height: 1.1;
+	margin-bottom: 8px;
+	font-family: var(--font-headers);
+}
+
+.kpi-sub-text {
+	font-family: var(--font-body);
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--primary);
 }
 
 .Russo {
@@ -582,5 +588,155 @@
 	.weight-comparison-grid {
 		grid-template-columns: repeat(3, 1fr);
 	}
+}
+
+/* Single full-width chart container */
+.report-charts-row-single {
+	display: block;
+	width: 100%;
+	margin-bottom: 30px;
+}
+
+.report-chart-card.full-width {
+	width: 100%;
+	max-width: 100%;
+	min-width: 0;
+	background: var(--surface);
+	border: 1px solid var(--outline);
+	border-radius: var(--rounded-md);
+	padding: 24px 20px;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+	box-sizing: border-box;
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	overflow: hidden;
+}
+
+.season-chart-wrapper {
+	width: 100%;
+	max-width: 100%;
+	min-width: 0;
+	position: relative;
+}
+
+.season-chart-legend {
+	display: flex;
+	justify-content: center;
+	gap: 24px;
+	margin-bottom: 16px;
+	font-family: var(--font-headers);
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: 0.05em;
+}
+
+.legend-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.legend-color-box {
+	width: 16px;
+	height: 16px;
+	border-radius: 4px;
+}
+
+.legend-color-box.fort-mill {
+	background-color: var(--primary);
+}
+
+.legend-color-box.opponent {
+	background-color: var(--secondary-accent);
+}
+
+.legend-label {
+	color: var(--on-surface-variant);
+}
+
+.season-chart-scroll-container {
+	width: 100%;
+	max-width: 100%;
+	min-width: 0;
+	overflow-x: auto;
+	overflow-y: hidden;
+	-webkit-overflow-scrolling: touch;
+}
+
+/* Scrollbar styling */
+.season-chart-scroll-container::-webkit-scrollbar {
+	height: 6px;
+}
+
+.season-chart-scroll-container::-webkit-scrollbar-track {
+	background: var(--background);
+	border-radius: 3px;
+}
+
+.season-chart-scroll-container::-webkit-scrollbar-thumb {
+	background: var(--outline-variant);
+	border-radius: 3px;
+}
+
+.season-chart-scroll-container::-webkit-scrollbar-thumb:hover {
+	background: var(--on-surface-variant);
+}
+
+/* Tooltip styles */
+.season-chart-tooltip {
+	position: absolute;
+	top: 20px;
+	left: 50%;
+	transform: translateX(-50%);
+	background-color: var(--inverse-surface);
+	color: var(--inverse-on-surface);
+	padding: 10px 16px;
+	border-radius: var(--rounded-md);
+	font-size: 12px;
+	font-family: var(--font-body);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	z-index: 100;
+	pointer-events: none;
+	border: 1px solid var(--outline-variant);
+	display: flex;
+	flex-direction: column;
+}
+
+.season-chart-tooltip-title {
+	font-weight: 700;
+	margin-bottom: 6px;
+	font-size: 13px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+	padding-bottom: 4px;
+	white-space: nowrap;
+}
+
+.season-chart-tooltip-content {
+	display: flex;
+	gap: 16px;
+}
+
+.season-chart-tooltip-col {
+	flex: 1;
+	white-space: nowrap;
+}
+
+.season-chart-tooltip-col.opponent-col {
+	border-left: 1px solid rgba(255, 255, 255, 0.15);
+	padding-left: 16px;
+}
+
+.season-chart-tooltip-team-name {
+	font-weight: 700;
+	color: #94a3b8;
+}
+
+.season-chart-tooltip-team-name.winner-fm {
+	color: #60a5fa;
+}
+
+.season-chart-tooltip-team-name.winner-opp {
+	color: #fb923c;
 }
 

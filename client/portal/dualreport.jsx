@@ -57,247 +57,416 @@ const calculateDualScore = (dualItem) => {
 	return { teamScore, opponentScore };
 };
 
-const DivergingBarChart = ({ dualsList }) => {
-	const completedDuals = dualsList.filter(dualItem => dualItem.matches && dualItem.matches.length > 0);
-	
-	if (completedDuals.length === 0) {
-		return <div className="no-chart-data">No completed dual meets recorded for this season.</div>;
-	}
-
-	const dualScoresList = completedDuals.map(dualItem => {
-		const scoreResult = calculateDualScore(dualItem);
-		return {
-			opponent: dualItem.opponent,
-			teamScore: scoreResult.teamScore,
-			opponentScore: scoreResult.opponentScore,
-			dateObject: new Date(dualItem.dualDate)
-		};
-	}).sort((firstScore, secondScore) => firstScore.dateObject - secondScore.dateObject);
-
-	let maxPointsValue = 1;
-	dualScoresList.forEach(scoreItem => {
-		if (scoreItem.teamScore > maxPointsValue) maxPointsValue = scoreItem.teamScore;
-		if (scoreItem.opponentScore > maxPointsValue) maxPointsValue = scoreItem.opponentScore;
-	});
-
-	const chartWidth = 600;
-	const rowHeight = 52;
-	const chartHeight = dualScoresList.length * rowHeight + 40;
-	const centerXCoordinate = chartWidth / 2;
-	const widthScalingFactor = (centerXCoordinate - 80) / maxPointsValue;
-
-	return (
-		<div className="diverging-chart-wrapper">
-			<svg viewBox={`0 0 ${chartWidth} ${chartHeight}`}>
-				<line x1={centerXCoordinate} y1={25} x2={centerXCoordinate} y2={chartHeight - 15} stroke="var(--outline)" strokeWidth={1.5} strokeDasharray="3,3" />
-				
-				<text x={centerXCoordinate - 15} y={18} textAnchor="end" fontFamily="var(--font-body)" fontSize="18px" fontWeight="700" fill="var(--secondary)">POINTS AGAINST</text>
-				<text x={centerXCoordinate + 15} y={18} textAnchor="start" fontFamily="var(--font-body)" fontSize="18px" fontWeight="700" fill="var(--primary)">POINTS FOR</text>
-
-				{dualScoresList.map((scoreItem, indexVal) => {
-					const yCoordinate = 45 + indexVal * rowHeight;
-					return (
-						<g key={indexVal} className="chart-row">
-							<text 
-								x={centerXCoordinate} 
-								y={yCoordinate - 6} 
-								textAnchor="middle" 
-								fontFamily="var(--font-body)" 
-								fontSize="15px" 
-								fill="var(--on-surface)"
-							>
-								{scoreItem.opponent}
-							</text>
-
-							<rect 
-								x={centerXCoordinate - scoreItem.opponentScore * widthScalingFactor} 
-								y={yCoordinate + 2} 
-								width={scoreItem.opponentScore * widthScalingFactor} 
-								height={20} 
-								fill="var(--secondary)" 
-								rx={2} 
-							/>
-							<text 
-								x={centerXCoordinate - scoreItem.opponentScore * widthScalingFactor - 12} 
-								y={yCoordinate + 17} 
-								textAnchor="end" 
-								fontFamily="var(--font-headers)" 
-								fontSize="18px" 
-								fill="var(--secondary)"
-							>
-								{scoreItem.opponentScore}
-							</text>
-
-							<rect 
-								x={centerXCoordinate} 
-								y={yCoordinate + 2} 
-								width={scoreItem.teamScore * widthScalingFactor} 
-								height={20} 
-								fill="var(--primary)" 
-								rx={2} 
-							/>
-							<text 
-								x={centerXCoordinate + scoreItem.teamScore * widthScalingFactor + 12} 
-								y={yCoordinate + 17} 
-								textAnchor="start" 
-								fontFamily="var(--font-headers)" 
-								fontSize="18px" 
-								fill="var(--primary)"
-							>
-								{scoreItem.teamScore}
-							</text>
-						</g>
-					);
-				})}
-			</svg>
-		</div>
+const SeasonChart = ({ dualsList }) => {
+	const completedDuals = dualsList.filter(
+		(dualItem) => dualItem.matches && dualItem.matches.length > 0
 	);
-};
 
-const ScatterPlot = ({ dualsList }) => {
-	const completedDuals = dualsList.filter(dualItem => dualItem.matches && dualItem.matches.length > 0);
 	const [hoveredIndex, setHoveredIndex] = useState(null);
 
 	if (completedDuals.length === 0) {
 		return <div className="no-chart-data">No completed dual meets recorded for this season.</div>;
 	}
 
-	const plotDataPoints = completedDuals.map(dualItem => {
+	// 1. Calculate scores and matches won
+	const completedDualsData = completedDuals.map((dualItem) => {
 		const scoreResult = calculateDualScore(dualItem);
+		let fortMillMatchesWon = 0;
+		let opponentMatchesWon = 0;
+
+		(dualItem.matches || []).forEach((matchItem) => {
+			const homeWrestler = (matchItem.wrestlers || []).find(
+				(w) => w.team.toLowerCase() === "fort mill"
+			);
+			const visitorWrestler = (matchItem.wrestlers || []).find(
+				(w) => w.team.toLowerCase() !== "fort mill"
+			);
+			if (homeWrestler && homeWrestler.isWinner) {
+				fortMillMatchesWon++;
+			} else if (visitorWrestler && visitorWrestler.isWinner) {
+				opponentMatchesWon++;
+			}
+		});
+
 		return {
 			opponent: dualItem.opponent,
 			teamScore: scoreResult.teamScore,
-			opponentScore: scoreResult.opponentScore
+			opponentScore: scoreResult.opponentScore,
+			fortMillMatchesWon,
+			opponentMatchesWon,
+			dateObject: new Date(dualItem.dualDate)
 		};
-	});
+	}).sort((first, second) => second.dateObject - first.dateObject); // Most recent to oldest
 
-	let maxPointsBoundary = 20;
-	plotDataPoints.forEach(pointItem => {
-		if (pointItem.teamScore > maxPointsBoundary) maxPointsBoundary = pointItem.teamScore;
-		if (pointItem.opponentScore > maxPointsBoundary) maxPointsBoundary = pointItem.opponentScore;
-	});
-	maxPointsBoundary = Math.ceil(maxPointsBoundary / 10) * 10;
+	// 2. Determine max values for scaling
+	const maxMatches = 14;
+	const maxPoints = Math.max(60, ...completedDualsData.map((d) => Math.max(d.teamScore, d.opponentScore)));
 
-	const canvasWidth = 500;
-	const canvasHeight = 380;
-	const paddingConfig = { top: 30, right: 30, bottom: 50, left: 60 };
+	// 3. Layout dimensions
+	const maxVisible = 10;
+	const N = completedDualsData.length;
+	const colWidth = 30;
+	const paddingLeft = 60;
+	const paddingRight = 60;
+	const chartHeight = 350;
 
-	const chartPlotWidth = canvasWidth - paddingConfig.left - paddingConfig.right;
-	const chartPlotHeight = canvasHeight - paddingConfig.top - paddingConfig.bottom;
+	const chartWidth = N > maxVisible ? paddingLeft + paddingRight + (N * colWidth) : 900;
+	const isScrollable = N > maxVisible;
 
-	const convertToXCoordinate = (value) => paddingConfig.left + (value / maxPointsBoundary) * chartPlotWidth;
-	const convertToYCoordinate = (value) => paddingConfig.top + (1 - value / maxPointsBoundary) * chartPlotHeight;
+	const zeroY = 175;
+	const heightRange = 130; // 175 - 45 (top padding) = 130; 305 (bottom padding) - 175 = 130
+
+	// Helpers for y-coordinates
+	const getMatchesYUp = (m) => zeroY - (m / maxMatches) * heightRange;
+	const getMatchesYDown = (m) => zeroY + (m / maxMatches) * heightRange;
+	const getPointsYUp = (p) => zeroY - (p / maxPoints) * heightRange;
+	const getPointsYDown = (p) => zeroY + (p / maxPoints) * heightRange;
+
+	const getXCoordinate = (index) => {
+		const availableWidth = chartWidth - paddingLeft - paddingRight;
+		const step = availableWidth / N;
+		return paddingLeft + (index + 0.5) * step;
+	};
+
+	// 4. Generate path for rounded bars
+	const getBarPath = (x, y, width, height, isUp, r = 4) => {
+		if (height <= 0) return "";
+		const radius = Math.min(r, height, width / 2);
+		if (isUp) {
+			return `M ${x},${y + height} L ${x},${y + radius} A ${radius},${radius} 0 0,1 ${x + radius},${y} L ${x + width - radius},${y} A ${radius},${radius} 0 0,1 ${x + width},${y + radius} L ${x + width},${y + height} Z`;
+		} else {
+			return `M ${x},${y} L ${x},${y + height - radius} A ${radius},${radius} 0 0,0 ${x + radius},${y + height} L ${x + width - radius},${y + height} A ${radius},${radius} 0 0,0 ${x + width},${y + height - radius} L ${x + width},${y} Z`;
+		}
+	};
+
+	// 5. Generate team abbreviation helper
+	const getTeamAbbreviation = (teamName) => {
+		if (!teamName) return "";
+		const cleanName = teamName.trim();
+		const words = cleanName.split(/\s+/);
+		if (words.length >= 2) {
+			return (words[0].charAt(0) + words[1].charAt(0)).toUpperCase();
+		}
+		return cleanName.slice(0, 2).toUpperCase();
+	};
+
+	// 6. Generate lines path data
+	const teamPointsPath = completedDualsData.map((d, i) => {
+		return `${i === 0 ? "M" : "L"} ${getXCoordinate(i)} ${getPointsYUp(d.teamScore)}`;
+	}).join(" ");
+
+	const opponentPointsPath = completedDualsData.map((d, i) => {
+		return `${i === 0 ? "M" : "L"} ${getXCoordinate(i)} ${getPointsYDown(d.opponentScore)}`;
+	}).join(" ");
+
+	// 7. Gridline y-coordinates
+	const gridlinesY = [45, 110, 240, 305]; // 175 is baseline
 
 	return (
-		<div className="scatter-plot-wrapper" style={{ position: "relative" }}>
-			<svg viewBox={`0 0 ${canvasWidth} ${canvasHeight}`}>
-				{[...Array(6)].map((_, indexVal) => {
-					const gridValue = (maxPointsBoundary / 5) * indexVal;
-					const xCoordinate = convertToXCoordinate(gridValue);
-					const yCoordinate = convertToYCoordinate(gridValue);
-					return (
-						<g key={indexVal}>
-							<line x1={paddingConfig.left} y1={yCoordinate} x2={canvasWidth - paddingConfig.right} y2={yCoordinate} stroke="var(--outline)" strokeWidth={0.5} strokeDasharray="2,2" />
-							<line x1={xCoordinate} y1={paddingConfig.top} x2={xCoordinate} y2={canvasHeight - paddingConfig.bottom} stroke="var(--outline)" strokeWidth={0.5} strokeDasharray="2,2" />
+		<div className="season-chart-wrapper">
+			{/* Legend */}
+			<div className="season-chart-legend">
+				<div className="legend-item">
+					<span className="legend-color-box fort-mill"></span>
+					<span className="legend-label">FORT MILL</span>
+				</div>
+				<div className="legend-item">
+					<span className="legend-color-box opponent"></span>
+					<span className="legend-label">OPPONENT</span>
+				</div>
+			</div>
 
-							<text x={paddingConfig.left - 8} y={yCoordinate + 4} textAnchor="end" fontFamily="var(--font-body)" fontSize="11px" fill="var(--on-surface-variant)">{gridValue}</text>
-							<text x={xCoordinate} y={canvasHeight - paddingConfig.bottom + 16} textAnchor="middle" fontFamily="var(--font-body)" fontSize="11px" fill="var(--on-surface-variant)">{gridValue}</text>
-						</g>
-					);
-				})}
-
-				<text 
-					x={18} 
-					y={paddingConfig.top + chartPlotHeight / 2} 
-					transform={`rotate(-90, 18, ${paddingConfig.top + chartPlotHeight / 2})`}
-					textAnchor="middle" 
-					fontFamily="var(--font-headers)" 
-					fontSize="12px" 
-					fill="var(--on-surface-variant)"
-				>
-					POINTS FOR
-				</text>
-
-				<text 
-					x={paddingConfig.left + chartPlotWidth / 2} 
-					y={canvasHeight - 12} 
-					textAnchor="middle" 
-					fontFamily="var(--font-headers)" 
-					fontSize="12px" 
-					fill="var(--on-surface-variant)"
-				>
-					POINTS AGAINST
-				</text>
-
-				<line 
-					x1={convertToXCoordinate(0)} 
-					y1={convertToYCoordinate(0)} 
-					x2={convertToXCoordinate(maxPointsBoundary)} 
-					y2={convertToYCoordinate(maxPointsBoundary)} 
-					stroke="var(--outline-variant)" 
-					strokeWidth={1.5} 
-					strokeDasharray="4,4" 
-				/>
-
-				<line x1={paddingConfig.left} y1={canvasHeight - paddingConfig.bottom} x2={canvasWidth - paddingConfig.right} y2={canvasHeight - paddingConfig.bottom} stroke="var(--on-surface)" strokeWidth={1.5} />
-				<line x1={paddingConfig.left} y1={paddingConfig.top} x2={paddingConfig.left} y2={canvasHeight - paddingConfig.bottom} stroke="var(--on-surface)" strokeWidth={1.5} />
-
-				{plotDataPoints.map((pointItem, indexVal) => {
-					const cxValue = convertToXCoordinate(pointItem.opponentScore);
-					const cyValue = convertToYCoordinate(pointItem.teamScore);
-					const isPointHovered = hoveredIndex === indexVal;
-
-					return (
-						<circle 
-							key={indexVal} 
-							cx={cxValue} 
-							cy={cyValue} 
-							r={isPointHovered ? 11 : 7} 
-							fill="var(--primary)" 
-							stroke="var(--on-primary)" 
-							strokeWidth={isPointHovered ? 2.5 : 1.5}
-							style={{ cursor: "pointer", transition: "all 0.15s ease" }}
-							onMouseEnter={() => setHoveredIndex(indexVal)}
-							onMouseLeave={() => setHoveredIndex(null)}
-							onTouchStart={() => setHoveredIndex(indexVal)}
-						/>
-					);
-				})}
-			</svg>
-
-			{hoveredIndex !== null && (
-				<div 
-					className="scatter-plot-tooltip"
+			{/* Scrollable Container */}
+			<div className="season-chart-scroll-container">
+				<svg
+					width={isScrollable ? chartWidth : "100%"}
+					height={chartHeight}
+					viewBox={`0 0 ${chartWidth} ${chartHeight}`}
 					style={{
-						position: "absolute",
-						top: `${convertToYCoordinate(plotDataPoints[hoveredIndex].teamScore) - 48}px`,
-						left: `${convertToXCoordinate(plotDataPoints[hoveredIndex].opponentScore) }px`,
-						backgroundColor: "var(--inverse-surface)",
-						color: "var(--inverse-on-surface)",
-						padding: "6px 10px",
-						borderRadius: "var(--rounded-sm)",
-						fontSize: "11px",
-						fontFamily: "var(--font-body)",
-						boxShadow: "0 2px 6px rgba(0, 0, 0, 0.2)",
-						zIndex: 5,
-						pointerEvents: "none"
+						display: "block",
+						width: isScrollable ? `${chartWidth}px` : "100%",
+						height: `${chartHeight}px`,
+						minWidth: isScrollable ? `${chartWidth}px` : "100%"
 					}}
 				>
-					<strong>{plotDataPoints[hoveredIndex].opponent}</strong>
-					<br />
-					Fort Mill: {plotDataPoints[hoveredIndex].teamScore}
-					<br />
-					Opponent: {plotDataPoints[hoveredIndex].opponentScore}
-				</div>
-			)}
+					{/* Horizontal Gridlines */}
+					{gridlinesY.map((yVal, idx) => (
+						<line
+							key={`grid-h-${idx}`}
+							x1={paddingLeft}
+							y1={yVal}
+							x2={chartWidth - paddingRight}
+							y2={yVal}
+							stroke="var(--outline)"
+							strokeWidth={0.5}
+							strokeDasharray="3,3"
+						/>
+					))}
+
+					{/* Vertical Gridlines & X-axis columns */}
+					{completedDualsData.map((d, i) => (
+						<line
+							key={`grid-v-${i}`}
+							x1={getXCoordinate(i)}
+							y1={45}
+							x2={getXCoordinate(i)}
+							y2={305}
+							stroke="var(--outline)"
+							strokeWidth={0.5}
+							strokeDasharray="3,3"
+						/>
+					))}
+
+					{/* Vertical Axis Lines */}
+					<line
+						x1={paddingLeft}
+						y1={45}
+						x2={paddingLeft}
+						y2={305}
+						stroke="var(--outline)"
+						strokeWidth={1.5}
+					/>
+					<line
+						x1={chartWidth - paddingRight}
+						y1={45}
+						x2={chartWidth - paddingRight}
+						y2={305}
+						stroke="var(--outline)"
+						strokeWidth={1.5}
+					/>
+
+					{/* Baseline */}
+					<line
+						x1={paddingLeft}
+						y1={zeroY}
+						x2={chartWidth - paddingRight}
+						y2={zeroY}
+						stroke="var(--outline-variant)"
+						strokeWidth={1.5}
+					/>
+
+					{/* Y-axis Titles */}
+					<text
+						x={paddingLeft - 35}
+						y={35}
+						fontFamily="var(--font-body)"
+						fontSize="11px"
+						fontWeight="700"
+						fill="var(--on-surface-variant)"
+						textAnchor="middle"
+					>
+						WINS
+					</text>
+					<text
+						x={chartWidth - paddingRight + 35}
+						y={35}
+						fontFamily="var(--font-body)"
+						fontSize="11px"
+						fontWeight="700"
+						fill="var(--on-surface-variant)"
+						textAnchor="middle"
+					>
+						PTS
+					</text>
+
+					{/* Left Axis Labels (Matches Won) */}
+					<text x={paddingLeft - 10} y={45 + 4} textAnchor="end" fontFamily="var(--font-headers)" fontSize="12px" fill="var(--on-surface-variant)">14</text>
+					<text x={paddingLeft - 10} y={110 + 4} textAnchor="end" fontFamily="var(--font-headers)" fontSize="12px" fill="var(--on-surface-variant)">7</text>
+					<text x={paddingLeft - 10} y={175 + 4} textAnchor="end" fontFamily="var(--font-headers)" fontSize="12px" fill="var(--on-surface-variant)">0</text>
+					<text x={paddingLeft - 10} y={240 + 4} textAnchor="end" fontFamily="var(--font-headers)" fontSize="12px" fill="var(--on-surface-variant)">7</text>
+					<text x={paddingLeft - 10} y={305 + 4} textAnchor="end" fontFamily="var(--font-headers)" fontSize="12px" fill="var(--on-surface-variant)">14</text>
+
+					{/* Right Axis Labels (Points) */}
+					<text x={chartWidth - paddingRight + 10} y={45 + 4} textAnchor="start" fontFamily="var(--font-headers)" fontSize="12px" fill="var(--on-surface-variant)">{maxPoints}</text>
+					<text x={chartWidth - paddingRight + 10} y={110 + 4} textAnchor="start" fontFamily="var(--font-headers)" fontSize="12px" fill="var(--on-surface-variant)">{maxPoints / 2}</text>
+					<text x={chartWidth - paddingRight + 10} y={175 + 4} textAnchor="start" fontFamily="var(--font-headers)" fontSize="12px" fill="var(--on-surface-variant)">0</text>
+					<text x={chartWidth - paddingRight + 10} y={240 + 4} textAnchor="start" fontFamily="var(--font-headers)" fontSize="12px" fill="var(--on-surface-variant)">{maxPoints / 2}</text>
+					<text x={chartWidth - paddingRight + 10} y={305 + 4} textAnchor="start" fontFamily="var(--font-headers)" fontSize="12px" fill="var(--on-surface-variant)">{maxPoints}</text>
+
+					{/* Bars (Matches Won) */}
+					{completedDualsData.map((d, i) => {
+						const barW = 15;
+						const x = getXCoordinate(i) - barW / 2;
+
+						const fmHeight = ((d.fortMillMatchesWon / maxMatches) * heightRange);
+						const fmY = zeroY - fmHeight;
+						const fmPath = getBarPath(x, fmY, barW, fmHeight, true);
+
+						const oppHeight = ((d.opponentMatchesWon / maxMatches) * heightRange);
+						const oppY = zeroY;
+						const oppPath = getBarPath(x, oppY, barW, oppHeight, false);
+
+						const isHovered = hoveredIndex === i;
+
+						return (
+							<g key={`bars-${i}`}>
+								{fmHeight > 0 && (
+									<path
+										d={fmPath}
+										fill="var(--primary)"
+										fillOpacity={isHovered ? 0.8 : 1}
+										style={{ transition: "fill-opacity 0.2s" }}
+									/>
+								)}
+								{oppHeight > 0 && (
+									<path
+										d={oppPath}
+										fill="var(--secondary-accent)"
+										fillOpacity={isHovered ? 0.8 : 1}
+										style={{ transition: "fill-opacity 0.2s" }}
+									/>
+								)}
+							</g>
+						);
+					})}
+
+					{/* X-axis Labels (Team Abbreviations) */}
+					{completedDualsData.map((d, i) => {
+						const x = getXCoordinate(i);
+						const abbrev = getTeamAbbreviation(d.opponent);
+						return (
+							<g key={`x-abbrev-${i}`}>
+								<rect
+									x={x - 12}
+									y={zeroY - 10}
+									width={25}
+									height={20}
+									fill="#ffffff"
+									stroke="var(--outline)"
+									strokeWidth={1}
+									rx={2}
+								/>
+								<text
+									x={x}
+									y={zeroY + 4}
+									textAnchor="middle"
+									fontFamily="var(--font-body)"
+									fontSize="10px"
+									fontWeight="700"
+									fill="var(--on-surface-variant)"
+								>
+									{abbrev}
+								</text>
+							</g>
+						);
+					})}
+
+					{/* Lines (Points Scored) */}
+					{completedDualsData.length > 1 && (
+						<>
+							<path
+								d={teamPointsPath}
+								fill="none"
+								stroke="#1565c0"
+								strokeWidth={2.5}
+								style={{ pointerEvents: "none" }}
+							/>
+							<path
+								d={opponentPointsPath}
+								fill="none"
+								stroke="#c77000"
+								strokeWidth={2.5}
+								style={{ pointerEvents: "none" }}
+							/>
+						</>
+					)}
+
+					{/* Line markers (Circles) */}
+					{completedDualsData.map((d, i) => {
+						const x = getXCoordinate(i);
+						const teamY = getPointsYUp(d.teamScore);
+						const oppY = getPointsYDown(d.opponentScore);
+						const isHovered = hoveredIndex === i;
+
+						return (
+							<g key={`markers-${i}`} style={{ pointerEvents: "none" }}>
+								<circle
+									cx={x}
+									cy={teamY}
+									r={isHovered ? 6 : 4}
+									fill="#1565c0"
+									stroke="#ffffff"
+									strokeWidth={1.5}
+									style={{ transition: "all 0.15s ease" }}
+								/>
+								<circle
+									cx={x}
+									cy={oppY}
+									r={isHovered ? 6 : 4}
+									fill="#c77000"
+									stroke="#ffffff"
+									strokeWidth={1.5}
+									style={{ transition: "all 0.15s ease" }}
+								/>
+							</g>
+						);
+					})}
+
+					{/* Invisible hover overlay zones */}
+					{completedDualsData.map((d, i) => {
+						const stepWidth = (chartWidth - paddingLeft - paddingRight) / N;
+						const x = getXCoordinate(i) - stepWidth / 2;
+						return (
+							<rect
+								key={`hover-zone-${i}`}
+								x={x}
+								y={45}
+								width={stepWidth}
+								height={260}
+								fill="transparent"
+								style={{ cursor: "pointer" }}
+								onMouseEnter={() => setHoveredIndex(i)}
+								onMouseLeave={() => setHoveredIndex(null)}
+							/>
+						);
+					})}
+				</svg>
+			</div>
+
+			{/* Tooltip */}
+			{hoveredIndex !== null && (() => {
+				const d = completedDualsData[hoveredIndex];
+				const rawDate = d.dateObject;
+				const formattedDate = `${String(rawDate.getMonth() + 1).padStart(2, "0")}/${String(rawDate.getDate()).padStart(2, "0")}/${rawDate.getFullYear()}`;
+				const fmWinner = d.teamScore > d.opponentScore;
+				const oppWinner = d.opponentScore > d.teamScore;
+				
+				return (
+					<div className="season-chart-tooltip">
+						<div className="season-chart-tooltip-title">
+							{d.opponent} ({formattedDate})
+						</div>
+						<div className="season-chart-tooltip-content">
+							<div className="season-chart-tooltip-col">
+								<span className={`season-chart-tooltip-team-name ${fmWinner ? "winner-fm" : ""}`}>
+									FORT MILL
+								</span>
+								<br />
+								Matches: {d.fortMillMatchesWon}
+								<br />
+								Points: {d.teamScore}
+							</div>
+							<div className="season-chart-tooltip-col opponent-col">
+								<span className={`season-chart-tooltip-team-name ${oppWinner ? "winner-opp" : ""}`}>
+									OPPONENT
+								</span>
+								<br />
+								Matches: {d.opponentMatchesWon}
+								<br />
+								Points: {d.opponentScore}
+							</div>
+						</div>
+					</div>
+				);
+			})()}
 		</div>
 	);
 };
 
 const MatchDetailMatrix = ({ dualsList }) => {
-	const sortedDuals = [...dualsList].sort((firstDual, secondDual) => new Date(firstDual.dualDate) - new Date(secondDual.dualDate));
+	const sortedDuals = [...dualsList].sort((firstDual, secondDual) => new Date(secondDual.dualDate) - new Date(firstDual.dualDate));
 	const completedDuals = sortedDuals.filter(dualItem => dualItem.matches && dualItem.matches.length > 0);
-	const mostRecentCompletedId = completedDuals.length > 0 ? (completedDuals[completedDuals.length - 1].id || completedDuals[completedDuals.length - 1]._id) : null;
+	const mostRecentCompletedId = completedDuals.length > 0 ? (completedDuals[0].id || completedDuals[0]._id) : null;
 
 	return (
 		<div className="matrix-table-container">
@@ -321,7 +490,7 @@ const MatchDetailMatrix = ({ dualsList }) => {
 					}
 
 					const rawDate = new Date(dualItem.dualDate);
-					const formattedDate = `${String(rawDate.getMonth() + 1).padStart(2, "0")}/${String(rawDate.getDate()).padStart(2, "0")}/${rawDate.getFullYear()}`;
+					const formattedDate = `${String(rawDate.getMonth() + 1).padStart(2, "0")}/${String(rawDate.getDate()).padStart(2, "0")}/${rawDate.getFullYear().toString().substring(2,4)}`;
 
 					const scoreDisplay = isCompleted ? `${scoreResult.teamScore}-${scoreResult.opponentScore}` : "-";
 					
@@ -828,7 +997,7 @@ const DualReport = () => {
 		<div className="page">
 			<Nav loggedInUser={loggedInUser} />
 
-			<div>
+			<div style={{ minWidth: 0 }}>
 				{isLoading ? (
 					<div className="pageLoading">
 						<img src="/media/wrestlingloading.gif" alt="Loading..." />
@@ -865,52 +1034,33 @@ const DualReport = () => {
 								{/* KPIs Cards Section */}
 								<div className="report-kpis-grid">
 									<div className="report-kpi-card">
-										<span className="kpi-label">DUAL RECORD</span>
-										<span className="kpi-value-text Russo">{totalWinsCount} - {totalLossesCount}</span>
+										<span className="kpi-label">RECORD</span>
+										<span className="kpi-value-text Russo">{totalWinsCount}-{totalLossesCount}</span>
+										<span className="kpi-sub-text">{winPercentageRatio.toFixed(1)}% Win Percentage</span>
 									</div>
 
 									<div className="report-kpi-card">
-										<span className="kpi-label">WIN PERCENTAGE</span>
-										<span className="kpi-value-text Russo">{winPercentageRatio.toFixed(1)}%</span>
-										{hasPreviousSeasonData && (
-											<span className={`kpi-comparison-variance ${variancePercentage >= 0 ? "positive-val" : "negative-val"}`}>
-												{formattedVariance} vs {startYearFullValue - 1} baseline
-											</span>
-										)}
-									</div>
-
-									<div className="report-kpi-card">
-										<span className="kpi-label">POINTS FOR / AGAINST</span>
+										<span className="kpi-label">POINTS</span>
 										<span className="kpi-value-text Russo">{totalPointsForSum} / {totalPointsAgainstSum}</span>
+										<span className="kpi-sub-text">
+											{netPointsDifferenceVal >= 0 ? "+" : ""}{netPointsDifferenceVal} Point Difference
+										</span>
 									</div>
 
 									<div className="report-kpi-card">
-										<span className="kpi-label">NEXT DUAL</span>
-										<span className="kpi-value-text Russo" style={{ fontSize: nextUpcomingDual ? "20px" : "28px", textAlign: "center" }}>
-											{nextUpcomingDual ? nextUpcomingDual.opponent : "None Scheduled"}
-										</span>
-										<span className="kpi-comparison-variance" style={{ color: "var(--on-surface-variant)" }}>
-											{nextUpcomingDual ? new Date(nextUpcomingDual.dualDate).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "No upcoming meets"}
+										<span className="kpi-label">SEASON</span>
+										<span className="kpi-value-text Russo">{completedDuals.length} / {duals.length - completedDuals.length}</span>
+										<span className="kpi-sub-text">
+											{nextUpcomingDual ? `Next: ${nextUpcomingDual.opponent}` : "Season Complete"}
 										</span>
 									</div>
 								</div>
 
 								{/* Charts Row */}
-								<div className="report-charts-row">
-									<div className="report-chart-card">
-										<h3 className="chart-card-title">Points Differential</h3>
-										<DivergingBarChart dualsList={duals} />
-										<div className="chart-net-indicator-wrapper">
-											<span className="net-label">NET OVERALL POINTS</span>
-											<span className={`net-value-count Russo ${netPointsDifferenceVal >= 0 ? "positive-val" : "negative-val"}`}>
-												{netPointsDifferenceVal > 0 ? "+" : ""}{netPointsDifferenceVal}
-											</span>
-										</div>
-									</div>
-
-									<div className="report-chart-card">
-										<h3 className="chart-card-title">Matchup Scoring Trends</h3>
-										<ScatterPlot dualsList={duals} />
+								<div className="report-charts-row-single">
+									<div className="report-chart-card full-width">
+										<h3 className="chart-card-title">Season Performance Overview</h3>
+										<SeasonChart dualsList={duals} />
 									</div>
 								</div>
 
