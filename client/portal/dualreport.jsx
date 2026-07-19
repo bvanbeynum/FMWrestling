@@ -57,6 +57,16 @@ const calculateDualScore = (dualItem) => {
 	return { teamScore, opponentScore };
 };
 
+const getBarPath = (x, y, width, height, isUp, r = 4) => {
+	if (height <= 0) return "";
+	const radius = Math.min(r, height, width / 2);
+	if (isUp) {
+		return `M ${x},${y + height} L ${x},${y + radius} A ${radius},${radius} 0 0,1 ${x + radius},${y} L ${x + width - radius},${y} A ${radius},${radius} 0 0,1 ${x + width},${y + radius} L ${x + width},${y + height} Z`;
+	} else {
+		return `M ${x},${y} L ${x},${y + height - radius} A ${radius},${radius} 0 0,0 ${x + radius},${y + height} L ${x + width - radius},${y + height} A ${radius},${radius} 0 0,0 ${x + width},${y + height - radius} L ${x + width},${y} Z`;
+	}
+};
+
 const SeasonChart = ({ dualsList }) => {
 	const completedDuals = dualsList.filter(
 		(dualItem) => dualItem.matches && dualItem.matches.length > 0
@@ -128,16 +138,7 @@ const SeasonChart = ({ dualsList }) => {
 		return paddingLeft + (index + 0.5) * step;
 	};
 
-	// 4. Generate path for rounded bars
-	const getBarPath = (x, y, width, height, isUp, r = 4) => {
-		if (height <= 0) return "";
-		const radius = Math.min(r, height, width / 2);
-		if (isUp) {
-			return `M ${x},${y + height} L ${x},${y + radius} A ${radius},${radius} 0 0,1 ${x + radius},${y} L ${x + width - radius},${y} A ${radius},${radius} 0 0,1 ${x + width},${y + radius} L ${x + width},${y + height} Z`;
-		} else {
-			return `M ${x},${y} L ${x},${y + height - radius} A ${radius},${radius} 0 0,0 ${x + radius},${y + height} L ${x + width - radius},${y + height} A ${radius},${radius} 0 0,0 ${x + width},${y + height - radius} L ${x + width},${y} Z`;
-		}
-	};
+	// 4. Generate path for rounded bars (moved to global file scope)
 
 	// 5. Generate team abbreviation helper
 	const getTeamAbbreviation = (teamName) => {
@@ -526,23 +527,24 @@ const MatchDetailMatrix = ({ dualsList }) => {
 const WEIGHT_CLASSES = ["106", "113", "120", "126", "132", "138", "144", "150", "157", "165", "175", "190", "215", "285"];
 
 const processWeightClassData = (dualsList) => {
-	const completedDuals = dualsList.filter(function (dualItem) {
+	const completedDuals = dualsList.filter((dualItem) => {
 		return dualItem.matches && dualItem.matches.length > 0;
 	});
 
 	const statsMap = {};
-	WEIGHT_CLASSES.forEach(function (weightClass) {
+	WEIGHT_CLASSES.forEach((weightClass) => {
 		statsMap[weightClass] = {
 			weightClass: weightClass,
 			wins: 0,
+			losses: 0,
 			points: 0,
 			totalMatches: 0,
 			wrestlers: {} // wrestlerName -> { name, wins, losses, points }
 		};
 	});
 
-	completedDuals.forEach(function (dualItem) {
-		(dualItem.matches || []).forEach(function (matchItem) {
+	completedDuals.forEach((dualItem) => {
+		(dualItem.matches || []).forEach((matchItem) => {
 			const weightClass = matchItem.weightClass;
 			if (!statsMap[weightClass]) {
 				return;
@@ -560,7 +562,7 @@ const processWeightClassData = (dualsList) => {
 				matchPoints = 6;
 			}
 
-			const fortMillWrestler = (matchItem.wrestlers || []).find(function (wrestlerItem) {
+			const fortMillWrestler = (matchItem.wrestlers || []).find((wrestlerItem) => {
 				return wrestlerItem.team.toLowerCase() === "fort mill";
 			});
 
@@ -582,256 +584,366 @@ const processWeightClassData = (dualsList) => {
 					statsMap[weightClass].wrestlers[wrestlerName].wins += 1;
 					statsMap[weightClass].wrestlers[wrestlerName].points += matchPoints;
 				} else {
+					statsMap[weightClass].losses += 1;
 					statsMap[weightClass].wrestlers[wrestlerName].losses += 1;
 				}
 			}
 		});
 	});
 
-	return WEIGHT_CLASSES.map(function (weightClass) {
+	return WEIGHT_CLASSES.map((weightClass) => {
 		const weightClassData = statsMap[weightClass];
-		const wrestlerList = Object.values(weightClassData.wrestlers).map(function (wrestlerItem) {
+		const wrestlerList = Object.values(weightClassData.wrestlers).map((wrestlerItem) => {
 			const totalMatches = wrestlerItem.wins + wrestlerItem.losses;
 			return {
 				...wrestlerItem,
-				winPercentage: totalMatches > 0 ? (wrestlerItem.wins / totalMatches) * 100 : 0,
-				percentageOfPoints: weightClassData.points > 0 ? (wrestlerItem.points / weightClassData.points) * 100 : 0
+				winPercentage: totalMatches > 0 ? (wrestlerItem.wins / totalMatches) * 100 : 0
 			};
-		});
+		}).sort((a, b) => b.points - a.points); // Sorted by points contributed!
 
-		// Determine leading wrestler based on wins, then win %, then points
-		let sortedWrestlersList = wrestlerList;
-		let leaderName = null;
-		if (wrestlerList.length > 0) {
-			sortedWrestlersList = [...wrestlerList].sort(function (firstWrestler, secondWrestler) {
-				if (secondWrestler.wins !== firstWrestler.wins) {
-					return secondWrestler.wins - firstWrestler.wins;
-				}
-				if (secondWrestler.winPercentage !== firstWrestler.winPercentage) {
-					return secondWrestler.winPercentage - firstWrestler.winPercentage;
-				}
-				return secondWrestler.points - firstWrestler.points;
-			});
-			leaderName = sortedWrestlersList[0].name;
+		const winPercentage = weightClassData.totalMatches > 0 ? (weightClassData.wins / weightClassData.totalMatches) * 100 : 0;
+		const averagePoints = weightClassData.totalMatches > 0 ? weightClassData.points / weightClassData.totalMatches : 0;
+
+		let status = "Work in Progress";
+		if (winPercentage > 75) {
+			status = "Powerhouse";
+		} else if (winPercentage >= 50) {
+			status = "Stable";
 		}
 
 		return {
 			weightClass: weightClass,
 			wins: weightClassData.wins,
+			losses: weightClassData.losses,
 			points: weightClassData.points,
 			totalMatches: weightClassData.totalMatches,
-			wrestlers: sortedWrestlersList,
-			leaderName: leaderName
+			winPercentage: winPercentage,
+			averagePoints: averagePoints,
+			status: status,
+			wrestlers: wrestlerList
 		};
 	});
 };
 
-const WinsPointsComboChart = ({ data }) => {
+const WeightClassChart = ({ data }) => {
 	const [hoveredIndex, setHoveredIndex] = useState(null);
+	const [isMobile, setIsMobile] = useState(false);
 
-	const maxWinsValue = Math.max(...data.map(function (dataPoint) { return dataPoint.wins; }), 5);
-	const maxPointsValue = Math.max(...data.map(function (dataPoint) { return dataPoint.points; }), 30);
+	useEffect(() => {
+		const checkMobile = () => {
+			setIsMobile(window.innerWidth < 768);
+		};
+		checkMobile();
+		window.addEventListener("resize", checkMobile);
+		return () => window.removeEventListener("resize", checkMobile);
+	}, []);
 
-	const chartTotalWidth = 600;
-	const chartTotalHeight = 300;
-	const paddingConfig = { top: 30, right: 50, bottom: 40, left: 50 };
-	const chartContentWidth = chartTotalWidth - paddingConfig.left - paddingConfig.right;
-	const chartContentHeight = chartTotalHeight - paddingConfig.top - paddingConfig.bottom;
+	const chartWidth = isMobile ? 480 : 800;
+	const chartHeight = isMobile ? 320 : 300;
+	const paddingLeft = isMobile ? 45 : 60;
+	const paddingRight = isMobile ? 45 : 60;
+	const paddingTop = isMobile ? 30 : 40;
+	const paddingBottom = isMobile ? 40 : 40;
 
-	const getXCoordinate = (indexValue) => paddingConfig.left + (indexValue + 0.5) * (chartContentWidth / data.length);
-	const getYLeftCoordinate = (winsValue) => paddingConfig.top + chartContentHeight - (winsValue / maxWinsValue) * chartContentHeight;
-	const getYRightCoordinate = (pointsValue) => paddingConfig.top + chartContentHeight - (pointsValue / maxPointsValue) * chartContentHeight;
+	const availableWidth = chartWidth - paddingLeft - paddingRight;
+	const heightRange = chartHeight - paddingTop - paddingBottom;
+	const zeroY = chartHeight - paddingBottom;
 
-	const pointsPathData = data.map(function (dataPoint, indexValue) {
-		return `${indexValue === 0 ? 'M' : 'L'} ${getXCoordinate(indexValue)} ${getYRightCoordinate(dataPoint.points)}`;
-	}).join(' ');
+	const getXCoordinate = (index) => paddingLeft + (index + 0.5) * (availableWidth / data.length);
+	const getWinPercentageY = (pct) => zeroY - (pct / 100) * heightRange;
+	const getPointsY = (pts) => zeroY - (pts / 6) * heightRange;
 
-	const tickLinesCount = 5;
-	const leftAxisTicks = Array.from({ length: tickLinesCount + 1 }, (unusedValue, indexValue) => Math.round((maxWinsValue / tickLinesCount) * indexValue));
-	const rightAxisTicks = Array.from({ length: tickLinesCount + 1 }, (unusedValue, indexValue) => Math.round((maxPointsValue / tickLinesCount) * indexValue));
+	const gridlinesY = [
+		paddingTop,
+		paddingTop + heightRange * 0.25,
+		paddingTop + heightRange * 0.5,
+		paddingTop + heightRange * 0.75,
+		zeroY
+	];
+
+	const pointsPath = data.map((d, i) => {
+		return `${i === 0 ? "M" : "L"} ${getXCoordinate(i)} ${getPointsY(d.averagePoints)}`;
+	}).join(" ");
+
+	const axisFontSize = isMobile ? "13px" : "12px";
+	const labelFontSize = isMobile ? "11px" : "10px";
 
 	return (
-		<div className="diverging-chart-wrapper" style={{ position: "relative" }}>
-			<svg viewBox={`0 0 ${chartTotalWidth} ${chartTotalHeight}`}>
-				{/* Gridlines */}
-				{leftAxisTicks.map((unusedValue, indexValue) => {
-					const yCoordinate = paddingConfig.top + chartContentHeight - (indexValue / tickLinesCount) * chartContentHeight;
-					return <line key={indexValue} x1={paddingConfig.left} y1={yCoordinate} x2={chartTotalWidth - paddingConfig.right} y2={yCoordinate} stroke="var(--outline)" strokeWidth={0.5} strokeDasharray="3,3" />;
-				})}
+		<div className="season-chart-wrapper">
+			<div className="season-chart-legend">
+				<div className="legend-item">
+					<span className="legend-color-box" style={{ backgroundColor: "#10b981" }}></span>
+					<span className="legend-label">POWERHOUSE (&gt;75%)</span>
+				</div>
+				<div className="legend-item">
+					<span className="legend-color-box" style={{ backgroundColor: "#f59e0b" }}></span>
+					<span className="legend-label">STABLE (50-75%)</span>
+				</div>
+				<div className="legend-item">
+					<span className="legend-color-box" style={{ backgroundColor: "#ef4444" }}></span>
+					<span className="legend-label">WIP (&lt;50%)</span>
+				</div>
+				<div className="legend-item" style={{ marginLeft: "12px" }}>
+					<span style={{ display: "inline-block", width: "20px", height: "0", borderTop: "2.5px solid var(--primary)", marginRight: "8px", verticalAlign: "middle" }}></span>
+					<span className="legend-label">AVG PTS / MATCH</span>
+				</div>
+			</div>
 
-				{/* Axis Lines */}
-				<line x1={paddingConfig.left} y1={paddingConfig.top} x2={paddingConfig.left} y2={paddingConfig.top + chartContentHeight} stroke="var(--outline)" strokeWidth={1.5} />
-				<line x1={chartTotalWidth - paddingConfig.right} y1={paddingConfig.top} x2={chartTotalWidth - paddingConfig.right} y2={paddingConfig.top + chartContentHeight} stroke="var(--outline)" strokeWidth={1.5} />
-				<line x1={paddingConfig.left} y1={paddingConfig.top + chartContentHeight} x2={chartTotalWidth - paddingConfig.right} y2={paddingConfig.top + chartContentHeight} stroke="var(--outline)" strokeWidth={1.5} />
-
-				{/* Axis Titles */}
-				<text x={20} y={paddingConfig.top - 12} fontFamily="var(--font-body)" fontSize="16px" fontWeight="700" fill="#3246e5" textAnchor="middle">WINS</text>
-				<text x={chartTotalWidth - 15} y={paddingConfig.top - 12} fontFamily="var(--font-body)" fontSize="16px" fontWeight="700" fill="#fd8b00" textAnchor="middle">PTS</text>
-
-				{/* Left Axis Labels (Wins) */}
-				{leftAxisTicks.map((tickValue, indexValue) => {
-					const yCoordinate = paddingConfig.top + chartContentHeight - (indexValue / tickLinesCount) * chartContentHeight;
-					return <text key={indexValue} x={paddingConfig.left - 10} y={yCoordinate + 4} textAnchor="end" fontFamily="var(--font-headers)" fontSize="15px" fill="var(--on-surface-variant)">{tickValue}</text>;
-				})}
-
-				{/* Right Axis Labels (Points) */}
-				{rightAxisTicks.map((tickValue, indexValue) => {
-					const yCoordinate = paddingConfig.top + chartContentHeight - (indexValue / tickLinesCount) * chartContentHeight;
-					return <text key={indexValue} x={chartTotalWidth - paddingConfig.right + 10} y={yCoordinate + 4} textAnchor="start" fontFamily="var(--font-headers)" fontSize="15px" fill="var(--on-surface-variant)">{tickValue}</text>;
-				})}
-
-				{/* X Axis Labels */}
-				{data.map((dataPoint, indexValue) => (
-					<text key={dataPoint.weightClass} x={getXCoordinate(indexValue)} y={paddingConfig.top + chartContentHeight + 20} textAnchor="middle" fontFamily="var(--font-headers)" fontSize="15px" fill="var(--on-surface-variant)">{dataPoint.weightClass}</text>
-				))}
-
-				{/* Bar Chart (Wins) */}
-				{data.map((dataPoint, indexValue) => {
-					const barElementWidth = 16;
-					const barElementHeight = (dataPoint.wins / maxWinsValue) * chartContentHeight;
-					const xCoordinate = getXCoordinate(indexValue) - barElementWidth / 2;
-					const yCoordinate = paddingConfig.top + chartContentHeight - barElementHeight;
-
-					return (
-						<rect
-							key={dataPoint.weightClass}
-							x={xCoordinate}
-							y={yCoordinate}
-							width={barElementWidth}
-							height={barElementHeight}
-							fill="#3246e5"
-							rx={2}
-							style={{ cursor: "pointer", transition: "fill-opacity 0.2s" }}
-							fillOpacity={hoveredIndex === indexValue ? 0.8 : 1}
-							onMouseEnter={() => setHoveredIndex(indexValue)}
-							onTouchStart={() => setHoveredIndex(indexValue)}
-							onMouseLeave={() => setHoveredIndex(null)}
-						/>
-					);
-				})}
-
-				{/* Line Chart (Points) */}
-				<path d={pointsPathData} fill="none" stroke="#fd8b00" strokeWidth={2.5} style={{ pointerEvents: "none" }} />
-				{data.map((dataPoint, indexValue) => (
-					<circle
-						key={dataPoint.weightClass}
-						cx={getXCoordinate(indexValue)}
-						cy={getYRightCoordinate(dataPoint.points)}
-						r={hoveredIndex === indexValue ? 7 : 5}
-						fill="#fd8b00"
-						stroke="#ffffff"
-						strokeWidth={1.5}
-						style={{ cursor: "pointer", transition: "all 0.15s ease" }}
-						onMouseEnter={() => setHoveredIndex(indexValue)}
-						onTouchStart={() => setHoveredIndex(indexValue)}
-						onMouseLeave={() => setHoveredIndex(null)}
-					/>
-				))}
-			</svg>
-
-			{hoveredIndex !== null && (
-				<div
-					className="combo-chart-tooltip"
+			<div className="season-chart-scroll-container" style={{ overflowX: "hidden" }}>
+				<svg
+					width="100%"
+					viewBox={`0 0 ${chartWidth} ${chartHeight}`}
 					style={{
-						position: "absolute",
-						top: `calc(${(getYRightCoordinate(data[hoveredIndex].points) / chartTotalHeight) * 100}% - 10px)`,
-						left: `${(getXCoordinate(hoveredIndex) / chartTotalWidth) * 100}%`
+						display: "block",
+						width: "100%",
+						height: `${chartHeight}px`
 					}}
 				>
-					<div>Weight: {data[hoveredIndex].weightClass}</div>
-					<div>Wins: {data[hoveredIndex].wins}</div>
-					<div>Points Contributed: {data[hoveredIndex].points}</div>
-				</div>
-			)}
-		</div>
-	);
-};
+					{gridlinesY.map((yVal, idx) => (
+						<line
+							key={`wc-grid-h-${idx}`}
+							x1={paddingLeft}
+							y1={yVal}
+							x2={chartWidth - paddingRight}
+							y2={yVal}
+							stroke="var(--outline)"
+							strokeWidth={0.5}
+							strokeDasharray="3,3"
+						/>
+					))}
 
-const PointsHorizontalBarChart = ({ data }) => {
-	const sortedData = [...data].sort((firstPoint, secondPoint) => +firstPoint.weightClass - +secondPoint.weightClass);
-	const maxPointsValue = Math.max(...sortedData.map(function (dataPoint) { return dataPoint.points; }), 10);
+					{data.map((d, i) => (
+						<line
+							key={`wc-grid-v-${i}`}
+							x1={getXCoordinate(i)}
+							y1={paddingTop}
+							x2={getXCoordinate(i)}
+							y2={zeroY}
+							stroke="var(--outline)"
+							strokeWidth={0.5}
+							strokeDasharray="3,3"
+						/>
+					))}
 
-	const chartTotalWidth = 500;
-	const barRowHeight = 15;
-	const barRowSpacing = 12;
-	const paddingConfig = { top: 10, right: 40, bottom: 20, left: 45 };
+					<line
+						x1={paddingLeft}
+						y1={paddingTop}
+						x2={paddingLeft}
+						y2={zeroY}
+						stroke="var(--outline)"
+						strokeWidth={1.5}
+					/>
+					<line
+						x1={chartWidth - paddingRight}
+						y1={paddingTop}
+						x2={chartWidth - paddingRight}
+						y2={zeroY}
+						stroke="var(--outline)"
+						strokeWidth={1.5}
+					/>
 
-	const chartContentHeight = sortedData.length * (barRowHeight + barRowSpacing);
-	const chartTotalHeight = chartContentHeight + paddingConfig.top + paddingConfig.bottom;
-	const chartContentWidth = chartTotalWidth - paddingConfig.left - paddingConfig.right;
+					<line
+						x1={paddingLeft}
+						y1={zeroY}
+						x2={chartWidth - paddingRight}
+						y2={zeroY}
+						stroke="var(--outline)"
+						strokeWidth={1.5}
+					/>
 
-	const getBarWidth = (pointsValue) => (pointsValue / maxPointsValue) * chartContentWidth;
+					<text
+						x={paddingLeft - 22}
+						y={20}
+						fontFamily="var(--font-body)"
+						fontSize={axisFontSize}
+						fontWeight="700"
+						fill="var(--on-surface-variant)"
+						textAnchor="middle"
+					>
+						WIN %
+					</text>
+					<text
+						x={chartWidth - paddingRight + 22}
+						y={20}
+						fontFamily="var(--font-body)"
+						fontSize={axisFontSize}
+						fontWeight="700"
+						fill="var(--on-surface-variant)"
+						textAnchor="middle"
+					>
+						AVG PTS
+					</text>
 
-	return (
-		<div className="points-horizontal-chart-wrapper">
-			<svg viewBox={`0 0 ${chartTotalWidth} ${chartTotalHeight}`}>
-				<line x1={paddingConfig.left} y1={paddingConfig.top} x2={paddingConfig.left} y2={paddingConfig.top + chartContentHeight} stroke="var(--outline)" strokeWidth={1.5} />
+					<text x={paddingLeft - 10} y={gridlinesY[0] + 4} textAnchor="end" fontFamily="var(--font-headers)" fontSize={axisFontSize} fill="var(--on-surface-variant)">100%</text>
+					<text x={paddingLeft - 10} y={gridlinesY[1] + 4} textAnchor="end" fontFamily="var(--font-headers)" fontSize={axisFontSize} fill="var(--on-surface-variant)">75%</text>
+					<text x={paddingLeft - 10} y={gridlinesY[2] + 4} textAnchor="end" fontFamily="var(--font-headers)" fontSize={axisFontSize} fill="var(--on-surface-variant)">50%</text>
+					<text x={paddingLeft - 10} y={gridlinesY[3] + 4} textAnchor="end" fontFamily="var(--font-headers)" fontSize={axisFontSize} fill="var(--on-surface-variant)">25%</text>
+					<text x={paddingLeft - 10} y={gridlinesY[4] + 4} textAnchor="end" fontFamily="var(--font-headers)" fontSize={axisFontSize} fill="var(--on-surface-variant)">0%</text>
 
-				{sortedData.map((dataPoint, indexValue) => {
-					const yCoordinate = paddingConfig.top + indexValue * (barRowHeight + barRowSpacing);
-					const barWidthValue = getBarWidth(dataPoint.points);
+					<text x={chartWidth - paddingRight + 10} y={gridlinesY[0] + 4} textAnchor="start" fontFamily="var(--font-headers)" fontSize={axisFontSize} fill="var(--on-surface-variant)">6.0</text>
+					<text x={chartWidth - paddingRight + 10} y={gridlinesY[1] + 4} textAnchor="start" fontFamily="var(--font-headers)" fontSize={axisFontSize} fill="var(--on-surface-variant)">4.5</text>
+					<text x={chartWidth - paddingRight + 10} y={gridlinesY[2] + 4} textAnchor="start" fontFamily="var(--font-headers)" fontSize={axisFontSize} fill="var(--on-surface-variant)">3.0</text>
+					<text x={chartWidth - paddingRight + 10} y={gridlinesY[3] + 4} textAnchor="start" fontFamily="var(--font-headers)" fontSize="12px" fill="var(--on-surface-variant)">1.5</text>
+					<text x={chartWidth - paddingRight + 10} y={gridlinesY[4] + 4} textAnchor="start" fontFamily="var(--font-headers)" fontSize="12px" fill="var(--on-surface-variant)">0.0</text>
 
-					return (
-						<g key={dataPoint.weightClass} className="chart-row">
+					{data.map((d, i) => {
+						const step = availableWidth / data.length;
+						const barW = step * 0.55;
+						const x = getXCoordinate(i) - barW / 2;
+
+						const barHeight = (d.winPercentage / 100) * heightRange;
+						const barY = zeroY - barHeight;
+						const barPath = getBarPath(x, barY, barW, barHeight, true);
+
+						let barColor = "#ef4444";
+						if (d.status === "Powerhouse") {
+							barColor = "#10b981";
+						} else if (d.status === "Stable") {
+							barColor = "#f59e0b";
+						}
+
+						const isHovered = hoveredIndex === i;
+
+						return (
+							<g key={`wc-bar-${i}`}>
+								{barHeight > 0 && (
+									<path
+										d={barPath}
+										fill={barColor}
+										fillOpacity={isHovered ? 0.8 : 1}
+										style={{ transition: "fill-opacity 0.2s" }}
+									/>
+								)}
+							</g>
+						);
+					})}
+
+					{data.map((d, i) => {
+						const x = getXCoordinate(i);
+						return (
 							<text
-								x={paddingConfig.left - 8}
-								y={yCoordinate + barRowHeight / 2 + 5}
-								textAnchor="end"
-								fontFamily="var(--font-headers)"
-								fontSize="15px"
+								key={`wc-x-lbl-${i}`}
+								x={x}
+								y={zeroY + 20}
+								textAnchor="middle"
+								fontFamily="var(--font-body)"
+								fontSize={labelFontSize}
+								fontWeight="700"
 								fill="var(--on-surface-variant)"
 							>
-								{dataPoint.weightClass}
+								{d.weightClass}
 							</text>
+						);
+					})}
 
-							<rect
-								x={paddingConfig.left}
-								y={yCoordinate}
-								width={Math.max(barWidthValue, 2)}
-								height={barRowHeight}
-								fill="#fd8b00"
-								rx={2}
+					{data.length > 1 && (
+						<path
+							d={pointsPath}
+							fill="none"
+							stroke="var(--primary)"
+							strokeWidth={2.5}
+							style={{ pointerEvents: "none" }}
+						/>
+					)}
+
+					{data.map((d, i) => {
+						const x = getXCoordinate(i);
+						const ptsY = getPointsY(d.averagePoints);
+						const isHovered = hoveredIndex === i;
+
+						return (
+							<circle
+								key={`wc-marker-${i}`}
+								cx={x}
+								cy={ptsY}
+								r={isHovered ? 6 : 4}
+								fill="var(--primary)"
+								stroke="#ffffff"
+								strokeWidth={1.5}
+								style={{ pointerEvents: "none", transition: "all 0.15s ease" }}
 							/>
+						);
+					})}
 
-							<text
-								x={paddingConfig.left + barWidthValue + 8}
-								y={yCoordinate + barRowHeight / 2 + 5}
-								textAnchor="start"
-								fontFamily="var(--font-body)"
-								fontSize="15px"
-								fontWeight="700"
-								fill="var(--on-surface)"
-							>
-								{dataPoint.points}
-							</text>
-						</g>
-					);
-				})}
-			</svg>
+					{data.map((d, i) => {
+						const step = availableWidth / data.length;
+						const x = getXCoordinate(i) - step / 2;
+						return (
+							<rect
+								key={`wc-hover-${i}`}
+								x={x}
+								y={paddingTop}
+								width={step}
+								height={heightRange}
+								fill="transparent"
+								style={{ cursor: "pointer" }}
+								onMouseEnter={() => setHoveredIndex(i)}
+								onMouseLeave={() => setHoveredIndex(null)}
+							/>
+						);
+					})}
+				</svg>
+			</div>
+
+			{hoveredIndex !== null && (() => {
+				const d = data[hoveredIndex];
+				return (
+					<div className="season-chart-tooltip">
+						<div className="season-chart-tooltip-title">
+							{d.weightClass} LBS
+						</div>
+						<div className="season-chart-tooltip-content">
+							<div className="season-chart-tooltip-col">
+								Status: <span className={`status-text-${d.status === "Powerhouse" ? "powerhouse" : d.status === "Stable" ? "stable" : "wip"}`}>
+									{d.status}
+								</span>
+								<br />
+								Matches: {d.totalMatches}
+								<br />
+								Wins: {d.wins} | Losses: {d.losses}
+							</div>
+							<div className="season-chart-tooltip-col opponent-col">
+								Win Rate: <strong>{d.winPercentage.toFixed(1)}%</strong>
+								<br />
+								Average Points: <strong>{d.averagePoints.toFixed(1)}</strong>
+							</div>
+						</div>
+					</div>
+				);
+			})()}
 		</div>
 	);
 };
 
-const IntraClassComparisonCards = ({ data }) => {
+const WeightClassListCards = ({ data }) => {
 	return (
 		<div className="weight-comparison-grid">
-			{data.map(function (weightClassData) {
+			{data.map((item) => {
 				return (
-					<div key={weightClassData.weightClass} className="weight-comparison-card">
+					<div key={item.weightClass} className="weight-comparison-card">
 						<h4 className="weight-comparison-card-title">
-							<span>{weightClassData.weightClass} LBS</span>
-							{weightClassData.leaderName && (
-								<span style={{ fontSize: "11px", fontWeight: "normal", textTransform: "none", color: "var(--on-surface-variant)" }}>
-									{weightClassData.wrestlers.length} Athlete(s)
-								</span>
-							)}
+							<span>{item.weightClass} LBS</span>
+							<span className={`weight-status-badge ${item.status === "Powerhouse" ? "powerhouse" : item.status === "Stable" ? "stable" : "wip"}`}>
+								{item.status}
+							</span>
 						</h4>
+						
+						<div className="weight-class-summary-row">
+							<div className="weight-class-summary-item">
+								<span className="weight-class-summary-lbl">Win %</span>
+								<span className="weight-class-summary-val">{item.winPercentage.toFixed(1)}%</span>
+							</div>
+							<div className="weight-class-summary-item" style={{ alignItems: "flex-end" }}>
+								<span className="weight-class-summary-lbl">Avg Pts</span>
+								<span className="weight-class-summary-val">{item.averagePoints.toFixed(1)}</span>
+							</div>
+						</div>
+
 						<div className="weight-comparison-card-body">
-							{weightClassData.wrestlers.length === 0 ? (
+							{item.wrestlers.length === 0 ? (
 								<div className="no-wrestlers-placeholder">No active records</div>
 							) : (
-								weightClassData.wrestlers.map(function (wrestlerItem) {
-									const isLeader = wrestlerItem.name === weightClassData.leaderName;
+								item.wrestlers.map((wrestlerItem) => {
 									const winPercentage = wrestlerItem.winPercentage;
 									const totalMatches = wrestlerItem.wins + wrestlerItem.losses;
 									let colorClass = "";
@@ -847,16 +959,13 @@ const IntraClassComparisonCards = ({ data }) => {
 									return (
 										<div
 											key={wrestlerItem.name}
-											className={`wrestler-comparison-row ${isLeader ? 'is-leader-row' : ''} ${colorClass}`}
+											className={`wrestler-comparison-row ${colorClass}`}
 										>
 											<div className="wrestler-identity">
 												<span className="wrestler-name-label">{wrestlerItem.name}</span>
 												<span className="wrestler-record-label">
-													Record: {wrestlerItem.wins}-{wrestlerItem.losses}
+													Record: {wrestlerItem.wins}-{wrestlerItem.losses} ({wrestlerItem.points} pts)
 												</span>
-												{isLeader && (
-													<span className="wrestler-leader-badge">★ LEADER</span>
-												)}
 											</div>
 											<div className="wrestler-metrics-summary">
 												<div className="wrestler-metric-item">
@@ -864,12 +973,6 @@ const IntraClassComparisonCards = ({ data }) => {
 														{wrestlerItem.winPercentage.toFixed(1)}%
 													</span>
 													<span className="wrestler-metric-lbl">Win %</span>
-												</div>
-												<div className="wrestler-metric-item">
-													<span className="wrestler-metric-val">
-														{wrestlerItem.points}
-													</span>
-													<span className="wrestler-metric-lbl">Pts For</span>
 												</div>
 											</div>
 										</div>
@@ -887,22 +990,58 @@ const IntraClassComparisonCards = ({ data }) => {
 const WeightClassOverview = ({ dualsList }) => {
 	const aggregatedData = processWeightClassData(dualsList);
 
+	const powerhouseClasses = aggregatedData.filter((item) => item.status === "Powerhouse");
+	const wipClasses = aggregatedData.filter((item) => item.status === "Work in Progress");
+
+	const totalPowerhouseWins = powerhouseClasses.reduce((sum, item) => sum + item.wins, 0);
+	const totalWipLosses = wipClasses.reduce((sum, item) => sum + item.losses, 0);
+
+	const totalPointsAll = aggregatedData.reduce((sum, item) => sum + item.points, 0);
+	const totalMatchesAll = aggregatedData.reduce((sum, item) => sum + item.totalMatches, 0);
+	const overallAveragePoints = totalMatchesAll > 0 ? totalPointsAll / totalMatchesAll : 0;
+
+	let topWeightClass = null;
+	let maxAverage = -1;
+	aggregatedData.forEach((item) => {
+		if (item.totalMatches > 0 && item.averagePoints > maxAverage) {
+			maxAverage = item.averagePoints;
+			topWeightClass = item;
+		}
+	});
+	const averageSubtext = topWeightClass ? `${topWeightClass.averagePoints.toFixed(1)} ${topWeightClass.weightClass}` : "N/A";
+
 	return (
 		<div className="weight-class-overview-container">
-			<div className="report-charts-row">
-				<div className="report-chart-card">
-					<h3 className="chart-card-title">Wins & Points Combo</h3>
-					<WinsPointsComboChart data={aggregatedData} />
+			<div className="report-kpis-grid">
+				<div className="report-kpi-card weight-class-kpi-card powerhouse">
+					<span className="kpi-label">Powerhouse</span>
+					<span className="kpi-value-text Russo">{powerhouseClasses.length}</span>
+					<span className="kpi-sub-text" style={{ color: "#137333" }}>{totalPowerhouseWins} Total Wins</span>
 				</div>
-				<div className="report-chart-card">
-					<h3 className="chart-card-title">Scoring Power by Weight</h3>
-					<PointsHorizontalBarChart data={aggregatedData} />
+
+				<div className="report-kpi-card weight-class-kpi-card wip">
+					<span className="kpi-label">Work in Progress</span>
+					<span className="kpi-value-text Russo">{wipClasses.length}</span>
+					<span className="kpi-sub-text" style={{ color: "#c5221f" }}>{totalWipLosses} Total Losses</span>
+				</div>
+
+				<div className="report-kpi-card weight-class-kpi-card average">
+					<span className="kpi-label">Average</span>
+					<span className="kpi-value-text Russo">{overallAveragePoints.toFixed(1)}</span>
+					<span className="kpi-sub-text">{averageSubtext} Top weight class</span>
+				</div>
+			</div>
+
+			<div className="report-charts-row-single">
+				<div className="report-chart-card full-width">
+					<h3 className="chart-card-title">Weight Class Performance Trends</h3>
+					<WeightClassChart data={aggregatedData} />
 				</div>
 			</div>
 
 			<div className="weight-matrix-section">
-				<h3 className="matrix-section-title">Intra-Class Comparison</h3>
-				<IntraClassComparisonCards data={aggregatedData} />
+				<h3 className="matrix-section-title">Detailed Weight Classes Overview</h3>
+				<WeightClassListCards data={aggregatedData} />
 			</div>
 		</div>
 	);
