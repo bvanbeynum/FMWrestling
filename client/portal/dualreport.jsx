@@ -993,8 +993,13 @@ const WeightClassOverview = ({ dualsList }) => {
 	const powerhouseClasses = aggregatedData.filter((item) => item.status === "Powerhouse");
 	const wipClasses = aggregatedData.filter((item) => item.status === "Work in Progress");
 
-	const totalPowerhouseWins = powerhouseClasses.reduce((sum, item) => sum + item.wins, 0);
-	const totalWipLosses = wipClasses.reduce((sum, item) => sum + item.losses, 0);
+	const powerhouseMatches = powerhouseClasses.reduce((sum, item) => sum + item.totalMatches, 0);
+	const powerhousePoints = powerhouseClasses.reduce((sum, item) => sum + item.points, 0);
+	const powerhouseAvg = powerhouseMatches > 0 ? powerhousePoints / powerhouseMatches : 0;
+
+	const wipMatches = wipClasses.reduce((sum, item) => sum + item.totalMatches, 0);
+	const wipPoints = wipClasses.reduce((sum, item) => sum + item.points, 0);
+	const wipAvg = wipMatches > 0 ? wipPoints / wipMatches : 0;
 
 	const totalPointsAll = aggregatedData.reduce((sum, item) => sum + item.points, 0);
 	const totalMatchesAll = aggregatedData.reduce((sum, item) => sum + item.totalMatches, 0);
@@ -1016,13 +1021,13 @@ const WeightClassOverview = ({ dualsList }) => {
 				<div className="report-kpi-card weight-class-kpi-card powerhouse">
 					<span className="kpi-label">Powerhouse</span>
 					<span className="kpi-value-text Russo">{powerhouseClasses.length}</span>
-					<span className="kpi-sub-text" style={{ color: "#137333" }}>{totalPowerhouseWins} Total Wins</span>
+					<span className="kpi-sub-text" style={{ color: "#137333" }}>{powerhouseAvg.toFixed(1)} Avg Points / Match</span>
 				</div>
 
 				<div className="report-kpi-card weight-class-kpi-card wip">
 					<span className="kpi-label">Work in Progress</span>
 					<span className="kpi-value-text Russo">{wipClasses.length}</span>
-					<span className="kpi-sub-text" style={{ color: "#c5221f" }}>{totalWipLosses} Total Losses</span>
+					<span className="kpi-sub-text" style={{ color: "#c5221f" }}>{wipAvg.toFixed(1)} Avg Points / Match</span>
 				</div>
 
 				<div className="report-kpi-card weight-class-kpi-card average">
