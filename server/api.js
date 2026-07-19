@@ -2210,7 +2210,7 @@ export default {
 		try {
 			const schoolResponse = await client.get(`${ serverPath }/data/school`);
 			const schools = schoolResponse.body.schools || [];
-			opponentSchool = schools.find(school => school.name === targetDual.opponent);
+			opponentSchool = schools.find(school => school.name === output.data.dual.opponent);
 		} catch (schoolError) {
 			console.error(`Error searching school: ${schoolError.message}`);
 		}
