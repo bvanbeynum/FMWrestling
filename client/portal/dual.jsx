@@ -58,7 +58,7 @@ const Dual = () => {
 	const [ isStarted, setIsStarted ] = useState(false);
 
 	// Data & Upload State
-	const [ duals, setDuals ] = useState([]);
+	const [ dual, setDual ] = useState(null);
 	const [ dualId, setDualId ] = useState(null);
 	const [ matches, setMatches ] = useState([]);
 	const [ division, setDivision ] = useState("Varsity");
@@ -80,38 +80,27 @@ const Dual = () => {
 		if (!pageActive) {
 			const urlParams = new URLSearchParams(window.location.search);
 			const targetId = urlParams.get("id");
-			let dualLoadUrl = "/api/dualload";
-			if (targetId) {
-				dualLoadUrl += `?id=${targetId}`;
-			}
+			
+			fetch(`/api/dualload?id=${targetId}`)
+				.then(res => res.ok ? res.json() : Promise.reject(res.statusText))
+				.then(dualData => {
+					const loadedDual = dualData.dual;
+					loadedDual.dualDateObj = new Date(loadedDual.dualDate);
 
-			fetch(dualLoadUrl)
-			.then(res => res.ok ? res.json() : Promise.reject(res.statusText))
-			.then(dualData => {
-				const loadedDuals = (dualData.duals || []).map(dual => ({
-					...dual,
-					dualDateObj: new Date(dual.dualDate)
-				}));
+					setDual(loadedDual);
+					setLoggedInUser(dualData.loggedInUser);
+					setFortMillWrestlers(dualData.fortMillWrestlers || []);
+					setOpponentWrestlers(dualData.opponentWrestlers || []);
 
-				setDuals(loadedDuals);
-				setLoggedInUser(dualData.loggedInUser);
-				setFortMillWrestlers(dualData.fortMillWrestlers || []);
-				setOpponentWrestlers(dualData.opponentWrestlers || []);
+					loadDualData(loadedDual);
 
-				if (targetId) {
-					const matched = loadedDuals.find(d => d.id === targetId || d._id === targetId);
-					if (matched) {
-						loadDualData(matched);
-					}
-				}
-
-				setPageActive(true);
-				setIsLoading(false);
-			})
-			.catch(error => {
-				console.warn("Initialization error:", error);
-				setIsLoading(false);
-			});
+					setPageActive(true);
+					setIsLoading(false);
+				})
+				.catch(error => {
+					console.warn("Initialization error:", error);
+					setIsLoading(false);
+				});
 		}
 	}, []);
 
@@ -410,11 +399,11 @@ const Dual = () => {
 		}
 
 		// Ensure correct team names are synchronized
-		const cleanedMatches = matches.map(m => ({
-			...m,
-			wrestlers: (m.wrestlers || []).map(w => ({
-				...w,
-				team: w.team.toLowerCase() === "fort mill" ? "Fort Mill" : (opponent || "Visitor")
+		const cleanedMatches = matches.map(match => ({
+			...match,
+			wrestlers: (match.wrestlers || []).map(wrestler => ({
+				...wrestler,
+				team: wrestler.team.toLowerCase() === "fort mill" ? "Fort Mill" : (opponent || "Visitor")
 			}))
 		}));
 
@@ -432,16 +421,16 @@ const Dual = () => {
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ dual: dualData })
 		})
-		.then(res => res.json())
-		.then(data => {
-			if (data.error) {
-				console.error("Save error:", data.error);
-				alert("Failed to save dual meet.");
-			} else {
-				window.location.href = "/portal/schedule.html";
-			}
-		})
-		.catch(err => console.error("Save catch error:", err));
+			.then(res => res.json())
+			.then(data => {
+				if (data.error) {
+					console.error("Save error:", data.error);
+					alert("Failed to save dual meet.");
+				} else {
+					window.location.href = "/portal/schedule.html";
+				}
+			})
+			.catch(err => console.error("Save catch error:", err));
 	};
 
 	const handleCancel = () => {

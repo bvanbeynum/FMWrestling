@@ -2197,8 +2197,8 @@ export default {
 		const output = { data: { duals: [], fortMillWrestlers: [], opponentWrestlers: [] } };
 
 		try {
-			const clientResponse = await client.get(`${ serverPath }/data/dual`);
-			output.data.duals = clientResponse.body.duals;
+			const clientResponse = await client.get(`${ serverPath }/data/dual?id=${ dualId }`);
+			output.data.dual = clientResponse.body.duals[0];
 		}
 		catch (error) {
 			output.status = 564;
@@ -2206,23 +2206,18 @@ export default {
 			return output;
 		}
 
-		if (dualId) {
-			const targetDual = (output.data.duals || []).find(dual => dual.id === dualId || dual._id === dualId);
-			if (targetDual && targetDual.opponent) {
-				let opponentSchool = null;
-				try {
-					const schoolResponse = await client.get(`${ serverPath }/data/school`);
-					const schools = schoolResponse.body.schools || [];
-					opponentSchool = schools.find(school => school.name === targetDual.opponent);
-				} catch (schoolError) {
-					console.error(`Error searching school: ${schoolError.message}`);
-				}
-
-				const wrestlersData = await getDualWrestlers(opponentSchool, serverPath);
-				output.data.fortMillWrestlers = wrestlersData.fortMillWrestlers;
-				output.data.opponentWrestlers = wrestlersData.opponentWrestlers;
-			}
+		let opponentSchool = null;
+		try {
+			const schoolResponse = await client.get(`${ serverPath }/data/school`);
+			const schools = schoolResponse.body.schools || [];
+			opponentSchool = schools.find(school => school.name === targetDual.opponent);
+		} catch (schoolError) {
+			console.error(`Error searching school: ${schoolError.message}`);
 		}
+
+		const wrestlersData = await getDualWrestlers(opponentSchool, serverPath);
+		output.data.fortMillWrestlers = wrestlersData.fortMillWrestlers;
+		output.data.opponentWrestlers = wrestlersData.opponentWrestlers;
 
 		output.status = 200;
 		return output;
