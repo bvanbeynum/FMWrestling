@@ -4,6 +4,26 @@ import Nav from "./nav.jsx";
 import "./include/index.css";
 import "./include/dualreport.css";
 
+const parseEventDate = (dateInput) => {
+	if (!dateInput) return null;
+	if (dateInput instanceof Date) return dateInput;
+
+	const str = String(dateInput).trim();
+	const isoMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2}))?)?/);
+	if (isoMatch) {
+		const year = parseInt(isoMatch[1], 10);
+		const month = parseInt(isoMatch[2], 10) - 1;
+		const day = parseInt(isoMatch[3], 10);
+		const hours = isoMatch[4] ? parseInt(isoMatch[4], 10) : 0;
+		const minutes = isoMatch[5] ? parseInt(isoMatch[5], 10) : 0;
+		const seconds = isoMatch[6] ? parseInt(isoMatch[6], 10) : 0;
+
+		return new Date(year, month, day, hours, minutes, seconds);
+	}
+
+	return new Date(dateInput);
+};
+
 const getSeasonOptions = (dateObject) => {
 	const currentYear = dateObject.getFullYear();
 	const currentMonth = dateObject.getMonth(); // 0-indexed, so 8 is September
@@ -105,7 +125,7 @@ const SeasonChart = ({ dualsList }) => {
 			opponentScore: scoreResult.opponentScore,
 			fortMillMatchesWon,
 			opponentMatchesWon,
-			dateObject: new Date(dualItem.dualDate)
+			dateObject: parseEventDate(dualItem.dualDate)
 		};
 	}).sort((first, second) => second.dateObject - first.dateObject); // Most recent to oldest
 
@@ -496,7 +516,7 @@ const MatchDetailMatrix = ({ dualsList }) => {
 						else resultValueText = "T";
 					}
 
-					const rawDate = new Date(dualItem.dualDate);
+					const rawDate = parseEventDate(dualItem.dualDate);
 					const formattedDate = `${String(rawDate.getMonth() + 1).padStart(2, "0")}/${String(rawDate.getDate()).padStart(2, "0")}/${rawDate.getFullYear().toString().substring(2,4)}`;
 
 					const scoreDisplay = isCompleted ? `${scoreResult.teamScore}-${scoreResult.opponentScore}` : "-";

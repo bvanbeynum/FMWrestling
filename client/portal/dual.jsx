@@ -32,10 +32,30 @@ const formatTimeDisplay = (timeStr) => {
 	return `${h}:${m} ${period}`;
 };
 
+const parseEventDate = (dateInput) => {
+	if (!dateInput) return null;
+	if (dateInput instanceof Date) return dateInput;
+
+	const str = String(dateInput).trim();
+	const isoMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2}))?)?/);
+	if (isoMatch) {
+		const year = parseInt(isoMatch[1], 10);
+		const month = parseInt(isoMatch[2], 10) - 1;
+		const day = parseInt(isoMatch[3], 10);
+		const hours = isoMatch[4] ? parseInt(isoMatch[4], 10) : 0;
+		const minutes = isoMatch[5] ? parseInt(isoMatch[5], 10) : 0;
+		const seconds = isoMatch[6] ? parseInt(isoMatch[6], 10) : 0;
+
+		return new Date(year, month, day, hours, minutes, seconds);
+	}
+
+	return new Date(dateInput);
+};
+
 const formatDate = (dateStr) => {
 	if (!dateStr) return "";
-	const date = new Date(dateStr);
-	if (isNaN(date.getTime())) return "";
+	const date = parseEventDate(dateStr);
+	if (!date || isNaN(date.getTime())) return "";
 	return (date.getMonth() + 1) + "/" + date.getDate() + "/" + date.getFullYear();
 };
 
@@ -89,7 +109,7 @@ const Dual = () => {
 				.then(res => res.ok ? res.json() : Promise.reject(res.statusText))
 				.then(dualData => {
 					const loadedDual = dualData.dual;
-					loadedDual.dualDateObj = new Date(loadedDual.dualDate);
+					loadedDual.dualDateObj = parseEventDate(loadedDual.dualDate);
 
 					setDual(loadedDual);
 					setLoggedInUser(dualData.loggedInUser);

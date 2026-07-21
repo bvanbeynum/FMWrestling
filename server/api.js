@@ -2813,31 +2813,46 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 	scheduleSave: async (teamEventObject, opponentName, serverPath) => {
 		const output = {};
 
+		// Extract unshifted date string YYYY-MM-DD
+		let dateString = "";
+		if (teamEventObject.date) {
+			const str = String(teamEventObject.date).trim();
+			const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+			if (match) {
+				dateString = `${match[1]}-${match[2]}-${match[3]}`;
+			} else {
+				const dObj = new Date(teamEventObject.date);
+				const year = dObj.getUTCFullYear();
+				const month = String(dObj.getUTCMonth() + 1).padStart(2, '0');
+				const day = String(dObj.getUTCDate()).padStart(2, '0');
+				dateString = `${year}-${month}-${day}`;
+			}
+		}
+
+		let hours = "00";
+		let minutes = "00";
+		if (teamEventObject.startTime) {
+			const [time, modifier] = teamEventObject.startTime.split(' ');
+			let [h, m] = time.split(':');
+			let hNum = parseInt(h, 10);
+			if (modifier === 'PM' && hNum < 12) hNum += 12;
+			if (modifier === 'AM' && hNum === 12) hNum = 0;
+			hours = String(hNum).padStart(2, '0');
+			minutes = String(m || "00").padStart(2, '0');
+		}
+
+		const combinedDateTime = dateString ? `${dateString}T${hours}:${minutes}:00.000Z` : null;
+		if (combinedDateTime) {
+			teamEventObject.date = combinedDateTime;
+		}
+
 		// Orchestrate Dual creation if this is a new Dual teamEvent
 		if (teamEventObject.eventType === "Dual" && !teamEventObject.id && !teamEventObject.dualId) {
 			try {
-				// Parse date and time to construct local Date object
-				const dateObj = new Date(teamEventObject.date);
-				const year = dateObj.getFullYear();
-				const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-				const day = String(dateObj.getDate()).padStart(2, '0');
-				const dateString = `${year}-${month}-${day}`;
-
-				let combinedDateTime;
-				if (teamEventObject.startTime) {
-					const [time, modifier] = teamEventObject.startTime.split(' ');
-					let [hours, minutes] = time.split(':');
-					if (hours === '12') hours = '00';
-					if (modifier === 'PM') hours = String(parseInt(hours, 10) + 12).padStart(2, '0');
-					combinedDateTime = new Date(`${dateString}T${hours}:${minutes}:00`);
-				} else {
-					combinedDateTime = new Date(`${dateString}T00:00:00`);
-				}
-
 				// 1. Create dual record with empty matches list for manual entry
 				const dualObject = {
 					opponent: opponentName,
-					dualDate: combinedDateTime.toISOString(),
+					dualDate: combinedDateTime,
 					division: teamEventObject.division || "Varsity",
 					matches: [],
 					imagePath: null
@@ -2856,7 +2871,7 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 					systemId: newDualId.toString(),
 					eventType: "Dual",
 					name: teamEventObject.name || "Fort Mill vs " + (opponentName || ""),
-					date: combinedDateTime.toISOString(),
+					date: combinedDateTime,
 					location: teamEventObject.location || null,
 					state: "SC"
 				};

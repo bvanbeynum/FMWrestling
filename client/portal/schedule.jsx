@@ -38,6 +38,36 @@ const timeOptions = [
 	"06:00 PM", "06:30 PM", "07:00 PM", "07:30 PM", "08:00 PM", "08:30 PM", "09:00 PM"
 ];
 
+const parseEventDate = (dateInput) => {
+	if (!dateInput) return null;
+	if (dateInput instanceof Date) return dateInput;
+
+	const str = String(dateInput).trim();
+	const isoMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2}))?)?/);
+	if (isoMatch) {
+		const year = parseInt(isoMatch[1], 10);
+		const month = parseInt(isoMatch[2], 10) - 1;
+		const day = parseInt(isoMatch[3], 10);
+		const hours = isoMatch[4] ? parseInt(isoMatch[4], 10) : 0;
+		const minutes = isoMatch[5] ? parseInt(isoMatch[5], 10) : 0;
+		const seconds = isoMatch[6] ? parseInt(isoMatch[6], 10) : 0;
+
+		return new Date(year, month, day, hours, minutes, seconds);
+	}
+
+	return new Date(dateInput);
+};
+
+const formatFormDate = (dateInput) => {
+	if (!dateInput) return "";
+	const dateObj = parseEventDate(dateInput);
+	if (!dateObj || isNaN(dateObj.getTime())) return "";
+	const y = dateObj.getFullYear();
+	const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+	const d = String(dateObj.getDate()).padStart(2, '0');
+	return `${y}-${m}-${d}`;
+};
+
 const Schedule = props => {
 	const seasonOptions = getSeasonOptions(new Date());
 	const [ pageActive, setPageActive ] = useState(false);
@@ -83,9 +113,10 @@ const Schedule = props => {
 
 	useEffect(() => {
 		setIsLoading(true);
-		const seasonOption = seasonOptions.find(option => option.name === selectedSeason) || seasonOptions[1];
-		const startDateString = seasonOption.startDate;
-		const endDateString = seasonOption.endDate;
+		const earliestSeason = seasonOptions[seasonOptions.length - 1];
+		const latestSeason = seasonOptions[0];
+		const startDateString = earliestSeason.startDate;
+		const endDateString = latestSeason.endDate;
 		
 		let fetchUrl = `/api/scheduleload?startdate=${startDateString}&enddate=${endDateString}`;
 		if (selectedState !== "All") {
@@ -106,16 +137,16 @@ const Schedule = props => {
 				].map(eventItem => ({
 					...eventItem,
 					type: eventItem.eventSystem?.toLowerCase(),
-					date: new Date(eventItem.date),
-					endDate: eventItem.endDate ? new Date(eventItem.endDate) : null
+					date: parseEventDate(eventItem.date),
+					endDate: eventItem.endDate ? parseEventDate(eventItem.endDate) : null
 				}));
 
 				const loadedTeamEvents = [
 					...(responseData.teamEvents || [])
 				].map(teamEventItem => ({
 					...teamEventItem,
-					date: new Date(teamEventItem.date),
-					endDate: teamEventItem.endDate ? new Date(teamEventItem.endDate) : null
+					date: parseEventDate(teamEventItem.date),
+					endDate: teamEventItem.endDate ? parseEventDate(teamEventItem.endDate) : null
 				}));
 
 				setLoggedInUser(responseData.loggedInUser);
@@ -139,22 +170,15 @@ const Schedule = props => {
 				setPageActive(true);
 				setIsLoading(false);
 
-				const seasonStartDate = new Date(Date.parse(startDateString));
-				const seasonEndDate = new Date(Date.parse(endDateString));
 				const todayDate = new Date();
-				if (todayDate >= seasonStartDate && todayDate <= seasonEndDate) {
-					setViewDate(todayDate);
-					setSelectedDate(todayDate);
-				} else {
-					setViewDate(seasonStartDate);
-					setSelectedDate(seasonStartDate);
-				}
+				setViewDate(todayDate);
+				setSelectedDate(todayDate);
 			})
 			.catch(error => {
 				console.warn(error);
 				setIsLoading(false);
 			});
-	}, [selectedState, selectedSeason, reloadTrigger]);
+	}, [selectedState, reloadTrigger]);
 
 	const getEventCategory = (eventItem) => {
 		const system = (eventItem.eventSystem || "").toLowerCase();
@@ -168,43 +192,57 @@ const Schedule = props => {
 		return eventItem.category || "Tournament";
 	};
 
-	const filteredEvents = events.filter(eventItem => {
-		let matchesType = true;
-		if (selectedEventType !== "All") {
-			const category = getEventCategory(eventItem);
-			if (selectedEventType.toLowerCase() === "dual") {
-				matchesType = category.toLowerCase().includes("dual");
-			} else if (selectedEventType.toLowerCase() === "tournament") {
-				matchesType = category.toLowerCase().includes("tournament");
-			} else {
-				matchesType = category.toLowerCase() === selectedEventType.toLowerCase();
-			}
-		}
-		
-		return matchesType;
-	});
+	const filteredEvents = events;
+
+	const activeSeasonOption = seasonOptions.find(o => o.name === selectedSeason) || seasonOptions[1];
+	const seasonStart = parseEventDate(activeSeasonOption.startDate);
+	const seasonEnd = parseEventDate(activeSeasonOption.endDate + "T23:59:59");
 
 	const filteredTeamEvents = teamEvents.filter(teamEventItem => {
-		if (selectedDivision === "All") {
-			return true;
+		let matchesDivision = true;
+		if (selectedDivision !== "All") {
+			matchesDivision = (teamEventItem.division || "").toLowerCase() === selectedDivision.toLowerCase();
 		}
-		return (teamEventItem.division || "").toLowerCase() === selectedDivision.toLowerCase();
+		if (!matchesDivision) return false;
+
+		if (teamEventItem.date) {
+			const d = parseEventDate(teamEventItem.date);
+			return d >= seasonStart && d <= seasonEnd;
+		}
+		return true;
 	});
 
 	const isSameDay = (firstDate, secondDate) => {
 		if (!firstDate || !secondDate) return false;
-		return firstDate.getFullYear() === secondDate.getFullYear() &&
-			   firstDate.getMonth() === secondDate.getMonth() &&
-			   firstDate.getDate() === secondDate.getDate();
+		const d1 = parseEventDate(firstDate);
+		const d2 = parseEventDate(secondDate);
+		return d1.getFullYear() === d2.getFullYear() &&
+			   d1.getMonth() === d2.getMonth() &&
+			   d1.getDate() === d2.getDate();
 	};
 
+	const firstDayOfCurrentMonth = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1);
+	const firstDayOfNextMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1);
+
+	const hasPrevMonthEvents = events.some(e => {
+		const d = parseEventDate(e.date);
+		return d && d < firstDayOfCurrentMonth;
+	});
+
+	const hasNextMonthEvents = events.some(e => {
+		const d = parseEventDate(e.date);
+		return d && d >= firstDayOfNextMonth;
+	});
+
 	const handlePrevMonth = () => {
+		if (!hasPrevMonthEvents) return;
 		const newDate = new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1);
 		setViewDate(newDate);
 		setSelectedDate(newDate);
 	};
 
 	const handleNextMonth = () => {
+		if (!hasNextMonthEvents) return;
 		const newDate = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1);
 		setViewDate(newDate);
 		setSelectedDate(newDate);
@@ -306,7 +344,7 @@ const Schedule = props => {
 		setIsOpponentFocused(false);
 		setFormName("");
 		setFormDivision("Varsity");
-		setFormDate(selectedDate ? selectedDate.toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10));
+		setFormDate(selectedDate ? formatFormDate(selectedDate) : formatFormDate(new Date()));
 		setFormEndDate("");
 		setFormStartTime("");
 		setFormLocation("");
@@ -331,8 +369,8 @@ const Schedule = props => {
 
 		setFormName(teamEventItem.name || "");
 		setFormDivision(teamEventItem.division || "Varsity");
-		setFormDate(teamEventItem.date ? new Date(teamEventItem.date).toISOString().slice(0, 10) : "");
-		setFormEndDate(teamEventItem.endDate ? new Date(teamEventItem.endDate).toISOString().slice(0, 10) : "");
+		setFormDate(formatFormDate(teamEventItem.date));
+		setFormEndDate(formatFormDate(teamEventItem.endDate));
 		setFormStartTime(teamEventItem.startTime || "");
 		setFormLocation(teamEventItem.location || "");
 		setFormLinkedEventId(teamEventItem.eventId || "");
@@ -375,12 +413,34 @@ const Schedule = props => {
 
 	const handleFormSubmit = (submitEvent) => {
 		submitEvent.preventDefault();
+
+		let dateIso = null;
+		if (formDate) {
+			let hours = 0;
+			let minutes = 0;
+			if (formStartTime) {
+				const [time, modifier] = formStartTime.split(' ');
+				let [h, m] = time.split(':');
+				let hNum = parseInt(h, 10);
+				if (modifier === 'PM' && hNum < 12) hNum += 12;
+				if (modifier === 'AM' && hNum === 12) hNum = 0;
+				hours = hNum;
+				minutes = parseInt(m || "0", 10);
+			}
+			dateIso = `${formDate}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00.000Z`;
+		}
+
+		let endDateIso = null;
+		if (formEventType === "Tournament" && formEndDate) {
+			endDateIso = `${formEndDate}T00:00:00.000Z`;
+		}
+
 		const teamEventObject = {
 			eventType: formEventType,
 			name: formName,
 			division: formDivision,
-			date: formDate ? new Date(formDate) : null,
-			endDate: formEventType === "Tournament" && formEndDate ? new Date(formEndDate) : null,
+			date: dateIso,
+			endDate: endDateIso,
 			startTime: formStartTime,
 			location: formLocation,
 			eventId: formLinkedEventId || null,
@@ -511,29 +571,23 @@ const Schedule = props => {
 								<option value="All">All States</option>
 							</select>
 
-							<select 
-								value={ selectedSeason } 
-								onChange={ changeEvent => setSelectedSeason(changeEvent.target.value) }
-								aria-label="Filter Season"
-							>
-								{seasonOptions.map(option => (
-									<option key={option.name} value={option.name}>{option.name}</option>
-								))}
-							</select>
-
-							<select 
-								value={ selectedEventType } 
-								onChange={ changeEvent => setSelectedEventType(changeEvent.target.value) }
-								aria-label="Filter Event Type"
-							>
-								<option value="All">All Events</option>
-								<option value="Tournament">Tournament</option>
-								<option value="Dual">Dual</option>
-							</select>
-
 							<div className="monthNavGroup">
-								<button onClick={ handlePrevMonth } aria-label="Previous Month" className="navArrowBtn">&lt;</button>
-								<button onClick={ handleNextMonth } aria-label="Next Month" className="navArrowBtn">&gt;</button>
+								<button 
+									onClick={ handlePrevMonth } 
+									disabled={ !hasPrevMonthEvents }
+									aria-label="Previous Month" 
+									className={`navArrowBtn ${ !hasPrevMonthEvents ? "disabled" : "" }`}
+								>
+									&lt;
+								</button>
+								<button 
+									onClick={ handleNextMonth } 
+									disabled={ !hasNextMonthEvents }
+									aria-label="Next Month" 
+									className={`navArrowBtn ${ !hasNextMonthEvents ? "disabled" : "" }`}
+								>
+									&gt;
+								</button>
 							</div>
 
 							{ loggedInUser?.privileges?.includes("scheduleManage") && (
