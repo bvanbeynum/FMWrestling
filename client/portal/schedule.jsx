@@ -591,50 +591,42 @@ const Schedule = props => {
 																		</div>
 																	</div>
 																	<div className="timelineEventRight">
-																		{loggedInUser?.privileges?.includes("scheduleManage") && (
-																			<button 
-																				className="timelineEditBtn" 
-																				onClick={() => {
-																					if (teamEventItem.eventType?.toLowerCase() === "dual" || teamEventItem.dualId) {
-																						window.location.href = `/portal/dual.html?id=${teamEventItem.dualId}`;
-																					} else {
-																						openEditModal(teamEventItem);
-																					}
-																				}}
-																			>
-																				Edit
-																			</button>
-																		)}
 																		{(() => {
 																			const isDual = teamEventItem.eventType?.toLowerCase() === "dual" || teamEventItem.dualId;
 																			if (isDual) {
-																				if (!loggedInUser?.privileges?.includes("scheduleManage")) {
-																					return (
-																						<button
-																							className="timelineViewBtn"
-																							onClick={() => {
-																								window.location.href = `/portal/dual.html?id=${teamEventItem.dualId}`;
-																							}}
-																						>
-																							View
-																						</button>
-																					);
-																				}
-																				return null;
+																				return (
+																					<button
+																						className="timelineViewBtn"
+																						onClick={() => {
+																							window.location.href = `/portal/dual.html?id=${teamEventItem.dualId}`;
+																						}}
+																					>
+																						View
+																					</button>
+																				);
 																			} else {
-																				if (teamEventItem.eventId) {
-																					return (
-																						<button
-																							className="timelineViewBtn"
-																							onClick={() => {
-																								window.location.href = `/portal/tournamentsummary.html?id=${teamEventItem.eventId}`;
-																							}}
-																						>
-																							View
-																						</button>
-																					);
-																				}
-																				return null;
+																				return (
+																					<>
+																						{loggedInUser?.privileges?.includes("scheduleManage") && (
+																							<button 
+																								className="timelineEditBtn" 
+																								onClick={() => openEditModal(teamEventItem)}
+																							>
+																								Edit
+																							</button>
+																						)}
+																						{teamEventItem.eventId && (
+																							<button
+																								className="timelineViewBtn"
+																								onClick={() => {
+																									window.location.href = `/portal/tournamentsummary.html?id=${teamEventItem.eventId}`;
+																								}}
+																							>
+																								View
+																							</button>
+																						)}
+																					</>
+																				);
 																			}
 																		})()}
 																	</div>
@@ -781,7 +773,7 @@ const Schedule = props => {
 															className="eventActionBtn dual"
 															onClick={ () => { window.location.href = `/portal/dual.html?id=${ eventItem.systemId || eventItem.id || "" }`; } }
 														>
-															MANAGE LINEUP &rarr;
+															VIEW DUAL &rarr;
 														</button>
 													) : (
 														<>

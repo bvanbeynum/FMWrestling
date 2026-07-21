@@ -99,6 +99,7 @@ const SeasonChart = ({ dualsList }) => {
 		});
 
 		return {
+			id: dualItem.id || dualItem._id,
 			opponent: dualItem.opponent,
 			teamScore: scoreResult.teamScore,
 			opponentScore: scoreResult.opponentScore,
@@ -418,6 +419,11 @@ const SeasonChart = ({ dualsList }) => {
 								style={{ cursor: "pointer" }}
 								onMouseEnter={() => setHoveredIndex(i)}
 								onMouseLeave={() => setHoveredIndex(null)}
+								onClick={() => {
+									if (d.id) {
+										window.location.href = `/portal/dual.html?id=${d.id}`;
+									}
+								}}
 							/>
 						);
 					})}
@@ -503,20 +509,27 @@ const MatchDetailMatrix = ({ dualsList }) => {
 
 					const isMostRecentCompleted = mostRecentCompletedId && (dualItem.id === mostRecentCompletedId || dualItem._id === mostRecentCompletedId);
 
-					return (
-						<div 
-							key={dualItem.id || indexVal} 
-							className={`matrix-table-row ${isMostRecentCompleted ? "active-state-dual" : ""}`}
-						>
-							<div>{formattedDate}</div>
-							<div className="opponent-name-cell">{dualItem.opponent}</div>
-							<div className={`result-badge-cell ${resultValueText.toLowerCase()}`}>{resultValueText}</div>
-							<div className="score-cell-val" style={{ textAlign: "right" }}>{scoreDisplay}</div>
-							<div className={`score-cell-val ${isCompleted ? (scoreResult.teamScore >= scoreResult.opponentScore ? "positive-val" : "negative-val") : ""}`} style={{ textAlign: "right" }}>
-								{diffDisplay}
+						return (
+							<div 
+								key={dualItem.id || indexVal} 
+								className={`matrix-table-row ${isMostRecentCompleted ? "active-state-dual" : ""}`}
+								onClick={() => {
+									const targetId = dualItem.id || dualItem._id;
+									if (targetId) {
+										window.location.href = `/portal/dual.html?id=${targetId}`;
+									}
+								}}
+								style={{ cursor: "pointer" }}
+							>
+								<div>{formattedDate}</div>
+								<div className="opponent-name-cell">{dualItem.opponent}</div>
+								<div className={`result-badge-cell ${resultValueText.toLowerCase()}`}>{resultValueText}</div>
+								<div className="score-cell-val" style={{ textAlign: "right" }}>{scoreDisplay}</div>
+								<div className={`score-cell-val ${isCompleted ? (scoreResult.teamScore >= scoreResult.opponentScore ? "positive-val" : "negative-val") : ""}`} style={{ textAlign: "right" }}>
+									{diffDisplay}
+								</div>
 							</div>
-						</div>
-					);
+						);
 				})}
 			</div>
 		</div>
@@ -1039,13 +1052,13 @@ const WeightClassOverview = ({ dualsList }) => {
 
 			<div className="report-charts-row-single">
 				<div className="report-chart-card full-width">
-					<h3 className="chart-card-title">Weight Class Performance Trends</h3>
+					<h3 className="chart-card-title">Weight Class Performance</h3>
 					<WeightClassChart data={aggregatedData} />
 				</div>
 			</div>
 
 			<div className="weight-matrix-section">
-				<h3 className="matrix-section-title">Detailed Weight Classes Overview</h3>
+				<h3 className="matrix-section-title">Weight Class Depth</h3>
 				<WeightClassListCards data={aggregatedData} />
 			</div>
 		</div>
@@ -1210,7 +1223,7 @@ const DualReport = () => {
 
 								{/* Match detail table matrix section */}
 								<div className="report-matrix-section">
-									<h3 className="matrix-section-title">Match Detail Matrix</h3>
+									<h3 className="matrix-section-title">Duals</h3>
 									<MatchDetailMatrix dualsList={duals} />
 								</div>
 							</>
@@ -1255,19 +1268,6 @@ const DualReport = () => {
 								<path d="M16 3.13a4 4 0 0 1 0 7.75" />
 							</svg>
 							<span>Wrestlers</span>
-						</div>
-						<div 
-							className="navItem"
-							onClick={() => { window.location = "/portal/schedule.html"; }}
-						>
-							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-								<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
-								<path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
-								<path d="M4 22h16" />
-								<path d="M10 14.66V17c0 .55-.45 1-1 1H4v2h16v-2h-5c-.55 0-1-.45-1-1v-2.34" />
-								<path d="M12 2a5 5 0 0 0-5 5v4c0 1.25.78 2.3 1.87 2.7L12 16l3.13-2.3c1.09-.4 1.87-1.45 1.87-2.7V7a5 5 0 0 0-5-5z" />
-							</svg>
-							<span>Dual</span>
 						</div>
 					</div>
 					</>
