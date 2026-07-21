@@ -72,6 +72,8 @@ const Schedule = props => {
 	const [ opponentSelectGroup, setOpponentSelectGroup ] = useState([]);
 	const [ formEventType, setFormEventType ] = useState("Tournament");
 	const [ formOpponentId, setFormOpponentId ] = useState("");
+	const [ formOpponentName, setFormOpponentName ] = useState("");
+	const [ isOpponentFocused, setIsOpponentFocused ] = useState(false);
 
 	const [ eventSearchQuery, setEventSearchQuery ] = useState("");
 	const [ eventSearchResults, setEventSearchResults ] = useState([]);
@@ -300,6 +302,8 @@ const Schedule = props => {
 		setEditingEventId(null);
 		setFormEventType("Tournament");
 		setFormOpponentId("");
+		setFormOpponentName("");
+		setIsOpponentFocused(false);
 		setFormName("");
 		setFormDivision("Varsity");
 		setFormDate(selectedDate ? selectedDate.toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10));
@@ -318,7 +322,13 @@ const Schedule = props => {
 		setModalMode("edit");
 		setEditingEventId(teamEventItem.id);
 		setFormEventType(teamEventItem.eventType || (teamEventItem.dualId ? "Dual" : "Tournament"));
-		setFormOpponentId("");
+		
+		const oppName = teamEventItem.opponent || (teamEventItem.name ? teamEventItem.name.replace(/^Fort Mill vs\s*/i, "") : "");
+		setFormOpponentName(oppName);
+		const foundSch = schools.find(s => s.name.toLowerCase() === oppName.toLowerCase());
+		setFormOpponentId(foundSch ? foundSch.id : "");
+		setIsOpponentFocused(false);
+
 		setFormName(teamEventItem.name || "");
 		setFormDivision(teamEventItem.division || "Varsity");
 		setFormDate(teamEventItem.date ? new Date(teamEventItem.date).toISOString().slice(0, 10) : "");
@@ -363,17 +373,6 @@ const Schedule = props => {
 		setFormLinkedEventName("");
 	};
 
-	const handleFormOpponentChange = (e) => {
-		const schId = e.target.value;
-		setFormOpponentId(schId);
-		const found = schools.find(s => String(s.id) === String(schId) || String(s._id) === String(schId));
-		if (found) {
-			setFormName(`Fort Mill vs ${found.name}`);
-		} else {
-			setFormName("");
-		}
-	};
-
 	const handleFormSubmit = (submitEvent) => {
 		submitEvent.preventDefault();
 		const teamEventObject = {
@@ -393,13 +392,14 @@ const Schedule = props => {
 		}
 
 		const opponentRecord = schools.find(s => String(s.id) === String(formOpponentId));
+		const finalOpponent = opponentRecord ? opponentRecord.name : formOpponentName.trim();
 
 		fetch("/api/schedulesave", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ 
 				teamEvent: teamEventObject,
-				opponent: opponentRecord ? opponentRecord.name : ""
+				opponent: finalOpponent
 			})
 		})
 		.then(apiResponse => {
@@ -869,23 +869,55 @@ const Schedule = props => {
 
 					{/* Opponent Selection (Duals only) */}
 					{formEventType === "Dual" && (
-						<div className="formGroup">
-							<label htmlFor="eventOpponentSelect">Opponent *</label>
-							<select
-								id="eventOpponentSelect"
-								value={formOpponentId}
-								onChange={handleFormOpponentChange}
+						<div className="formGroup autocompleteGroup">
+							<label htmlFor="eventOpponentInput">Opponent *</label>
+							<input
+								type="text"
+								id="eventOpponentInput"
+								value={formOpponentName}
+								onChange={e => {
+									const val = e.target.value;
+									setFormOpponentName(val);
+									const found = schools.find(s => s.name.toLowerCase() === val.toLowerCase());
+									if (found) {
+										setFormOpponentId(found.id);
+									} else {
+										setFormOpponentId("");
+									}
+									if (!formName || formName.startsWith("Fort Mill vs ")) {
+										setFormName(val.trim() ? `Fort Mill vs ${val.trim()}` : "");
+									}
+								}}
+								onFocus={() => setIsOpponentFocused(true)}
+								onBlur={() => setTimeout(() => setIsOpponentFocused(false), 200)}
+								placeholder="Type or select opponent school..."
 								required
-							>
-								<option value="">Choose Opponent...</option>
-								{opponentSelectGroup.map((group, gIdx) => (
-									<optgroup key={gIdx} label={group.name}>
-										{group.schools.map((sch, sIdx) => (
-											<option key={sIdx} value={sch.id}>{sch.name}</option>
-										))}
-									</optgroup>
-								))}
-							</select>
+							/>
+							{isOpponentFocused && (
+								<ul className="autocompleteResultsList">
+									{schools
+										.filter(sch => sch.name.toLowerCase().includes((formOpponentName || "").toLowerCase()))
+										.map((sch, sIdx) => (
+											<li 
+												key={sch.id || sIdx}
+												onMouseDown={() => {
+													setFormOpponentName(sch.name);
+													setFormOpponentId(sch.id);
+													setFormName(`Fort Mill vs ${sch.name}`);
+													setIsOpponentFocused(false);
+												}}
+											>
+												<div style={{ fontWeight: 600 }}>{sch.name}</div>
+												{(sch.classification || sch.region) && (
+													<div style={{ fontSize: "0.75rem", color: "#64748b" }}>
+														{sch.classification || ""} {sch.region ? `• ${sch.region}` : ""}
+													</div>
+												)}
+											</li>
+										))
+									}
+								</ul>
+							)}
 						</div>
 					)}
 
