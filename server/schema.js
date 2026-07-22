@@ -281,6 +281,22 @@ export default {
 		eventType: String,
 		created: Date,
 		modified: Date
+	}),
+
+	parentEmail: mongoose.model("parentemail", {
+		email: String,
+		name: String,
+		isCoach: Boolean,
+		status: { type: String, default: "active" },
+		wrestlers: [{
+			name: String,
+			grade: String,
+			isVarsity: Boolean,
+			isJV: Boolean,
+			isMiddle: Boolean
+		}],
+		created: Date,
+		modified: Date
 	})
 	
 };

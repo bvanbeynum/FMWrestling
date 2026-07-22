@@ -1929,6 +1929,207 @@ export default {
 		output.status = 200;
 		output.data = { status: "ok" };
 		return output;
+	},
+
+	parentEmailGet: async (parentEmailFilter = {}) => {
+		const filterObject = {},
+			outputObject = {};
+
+		if (parentEmailFilter.id) {
+			filterObject["_id"] = mongoose.Types.ObjectId.isValid(parentEmailFilter.id) ? parentEmailFilter.id : null;
+		}
+		if (parentEmailFilter.status) {
+			filterObject.status = parentEmailFilter.status;
+		}
+		if (parentEmailFilter.searchQuery) {
+			const searchRegex = new RegExp(parentEmailFilter.searchQuery, "i");
+			filterObject["$or"] = [
+				{ name: searchRegex },
+				{ email: searchRegex },
+				{ "wrestlers.name": searchRegex }
+			];
+		}
+
+		try {
+			const recordsList = await data.parentEmail.find(filterObject).lean().exec();
+			outputObject.status = 200;
+			outputObject.data = { parentEmails: recordsList.map(({ _id, __v, ...recordData }) => ({ id: _id, ...recordData })) };
+		}
+		catch (errorObject) {
+			outputObject.status = 560;
+			outputObject.error = errorObject.message;
+		}
+
+		return outputObject;
+	},
+
+	parentEmailSave: async (saveObject) => {
+		const outputObject = {};
+
+		if (!saveObject) {
+			outputObject.status = 550;
+			outputObject.error = "Missing object to save";
+			return outputObject;
+		}
+
+		if (saveObject.id) {
+			let existingRecord = null;
+			try {
+				existingRecord = await data.parentEmail.findById(saveObject.id).exec();
+			}
+			catch (errorObject) {
+				outputObject.status = 560;
+				outputObject.error = errorObject.message;
+				return outputObject;
+			}
+
+			if (!existingRecord) {
+				outputObject.status = 561;
+				outputObject.error = "Record not found";
+				return outputObject;
+			}
+
+			try {
+				Object.keys(saveObject).forEach(fieldKey => {
+					if (fieldKey !== "id" && fieldKey !== "_id") {
+						existingRecord[fieldKey] = saveObject[fieldKey];
+					}
+				});
+				existingRecord.modified = new Date();
+
+				const savedRecord = await existingRecord.save();
+				outputObject.status = 200;
+				outputObject.data = { id: savedRecord._id };
+			}
+			catch (errorObject) {
+				outputObject.status = 562;
+				outputObject.error = errorObject.message;
+				return outputObject;
+			}
+		}
+		else {
+			let createdRecord = null;
+			try {
+				createdRecord = await (new data.parentEmail({
+					status: "active",
+					...saveObject,
+					created: new Date(),
+					modified: new Date()
+				})).save();
+			}
+			catch (errorObject) {
+				outputObject.status = 563;
+				outputObject.error = errorObject.message;
+				return outputObject;
+			}
+
+			outputObject.status = 200;
+			outputObject.data = { id: createdRecord._id };
+		}
+
+		return outputObject;
+	},
+
+	parentEmailDelete: async (recordId) => {
+		const outputObject = {};
+
+		if (!recordId || !mongoose.Types.ObjectId.isValid(recordId)) {
+			outputObject.status = 550;
+			outputObject.error = "Missing ID to delete";
+			return outputObject;
+		}
+
+		try {
+			await data.parentEmail.deleteOne({ _id: recordId });
+		}
+		catch (errorObject) {
+			outputObject.status = 560;
+			outputObject.error = errorObject.message;
+			return outputObject;
+		}
+
+		outputObject.status = 200;
+		outputObject.data = { status: "ok" };
+		return outputObject;
+	},
+
+	parentEmailBulkSave: async (recordsArray) => {
+		const outputObject = {};
+
+		if (!recordsArray || !Array.isArray(recordsArray) || recordsArray.length === 0) {
+			outputObject.status = 550;
+			outputObject.error = "Missing records to save";
+			return outputObject;
+		}
+
+		try {
+			const operationsArray = recordsArray.map(recordItem => {
+				const recordPayload = {
+					...recordItem,
+					status: recordItem.status || "active",
+					modified: new Date()
+				};
+
+				if (recordItem.id && mongoose.Types.ObjectId.isValid(recordItem.id)) {
+					return {
+						updateOne: {
+							filter: { _id: recordItem.id },
+							update: { $set: recordPayload }
+						}
+					};
+				}
+				else {
+					return {
+						insertOne: {
+							document: {
+								...recordPayload,
+								created: new Date()
+							}
+						}
+					};
+				}
+			});
+
+			await data.parentEmail.bulkWrite(operationsArray);
+			outputObject.status = 200;
+			outputObject.data = { status: "ok", count: recordsArray.length };
+		}
+		catch (errorObject) {
+			outputObject.status = 560;
+			outputObject.error = errorObject.message;
+		}
+
+		return outputObject;
+	},
+
+	parentEmailBulkStatus: async (recordIdsArray, targetStatusValue) => {
+		const outputObject = {};
+
+		if (!recordIdsArray || !Array.isArray(recordIdsArray) || recordIdsArray.length === 0) {
+			outputObject.status = 550;
+			outputObject.error = "Missing record IDs";
+			return outputObject;
+		}
+
+		try {
+			const validObjectIds = recordIdsArray
+				.filter(recordId => mongoose.Types.ObjectId.isValid(recordId))
+				.map(recordId => new mongoose.Types.ObjectId(recordId));
+
+			await data.parentEmail.updateMany(
+				{ _id: { $in: validObjectIds } },
+				{ $set: { status: targetStatusValue, modified: new Date() } }
+			);
+
+			outputObject.status = 200;
+			outputObject.data = { status: "ok" };
+		}
+		catch (errorObject) {
+			outputObject.status = 560;
+			outputObject.error = errorObject.message;
+		}
+
+		return outputObject;
 	}
 
 };

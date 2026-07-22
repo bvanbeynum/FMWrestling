@@ -18,9 +18,20 @@ export default {
 		duplicates: "./client/portal/duplicates.jsx",
 		noaccess: "./client/portal/noaccess.jsx",
 		tournamentsummary: "./client/portal/tournamentsummary.jsx",
-		dualreport: "./client/portal/dualreport.jsx"
+		dualreport: "./client/portal/dualreport.jsx",
+		parentemail: "./client/portal/parentemail.jsx"
 	},
 	plugins: [
+		new HtmlWebpackPlugin({ 
+			filename: "./portal/parentemail.html",
+			title: "Fort Mill Wrestling - Parent Email List",
+			favicon: "./client/media/favicon.ico",
+			meta: {
+				viewport: "width=device-width, initial-scale=1"
+			},
+			chunks: [ "parentemail" ],
+			templateContent: "<html><body><div id='root'></div></body></html>"
+		}),
 		new HtmlWebpackPlugin({ 
 			filename: "./portal/index.html",
 			title: "Fort Mill Wrestling - Portal",

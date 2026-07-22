@@ -492,4 +492,51 @@ router.post("/api/teameventdelete", authAPI, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 });
 
+// ***************** Parent Email ********************
+
+router.get("/api/parentemailload", authAPI, async (requestObject, responseObject) => {
+	if (!requestObject.user || !requestObject.user.privileges || (!requestObject.user.privileges.includes("parentManage") && !requestObject.user.privileges.includes("parentmanage"))) {
+		return responseObject.status(401).json({ error: "Unauthorized access" });
+	}
+
+	const resultsObject = await api.parentEmailLoad(requestObject.serverPath, requestObject.query.status);
+	responseObject.status(resultsObject.status).json(resultsObject.error ? { error: resultsObject.error } : { loggedInUser: requestObject.user, ...resultsObject.data });
+});
+
+router.post("/api/parentemailsave", authAPI, async (requestObject, responseObject) => {
+	if (!requestObject.user || !requestObject.user.privileges || (!requestObject.user.privileges.includes("parentManage") && !requestObject.user.privileges.includes("parentmanage"))) {
+		return responseObject.status(401).json({ error: "Unauthorized access" });
+	}
+
+	const resultsObject = await api.parentEmailSave(requestObject.body.saveRecord, requestObject.serverPath);
+	responseObject.status(resultsObject.status).json(resultsObject.error ? { error: resultsObject.error } : resultsObject.data);
+});
+
+router.post("/api/parentemailbulkupload", authAPI, async (requestObject, responseObject) => {
+	if (!requestObject.user || !requestObject.user.privileges || (!requestObject.user.privileges.includes("parentManage") && !requestObject.user.privileges.includes("parentmanage"))) {
+		return responseObject.status(401).json({ error: "Unauthorized access" });
+	}
+
+	const resultsObject = await api.parentEmailBulkUpload(requestObject.body.records, requestObject.serverPath);
+	responseObject.status(resultsObject.status).json(resultsObject.error ? { error: resultsObject.error } : resultsObject.data);
+});
+
+router.post("/api/parentemailbulkstatus", authAPI, async (requestObject, responseObject) => {
+	if (!requestObject.user || !requestObject.user.privileges || (!requestObject.user.privileges.includes("parentManage") && !requestObject.user.privileges.includes("parentmanage"))) {
+		return responseObject.status(401).json({ error: "Unauthorized access" });
+	}
+
+	const resultsObject = await api.parentEmailBulkStatus(requestObject.body.ids, requestObject.body.status, requestObject.serverPath);
+	responseObject.status(resultsObject.status).json(resultsObject.error ? { error: resultsObject.error } : resultsObject.data);
+});
+
+router.post("/api/parentemaildelete", authAPI, async (requestObject, responseObject) => {
+	if (!requestObject.user || !requestObject.user.privileges || (!requestObject.user.privileges.includes("parentManage") && !requestObject.user.privileges.includes("parentmanage"))) {
+		return responseObject.status(401).json({ error: "Unauthorized access" });
+	}
+
+	const resultsObject = await api.parentEmailDelete(requestObject.body.id, requestObject.serverPath);
+	responseObject.status(resultsObject.status).json(resultsObject.error ? { error: resultsObject.error } : resultsObject.data);
+});
+
 export default router;

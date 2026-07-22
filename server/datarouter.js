@@ -673,4 +673,68 @@ router.delete("/data/teamevent", authInternal, async (request, response) => {
 	}
 });
 
+router.get("/data/parentemail", authInternal, async (request, response) => {
+	try {
+		const results = await data.parentEmailGet({
+			id: request.query.id,
+			status: request.query.status,
+			searchQuery: request.query.searchquery
+		});
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		response.status(570).json({ error: error.message });
+	}
+});
+
+router.post("/data/parentemail", authInternal, async (request, response) => {
+	try {
+		const results = await data.parentEmailSave(request.body.parentEmail || request.body.parentemail || request.body.saveRecord);
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		response.status(570).json({ error: error.message });
+	}
+});
+
+router.post("/data/parentemail/bulk", authInternal, async (request, response) => {
+	try {
+		const results = await data.parentEmailBulkSave(request.body.records);
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		response.status(570).json({ error: error.message });
+	}
+});
+
+router.post("/data/parentemail/status", authInternal, async (request, response) => {
+	try {
+		const results = await data.parentEmailBulkStatus(request.body.ids, request.body.status);
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		response.status(570).json({ error: error.message });
+	}
+});
+
+router.delete("/data/parentemail", authInternal, async (request, response) => {
+	try {
+		const results = await data.parentEmailDelete(request.query.id);
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		response.status(570).json({ error: error.message });
+	}
+});
+
 export default router;

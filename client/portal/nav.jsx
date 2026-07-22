@@ -15,6 +15,9 @@ const Nav = props => {
 		else if (/(team|opponent|opponentevent|dualreport)/i.test(window.location)) {
 			setSubExpanded("team");
 		}
+		else if (/(parentemail)/i.test(window.location)) {
+			setSubExpanded("parent");
+		}
 	}, []);
 
 	useEffect(() => {
@@ -115,6 +118,27 @@ const Nav = props => {
 			: ""
 			}
 
+
+			</>
+			: ""
+			}
+
+			{
+			privileges.includes("parentManage") || privileges.includes("parentmanage") ?
+			<>
+
+			<li role="button" className="button" onClick={ () => setSubExpanded(subExpanded => subExpanded === "parent" ? null : "parent") } aria-label="Parent">
+				{/* Parent */}
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+					<path d="M480-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM160-160v-32q0-34 17.5-62.5T225-298q51-25 112.5-38.5T480-350q64 0 125.5 13.5T718-298q30 15 47.5 43.5T783-192v32H160Z"/>
+				</svg>
+
+				<span>Parent</span>
+			</li>
+
+			<li role="button" onClick={ () => window.location = "/portal/parentemail.html" } className={`button sub ${ subExpanded === "parent" ? "active" : "" }`} aria-label="Email List">
+				<span>Email List</span>
+			</li>
 
 			</>
 			: ""

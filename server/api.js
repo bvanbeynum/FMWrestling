@@ -2484,6 +2484,220 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 			output.error = error.message;
 		}
 		return output;
+	},
+
+	parentEmailLoad: async (serverPathString, statusFilterString) => {
+		const outputObject = { data: { parentEmails: [] } };
+
+		try {
+			await seedParentEmailsIfEmpty(serverPathString);
+
+			let requestUrlString = `${serverPathString}/data/parentemail`;
+			if (statusFilterString && statusFilterString !== "all") {
+				requestUrlString += `?status=${encodeURIComponent(statusFilterString)}`;
+			}
+
+			const clientResponse = await client.get(requestUrlString);
+			outputObject.data.parentEmails = clientResponse.body.parentEmails || [];
+			outputObject.status = 200;
+		}
+		catch (errorObject) {
+			outputObject.status = 500;
+			outputObject.error = errorObject.message;
+		}
+
+		return outputObject;
+	},
+
+	parentEmailSave: async (saveRecordObject, serverPathString) => {
+		const outputObject = {};
+
+		try {
+			const clientResponse = await client.post(`${serverPathString}/data/parentemail`).send({ parentEmail: saveRecordObject });
+			outputObject.status = 200;
+			outputObject.data = clientResponse.body;
+		}
+		catch (errorObject) {
+			outputObject.status = 500;
+			outputObject.error = errorObject.message;
+		}
+
+		return outputObject;
+	},
+
+	parentEmailBulkUpload: async (recordsArrayList, serverPathString) => {
+		const outputObject = {};
+
+		try {
+			const clientResponse = await client.post(`${serverPathString}/data/parentemail/bulk`).send({ records: recordsArrayList });
+			outputObject.status = 200;
+			outputObject.data = clientResponse.body;
+		}
+		catch (errorObject) {
+			outputObject.status = 500;
+			outputObject.error = errorObject.message;
+		}
+
+		return outputObject;
+	},
+
+	parentEmailBulkStatus: async (recordIdsArrayList, targetStatusString, serverPathString) => {
+		const outputObject = {};
+
+		try {
+			const clientResponse = await client.post(`${serverPathString}/data/parentemail/status`).send({ ids: recordIdsArrayList, status: targetStatusString });
+			outputObject.status = 200;
+			outputObject.data = clientResponse.body;
+		}
+		catch (errorObject) {
+			outputObject.status = 500;
+			outputObject.error = errorObject.message;
+		}
+
+		return outputObject;
+	},
+
+	parentEmailDelete: async (recordIdString, serverPathString) => {
+		const outputObject = {};
+
+		try {
+			const clientResponse = await client.delete(`${serverPathString}/data/parentemail?id=${recordIdString}`);
+			outputObject.status = 200;
+			outputObject.data = clientResponse.body;
+		}
+		catch (errorObject) {
+			outputObject.status = 500;
+			outputObject.error = errorObject.message;
+		}
+
+		return outputObject;
 	}
 
+};
+
+const parseCsvTextContent = (csvTextContent) => {
+	const resultRowsList = [];
+	let currentRowFieldsList = [];
+	let currentFieldString = "";
+	let isInsideQuotes = false;
+
+	for (let characterIndex = 0; characterIndex < csvTextContent.length; characterIndex++) {
+		const currentCharacter = csvTextContent[characterIndex];
+		const nextCharacter = csvTextContent[characterIndex + 1];
+
+		if (currentCharacter === '"') {
+			if (isInsideQuotes && nextCharacter === '"') {
+				currentFieldString += '"';
+				characterIndex++;
+			} else {
+				isInsideQuotes = !isInsideQuotes;
+			}
+		} else if (currentCharacter === ',' && !isInsideQuotes) {
+			currentRowFieldsList.push(currentFieldString.trim());
+			currentFieldString = "";
+		} else if ((currentCharacter === '\r' || currentCharacter === '\n') && !isInsideQuotes) {
+			if (currentCharacter === '\r' && nextCharacter === '\n') {
+				characterIndex++;
+			}
+			currentRowFieldsList.push(currentFieldString.trim());
+			if (currentRowFieldsList.some(fieldValue => fieldValue.length > 0)) {
+				resultRowsList.push(currentRowFieldsList);
+			}
+			currentRowFieldsList = [];
+			currentFieldString = "";
+		} else {
+			currentFieldString += currentCharacter;
+		}
+	}
+
+	if (currentFieldString.length > 0 || currentRowFieldsList.length > 0) {
+		currentRowFieldsList.push(currentFieldString.trim());
+		if (currentRowFieldsList.some(fieldValue => fieldValue.length > 0)) {
+			resultRowsList.push(currentRowFieldsList);
+		}
+	}
+
+	return resultRowsList;
+};
+
+const seedParentEmailsIfEmpty = async (serverPathString) => {
+	try {
+		const existingCheckResponse = await client.get(`${serverPathString}/data/parentemail`);
+		if (existingCheckResponse.body && existingCheckResponse.body.parentEmails && existingCheckResponse.body.parentEmails.length > 0) {
+			return;
+		}
+
+		const csvFilePathString = path.resolve(process.cwd(), "working", "Team Email.csv");
+		if (!fs.existsSync(csvFilePathString)) {
+			return;
+		}
+
+		const fileContentString = fs.readFileSync(csvFilePathString, "utf8");
+		const rowsArrayList = parseCsvTextContent(fileContentString);
+
+		if (rowsArrayList.length <= 1) return;
+
+		const headerRowArray = rowsArrayList[0].map(headerName => headerName.trim().toLowerCase());
+
+		const getColumnIndex = (columnNameSearch) => headerRowArray.findIndex(headerName => headerName.includes(columnNameSearch.toLowerCase()));
+
+		const emailIndexNumber = getColumnIndex("emails");
+		const nameIndexNumber = getColumnIndex("name");
+		const wrestlersIndexNumber = getColumnIndex("wrestlers");
+		const coachIndexNumber = getColumnIndex("coach");
+		const varsityIndexNumber = getColumnIndex("varsity");
+		const jvIndexNumber = getColumnIndex("jv");
+		const middleIndexNumber = getColumnIndex("middle");
+		const gradeIndexNumber = getColumnIndex("grade");
+
+		const recordsToInsertList = [];
+
+		for (let rowIndexNumber = 1; rowIndexNumber < rowsArrayList.length; rowIndexNumber++) {
+			const currentRowArray = rowsArrayList[rowIndexNumber];
+			if (!currentRowArray || currentRowArray.length === 0) continue;
+
+			const rawEmailString = emailIndexNumber !== -1 && currentRowArray[emailIndexNumber] ? currentRowArray[emailIndexNumber].trim() : "";
+			const rawNameString = nameIndexNumber !== -1 && currentRowArray[nameIndexNumber] ? currentRowArray[nameIndexNumber].trim() : "";
+
+			if (!rawEmailString && !rawNameString) continue;
+
+			const isCoachBoolean = coachIndexNumber !== -1 && (currentRowArray[coachIndexNumber] || "").trim().toUpperCase() === "Y";
+
+			const rawWrestlersString = wrestlersIndexNumber !== -1 ? (currentRowArray[wrestlersIndexNumber] || "").trim() : "";
+			const rawGradesString = gradeIndexNumber !== -1 ? (currentRowArray[gradeIndexNumber] || "").trim() : "";
+
+			const wrestlerNamesList = rawWrestlersString ? rawWrestlersString.split(/;|,/).map(wrestlerNameItem => wrestlerNameItem.trim()).filter(Boolean) : [];
+			const gradeValuesList = rawGradesString ? rawGradesString.split(/;|,/).map(gradeItem => gradeItem.trim()).filter(Boolean) : [];
+
+			const isVarsityBoolean = varsityIndexNumber !== -1 && (currentRowArray[varsityIndexNumber] || "").trim().toUpperCase() === "Y";
+			const isJvBoolean = jvIndexNumber !== -1 && (currentRowArray[jvIndexNumber] || "").trim().toUpperCase() === "Y";
+			const isMiddleBoolean = middleIndexNumber !== -1 && (currentRowArray[middleIndexNumber] || "").trim().toUpperCase() === "Y";
+
+			const wrestlersSubDocumentsList = wrestlerNamesList.map((wrestlerNameString, wrestlerIndex) => {
+				const assignedGradeString = gradeValuesList[wrestlerIndex] || gradeValuesList[0] || "";
+				return {
+					name: wrestlerNameString,
+					grade: assignedGradeString,
+					isVarsity: isVarsityBoolean,
+					isJV: isJvBoolean,
+					isMiddle: isMiddleBoolean
+				};
+			});
+
+			recordsToInsertList.push({
+				email: rawEmailString,
+				name: rawNameString,
+				isCoach: isCoachBoolean,
+				status: "active",
+				wrestlers: wrestlersSubDocumentsList
+			});
+		}
+
+		if (recordsToInsertList.length > 0) {
+			await client.post(`${serverPathString}/data/parentemail/bulk`).send({ records: recordsToInsertList });
+		}
+	}
+	catch (seedErrorObject) {
+		console.warn("Error seeding parent emails:", seedErrorObject.message);
+	}
 };
