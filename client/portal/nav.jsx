@@ -12,7 +12,7 @@ const Nav = props => {
 		if (/(users|roles|request)/i.test(window.location)) {
 			setSubExpanded("user");
 		}
-		else if (/(team|opponent|opponentevent|myteam|teamcompare|dualreport)/i.test(window.location)) {
+		else if (/(team|opponent|opponentevent|dualreport)/i.test(window.location)) {
 			setSubExpanded("team");
 		}
 	}, []);
@@ -115,21 +115,6 @@ const Nav = props => {
 			: ""
 			}
 
-			{
-			privileges.includes("myteam") ?
-			<li role="button" onClick={ () => window.location = "/portal/myteam.html" } className={`button sub ${ subExpanded === "team" ? "active" : "" }`} aria-label="My Team">
-			<span>My Team</span>
-			</li>
-			: ""
-			}
-
-			{
-			privileges.includes("teamManage") ?
-			<li role="button" onClick={ () => window.location = "/portal/teamcompare.html" } className={`button sub ${ subExpanded === "team" ? "active" : "" }`} aria-label="Team Comparison">
-			<span>Compare</span>
-			</li>
-			: ""
-			}
 
 			</>
 			: ""
