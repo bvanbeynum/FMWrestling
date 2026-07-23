@@ -2130,6 +2130,121 @@ export default {
 		}
 
 		return outputObject;
+	},
+
+	serverConfigGet: async (filterObject = {}) => {
+		const filter = {};
+		const output = {};
+
+		if (filterObject.id) {
+			filter["_id"] = mongoose.Types.ObjectId.isValid(filterObject.id) ? filterObject.id : null;
+		}
+		if (filterObject.key) {
+			filter.key = filterObject.key;
+		}
+
+		try {
+			const records = await data.serverConfig.find(filter).lean().exec();
+			output.status = 200;
+			output.data = { serverConfigs: records.map(({ _id, __v, ...data }) => ({ id: _id, ...data })) };
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+		}
+
+		return output;
+	},
+
+	serverConfigSave: async (saveObject) => {
+		const output = {};
+
+		if (!saveObject) {
+			output.status = 550;
+			output.error = "Missing object to save";
+			return output;
+		}
+
+		if (saveObject.id || saveObject.key) {
+			let record = null;
+			try {
+				if (saveObject.id) {
+					record = await data.serverConfig.findById(saveObject.id).exec();
+				} else if (saveObject.key) {
+					record = await data.serverConfig.findOne({ key: saveObject.key }).exec();
+				}
+			}
+			catch (error) {
+				output.status = 560;
+				output.error = error.message;
+				return output;
+			}
+
+			if (record) {
+				try {
+					Object.keys(saveObject).forEach(field => {
+						if (field !== "id" && field !== "_id") {
+							record[field] = saveObject[field];
+						}
+					});
+					record.modified = new Date();
+
+					record = await record.save();
+					output.status = 200;
+					output.data = { id: record._id, key: record.key };
+					return output;
+				}
+				catch (error) {
+					output.status = 562;
+					output.error = error.message;
+					return output;
+				}
+			}
+		}
+
+		let record = null;
+		try {
+			record = await (new data.serverConfig({ ...saveObject, created: new Date(), modified: new Date() })).save();
+		}
+		catch (error) {
+			output.status = 563;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		output.data = { id: record._id, key: record.key };
+		return output;
+	},
+
+	serverConfigDelete: async (idOrKey) => {
+		const output = {};
+
+		if (!idOrKey) {
+			output.status = 550;
+			output.error = "Missing ID or Key to delete";
+			return output;
+		}
+
+		const filter = {};
+		if (mongoose.Types.ObjectId.isValid(idOrKey)) {
+			filter._id = idOrKey;
+		} else {
+			filter.key = idOrKey;
+		}
+
+		try {
+			await data.serverConfig.deleteOne(filter);
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		output.data = { status: "ok" };
+		return output;
 	}
 
 };

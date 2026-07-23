@@ -539,4 +539,52 @@ router.post("/api/parentemaildelete", authAPI, async (requestObject, responseObj
 	responseObject.status(resultsObject.status).json(resultsObject.error ? { error: resultsObject.error } : resultsObject.data);
 });
 
+// ***************** AI Email & Google OAuth ********************
+
+router.get("/api/aiemailgoogleauth", async (requestObject, responseObject) => {
+	await api.authGoogle(requestObject, responseObject);
+});
+
+router.get("/api/aiemailgoogleauthcallback", async (requestObject, responseObject) => {
+	await api.authGoogleCallback(requestObject, responseObject);
+});
+
+router.get("/api/aiemailstatus", authAPI, async (requestObject, responseObject) => {
+	if (!requestObject.user || !requestObject.user.privileges || (!requestObject.user.privileges.includes("parentManage") && !requestObject.user.privileges.includes("parentmanage"))) {
+		return responseObject.status(401).json({ error: "Unauthorized access" });
+	}
+
+	const resultsObject = await api.aiEmailGetStatus(requestObject.serverPath);
+	responseObject.status(resultsObject.status || 200).json(resultsObject);
+});
+
+router.get("/api/aiemailinbox", authAPI, async (requestObject, responseObject) => {
+	if (!requestObject.user || !requestObject.user.privileges || (!requestObject.user.privileges.includes("parentManage") && !requestObject.user.privileges.includes("parentmanage"))) {
+		return responseObject.status(401).json({ error: "Unauthorized access" });
+	}
+
+	const resultsObject = await api.aiEmailLoadInbox(requestObject.serverPath);
+	responseObject.status(resultsObject.status || 200).json(resultsObject.error ? { error: resultsObject.error } : resultsObject);
+});
+
+router.post("/api/aiemailgenerate", authAPI, async (requestObject, responseObject) => {
+	if (!requestObject.user || !requestObject.user.privileges || (!requestObject.user.privileges.includes("parentManage") && !requestObject.user.privileges.includes("parentmanage"))) {
+		return responseObject.status(401).json({ error: "Unauthorized access" });
+	}
+
+	const { subject, body, from } = requestObject.body;
+	const resultsObject = await api.aiEmailGenerateResponse(subject, body, from);
+	responseObject.status(resultsObject.status || 200).json(resultsObject.error ? { error: resultsObject.error } : resultsObject);
+});
+
+router.post("/api/aiemailsend", authAPI, async (requestObject, responseObject) => {
+	if (!requestObject.user || !requestObject.user.privileges || (!requestObject.user.privileges.includes("parentManage") && !requestObject.user.privileges.includes("parentmanage"))) {
+		return responseObject.status(401).json({ error: "Unauthorized access" });
+	}
+
+	const { messageId, recipients, subject, body } = requestObject.body;
+	const resultsObject = await api.aiEmailSendAndArchive(requestObject.serverPath, messageId, recipients, subject, body);
+	responseObject.status(resultsObject.status || 200).json(resultsObject.error ? { error: resultsObject.error } : resultsObject);
+});
+
 export default router;

@@ -1,5 +1,6 @@
 import client from "superagent";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import config from "./config.js";
 import { google } from "googleapis";
 import nodemailer from "nodemailer";
@@ -2571,6 +2572,383 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 		}
 
 		return outputObject;
+	},
+
+	authGoogle: async (request, response) => {
+		const googleAuthorizationUrl = "https://accounts.google.com/o/oauth2/v2/auth";
+		const scopes = [
+			"https://www.googleapis.com/auth/userinfo.profile",
+			"https://www.googleapis.com/auth/userinfo.email",
+			"https://www.googleapis.com/auth/gmail.modify"
+		];
+
+		const rawHost = request.get("x-forwarded-host") || request.get("host") || "";
+		const host = rawHost.split(":")[0];
+		let protocol = request.get("x-forwarded-proto") || request.protocol || "https";
+		if (host.includes("beynum.com")) {
+			protocol = "https";
+		}
+		const constructedUri = `${protocol}://${rawHost}/api/aiemailgoogleauthcallback`;
+
+		let redirectUri = constructedUri;
+		if (config.google && config.google.redirect_uris && config.google.redirect_uris.length > 0) {
+			const matched = config.google.redirect_uris.find(uri => uri === constructedUri);
+			if (matched) {
+				redirectUri = matched;
+			} else {
+				const matchedHost = config.google.redirect_uris.find(uri => uri.includes(host));
+				redirectUri = matchedHost || config.google.redirect_uris[0];
+			}
+		}
+
+		const query = {
+			client_id: config.google.client_id,
+			redirect_uri: redirectUri,
+			response_type: "code",
+			scope: scopes.join(" "),
+			access_type: "offline",
+			prompt: "consent",
+			state: request.query.state || "vtp"
+		};
+
+		const queryString = new URLSearchParams(query).toString();
+		const authorizationUrl = `${googleAuthorizationUrl}?${queryString}`;
+		response.redirect(authorizationUrl);
+	},
+
+	authGoogleCallback: async (request, response) => {
+		if (request.query.error) {
+			return response.send(`
+				<html>
+					<body>
+						<script>
+							if (window.opener) {
+								window.opener.postMessage({ error: "${request.query.error}" }, '*');
+							}
+							window.close();
+						</script>
+						<p>Authentication error: ${request.query.error}</p>
+					</body>
+				</html>
+			`);
+		}
+
+		try {
+			const authorizationCode = request.query.code;
+			const rawHost = request.get("x-forwarded-host") || request.get("host") || "";
+			const host = rawHost.split(":")[0];
+			let protocol = request.get("x-forwarded-proto") || request.protocol || "https";
+			if (host.includes("beynum.com")) {
+				protocol = "https";
+			}
+			const constructedUri = `${protocol}://${rawHost}/api/aiemailgoogleauthcallback`;
+
+			let redirectUri = constructedUri;
+			if (config.google && config.google.redirect_uris && config.google.redirect_uris.length > 0) {
+				const matched = config.google.redirect_uris.find(uri => uri === constructedUri);
+				if (matched) {
+					redirectUri = matched;
+				} else {
+					const matchedHost = config.google.redirect_uris.find(uri => uri.includes(host));
+					redirectUri = matchedHost || config.google.redirect_uris[0];
+				}
+			}
+
+			const tokenResponse = await client
+				.post(config.google.token_uri)
+				.send({
+					code: authorizationCode,
+					client_id: config.google.client_id,
+					client_secret: config.google.client_secret,
+					redirect_uri: redirectUri,
+					grant_type: "authorization_code",
+				});
+
+			const accessToken = tokenResponse.body.access_token;
+			const refreshToken = tokenResponse.body.refresh_token;
+			const expiresIn = tokenResponse.body.expires_in;
+			const expirationDate = new Date(new Date().getTime() + expiresIn * 1000);
+
+			const userProfileResponse = await client
+				.get("https://www.googleapis.com/oauth2/v2/userinfo")
+				.set("Authorization", `Bearer ${accessToken}`);
+
+			const algorithm = 'aes-256-cbc';
+			const keyString = config.sessionSecret || config.jwt || "fortmill_wrestling_session_secret_key_123456789";
+			const key = crypto.createHash('sha256').update(keyString).digest();
+			const iv = crypto.randomBytes(16);
+			const cipher = crypto.createCipheriv(algorithm, key, iv);
+			let encrypted = cipher.update(refreshToken || "");
+			encrypted = Buffer.concat([encrypted, cipher.final()]);
+			const encryptedRefreshToken = iv.toString('hex') + ':' + encrypted.toString('hex');
+
+			const saveConfigRecord = {
+				key: "googleAuth",
+				value: {
+					googleEmail: userProfileResponse.body?.email || "",
+					googleName: userProfileResponse.body?.name || "",
+					refreshToken: encryptedRefreshToken,
+					refreshExpireDate: expirationDate,
+					connectedAt: new Date()
+				}
+			};
+
+			const serverPathString = `${request.protocol}://${request.get("host")}`;
+			await client.post(`${serverPathString}/data/serverconfig`).send({ serverConfig: saveConfigRecord });
+
+			const outputPayload = {
+				success: true,
+				googleEmail: userProfileResponse.body?.email,
+				googleName: userProfileResponse.body?.name
+			};
+
+			response.send(`
+				<html>
+					<body>
+						<script>
+							if (window.opener) {
+								window.opener.postMessage(${JSON.stringify(outputPayload)}, '*');
+							}
+							window.close();
+						</script>
+						<p>Authenticated successfully. You can close this window.</p>
+					</body>
+				</html>
+			`);
+		} catch (error) {
+			response.send(`
+				<html>
+					<body>
+						<script>
+							if (window.opener) {
+								window.opener.postMessage({ error: "${error.message}" }, '*');
+							}
+							window.close();
+						</script>
+						<p>An error occurred: ${error.message}</p>
+					</body>
+				</html>
+			`);
+		}
+	},
+
+	aiEmailGetStatus: async (serverPathString) => {
+		try {
+			const configResponse = await client.get(`${serverPathString}/data/serverconfig?key=googleAuth`);
+			const serverConfigs = configResponse.body && configResponse.body.serverConfigs;
+			if (serverConfigs && serverConfigs.length > 0 && serverConfigs[0].value && serverConfigs[0].value.refreshToken) {
+				const configVal = serverConfigs[0].value;
+				return {
+					connected: true,
+					googleEmail: configVal.googleEmail || "",
+					googleName: configVal.googleName || "",
+					connectedAt: configVal.connectedAt
+				};
+			}
+			return { connected: false };
+		} catch (error) {
+			return { connected: false, error: error.message };
+		}
+	},
+
+	aiEmailLoadInbox: async (serverPathString) => {
+		try {
+			const configResponse = await client.get(`${serverPathString}/data/serverconfig?key=googleAuth`);
+			const serverConfigs = configResponse.body && configResponse.body.serverConfigs;
+			if (!serverConfigs || serverConfigs.length === 0 || !serverConfigs[0].value || !serverConfigs[0].value.refreshToken) {
+				return { error: "Google account not connected", status: 401 };
+			}
+
+			const googleAuthVal = serverConfigs[0].value;
+			const algorithm = 'aes-256-cbc';
+			const keyString = config.sessionSecret || config.jwt || "fortmill_wrestling_session_secret_key_123456789";
+			const key = crypto.createHash('sha256').update(keyString).digest();
+			const textParts = googleAuthVal.refreshToken.split(':');
+			const iv = Buffer.from(textParts.shift(), 'hex');
+			const encryptedBuffer = Buffer.from(textParts.join(':'), 'hex');
+			const decipher = crypto.createDecipheriv(algorithm, key, iv);
+			let decrypted = decipher.update(encryptedBuffer);
+			decrypted = Buffer.concat([decrypted, decipher.final()]);
+			const decryptedRefreshToken = decrypted.toString();
+
+			const oAuth2Client = new google.auth.OAuth2(
+				config.google.client_id,
+				config.google.client_secret,
+				config.google.redirect_uris[0]
+			);
+			oAuth2Client.setCredentials({ refresh_token: decryptedRefreshToken });
+
+			const Gmail = google.gmail({ version: 'v1', auth: oAuth2Client });
+			const listResponse = await Gmail.users.messages.list({
+				userId: 'me',
+				q: 'label:INBOX'
+			});
+
+			if (!listResponse.data.messages || listResponse.data.messages.length === 0) {
+				return { messages: [] };
+			}
+
+			const messagesList = [];
+			for (const msgItem of listResponse.data.messages) {
+				const emailResponse = await Gmail.users.messages.get({
+					userId: 'me',
+					id: msgItem.id,
+					format: 'full'
+				});
+
+				const headers = emailResponse.data.payload?.headers || [];
+				const subjectHeader = headers.find(h => h.name.toLowerCase() === 'subject');
+				const fromHeader = headers.find(h => h.name.toLowerCase() === 'from');
+				const dateHeader = headers.find(h => h.name.toLowerCase() === 'date');
+
+				let body = '';
+				if (emailResponse.data.payload.parts) {
+					const part = emailResponse.data.payload.parts.find(p => p.mimeType === 'text/plain');
+					if (part && part.body && part.body.data) {
+						body = Buffer.from(part.body.data, 'base64').toString('utf-8');
+					}
+				} else if (emailResponse.data.payload.body && emailResponse.data.payload.body.data) {
+					body = Buffer.from(emailResponse.data.payload.body.data, 'base64').toString('utf-8');
+				}
+
+				if (!body) {
+					body = emailResponse.data.snippet || '';
+				}
+
+				messagesList.push({
+					id: msgItem.id,
+					threadId: msgItem.threadId,
+					subject: subjectHeader ? subjectHeader.value : '(No Subject)',
+					from: fromHeader ? fromHeader.value : 'Unknown Sender',
+					date: dateHeader ? dateHeader.value : '',
+					snippet: emailResponse.data.snippet || '',
+					body: body
+				});
+			}
+
+			return { messages: messagesList };
+		} catch (error) {
+			return { error: error.message, status: 500 };
+		}
+	},
+
+	aiEmailGenerateResponse: async (emailSubjectString, emailBodyString, emailSenderString) => {
+		const API_KEY = config.geminiAPIKey;
+		if (!API_KEY) {
+			return { error: "GEMINI_API_KEY not configured", status: 500 };
+		}
+
+		const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
+
+		const prompt = `
+You are a helpful team parent coordinator for the Fort Mill High School Wrestling Team. 
+Your task is to review the following email received in our team inbox and draft a friendly, professional, clear, and informative response to be sent out to team parents or back to the sender.
+
+Original Email Details:
+From: ${emailSenderString || "Parent / Coach"}
+Subject: ${emailSubjectString || "Team Update"}
+Body:
+---
+${emailBodyString || "(No body text)"}
+---
+
+Instructions for response:
+- Tone: Friendly, supportive, athletic, clear, and encouraging.
+- Format: Plain text with clean formatting ready for email body. Start with a warm greeting like "Hi Team Parents,".
+- Use clear bullet points if dates, times, gear, or locations are involved.
+- Add relevant emojis to make it approachable.
+- Do NOT include any un-filled placeholders like [Your Name] or [Insert Date].
+- Keep the response clear, accurate, and directly aligned with the original message content.
+`;
+
+		const requestBody = { "contents": [{ "parts": [{ "text": prompt }] }] };
+
+		try {
+			const response = await client.post(url)
+				.send(requestBody)
+				.set('Content-Type', 'application/json');
+
+			if (response.status === 200 && response.body.candidates && response.body.candidates[0].content.parts[0].text) {
+				return { text: response.body.candidates[0].content.parts[0].text };
+			} else {
+				return { error: `Gemini API returned status ${response.status}`, status: 580 };
+			}
+		} catch (error) {
+			return { error: error.message, status: 580 };
+		}
+	},
+
+	aiEmailSendAndArchive: async (serverPathString, messageIdString, recipientEmailsList, subjectString, bodyHtmlString) => {
+		try {
+			if (!messageIdString || !recipientEmailsList || recipientEmailsList.length === 0) {
+				return { error: "Missing message ID or recipient emails", status: 400 };
+			}
+
+			const configResponse = await client.get(`${serverPathString}/data/serverconfig?key=googleAuth`);
+			const serverConfigs = configResponse.body && configResponse.body.serverConfigs;
+			if (!serverConfigs || serverConfigs.length === 0 || !serverConfigs[0].value || !serverConfigs[0].value.refreshToken) {
+				return { error: "Google account not connected", status: 401 };
+			}
+
+			const googleAuthVal = serverConfigs[0].value;
+			const algorithm = 'aes-256-cbc';
+			const keyString = config.sessionSecret || config.jwt || "fortmill_wrestling_session_secret_key_123456789";
+			const key = crypto.createHash('sha256').update(keyString).digest();
+			const textParts = googleAuthVal.refreshToken.split(':');
+			const iv = Buffer.from(textParts.shift(), 'hex');
+			const encryptedBuffer = Buffer.from(textParts.join(':'), 'hex');
+			const decipher = crypto.createDecipheriv(algorithm, key, iv);
+			let decrypted = decipher.update(encryptedBuffer);
+			decrypted = Buffer.concat([decrypted, decipher.final()]);
+			const decryptedRefreshToken = decrypted.toString();
+
+			const oAuth2Client = new google.auth.OAuth2(
+				config.google.client_id,
+				config.google.client_secret,
+				config.google.redirect_uris[0]
+			);
+			oAuth2Client.setCredentials({ refresh_token: decryptedRefreshToken });
+
+			const Gmail = google.gmail({ version: 'v1', auth: oAuth2Client });
+
+			const boundary = `----=_Part_${Math.random().toString().slice(2)}`;
+			const emailLines = [
+				`Subject: ${subjectString || "Fort Mill Wrestling Update"}`,
+				`Bcc: ${recipientEmailsList.join(',')}`,
+				'MIME-Version: 1.0',
+				`Content-Type: multipart/mixed; boundary="${boundary}"`,
+				'',
+				`--${boundary}`,
+				'Content-Type: text/html; charset="UTF-8"',
+				'Content-Transfer-Encoding: 7bit',
+				'',
+				bodyHtmlString,
+				'',
+				`--${boundary}--`
+			];
+
+			const rawEmailString = emailLines.join('\r\n');
+			const base64EncodedEmail = Buffer.from(rawEmailString).toString('base64url');
+
+			await Gmail.users.messages.send({
+				userId: 'me',
+				requestBody: {
+					raw: base64EncodedEmail
+				}
+			});
+
+			await Gmail.users.messages.modify({
+				userId: 'me',
+				id: messageIdString,
+				requestBody: {
+					removeLabelIds: ['INBOX']
+				}
+			});
+
+			return { success: true, message: "Email sent and archived successfully" };
+		} catch (error) {
+			return { error: error.message, status: 500 };
+		}
 	}
 
 };

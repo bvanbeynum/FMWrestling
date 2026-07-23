@@ -1,0 +1,569 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Russo+One&display=swap');
+
+/* Main Container */
+.aiemail-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px;
+    font-family: 'Roboto', sans-serif;
+    color: #191c1d;
+    background-color: #f8f9fa;
+    min-height: calc(100vh - 60px);
+}
+
+.aiemail-container header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #e1e3e4;
+}
+
+.aiemail-container h1 {
+    font-family: 'Russo One', sans-serif;
+    font-size: 28px;
+    color: #3c5c93;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+}
+
+/* Status Header / Google Connection Bar */
+.connection-status-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #ffffff;
+    border: 1px solid #c5c5d8;
+    border-left: 4px solid #3246e5;
+    border-radius: 4px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.connection-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.status-indicator-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: #ba1a1a;
+}
+
+.status-indicator-dot.connected {
+    background-color: #10b981;
+}
+
+.connection-text strong {
+    color: #3c5c93;
+    font-family: 'Roboto', sans-serif;
+    font-weight: 700;
+}
+
+.connection-text span {
+    color: #757687;
+    font-size: 14px;
+    margin-left: 6px;
+}
+
+/* Buttons */
+.btn-google-connect {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background-color: #3246e5;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-family: 'Roboto', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.btn-google-connect:hover {
+    background-color: #2737c0;
+    transform: translateY(-1px);
+}
+
+.btn-primary {
+    background-color: #3246e5;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.btn-primary:hover {
+    background-color: #2737c0;
+}
+
+.btn-secondary {
+    background-color: #ffffff;
+    color: #3246e5;
+    border: 1px solid #3246e5;
+    border-radius: 8px;
+    padding: 9px 18px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+    background-color: #f3f4f5;
+}
+
+.btn-accent {
+    background-color: #904d00;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.btn-accent:hover {
+    background-color: #733e00;
+}
+
+.btn-accent:disabled {
+    background-color: #d9dadb;
+    cursor: not-allowed;
+}
+
+/* Inbox Emails Stream */
+.inbox-section {
+    background-color: #ffffff;
+    border: 1px solid #e1e3e4;
+    border-radius: 4px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+}
+
+.inbox-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #edeeef;
+}
+
+.inbox-header h2 {
+    font-family: 'Russo One', sans-serif;
+    font-size: 20px;
+    color: #3c5c93;
+    margin: 0;
+}
+
+.inbox-refresh-btn {
+    background: none;
+    border: 1px solid #c5c5d8;
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    color: #444655;
+}
+
+.email-cards-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.email-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    background-color: #ffffff;
+    border: 1px solid #e1e3e4;
+    border-left: 4px solid #3246e5;
+    border-radius: 4px;
+    padding: 16px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.email-card:hover {
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+.email-main-info {
+    flex: 1;
+    margin-right: 16px;
+}
+
+.email-sender {
+    font-size: 14px;
+    font-weight: 700;
+    color: #191c1d;
+    margin-bottom: 4px;
+}
+
+.email-subject {
+    font-family: 'Russo One', sans-serif;
+    font-size: 16px;
+    color: #3c5c93;
+    margin-bottom: 6px;
+}
+
+.email-snippet {
+    font-size: 14px;
+    color: #444655;
+    line-height: 1.4;
+    margin-bottom: 8px;
+}
+
+.email-date {
+    font-size: 12px;
+    color: #757687;
+}
+
+/* Modal Overlay & Card for AI Response / Email Composer */
+.composer-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(25, 28, 29, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 999;
+    padding: 20px;
+}
+
+.composer-modal-card {
+    background-color: #ffffff;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 900px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+    overflow: hidden;
+}
+
+.composer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    background-color: #3c5c93;
+    color: #ffffff;
+}
+
+.composer-header h3 {
+    font-family: 'Russo One', sans-serif;
+    font-size: 20px;
+    margin: 0;
+}
+
+.composer-close-btn {
+    background: none;
+    border: none;
+    color: #ffffff;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+.composer-body {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.original-email-box {
+    background-color: #f3f4f5;
+    border: 1px solid #e1e3e4;
+    border-radius: 4px;
+    padding: 14px;
+    font-size: 13px;
+    color: #444655;
+}
+
+.original-email-box strong {
+    color: #191c1d;
+}
+
+.response-editor-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.response-editor-group label {
+    font-weight: 700;
+    color: #3c5c93;
+    font-size: 14px;
+}
+
+.response-textarea {
+    width: 100%;
+    min-height: 180px;
+    border: 1px solid #c5c5d8;
+    border-radius: 4px;
+    padding: 12px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #191c1d;
+    resize: vertical;
+    box-sizing: border-box;
+}
+
+.response-textarea:focus {
+    outline: none;
+    border-color: #3246e5;
+}
+
+/* Parent Recipients Selector Section */
+.recipients-selection-section {
+    border: 1px solid #e1e3e4;
+    border-radius: 4px;
+    padding: 16px;
+    background-color: #ffffff;
+}
+
+.recipients-selection-section h4 {
+    font-family: 'Russo One', sans-serif;
+    font-size: 16px;
+    color: #3c5c93;
+    margin: 0 0 12px 0;
+}
+
+/* Controls Bar inside Composer */
+.controls-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 16px;
+    background-color: #f8f9fa;
+    padding: 12px;
+    border-radius: 4px;
+}
+
+.filter-tabs {
+    display: flex;
+    gap: 4px;
+    background-color: #edeeef;
+    padding: 3px;
+    border-radius: 4px;
+}
+
+.tab-btn {
+    background: none;
+    border: none;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 3px;
+    cursor: pointer;
+    color: #444655;
+}
+
+.tab-btn.active {
+    background-color: #ffffff;
+    color: #3246e5;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.filter-selects-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.filter-select {
+    padding: 6px 10px;
+    border: 1px solid #c5c5d8;
+    border-radius: 4px;
+    font-size: 13px;
+    background-color: #ffffff;
+}
+
+/* Multi Select Dropdown */
+.multi-select-dropdown-container {
+    position: relative;
+}
+
+.multi-select-trigger-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid #c5c5d8;
+    border-radius: 4px;
+    background-color: #ffffff;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.multi-select-trigger-btn.active {
+    border-color: #3246e5;
+    color: #3246e5;
+}
+
+.multi-select-popover {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 1000;
+    margin-top: 4px;
+    background-color: #ffffff;
+    border: 1px solid #c5c5d8;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    width: 200px;
+    padding: 8px;
+}
+
+.multi-select-popover-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 700;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #edeeef;
+    margin-bottom: 6px;
+}
+
+.btn-clear-link {
+    background: none;
+    border: none;
+    color: #3246e5;
+    cursor: pointer;
+    font-size: 11px;
+    padding: 0;
+}
+
+.multi-select-popover-options {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.multi-select-option-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    cursor: pointer;
+    padding: 2px 4px;
+}
+
+.search-box {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid #c5c5d8;
+    border-radius: 4px;
+    padding: 4px 10px;
+    background-color: #ffffff;
+    flex: 1;
+    min-width: 160px;
+}
+
+.search-input {
+    border: none;
+    outline: none;
+    width: 100%;
+    font-size: 13px;
+}
+
+/* Recipient Table */
+.recipients-table-container {
+    max-height: 220px;
+    overflow-y: auto;
+    border: 1px solid #e1e3e4;
+    border-radius: 4px;
+}
+
+.recipients-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.recipients-table th {
+    background-color: #edeeef;
+    color: #3c5c93;
+    font-family: 'Russo One', sans-serif;
+    font-weight: 400;
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 1px solid #e1e3e4;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.recipients-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #f3f4f5;
+    color: #191c1d;
+}
+
+.recipients-table tr.selected {
+    background-color: #dfe0ff;
+}
+
+.composer-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    background-color: #f8f9fa;
+    border-top: 1px solid #e1e3e4;
+}
+
+.recipients-summary-count {
+    font-weight: 700;
+    color: #3246e5;
+    font-size: 14px;
+}
+
+.composer-action-btns {
+    display: flex;
+    gap: 12px;
+}
+
+/* Utility Loading / Empty State */
+.loading-box, .empty-box {
+    text-align: center;
+    padding: 40px;
+    color: #757687;
+}
+
+.badge-coach {
+    background-color: #fd8b00;
+    color: #603100;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 2px;
+    margin-left: 6px;
+}

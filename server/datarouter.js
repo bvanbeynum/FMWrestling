@@ -737,4 +737,43 @@ router.delete("/data/parentemail", authInternal, async (request, response) => {
 	}
 });
 
+router.get("/data/serverconfig", authInternal, async (request, response) => {
+	try {
+		const results = await data.serverConfigGet({
+			id: request.query.id,
+			key: request.query.key
+		});
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		response.status(570).json({ error: error.message });
+	}
+});
+
+router.post("/data/serverconfig", authInternal, async (request, response) => {
+	try {
+		const results = await data.serverConfigSave(request.body.serverConfig || request.body.saveRecord || request.body);
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		response.status(570).json({ error: error.message });
+	}
+});
+
+router.delete("/data/serverconfig", authInternal, async (request, response) => {
+	try {
+		const results = await data.serverConfigDelete(request.query.id || request.query.key);
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		response.status(570).json({ error: error.message });
+	}
+});
+
 export default router;

@@ -19,9 +19,20 @@ export default {
 		noaccess: "./client/portal/noaccess.jsx",
 		tournamentsummary: "./client/portal/tournamentsummary.jsx",
 		dualreport: "./client/portal/dualreport.jsx",
-		parentemail: "./client/portal/parentemail.jsx"
+		parentemail: "./client/portal/parentemail.jsx",
+		aiemail: "./client/portal/aiemail.jsx"
 	},
 	plugins: [
+		new HtmlWebpackPlugin({ 
+			filename: "./portal/aiemail.html",
+			title: "Fort Mill Wrestling - AI Email",
+			favicon: "./client/media/favicon.ico",
+			meta: {
+				viewport: "width=device-width, initial-scale=1"
+			},
+			chunks: [ "aiemail" ],
+			templateContent: "<html><body><div id='root'></div></body></html>"
+		}),
 		new HtmlWebpackPlugin({ 
 			filename: "./portal/parentemail.html",
 			title: "Fort Mill Wrestling - Parent Email List",

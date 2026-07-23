@@ -297,6 +297,13 @@ export default {
 		}],
 		created: Date,
 		modified: Date
+	}),
+
+	serverConfig: mongoose.model("serverconfig", {
+		key: String,
+		value: mongoose.Schema.Types.Mixed,
+		created: Date,
+		modified: Date
 	})
 	
 };
