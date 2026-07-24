@@ -668,9 +668,10 @@ input[type=number] {
 	}
 
 	.dt-col-wt { width: 12%; }
-	.dt-col-wrestlers { width: 38%; }
+	.dt-col-wrestlers { width: 32%; }
+	.dt-col-win { width: 9%; text-align: center; font-weight: 600; font-size: 14px; color: var(--on-surface-variant) }
+	.dt-col-wintype { width: 10%; text-align: center; font-weight: 600; font-size: 14px; color: var(--on-surface-variant) }
 	.dt-col-stat { width: 8%; text-align: center; }
-	.dt-col-score { width: 10%; text-align: center; background-color: #f1f3f5; padding: 4px; border-radius: 4px; color: #495057; }
 	.dt-col-actions { width: 6%; text-align: center; }
 
 	/* Transform Mobile Weight Cards into Table Rows */
@@ -683,7 +684,7 @@ input[type=number] {
 		padding: 12px 0;
 		margin-bottom: 0;
 		display: grid;
-		grid-template-columns: 12% 32% 10% 12% 32% 6%; /* WT | Wrestlers | Winner | Win Type | Stats | Actions */
+		grid-template-columns: 12% 32% 9% 9% 31% 7%; /* WT | Wrestlers | Winner | Win Type | Stats | Actions */
 		align-items: center;
 		gap: 0;
 	}
@@ -711,6 +712,7 @@ input[type=number] {
 		grid-row: 1 / 3;
 		display: flex;
 		justify-content: center;
+		padding: 0px 8px;
 	}
 
 	.mobile-wintype-title {
@@ -751,6 +753,7 @@ input[type=number] {
 		grid-row: 1;
 		display: flex;
 		justify-content: center;
+		margin-left: inherit;
 	}
 	.wrestler-row:first-child .stats-col {
 		grid-column: 5;
@@ -772,6 +775,7 @@ input[type=number] {
 		grid-row: 2;
 		display: flex;
 		justify-content: center;
+		margin-left: inherit;
 	}
 	.wrestler-row:last-child .stats-col {
 		grid-column: 5;

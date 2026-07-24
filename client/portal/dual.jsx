@@ -925,9 +925,9 @@ const Dual = () => {
 							{/* Desktop Table Header (Shown >= 768px) */}
 							<div className="desktop-table-header">
 								<div className="dt-col-wt">WT</div>
-								<div className="dt-col-wrestlers" style={{ width: "32%" }}>Wrestlers (Home vs Visitor)</div>
-								<div className="dt-col-win" style={{ width: "10%", textAlign: "center", fontWeight: "600", fontSize: "14px", color: "var(--on-surface-variant)" }}>Winner?</div>
-								<div className="dt-col-wintype" style={{ width: "12%", textAlign: "center", fontWeight: "600", fontSize: "14px", color: "var(--on-surface-variant)" }}>Win Type</div>
+								<div className="dt-col-wrestlers">Wrestlers (Home vs Visitor)</div>
+								<div className="dt-col-win">Winner?</div>
+								<div className="dt-col-wintype">Win Type</div>
 								<div className="dt-col-stat">T</div>
 								<div className="dt-col-stat">N</div>
 								<div className="dt-col-stat">R</div>
