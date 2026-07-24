@@ -49,6 +49,14 @@ const parseCsvClientText = (csvRawTextContent) => {
 	return parsedRowsList;
 };
 
+const escapeCsvCellValue = (cellValueText) => {
+	const stringValueText = cellValueText == null ? "" : String(cellValueText);
+	if (stringValueText.includes('"') || stringValueText.includes(',') || stringValueText.includes('\n') || stringValueText.includes('\r')) {
+		return `"${stringValueText.replace(/"/g, '""')}"`;
+	}
+	return stringValueText;
+};
+
 const ParentEmailManagementPage = () => {
 	const [ isLoadingBoolean, setIsLoadingBoolean ] = useState(true);
 	const [ loggedInUserObject, setLoggedInUserObject ] = useState(null);
@@ -209,6 +217,54 @@ const ParentEmailManagementPage = () => {
 			.catch(bulkDeleteErrorObject => {
 				alert(`Bulk delete error: ${bulkDeleteErrorObject.message}`);
 			});
+	};
+
+	const handleExportSelectedCsv = () => {
+		if (selectedRowIdsList.length === 0) return;
+
+		const selectedRecordsList = parentEmailsList.filter(parentRecordItem => selectedRowIdsList.includes(parentRecordItem.id));
+		if (selectedRecordsList.length === 0) return;
+
+		const csvHeaderColumnsList = ["Parent Name", "Email Address", "Wrestlers", "Varsity", "JV", "Middle"];
+
+		const csvRowsList = selectedRecordsList.map(parentRecordItem => {
+			const parentNameText = parentRecordItem.name || "";
+			const emailAddressText = parentRecordItem.email || "";
+
+			const wrestlersFormattedText = (parentRecordItem.wrestlers || []).map(wrestlerItem => {
+				const wrestlerNameText = (wrestlerItem.name || "").trim();
+				const wrestlerGradeText = (wrestlerItem.grade || "").trim();
+				if (!wrestlerNameText) return "";
+				return wrestlerGradeText ? `${wrestlerNameText} (Gr ${wrestlerGradeText})` : wrestlerNameText;
+			}).filter(Boolean).join(", ");
+
+			const isVarsityText = (parentRecordItem.wrestlers || []).some(wrestlerItem => wrestlerItem.isVarsity === true) ? "Y" : "N";
+			const isJvText = (parentRecordItem.wrestlers || []).some(wrestlerItem => wrestlerItem.isJV === true) ? "Y" : "N";
+			const isMiddleText = (parentRecordItem.wrestlers || []).some(wrestlerItem => wrestlerItem.isMiddle === true) ? "Y" : "N";
+
+			return [
+				parentNameText,
+				emailAddressText,
+				wrestlersFormattedText,
+				isVarsityText,
+				isJvText,
+				isMiddleText
+			];
+		});
+
+		const fullCsvContentText = [csvHeaderColumnsList, ...csvRowsList]
+			.map(rowCellsList => rowCellsList.map(escapeCsvCellValue).join(","))
+			.join("\r\n");
+
+		const blobInstance = new Blob([fullCsvContentText], { type: "text/csv;charset=utf-8;" });
+		const downloadObjectUrl = URL.createObjectURL(blobInstance);
+		const anchorElement = document.createElement("a");
+		anchorElement.href = downloadObjectUrl;
+		anchorElement.setAttribute("download", `parent_contacts_export_${new Date().toISOString().slice(0, 10)}.csv`);
+		document.body.appendChild(anchorElement);
+		anchorElement.click();
+		document.body.removeChild(anchorElement);
+		URL.revokeObjectURL(downloadObjectUrl);
 	};
 
 	const handleProcessFileContent = (rawCsvFileContentString) => {
@@ -541,6 +597,7 @@ const ParentEmailManagementPage = () => {
 							<div className="batch-toolbar">
 								<span className="batch-info">{selectedRowIdsList.length} contact(s) selected</span>
 								<div className="batch-buttons">
+									<button className="btn-batch-action export" onClick={handleExportSelectedCsv}>Export CSV</button>
 									<button className="btn-batch-action alumni" onClick={() => handleBulkStatusChange("alumni")}>Set as Alumni</button>
 									<button className="btn-batch-action archive" onClick={() => handleBulkStatusChange("archived")}>Archive Selected</button>
 									<button className="btn-batch-action activate" onClick={() => handleBulkStatusChange("active")}>Restore Active</button>

@@ -451,6 +451,7 @@ button.lineupButton.addDual:hover {
 .btn-batch-action.archive { background-color: #64748b; }
 .btn-batch-action.alumni { background-color: #8b5cf6; }
 .btn-batch-action.activate { background-color: #10b981; }
+.btn-batch-action.export { background-color: #2563eb; }
 .btn-batch-action.delete { background-color: #ef4444; }
 
 /* Mobile-First Responsive List Container */
