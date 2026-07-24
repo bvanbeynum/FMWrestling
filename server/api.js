@@ -2021,6 +2021,7 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 							const dbWrestler = wrestlers.find(wrestler => nameMatch && wrestler.id == nameMatch.matchId);
 							return {
 								...wrestler,
+								wrestlerId: dbWrestler ? dbWrestler.id : null,
 								name: dbWrestler ? dbWrestler.name : wrestler.name
 							};
 						})
