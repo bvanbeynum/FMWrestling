@@ -68,26 +68,28 @@ const css = {
 
 const NoAccess = () => {
 
-	const [name, setName] = useState("");
-	const [email, setEmail] = useState("");
+	const [userName, setUserName] = useState("");
+	const [userEmail, setUserEmail] = useState("");
 	const [isSubmitted, setIsSubmitted] = useState(false);
+	const [isEmailSent, setIsEmailSent] = useState(false);
 	const [isError, setIsError] = useState(false);
 	const [isSending, setIsSending] = useState(false);
 
 	const submit = () => {
-		if (name && name.length > 0 && email && email.length > 0) {
+		if (userName && userName.length > 0 && userEmail && userEmail.length > 0) {
 			setIsSending(true);
 
-			fetch(`/api/requestaccess`, { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name, email: email }) })
+			fetch(`/api/requestaccess`, { method: "post", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: userName, email: userEmail }) })
 				.then(response => {
 					if (response.ok) {
-						return response.text();
+						return response.json();
 					}
 					else {
 						throw Error(response.statusText);
 					}
 				})
-				.then(() => {
+				.then(response => {
+					setIsEmailSent((response && response.emailSent));
 					setIsSubmitted(true);
 					setIsSending(false);
 				})
@@ -119,7 +121,10 @@ const NoAccess = () => {
 		isSubmitted ?
 
 		<div style={ css.updateContainer }>
-			Your request has been forwarded to an administrator
+			{ isEmailSent ? 
+				"An approval email has been sent to your email address. Please check your inbox and click the link to approve access." :
+				"Your request has been forwarded to an administrator" 
+			}
 		</div>
 
 		: isError ?
@@ -138,11 +143,11 @@ const NoAccess = () => {
 
 		<div style={css.requestContainer}>
 			<div style={css.requestInput}>
-				<input type="text" placeholder="Name" value={name} onChange={ event => setName(event.target.value) } style={css.input} />
+				<input type="text" placeholder="Name" value={userName} onChange={ event => setUserName(event.target.value) } style={css.input} />
 			</div>
 
 			<div style={css.requestInput}>
-				<input type="email" placeholder="Email" value={email} onChange={ event => setEmail(event.target.value) } style={css.input} />
+				<input type="email" placeholder="Email" value={userEmail} onChange={ event => setUserEmail(event.target.value) } style={css.input} />
 			</div>
 
 			<div style={css.requestInput}>

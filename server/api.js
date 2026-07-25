@@ -150,6 +150,38 @@ export default {
 			}
 
 			if (!clientResponse.body.users || clientResponse.body.users.length !== 1) {
+				// Check if there is a pending deviceRequest token to accept
+				try {
+					const deviceRequestsResponse = await client.get(`${ serverPath }/data/devicerequest`);
+					const deviceRequests = (deviceRequestsResponse.body && deviceRequestsResponse.body.deviceRequests) || [];
+					const matchingDeviceRequest = deviceRequests.find(deviceRequest => deviceRequest.device && deviceRequest.device.token === tokenData.token);
+
+					if (matchingDeviceRequest) {
+						const userByEmailResponse = await client.get(`${ serverPath }/data/user?email=${ encodeURIComponent(matchingDeviceRequest.email) }`);
+						const usersByEmail = (userByEmailResponse.body && userByEmailResponse.body.users) || [];
+
+						if (usersByEmail.length > 0) {
+							const targetUser = usersByEmail[0];
+							const updatedDevices = (targetUser.devices || []).concat({
+								...matchingDeviceRequest.device,
+								created: matchingDeviceRequest.created || new Date(),
+								lastAccess: new Date()
+							});
+							targetUser.devices = updatedDevices;
+
+							await client.post(`${ serverPath }/data/user`).send({ user: targetUser });
+							await client.delete(`${ serverPath }/data/devicerequest?id=${ matchingDeviceRequest.id }`);
+
+							clientResponse = { body: { users: [targetUser] } };
+						}
+					}
+				}
+				catch (approvalError) {
+					console.warn("Error approving device request token in authPortal:", approvalError.message);
+				}
+			}
+
+			if (!clientResponse.body.users || clientResponse.body.users.length !== 1) {
 				output.status = 563;
 				output.error = `User not found with token ${ tokenData.token }`;
 				return output;
@@ -168,7 +200,7 @@ export default {
 			}
 			catch (error) {
 				output.status = 565;
-				output.error = error.message
+				output.error = error.message;
 				return output;
 			}
 
@@ -189,7 +221,7 @@ export default {
 			}
 			catch (error) {
 				output.status = 566;
-				output.error = error.message
+				output.error = error.message;
 				return output;
 			}
 		}
@@ -198,20 +230,20 @@ export default {
 		return output;
 	},
 
-	requestAccess: async (ipAddress, domain, userName, userEmail, userAgent, serverPath) => {
+	requestAccess: async (ipAddress, domainHost, userName, userEmail, userAgent, serverPath) => {
 		const output = {},
-			token = (Math.random() + 1).toString(36).substring(2,12),
-			encryptedToken = jwt.sign({ token: token }, config.jwt),
+			deviceToken = (Math.random() + 1).toString(36).substring(2,12),
+			encryptedToken = jwt.sign({ token: deviceToken }, config.jwt),
 			userRequest = {
 				name: userName,
 				email: userEmail,
 				device: {
-						token: token,
-						ip: ipAddress,
-						domain: domain,
-						browser: userAgent
-					}
-				};
+					token: deviceToken,
+					ip: ipAddress,
+					domain: domainHost,
+					browser: userAgent
+				}
+			};
 			
 		try {
 			await client.post(`${ serverPath }/data/devicerequest`).send({ devicerequest: userRequest }).then();
@@ -222,8 +254,93 @@ export default {
 			return output;
 		}
 
+		let isEmailSent = false;
+		try {
+			const userLookupResponse = await client.get(`${ serverPath }/data/user?email=${ encodeURIComponent(userEmail) }`);
+			const matchingUsers = (userLookupResponse.body && userLookupResponse.body.users) || [];
+
+			if (matchingUsers.length > 0) {
+				const approvalLinkUrl = `https://${ domainHost }/portal/index.html?token=${ encryptedToken }`;
+				
+				try {
+					const configResponse = await client.get(`${ serverPath }/data/serverconfig?key=googleAuth`);
+					const serverConfigs = configResponse.body && configResponse.body.serverConfigs;
+
+					if (serverConfigs && serverConfigs.length > 0 && serverConfigs[0].value && serverConfigs[0].value.refreshToken) {
+						const googleAuthVal = serverConfigs[0].value;
+						const algorithm = 'aes-256-cbc';
+						const keySecret = config.sessionSecret || config.jwt || "fortmill_wrestling_session_secret_key_123456789";
+						const key = crypto.createHash('sha256').update(keySecret).digest();
+						const refreshTokenParts = googleAuthVal.refreshToken.split(':');
+						const iv = Buffer.from(refreshTokenParts.shift(), 'hex');
+						const encryptedBuffer = Buffer.from(refreshTokenParts.join(':'), 'hex');
+						const decipher = crypto.createDecipheriv(algorithm, key, iv);
+						let decryptedBuffer = decipher.update(encryptedBuffer);
+						decryptedBuffer = Buffer.concat([decryptedBuffer, decipher.final()]);
+						const decryptedRefreshToken = decryptedBuffer.toString();
+
+						const oAuth2Client = new google.auth.OAuth2(
+							config.google.client_id,
+							config.google.client_secret,
+							config.google.redirect_uris[0]
+						);
+						oAuth2Client.setCredentials({ refresh_token: decryptedRefreshToken });
+
+						const gmail = google.gmail({ version: 'v1', auth: oAuth2Client });
+
+						const emailBodyHtml = `
+							<div style="font-family: sans-serif; padding: 20px;">
+								<h2>Access Approval Requested</h2>
+								<p>A request to access <strong>The Wrestling Mill</strong> portal was made for <strong>${ userEmail }</strong> (${ userName }).</p>
+								<p>If you requested this access, click the button below to approve and log in:</p>
+								<p style="margin: 25px 0;">
+									<a href="${ approvalLinkUrl }" style="background-color: #76b900; color: white; padding: 12px 24px; text-decoration: none; font-weight: bold; border-radius: 5px; display: inline-block;">Approve Access & Log In</a>
+								</p>
+								<p style="color: #666; font-size: 12px;">Or copy and paste this link into your browser: <br/><a href="${ approvalLinkUrl }">${ approvalLinkUrl }</a></p>
+							</div>
+						`;
+
+						const boundary = `----=_Part_${ Math.random().toString().slice(2) }`;
+						const emailLines = [
+							`To: ${ userEmail }`,
+							`Subject: Attempted Login - Access Approval Requested`,
+							'MIME-Version: 1.0',
+							`Content-Type: multipart/mixed; boundary="${ boundary }"`,
+							'',
+							`--${ boundary }`,
+							'Content-Type: text/html; charset="UTF-8"',
+							'Content-Transfer-Encoding: 7bit',
+							'',
+							emailBodyHtml,
+							'',
+							`--${ boundary }--`
+						];
+
+						const rawEmail = emailLines.join('\r\n');
+						const base64EncodedEmail = Buffer.from(rawEmail).toString('base64url');
+
+						await gmail.users.messages.send({
+							userId: 'me',
+							requestBody: {
+								raw: base64EncodedEmail
+							}
+						});
+
+						isEmailSent = true;
+					}
+				}
+				catch (sendEmailError) {
+					console.warn("Error sending approval email via googleapis in requestAccess:", sendEmailError.message);
+				}
+			}
+		}
+		catch (lookupError) {
+			console.warn("Error looking up user by email in requestAccess:", lookupError.message);
+		}
+
 		output.status = 200;
 		output.cookie = encryptedToken;
+		output.data = { emailSent: isEmailSent };
 		return output;
 	},
 
@@ -2344,18 +2461,18 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 		return output;
 	},
 
-	scheduleSave: async (teamEventObject, opponentName, serverPath) => {
+	scheduleSave: async (teamEvent, opponentName, serverPath) => {
 		const output = {};
 
 		// Extract unshifted date string YYYY-MM-DD
 		let dateString = "";
-		if (teamEventObject.date) {
-			const str = String(teamEventObject.date).trim();
+		if (teamEvent.date) {
+			const str = String(teamEvent.date).trim();
 			const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
 			if (match) {
 				dateString = `${match[1]}-${match[2]}-${match[3]}`;
 			} else {
-				const dObj = new Date(teamEventObject.date);
+				const dObj = new Date(teamEvent.date);
 				const year = dObj.getUTCFullYear();
 				const month = String(dObj.getUTCMonth() + 1).padStart(2, '0');
 				const day = String(dObj.getUTCDate()).padStart(2, '0');
@@ -2365,8 +2482,8 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 
 		let hours = "00";
 		let minutes = "00";
-		if (teamEventObject.startTime) {
-			const [time, modifier] = teamEventObject.startTime.split(' ');
+		if (teamEvent.startTime) {
+			const [time, modifier] = teamEvent.startTime.split(' ');
 			let [h, m] = time.split(':');
 			let hNum = parseInt(h, 10);
 			if (modifier === 'PM' && hNum < 12) hNum += 12;
@@ -2377,21 +2494,21 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 
 		const combinedDateTime = dateString ? `${dateString}T${hours}:${minutes}:00.000Z` : null;
 		if (combinedDateTime) {
-			teamEventObject.date = combinedDateTime;
+			teamEvent.date = combinedDateTime;
 		}
 
 		// Orchestrate Dual creation if this is a new Dual teamEvent
-		if (teamEventObject.eventType === "Dual" && !teamEventObject.id && !teamEventObject.dualId) {
+		if (teamEvent.eventType === "Dual" && !teamEvent.id && !teamEvent.dualId) {
 			try {
 				// 1. Create dual record with empty matches list for manual entry
-				const dualObject = {
+				const dual = {
 					opponent: opponentName,
 					dualDate: combinedDateTime,
-					division: teamEventObject.division || "Varsity",
+					division: teamEvent.division || "Varsity",
 					matches: [],
 					imagePath: null
 				};
-				const saveDualResponse = await client.post(`${ serverPath }/data/dual`).send({ dual: dualObject });
+				const saveDualResponse = await client.post(`${ serverPath }/data/dual`).send({ dual: dual });
 				const newDualId = saveDualResponse.body?.id;
 
 				if (!newDualId) {
@@ -2399,23 +2516,23 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 				}
 
 				// 2. Create associated event record
-				const eventObject = {
+				const event = {
 					sqlId: null,
 					eventSystem: "WrestlingPortal",
 					systemId: newDualId.toString(),
 					eventType: "Dual",
-					name: teamEventObject.name || "Fort Mill vs " + (opponentName || ""),
+					name: teamEvent.name || "Fort Mill vs " + (opponentName || ""),
 					date: combinedDateTime,
-					location: teamEventObject.location || null,
+					location: teamEvent.location || null,
 					state: "SC"
 				};
-				const saveEventResponse = await client.post(`${ serverPath }/data/event`).send({ event: eventObject });
+				const saveEventResponse = await client.post(`${ serverPath }/data/event`).send({ event: event });
 				const newEventId = saveEventResponse.body?.id;
 
 				// 3. Link records to teamEvent
-				teamEventObject.dualId = newDualId;
+				teamEvent.dualId = newDualId;
 				if (newEventId) {
-					teamEventObject.eventId = newEventId;
+					teamEvent.eventId = newEventId;
 				}
 			} catch (error) {
 				output.status = 562;
@@ -2426,7 +2543,7 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 
 		// Save the teamEvent record
 		try {
-			const saveResponse = await client.post(`${ serverPath }/data/teamevent`).send({ teamEvent: teamEventObject });
+			const saveResponse = await client.post(`${ serverPath }/data/teamevent`).send({ teamEvent: teamEvent });
 			output.status = saveResponse.status;
 			output.data = saveResponse.body;
 		} catch (error) {
@@ -2463,10 +2580,10 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 			}
 			const endYear = startYear + 1;
 			
-			const startDateString = `${startYear}-09-01`;
-			const endDateString = `${endYear}-08-31`;
+			const startDate = `${startYear}-09-01`;
+			const endDate = `${endYear}-08-31`;
 			
-			const seasonDualsResponse = await client.get(`${ serverPath }/data/dual?startdate=${startDateString}&enddate=${endDateString}`);
+			const seasonDualsResponse = await client.get(`${ serverPath }/data/dual?startdate=${startDate}&enddate=${endDate}`);
 			output.data.duals = seasonDualsResponse.body.duals || [];
 			
 			const shortStart = startYear.toString().slice(-2);
@@ -2488,91 +2605,91 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 		return output;
 	},
 
-	parentEmailLoad: async (serverPathString, statusFilterString) => {
-		const outputObject = { data: { parentEmails: [] } };
+	parentEmailLoad: async (serverPath, statusFilter) => {
+		const output = { data: { parentEmails: [] } };
 
 		try {
-			await seedParentEmailsIfEmpty(serverPathString);
+			await seedParentEmailsIfEmpty(serverPath);
 
-			let requestUrlString = `${serverPathString}/data/parentemail`;
-			if (statusFilterString && statusFilterString !== "all") {
-				requestUrlString += `?status=${encodeURIComponent(statusFilterString)}`;
+			let requestUrl = `${serverPath}/data/parentemail`;
+			if (statusFilter && statusFilter !== "all") {
+				requestUrl += `?status=${encodeURIComponent(statusFilter)}`;
 			}
 
-			const clientResponse = await client.get(requestUrlString);
-			outputObject.data.parentEmails = clientResponse.body.parentEmails || [];
-			outputObject.status = 200;
+			const clientResponse = await client.get(requestUrl);
+			output.data.parentEmails = clientResponse.body.parentEmails || [];
+			output.status = 200;
 		}
-		catch (errorObject) {
-			outputObject.status = 500;
-			outputObject.error = errorObject.message;
+		catch (error) {
+			output.status = 500;
+			output.error = error.message;
 		}
 
-		return outputObject;
+		return output;
 	},
 
-	parentEmailSave: async (saveRecordObject, serverPathString) => {
-		const outputObject = {};
+	parentEmailSave: async (saveRecord, serverPath) => {
+		const output = {};
 
 		try {
-			const clientResponse = await client.post(`${serverPathString}/data/parentemail`).send({ parentEmail: saveRecordObject });
-			outputObject.status = 200;
-			outputObject.data = clientResponse.body;
+			const clientResponse = await client.post(`${serverPath}/data/parentemail`).send({ parentEmail: saveRecord });
+			output.status = 200;
+			output.data = clientResponse.body;
 		}
-		catch (errorObject) {
-			outputObject.status = 500;
-			outputObject.error = errorObject.message;
+		catch (error) {
+			output.status = 500;
+			output.error = error.message;
 		}
 
-		return outputObject;
+		return output;
 	},
 
-	parentEmailBulkUpload: async (recordsArrayList, serverPathString) => {
-		const outputObject = {};
+	parentEmailBulkUpload: async (recordsArrayList, serverPath) => {
+		const output = {};
 
 		try {
-			const clientResponse = await client.post(`${serverPathString}/data/parentemail/bulk`).send({ records: recordsArrayList });
-			outputObject.status = 200;
-			outputObject.data = clientResponse.body;
+			const clientResponse = await client.post(`${serverPath}/data/parentemail/bulk`).send({ records: recordsArrayList });
+			output.status = 200;
+			output.data = clientResponse.body;
 		}
-		catch (errorObject) {
-			outputObject.status = 500;
-			outputObject.error = errorObject.message;
+		catch (error) {
+			output.status = 500;
+			output.error = error.message;
 		}
 
-		return outputObject;
+		return output;
 	},
 
-	parentEmailBulkStatus: async (recordIdsArrayList, targetStatusString, serverPathString) => {
-		const outputObject = {};
+	parentEmailBulkStatus: async (recordIdsArrayList, targetStatus, serverPath) => {
+		const output = {};
 
 		try {
-			const clientResponse = await client.post(`${serverPathString}/data/parentemail/status`).send({ ids: recordIdsArrayList, status: targetStatusString });
-			outputObject.status = 200;
-			outputObject.data = clientResponse.body;
+			const clientResponse = await client.post(`${serverPath}/data/parentemail/status`).send({ ids: recordIdsArrayList, status: targetStatus });
+			output.status = 200;
+			output.data = clientResponse.body;
 		}
-		catch (errorObject) {
-			outputObject.status = 500;
-			outputObject.error = errorObject.message;
+		catch (error) {
+			output.status = 500;
+			output.error = error.message;
 		}
 
-		return outputObject;
+		return output;
 	},
 
-	parentEmailDelete: async (recordIdString, serverPathString) => {
-		const outputObject = {};
+	parentEmailDelete: async (recordId, serverPath) => {
+		const output = {};
 
 		try {
-			const clientResponse = await client.delete(`${serverPathString}/data/parentemail?id=${recordIdString}`);
-			outputObject.status = 200;
-			outputObject.data = clientResponse.body;
+			const clientResponse = await client.delete(`${serverPath}/data/parentemail?id=${recordId}`);
+			output.status = 200;
+			output.data = clientResponse.body;
 		}
-		catch (errorObject) {
-			outputObject.status = 500;
-			outputObject.error = errorObject.message;
+		catch (error) {
+			output.status = 500;
+			output.error = error.message;
 		}
 
-		return outputObject;
+		return output;
 	},
 
 	authGoogle: async (request, response) => {
@@ -2694,8 +2811,8 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 				}
 			};
 
-			const serverPathString = `${request.protocol}://${request.get("host")}`;
-			await client.post(`${serverPathString}/data/serverconfig`).send({ serverConfig: saveConfigRecord });
+			const serverPath = `${request.protocol}://${request.get("host")}`;
+			await client.post(`${serverPath}/data/serverconfig`).send({ serverConfig: saveConfigRecord });
 
 			const outputPayload = {
 				success: true,
@@ -2733,9 +2850,9 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 		}
 	},
 
-	aiEmailGetStatus: async (serverPathString) => {
+	aiEmailGetStatus: async (serverPath) => {
 		try {
-			const configResponse = await client.get(`${serverPathString}/data/serverconfig?key=googleAuth`);
+			const configResponse = await client.get(`${serverPath}/data/serverconfig?key=googleAuth`);
 			const serverConfigs = configResponse.body && configResponse.body.serverConfigs;
 			if (serverConfigs && serverConfigs.length > 0 && serverConfigs[0].value && serverConfigs[0].value.refreshToken) {
 				const configVal = serverConfigs[0].value;
@@ -2752,9 +2869,9 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 		}
 	},
 
-	aiEmailLoadInbox: async (serverPathString) => {
+	aiEmailLoadInbox: async (serverPath) => {
 		try {
-			const configResponse = await client.get(`${serverPathString}/data/serverconfig?key=googleAuth`);
+			const configResponse = await client.get(`${serverPath}/data/serverconfig?key=googleAuth`);
 			const serverConfigs = configResponse.body && configResponse.body.serverConfigs;
 			if (!serverConfigs || serverConfigs.length === 0 || !serverConfigs[0].value || !serverConfigs[0].value.refreshToken) {
 				return { error: "Google account not connected", status: 401 };
@@ -2833,7 +2950,7 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 		}
 	},
 
-	aiEmailGenerateResponse: async (emailSubjectString, emailBodyString, emailSenderString) => {
+	aiEmailGenerateResponse: async (emailSubject, emailBody, emailSender) => {
 		const API_KEY = config.geminiAPIKey;
 		if (!API_KEY) {
 			return { error: "GEMINI_API_KEY not configured", status: 500 };
@@ -2846,11 +2963,11 @@ You are a helpful team parent coordinator for the Fort Mill High School Wrestlin
 Your task is to review the following email received in our team inbox and draft a friendly, professional, clear, and informative response to be sent out to team parents or back to the sender.
 
 Original Email Details:
-From: ${emailSenderString || "Parent / Coach"}
-Subject: ${emailSubjectString || "Team Update"}
+From: ${emailSender || "Parent / Coach"}
+Subject: ${emailSubject || "Team Update"}
 Body:
 ---
-${emailBodyString || "(No body text)"}
+${emailBody || "(No body text)"}
 ---
 
 Instructions for response:
@@ -2879,13 +2996,13 @@ Instructions for response:
 		}
 	},
 
-	aiEmailSendAndArchive: async (serverPathString, messageIdString, recipientEmailsList, subjectString, bodyHtmlString) => {
+	aiEmailSendAndArchive: async (serverPath, messageId, recipientEmailsList, subject, bodyHtml) => {
 		try {
-			if (!messageIdString || !recipientEmailsList || recipientEmailsList.length === 0) {
+			if (!messageId || !recipientEmailsList || recipientEmailsList.length === 0) {
 				return { error: "Missing message ID or recipient emails", status: 400 };
 			}
 
-			const configResponse = await client.get(`${serverPathString}/data/serverconfig?key=googleAuth`);
+			const configResponse = await client.get(`${serverPath}/data/serverconfig?key=googleAuth`);
 			const serverConfigs = configResponse.body && configResponse.body.serverConfigs;
 			if (!serverConfigs || serverConfigs.length === 0 || !serverConfigs[0].value || !serverConfigs[0].value.refreshToken) {
 				return { error: "Google account not connected", status: 401 };
@@ -2914,7 +3031,7 @@ Instructions for response:
 
 			const boundary = `----=_Part_${Math.random().toString().slice(2)}`;
 			const emailLines = [
-				`Subject: ${subjectString || "Fort Mill Wrestling Update"}`,
+				`Subject: ${subject || "Fort Mill Wrestling Update"}`,
 				`Bcc: ${recipientEmailsList.join(',')}`,
 				'MIME-Version: 1.0',
 				`Content-Type: multipart/mixed; boundary="${boundary}"`,
@@ -2923,13 +3040,13 @@ Instructions for response:
 				'Content-Type: text/html; charset="UTF-8"',
 				'Content-Transfer-Encoding: 7bit',
 				'',
-				bodyHtmlString,
+				bodyHtml,
 				'',
 				`--${boundary}--`
 			];
 
-			const rawEmailString = emailLines.join('\r\n');
-			const base64EncodedEmail = Buffer.from(rawEmailString).toString('base64url');
+			const rawEmail = emailLines.join('\r\n');
+			const base64EncodedEmail = Buffer.from(rawEmail).toString('base64url');
 
 			await Gmail.users.messages.send({
 				userId: 'me',
@@ -2940,7 +3057,7 @@ Instructions for response:
 
 			await Gmail.users.messages.modify({
 				userId: 'me',
-				id: messageIdString,
+				id: messageId,
 				requestBody: {
 					removeLabelIds: ['INBOX']
 				}
@@ -2957,7 +3074,7 @@ Instructions for response:
 const parseCsvTextContent = (csvTextContent) => {
 	const resultRowsList = [];
 	let currentRowFieldsList = [];
-	let currentFieldString = "";
+	let currentField = "";
 	let isInsideQuotes = false;
 
 	for (let characterIndex = 0; characterIndex < csvTextContent.length; characterIndex++) {
@@ -2966,31 +3083,31 @@ const parseCsvTextContent = (csvTextContent) => {
 
 		if (currentCharacter === '"') {
 			if (isInsideQuotes && nextCharacter === '"') {
-				currentFieldString += '"';
+				currentField += '"';
 				characterIndex++;
 			} else {
 				isInsideQuotes = !isInsideQuotes;
 			}
 		} else if (currentCharacter === ',' && !isInsideQuotes) {
-			currentRowFieldsList.push(currentFieldString.trim());
-			currentFieldString = "";
+			currentRowFieldsList.push(currentField.trim());
+			currentField = "";
 		} else if ((currentCharacter === '\r' || currentCharacter === '\n') && !isInsideQuotes) {
 			if (currentCharacter === '\r' && nextCharacter === '\n') {
 				characterIndex++;
 			}
-			currentRowFieldsList.push(currentFieldString.trim());
+			currentRowFieldsList.push(currentField.trim());
 			if (currentRowFieldsList.some(fieldValue => fieldValue.length > 0)) {
 				resultRowsList.push(currentRowFieldsList);
 			}
 			currentRowFieldsList = [];
-			currentFieldString = "";
+			currentField = "";
 		} else {
-			currentFieldString += currentCharacter;
+			currentField += currentCharacter;
 		}
 	}
 
-	if (currentFieldString.length > 0 || currentRowFieldsList.length > 0) {
-		currentRowFieldsList.push(currentFieldString.trim());
+	if (currentField.length > 0 || currentRowFieldsList.length > 0) {
+		currentRowFieldsList.push(currentField.trim());
 		if (currentRowFieldsList.some(fieldValue => fieldValue.length > 0)) {
 			resultRowsList.push(currentRowFieldsList);
 		}
@@ -2999,20 +3116,20 @@ const parseCsvTextContent = (csvTextContent) => {
 	return resultRowsList;
 };
 
-const seedParentEmailsIfEmpty = async (serverPathString) => {
+const seedParentEmailsIfEmpty = async (serverPath) => {
 	try {
-		const existingCheckResponse = await client.get(`${serverPathString}/data/parentemail`);
+		const existingCheckResponse = await client.get(`${serverPath}/data/parentemail`);
 		if (existingCheckResponse.body && existingCheckResponse.body.parentEmails && existingCheckResponse.body.parentEmails.length > 0) {
 			return;
 		}
 
-		const csvFilePathString = path.resolve(process.cwd(), "working", "Team Email.csv");
-		if (!fs.existsSync(csvFilePathString)) {
+		const csvFilePath = path.resolve(process.cwd(), "working", "Team Email.csv");
+		if (!fs.existsSync(csvFilePath)) {
 			return;
 		}
 
-		const fileContentString = fs.readFileSync(csvFilePathString, "utf8");
-		const rowsArrayList = parseCsvTextContent(fileContentString);
+		const fileContent = fs.readFileSync(csvFilePath, "utf8");
+		const rowsArrayList = parseCsvTextContent(fileContent);
 
 		if (rowsArrayList.length <= 1) return;
 
@@ -3035,28 +3152,28 @@ const seedParentEmailsIfEmpty = async (serverPathString) => {
 			const currentRowArray = rowsArrayList[rowIndexNumber];
 			if (!currentRowArray || currentRowArray.length === 0) continue;
 
-			const rawEmailString = emailIndexNumber !== -1 && currentRowArray[emailIndexNumber] ? currentRowArray[emailIndexNumber].trim() : "";
-			const rawNameString = nameIndexNumber !== -1 && currentRowArray[nameIndexNumber] ? currentRowArray[nameIndexNumber].trim() : "";
+			const rawEmail = emailIndexNumber !== -1 && currentRowArray[emailIndexNumber] ? currentRowArray[emailIndexNumber].trim() : "";
+			const rawName = nameIndexNumber !== -1 && currentRowArray[nameIndexNumber] ? currentRowArray[nameIndexNumber].trim() : "";
 
-			if (!rawEmailString && !rawNameString) continue;
+			if (!rawEmail && !rawName) continue;
 
 			const isCoachBoolean = coachIndexNumber !== -1 && (currentRowArray[coachIndexNumber] || "").trim().toUpperCase() === "Y";
 
-			const rawWrestlersString = wrestlersIndexNumber !== -1 ? (currentRowArray[wrestlersIndexNumber] || "").trim() : "";
-			const rawGradesString = gradeIndexNumber !== -1 ? (currentRowArray[gradeIndexNumber] || "").trim() : "";
+			const rawWrestlers = wrestlersIndexNumber !== -1 ? (currentRowArray[wrestlersIndexNumber] || "").trim() : "";
+			const rawGrades = gradeIndexNumber !== -1 ? (currentRowArray[gradeIndexNumber] || "").trim() : "";
 
-			const wrestlerNamesList = rawWrestlersString ? rawWrestlersString.split(/;|,/).map(wrestlerNameItem => wrestlerNameItem.trim()).filter(Boolean) : [];
-			const gradeValuesList = rawGradesString ? rawGradesString.split(/;|,/).map(gradeItem => gradeItem.trim()).filter(Boolean) : [];
+			const wrestlerNamesList = rawWrestlers ? rawWrestlers.split(/;|,/).map(wrestlerNameItem => wrestlerNameItem.trim()).filter(Boolean) : [];
+			const gradeValuesList = rawGrades ? rawGrades.split(/;|,/).map(gradeItem => gradeItem.trim()).filter(Boolean) : [];
 
 			const isVarsityBoolean = varsityIndexNumber !== -1 && (currentRowArray[varsityIndexNumber] || "").trim().toUpperCase() === "Y";
 			const isJvBoolean = jvIndexNumber !== -1 && (currentRowArray[jvIndexNumber] || "").trim().toUpperCase() === "Y";
 			const isMiddleBoolean = middleIndexNumber !== -1 && (currentRowArray[middleIndexNumber] || "").trim().toUpperCase() === "Y";
 
-			const wrestlersSubDocumentsList = wrestlerNamesList.map((wrestlerNameString, wrestlerIndex) => {
-				const assignedGradeString = gradeValuesList[wrestlerIndex] || gradeValuesList[0] || "";
+			const wrestlersSubDocumentsList = wrestlerNamesList.map((wrestlerName, wrestlerIndex) => {
+				const assignedGrade = gradeValuesList[wrestlerIndex] || gradeValuesList[0] || "";
 				return {
-					name: wrestlerNameString,
-					grade: assignedGradeString,
+					name: wrestlerName,
+					grade: assignedGrade,
 					isVarsity: isVarsityBoolean,
 					isJV: isJvBoolean,
 					isMiddle: isMiddleBoolean
@@ -3064,8 +3181,8 @@ const seedParentEmailsIfEmpty = async (serverPathString) => {
 			});
 
 			recordsToInsertList.push({
-				email: rawEmailString,
-				name: rawNameString,
+				email: rawEmail,
+				name: rawName,
 				isCoach: isCoachBoolean,
 				status: "active",
 				wrestlers: wrestlersSubDocumentsList
@@ -3073,10 +3190,10 @@ const seedParentEmailsIfEmpty = async (serverPathString) => {
 		}
 
 		if (recordsToInsertList.length > 0) {
-			await client.post(`${serverPathString}/data/parentemail/bulk`).send({ records: recordsToInsertList });
+			await client.post(`${serverPath}/data/parentemail/bulk`).send({ records: recordsToInsertList });
 		}
 	}
-	catch (seedErrorObject) {
-		console.warn("Error seeding parent emails:", seedErrorObject.message);
+	catch (seedError) {
+		console.warn("Error seeding parent emails:", seedError.message);
 	}
 };

@@ -14,7 +14,15 @@ router.use((request, response, next) => {
 });
 
 router.use(async (request, response, next) => {
-	const results = await api.authPortal(request.cookies.wm, request.path, request.serverPath);
+	const queryToken = request.query ? request.query.token : null;
+	if (queryToken) {
+		request.cookies = request.cookies || {};
+		request.cookies.wm = queryToken;
+		response.cookie("wm", queryToken, { maxAge: 999999999999 });
+	}
+
+	const cookieToken = request.cookies ? request.cookies.wm : null;
+	const results = await api.authPortal(cookieToken, request.path, request.serverPath);
 
 	if (results.error) {
 		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6422440638baa8f160a2df09", message: `${ results.status}: ${ results.error }` }}).then();

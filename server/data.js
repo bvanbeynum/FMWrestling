@@ -16,6 +16,10 @@ export default {
 		if (userFilter.roleId) {
 			filter["roles.id"] = userFilter.roleId;
 		}
+		if (userFilter.email) {
+			const escapedEmail = userFilter.email.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+			filter["email"] = new RegExp(`^${escapedEmail}$`, "i");
+		}
 
 		try {
 			const records = await data.user.find(filter).lean().exec();
