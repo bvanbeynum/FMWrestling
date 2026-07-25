@@ -3,63 +3,10 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import config from "./config.js";
 import { google } from "googleapis";
-import nodemailer from "nodemailer";
 import fs, { stat } from "fs";
 import path from "path";
-import { getDualWrestlers } from "./middleware.js";
+import { getDualWrestlers, isGeminiQuotaError, isGeminiOverloadedError } from "./middleware.js";
 
-
-const isGeminiQuotaError = (error) => {
-	if (error.status === 429) return true;
-	if (error.response) {
-		if (error.response.status === 429) return true;
-		if (error.response.body && error.response.body.error) {
-			const code = error.response.body.error.code;
-			const status = error.response.body.error.status;
-			if (code === 429 || status === "RESOURCE_EXHAUSTED") return true;
-		}
-		if (error.response.text) {
-			try {
-				const parsed = JSON.parse(error.response.text);
-				if (parsed && parsed.error && (parsed.error.code === 429 || parsed.error.status === "RESOURCE_EXHAUSTED")) {
-					return true;
-				}
-			} catch (parseError) {}
-		}
-	}
-	const errorText = error.response ? (error.response.text || JSON.stringify(error.response.body || "")) : "";
-	const combinedText = `${error.message || ""} ${errorText}`.toLowerCase();
-	if (combinedText.includes("quota exceeded") || combinedText.includes("resource_exhausted") || combinedText.includes("quota")) {
-		return true;
-	}
-	return false;
-};
-
-const isGeminiOverloadedError = (error) => {
-	if (error.status === 503) return true;
-	if (error.response) {
-		if (error.response.status === 503) return true;
-		if (error.response.body && error.response.body.error) {
-			const code = error.response.body.error.code;
-			const status = error.response.body.error.status;
-			if (code === 503 || status === "UNAVAILABLE") return true;
-		}
-		if (error.response.text) {
-			try {
-				const parsed = JSON.parse(error.response.text);
-				if (parsed && parsed.error && (parsed.error.code === 503 || parsed.error.status === "UNAVAILABLE")) {
-					return true;
-				}
-			} catch (parseError) {}
-		}
-	}
-	const errorText = error.response ? (error.response.text || JSON.stringify(error.response.body || "")) : "";
-	const combinedText = `${error.message || ""} ${errorText}`.toLowerCase();
-	if (combinedText.includes("high demand") || combinedText.includes("unavailable") || combinedText.includes("overloaded") || combinedText.includes("503")) {
-		return true;
-	}
-	return false;
-};
 
 export default {
 
@@ -77,8 +24,8 @@ export default {
 	authAPI: async (serverPath, referer, cookie) => {
 		const output = {};
 		
-		const re = new RegExp(serverPath.substring(serverPath.lastIndexOf("/") + 1)); // Build the regex based on the shorter path to the server
-		output.isValid = re.test(referer); // The referer is the full URL, so it should include the server path
+		const pathRegex = new RegExp(serverPath.substring(serverPath.lastIndexOf("/") + 1)); // Build the regex based on the shorter path to the server
+		output.isValid = pathRegex.test(referer); // The referer is the full URL, so it should include the server path
 		
 		if (output.isValid && cookie) {
 			
@@ -2375,9 +2322,9 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 				
 				// 1. Extract wrestler SQL IDs
 				const wrestlerSqlIds = new Set();
-				(event.matches || []).forEach(m => {
-					if (m.winner && m.winner.wrestlerSqlId) wrestlerSqlIds.add(m.winner.wrestlerSqlId);
-					if (m.loser && m.loser.wrestlerSqlId) wrestlerSqlIds.add(m.loser.wrestlerSqlId);
+				(event.matches || []).forEach(match => {
+					if (match.winner && match.winner.wrestlerSqlId) wrestlerSqlIds.add(match.winner.wrestlerSqlId);
+					if (match.loser && match.loser.wrestlerSqlId) wrestlerSqlIds.add(match.loser.wrestlerSqlId);
 				});
 
 				// 2. Query wrestler profiles from the data layer
@@ -2386,31 +2333,31 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 					try {
 						const wrestlerResponse = await client.get(`${ serverPath }/data/wrestler?sqlids=${JSON.stringify(Array.from(wrestlerSqlIds))}`);
 						const wrestlers = wrestlerResponse.body.wrestlers || [];
-						wrestlers.forEach(w => {
-							if (w.division) wrestlerDivisionMap.set(w.sqlId, w.division);
+						wrestlers.forEach(wrestler => {
+							if (wrestler.division) wrestlerDivisionMap.set(wrestler.sqlId, wrestler.division);
 						});
-					} catch (e) {
-						console.error("API error fetching wrestlers in eventDetailsLoad:", e);
+					} catch (error) {
+						console.error("API error fetching wrestlers in eventDetailsLoad:", error);
 					}
 				}
 
 				// 3. Resolve division for each match
-				(event.matches || []).forEach(m => {
-					if (!m.division) {
-						if (m.winner && m.winner.wrestlerSqlId && wrestlerDivisionMap.has(m.winner.wrestlerSqlId)) {
-							m.division = wrestlerDivisionMap.get(m.winner.wrestlerSqlId);
-						} else if (m.loser && m.loser.wrestlerSqlId && wrestlerDivisionMap.has(m.loser.wrestlerSqlId)) {
-							m.division = wrestlerDivisionMap.get(m.loser.wrestlerSqlId);
+				(event.matches || []).forEach(match => {
+					if (!match.division) {
+						if (match.winner && match.winner.wrestlerSqlId && wrestlerDivisionMap.has(match.winner.wrestlerSqlId)) {
+							match.division = wrestlerDivisionMap.get(match.winner.wrestlerSqlId);
+						} else if (match.loser && match.loser.wrestlerSqlId && wrestlerDivisionMap.has(match.loser.wrestlerSqlId)) {
+							match.division = wrestlerDivisionMap.get(match.loser.wrestlerSqlId);
 						} else {
-							const wc = (m.weightClass || "").toLowerCase();
-							if (wc.startsWith("jv") || wc.includes(" jv") || wc.includes("jv ")) {
-								m.division = "JV";
-							} else if (wc.includes("middle school") || wc.startsWith("ms")) {
-								m.division = "Middle School";
-							} else if (wc.includes("girls") || wc.startsWith("g-") || wc.startsWith("girls-")) {
-								m.division = "Girls";
+							const weightClass = (match.weightClass || "").toLowerCase();
+							if (weightClass.startsWith("jv") || weightClass.includes(" jv") || weightClass.includes("jv ")) {
+								match.division = "JV";
+							} else if (weightClass.includes("middle school") || weightClass.startsWith("ms")) {
+								match.division = "Middle School";
+							} else if (weightClass.includes("girls") || weightClass.startsWith("g-") || weightClass.startsWith("girls-")) {
+								match.division = "Girls";
 							} else {
-								m.division = "Varsity";
+								match.division = "Varsity";
 							}
 						}
 					}
@@ -2418,35 +2365,35 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 
 				// 4. Extract team names
 				const teamNamesSet = new Set();
-				(event.matches || []).forEach(m => {
-					if (m.winner?.team) teamNamesSet.add(m.winner.team);
-					if (m.loser?.team) teamNamesSet.add(m.loser.team);
+				(event.matches || []).forEach(match => {
+					if (match.winner?.team) teamNamesSet.add(match.winner.team);
+					if (match.loser?.team) teamNamesSet.add(match.loser.team);
 				});
 				const teamNames = Array.from(teamNamesSet).filter(Boolean);
 
 				// 5. Query schools matching team names
-				let familiarTeamsList = [];
+				let familiarTeams = [];
 				if (teamNames.length > 0) {
 					try {
 						const schoolResponse = await client.get(`${ serverPath }/data/school?names=${JSON.stringify(teamNames)}`);
 						const schools = schoolResponse.body.schools || [];
 
 						const schoolNamesSet = new Set();
-						schools.forEach(s => {
-							if (s.name) schoolNamesSet.add(s.name.toLowerCase().trim());
-							if (s.lookupNames) {
-								s.lookupNames.forEach(name => {
+						schools.forEach(school => {
+							if (school.name) schoolNamesSet.add(school.name.toLowerCase().trim());
+							if (school.lookupNames) {
+								school.lookupNames.forEach(name => {
 									if (name) schoolNamesSet.add(name.toLowerCase().trim());
 								});
 							}
 						});
 
-						familiarTeamsList = teamNames.filter(t => schoolNamesSet.has(t.toLowerCase().trim()));
-					} catch (e) {
-						console.error("API error fetching schools in eventDetailsLoad:", e);
+						familiarTeams = teamNames.filter(teamName => schoolNamesSet.has(teamName.toLowerCase().trim()));
+					} catch (error) {
+						console.error("API error fetching schools in eventDetailsLoad:", error);
 					}
 				}
-				event.familiarTeams = familiarTeamsList;
+				event.familiarTeams = familiarTeams;
 
 				output.data.event = event;
 				output.status = 200;
@@ -2609,7 +2556,120 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 		const output = { data: { parentEmails: [] } };
 
 		try {
-			await seedParentEmailsIfEmpty(serverPath);
+			try {
+				const existingCheckResponse = await client.get(`${serverPath}/data/parentemail`);
+				if (!existingCheckResponse.body || !existingCheckResponse.body.parentEmails || existingCheckResponse.body.parentEmails.length === 0) {
+					const csvFilePath = path.resolve(process.cwd(), "working", "Team Email.csv");
+					if (fs.existsSync(csvFilePath)) {
+						const csvTextContent = fs.readFileSync(csvFilePath, "utf8");
+
+						const resultRows = [];
+						let currentRowFields = [];
+						let currentField = "";
+						let isInsideQuotes = false;
+
+						for (let characterIndex = 0; characterIndex < csvTextContent.length; characterIndex++) {
+							const currentCharacter = csvTextContent[characterIndex];
+							const nextCharacter = csvTextContent[characterIndex + 1];
+
+							if (currentCharacter === '"') {
+								if (isInsideQuotes && nextCharacter === '"') {
+									currentField += '"';
+									characterIndex++;
+								} else {
+									isInsideQuotes = !isInsideQuotes;
+								}
+							} else if (currentCharacter === ',' && !isInsideQuotes) {
+								currentRowFields.push(currentField.trim());
+								currentField = "";
+							} else if ((currentCharacter === '\r' || currentCharacter === '\n') && !isInsideQuotes) {
+								if (currentCharacter === '\r' && nextCharacter === '\n') {
+									characterIndex++;
+								}
+								currentRowFields.push(currentField.trim());
+								if (currentRowFields.some(fieldValue => fieldValue.length > 0)) {
+									resultRows.push(currentRowFields);
+								}
+								currentRowFields = [];
+								currentField = "";
+							} else {
+								currentField += currentCharacter;
+							}
+						}
+
+						if (currentField.length > 0 || currentRowFields.length > 0) {
+							currentRowFields.push(currentField.trim());
+							if (currentRowFields.some(fieldValue => fieldValue.length > 0)) {
+								resultRows.push(currentRowFields);
+							}
+						}
+
+						if (resultRows.length > 1) {
+							const headerRow = resultRows[0].map(headerName => headerName.trim().toLowerCase());
+							const getColumnIndex = (columnName) => headerRow.findIndex(headerName => headerName.includes(columnName.toLowerCase()));
+
+							const emailIndex = getColumnIndex("emails");
+							const nameIndex = getColumnIndex("name");
+							const wrestlersIndex = getColumnIndex("wrestlers");
+							const coachIndex = getColumnIndex("coach");
+							const varsityIndex = getColumnIndex("varsity");
+							const jvIndex = getColumnIndex("jv");
+							const middleIndex = getColumnIndex("middle");
+							const gradeIndex = getColumnIndex("grade");
+
+							const recordsToInsert = [];
+
+							for (let rowIndex = 1; rowIndex < resultRows.length; rowIndex++) {
+								const currentRow = resultRows[rowIndex];
+								if (!currentRow || currentRow.length === 0) continue;
+
+								const rawEmail = emailIndex !== -1 && currentRow[emailIndex] ? currentRow[emailIndex].trim() : "";
+								const rawName = nameIndex !== -1 && currentRow[nameIndex] ? currentRow[nameIndex].trim() : "";
+
+								if (!rawEmail && !rawName) continue;
+
+								const isCoach = coachIndex !== -1 && (currentRow[coachIndex] || "").trim().toUpperCase() === "Y";
+
+								const rawWrestlers = wrestlersIndex !== -1 ? (currentRow[wrestlersIndex] || "").trim() : "";
+								const rawGrades = gradeIndex !== -1 ? (currentRow[gradeIndex] || "").trim() : "";
+
+								const wrestlerNames = rawWrestlers ? rawWrestlers.split(/;|,/).map(wrestlerName => wrestlerName.trim()).filter(Boolean) : [];
+								const gradeValues = rawGrades ? rawGrades.split(/;|,/).map(grade => grade.trim()).filter(Boolean) : [];
+
+								const isVarsity = varsityIndex !== -1 && (currentRow[varsityIndex] || "").trim().toUpperCase() === "Y";
+								const isJv = jvIndex !== -1 && (currentRow[jvIndex] || "").trim().toUpperCase() === "Y";
+								const isMiddle = middleIndex !== -1 && (currentRow[middleIndex] || "").trim().toUpperCase() === "Y";
+
+								const wrestlers = wrestlerNames.map((wrestlerName, wrestlerIndex) => {
+									const assignedGrade = gradeValues[wrestlerIndex] || gradeValues[0] || "";
+									return {
+										name: wrestlerName,
+										grade: assignedGrade,
+										isVarsity: isVarsity,
+										isJV: isJv,
+										isMiddle: isMiddle
+									};
+								});
+
+								recordsToInsert.push({
+									email: rawEmail,
+									name: rawName,
+									isCoach: isCoach,
+									status: "active",
+									wrestlers: wrestlers
+								});
+							}
+
+							if (recordsToInsert.length > 0) {
+								await client.post(`${serverPath}/data/parentemail/bulk`).send({ records: recordsToInsert });
+							}
+						}
+					}
+				}
+			}
+			catch (seedError) {
+				console.warn("Error seeding parent emails:", seedError.message);
+			}
 
 			let requestUrl = `${serverPath}/data/parentemail`;
 			if (statusFilter && statusFilter !== "all") {
@@ -2644,11 +2704,11 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 		return output;
 	},
 
-	parentEmailBulkUpload: async (recordsArrayList, serverPath) => {
+	parentEmailBulkUpload: async (records, serverPath) => {
 		const output = {};
 
 		try {
-			const clientResponse = await client.post(`${serverPath}/data/parentemail/bulk`).send({ records: recordsArrayList });
+			const clientResponse = await client.post(`${serverPath}/data/parentemail/bulk`).send({ records: records });
 			output.status = 200;
 			output.data = clientResponse.body;
 		}
@@ -2660,11 +2720,11 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 		return output;
 	},
 
-	parentEmailBulkStatus: async (recordIdsArrayList, targetStatus, serverPath) => {
+	parentEmailBulkStatus: async (recordIds, targetStatus, serverPath) => {
 		const output = {};
 
 		try {
-			const clientResponse = await client.post(`${serverPath}/data/parentemail/status`).send({ ids: recordIdsArrayList, status: targetStatus });
+			const clientResponse = await client.post(`${serverPath}/data/parentemail/status`).send({ ids: recordIds, status: targetStatus });
 			output.status = 200;
 			output.data = clientResponse.body;
 		}
@@ -2906,7 +2966,7 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 				return { messages: [] };
 			}
 
-			const messagesList = [];
+			const messages = [];
 			for (const msgItem of listResponse.data.messages) {
 				const emailResponse = await Gmail.users.messages.get({
 					userId: 'me',
@@ -2915,13 +2975,13 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 				});
 
 				const headers = emailResponse.data.payload?.headers || [];
-				const subjectHeader = headers.find(h => h.name.toLowerCase() === 'subject');
-				const fromHeader = headers.find(h => h.name.toLowerCase() === 'from');
-				const dateHeader = headers.find(h => h.name.toLowerCase() === 'date');
+				const subjectHeader = headers.find(header => header.name.toLowerCase() === 'subject');
+				const fromHeader = headers.find(header => header.name.toLowerCase() === 'from');
+				const dateHeader = headers.find(header => header.name.toLowerCase() === 'date');
 
 				let body = '';
 				if (emailResponse.data.payload.parts) {
-					const part = emailResponse.data.payload.parts.find(p => p.mimeType === 'text/plain');
+					const part = emailResponse.data.payload.parts.find(part => part.mimeType === 'text/plain');
 					if (part && part.body && part.body.data) {
 						body = Buffer.from(part.body.data, 'base64').toString('utf-8');
 					}
@@ -2933,7 +2993,7 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 					body = emailResponse.data.snippet || '';
 				}
 
-				messagesList.push({
+				messages.push({
 					id: msgItem.id,
 					threadId: msgItem.threadId,
 					subject: subjectHeader ? subjectHeader.value : '(No Subject)',
@@ -2944,7 +3004,7 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 				});
 			}
 
-			return { messages: messagesList };
+			return { messages: messages };
 		} catch (error) {
 			return { error: error.message, status: 500 };
 		}
@@ -2996,9 +3056,9 @@ Instructions for response:
 		}
 	},
 
-	aiEmailSendAndArchive: async (serverPath, messageId, recipientEmailsList, subject, bodyHtml) => {
+	aiEmailSendAndArchive: async (serverPath, messageId, recipientEmails, subject, bodyHtml) => {
 		try {
-			if (!messageId || !recipientEmailsList || recipientEmailsList.length === 0) {
+			if (!messageId || !recipientEmails || recipientEmails.length === 0) {
 				return { error: "Missing message ID or recipient emails", status: 400 };
 			}
 
@@ -3032,7 +3092,7 @@ Instructions for response:
 			const boundary = `----=_Part_${Math.random().toString().slice(2)}`;
 			const emailLines = [
 				`Subject: ${subject || "Fort Mill Wrestling Update"}`,
-				`Bcc: ${recipientEmailsList.join(',')}`,
+				`Bcc: ${recipientEmails.join(',')}`,
 				'MIME-Version: 1.0',
 				`Content-Type: multipart/mixed; boundary="${boundary}"`,
 				'',
@@ -3069,131 +3129,4 @@ Instructions for response:
 		}
 	}
 
-};
-
-const parseCsvTextContent = (csvTextContent) => {
-	const resultRowsList = [];
-	let currentRowFieldsList = [];
-	let currentField = "";
-	let isInsideQuotes = false;
-
-	for (let characterIndex = 0; characterIndex < csvTextContent.length; characterIndex++) {
-		const currentCharacter = csvTextContent[characterIndex];
-		const nextCharacter = csvTextContent[characterIndex + 1];
-
-		if (currentCharacter === '"') {
-			if (isInsideQuotes && nextCharacter === '"') {
-				currentField += '"';
-				characterIndex++;
-			} else {
-				isInsideQuotes = !isInsideQuotes;
-			}
-		} else if (currentCharacter === ',' && !isInsideQuotes) {
-			currentRowFieldsList.push(currentField.trim());
-			currentField = "";
-		} else if ((currentCharacter === '\r' || currentCharacter === '\n') && !isInsideQuotes) {
-			if (currentCharacter === '\r' && nextCharacter === '\n') {
-				characterIndex++;
-			}
-			currentRowFieldsList.push(currentField.trim());
-			if (currentRowFieldsList.some(fieldValue => fieldValue.length > 0)) {
-				resultRowsList.push(currentRowFieldsList);
-			}
-			currentRowFieldsList = [];
-			currentField = "";
-		} else {
-			currentField += currentCharacter;
-		}
-	}
-
-	if (currentField.length > 0 || currentRowFieldsList.length > 0) {
-		currentRowFieldsList.push(currentField.trim());
-		if (currentRowFieldsList.some(fieldValue => fieldValue.length > 0)) {
-			resultRowsList.push(currentRowFieldsList);
-		}
-	}
-
-	return resultRowsList;
-};
-
-const seedParentEmailsIfEmpty = async (serverPath) => {
-	try {
-		const existingCheckResponse = await client.get(`${serverPath}/data/parentemail`);
-		if (existingCheckResponse.body && existingCheckResponse.body.parentEmails && existingCheckResponse.body.parentEmails.length > 0) {
-			return;
-		}
-
-		const csvFilePath = path.resolve(process.cwd(), "working", "Team Email.csv");
-		if (!fs.existsSync(csvFilePath)) {
-			return;
-		}
-
-		const fileContent = fs.readFileSync(csvFilePath, "utf8");
-		const rowsArrayList = parseCsvTextContent(fileContent);
-
-		if (rowsArrayList.length <= 1) return;
-
-		const headerRowArray = rowsArrayList[0].map(headerName => headerName.trim().toLowerCase());
-
-		const getColumnIndex = (columnNameSearch) => headerRowArray.findIndex(headerName => headerName.includes(columnNameSearch.toLowerCase()));
-
-		const emailIndexNumber = getColumnIndex("emails");
-		const nameIndexNumber = getColumnIndex("name");
-		const wrestlersIndexNumber = getColumnIndex("wrestlers");
-		const coachIndexNumber = getColumnIndex("coach");
-		const varsityIndexNumber = getColumnIndex("varsity");
-		const jvIndexNumber = getColumnIndex("jv");
-		const middleIndexNumber = getColumnIndex("middle");
-		const gradeIndexNumber = getColumnIndex("grade");
-
-		const recordsToInsertList = [];
-
-		for (let rowIndexNumber = 1; rowIndexNumber < rowsArrayList.length; rowIndexNumber++) {
-			const currentRowArray = rowsArrayList[rowIndexNumber];
-			if (!currentRowArray || currentRowArray.length === 0) continue;
-
-			const rawEmail = emailIndexNumber !== -1 && currentRowArray[emailIndexNumber] ? currentRowArray[emailIndexNumber].trim() : "";
-			const rawName = nameIndexNumber !== -1 && currentRowArray[nameIndexNumber] ? currentRowArray[nameIndexNumber].trim() : "";
-
-			if (!rawEmail && !rawName) continue;
-
-			const isCoachBoolean = coachIndexNumber !== -1 && (currentRowArray[coachIndexNumber] || "").trim().toUpperCase() === "Y";
-
-			const rawWrestlers = wrestlersIndexNumber !== -1 ? (currentRowArray[wrestlersIndexNumber] || "").trim() : "";
-			const rawGrades = gradeIndexNumber !== -1 ? (currentRowArray[gradeIndexNumber] || "").trim() : "";
-
-			const wrestlerNamesList = rawWrestlers ? rawWrestlers.split(/;|,/).map(wrestlerNameItem => wrestlerNameItem.trim()).filter(Boolean) : [];
-			const gradeValuesList = rawGrades ? rawGrades.split(/;|,/).map(gradeItem => gradeItem.trim()).filter(Boolean) : [];
-
-			const isVarsityBoolean = varsityIndexNumber !== -1 && (currentRowArray[varsityIndexNumber] || "").trim().toUpperCase() === "Y";
-			const isJvBoolean = jvIndexNumber !== -1 && (currentRowArray[jvIndexNumber] || "").trim().toUpperCase() === "Y";
-			const isMiddleBoolean = middleIndexNumber !== -1 && (currentRowArray[middleIndexNumber] || "").trim().toUpperCase() === "Y";
-
-			const wrestlersSubDocumentsList = wrestlerNamesList.map((wrestlerName, wrestlerIndex) => {
-				const assignedGrade = gradeValuesList[wrestlerIndex] || gradeValuesList[0] || "";
-				return {
-					name: wrestlerName,
-					grade: assignedGrade,
-					isVarsity: isVarsityBoolean,
-					isJV: isJvBoolean,
-					isMiddle: isMiddleBoolean
-				};
-			});
-
-			recordsToInsertList.push({
-				email: rawEmail,
-				name: rawName,
-				isCoach: isCoachBoolean,
-				status: "active",
-				wrestlers: wrestlersSubDocumentsList
-			});
-		}
-
-		if (recordsToInsertList.length > 0) {
-			await client.post(`${serverPath}/data/parentemail/bulk`).send({ records: recordsToInsertList });
-		}
-	}
-	catch (seedError) {
-		console.warn("Error seeding parent emails:", seedError.message);
-	}
 };

@@ -131,3 +131,54 @@ export const getDualWrestlers = async (opponentSchool, serverPath) => {
 	return result;
 };
 
+export const isGeminiQuotaError = (error) => {
+	if (error.status === 429) return true;
+	if (error.response) {
+		if (error.response.status === 429) return true;
+		if (error.response.body && error.response.body.error) {
+			const code = error.response.body.error.code;
+			const status = error.response.body.error.status;
+			if (code === 429 || status === "RESOURCE_EXHAUSTED") return true;
+		}
+		if (error.response.text) {
+			try {
+				const parsed = JSON.parse(error.response.text);
+				if (parsed && parsed.error && (parsed.error.code === 429 || parsed.error.status === "RESOURCE_EXHAUSTED")) {
+					return true;
+				}
+			} catch (parseError) {}
+		}
+	}
+	const errorText = error.response ? (error.response.text || JSON.stringify(error.response.body || "")) : "";
+	const combinedText = `${error.message || ""} ${errorText}`.toLowerCase();
+	if (combinedText.includes("quota exceeded") || combinedText.includes("resource_exhausted") || combinedText.includes("quota")) {
+		return true;
+	}
+	return false;
+};
+
+export const isGeminiOverloadedError = (error) => {
+	if (error.status === 503) return true;
+	if (error.response) {
+		if (error.response.status === 503) return true;
+		if (error.response.body && error.response.body.error) {
+			const code = error.response.body.error.code;
+			const status = error.response.body.error.status;
+			if (code === 503 || status === "UNAVAILABLE") return true;
+		}
+		if (error.response.text) {
+			try {
+				const parsed = JSON.parse(error.response.text);
+				if (parsed && parsed.error && (parsed.error.code === 503 || parsed.error.status === "UNAVAILABLE")) {
+					return true;
+				}
+			} catch (parseError) {}
+		}
+	}
+	const errorText = error.response ? (error.response.text || JSON.stringify(error.response.body || "")) : "";
+	const combinedText = `${error.message || ""} ${errorText}`.toLowerCase();
+	if (combinedText.includes("high demand") || combinedText.includes("unavailable") || combinedText.includes("overloaded") || combinedText.includes("503")) {
+		return true;
+	}
+	return false;
+};
