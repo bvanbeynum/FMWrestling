@@ -20,7 +20,8 @@ export default {
 		tournamentsummary: "./client/portal/tournamentsummary.jsx",
 		dualreport: "./client/portal/dualreport.jsx",
 		parentemail: "./client/portal/parentemail.jsx",
-		aiemail: "./client/portal/aiemail.jsx"
+		aiemail: "./client/portal/aiemail.jsx",
+		wrestlerreport: "./client/portal/wrestlerreport.jsx"
 	},
 	plugins: [
 		new HtmlWebpackPlugin({ 
@@ -181,6 +182,16 @@ export default {
 				viewport: "width=device-width, initial-scale=1"
 			},
 			chunks: [ "wrestler" ],
+			templateContent: "<html><body><div id='root'></div></body></html>"
+		}),
+		new HtmlWebpackPlugin({ 
+			filename: "./portal/wrestlerreport.html",
+			title: "Fort Mill Wrestling - Wrestler Performance Report",
+			favicon: "./client/media/favicon.ico",
+			meta: {
+				viewport: "width=device-width, initial-scale=1"
+			},
+			chunks: [ "wrestlerreport" ],
 			templateContent: "<html><body><div id='root'></div></body></html>"
 		}),
 		new HtmlWebpackPlugin({ 

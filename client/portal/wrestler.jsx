@@ -395,7 +395,7 @@ isLoading || !wrestler ?
 
 					{
 					match.vsId ?
-					<button onClick={ () => window.open(`/portal/wrestler.html?id=${ match.vsId }`, "_blank") }>
+					<button onClick={ () => window.open(`/portal/wrestlerreport.html?id=${ match.vsId }`, "_blank") }>
 						{/* Eye View */}
 						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-320q75 0 127.5-52.5T660-500q0-75-52.5-127.5T480-680q-75 0-127.5 52.5T300-500q0 75 52.5 127.5T480-320Zm0-72q-45 0-76.5-31.5T372-500q0-45 31.5-76.5T480-608q45 0 76.5 31.5T588-500q0 45-31.5 76.5T480-392Zm0 192q-146 0-266-81.5T40-500q54-137 174-218.5T480-800q146 0 266 81.5T920-500q-54 137-174 218.5T480-200Zm0-300Zm0 220q113 0 207.5-59.5T832-500q-50-101-144.5-160.5T480-720q-113 0-207.5 59.5T128-500q50 101 144.5 160.5T480-280Z"/></svg>
 					</button>
@@ -447,7 +447,7 @@ isLoading || !wrestler ?
 							{
 							opponent.id ?
 							<>
-							<rect x={ chartConstants.boxWidth - 30 } y={ (chartConstants.boxHeight / 2) - 12 } width="24" height="24" onClick={ () => window.open(`/portal/wrestler.html?id=${ opponent.id }`, "_blank") } className="networkIcon" />
+							<rect x={ chartConstants.boxWidth - 30 } y={ (chartConstants.boxHeight / 2) - 12 } width="24" height="24" onClick={ () => window.open(`/portal/wrestlerreport.html?id=${ opponent.id }`, "_blank") } className="networkIcon" />
 							<svg x={ chartConstants.boxWidth - 30 } y={ (chartConstants.boxHeight / 2) - 12 } width="24" height="24" xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" className="networkIcon"><path d="M480-320q75 0 127.5-52.5T660-500q0-75-52.5-127.5T480-680q-75 0-127.5 52.5T300-500q0 75 52.5 127.5T480-320Zm0-72q-45 0-76.5-31.5T372-500q0-45 31.5-76.5T480-608q45 0 76.5 31.5T588-500q0 45-31.5 76.5T480-392Zm0 192q-146 0-266-81.5T40-500q54-137 174-218.5T480-800q146 0 266 81.5T920-500q-54 137-174 218.5T480-200Zm0-300Zm0 220q113 0 207.5-59.5T832-500q-50-101-144.5-160.5T480-720q-113 0-207.5 59.5T128-500q50 101 144.5 160.5T480-280Z"/></svg>
 							
 							{
@@ -563,7 +563,7 @@ isLoading || !wrestler ?
 										{ result.vs } ({ result.vsTeam})
 										{
 										result.vsId ?
-										<button onClick={ () => window.open(`/portal/wrestler.html?id=${ result.vsId }`, "_blank") }>
+										<button onClick={ () => window.open(`/portal/wrestlerreport.html?id=${ result.vsId }`, "_blank") }>
 											{/* Eye View */}
 											<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-320q75 0 127.5-52.5T660-500q0-75-52.5-127.5T480-680q-75 0-127.5 52.5T300-500q0 75 52.5 127.5T480-320Zm0-72q-45 0-76.5-31.5T372-500q0-45 31.5-76.5T480-608q45 0 76.5 31.5T588-500q0 45-31.5 76.5T480-392Zm0 192q-146 0-266-81.5T40-500q54-137 174-218.5T480-800q146 0 266 81.5T920-500q-54 137-174 218.5T480-200Zm0-300Zm0 220q113 0 207.5-59.5T832-500q-50-101-144.5-160.5T480-720q-113 0-207.5 59.5T128-500q50 101 144.5 160.5T480-280Z"/></svg>
 										</button>

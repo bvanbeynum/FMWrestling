@@ -1024,13 +1024,13 @@ const Opponent = () => {
 			<div className="wrestlerName">
 				{
 				viewPlayer.team == "Fort Mill" ? 
-					<a href={ `/portal/wrestler.html?id=${ viewPlayer.match.team.id }` } target="_blank">
+					<a href={ `/portal/wrestlerreport.html?id=${ viewPlayer.match.team.id }` } target="_blank">
 						{viewPlayer.match.team.name}
 					</a>
 					
 					: 
 				
-					<a href={ `/portal/wrestler.html?id=${ viewPlayer.match.opponent.id }` } target="_blank">
+					<a href={ `/portal/wrestlerreport.html?id=${ viewPlayer.match.opponent.id }` } target="_blank">
 						{viewPlayer.match.opponent.name}
 					</a>
 				}
@@ -1085,7 +1085,7 @@ const Opponent = () => {
 
 						<div>
 							<div className="alternateName">
-								<a href={ `/portal/wrestler.html?id=${ topPick.id }` } target="_blank">
+								<a href={ `/portal/wrestlerreport.html?id=${ topPick.id }` } target="_blank">
 									{ topPick.name }
 								</a>
 							</div>

@@ -103,7 +103,7 @@ const WrestlerSearchComponent = () => {
 	}, [ teamSearch ]);
 
 	const selectWrestler = wrestler => {
-		window.open(`/portal/wrestler.html?id=${ wrestler.id }`, "_blank");
+		window.open(`/portal/wrestlerreport.html?id=${ wrestler.id }`, "_blank");
 	};
 
 	const updateFilter = (filterName, filterValue) => {
