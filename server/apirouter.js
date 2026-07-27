@@ -272,6 +272,12 @@ router.get("/api/wrestlerdetails", authAPI, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
 });
 
+router.get("/api/wrestlergraph", authAPI, async (request, response) => {
+	const results = await api.wrestlerOpponentsGraph(request.query.id, request.query.months, request.serverPath);
+
+	response.status(results.status).json(results.error ? { error: results.error } : results.data);
+});
+
 router.get("/api/wrestlersearchranking", authAPI, async (request, response) => {
 	const results = await api.wrestlerSearchRanking(request.query.state, request.query.team, request.query.weightclass, request.query.classification, request.serverPath);
 

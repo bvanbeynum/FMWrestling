@@ -38,6 +38,11 @@ html, body, #root {
 	padding: 0;
 }
 
+svg {
+	width: inherit;
+	height: inherit;
+}
+
 .wrestler-report-container {
 	display: block;
 	width: 100%;
@@ -691,3 +696,579 @@ html, body, #root {
 	color: var(--on-surface-variant);
 	font-style: italic;
 }
+
+/* Memgraph Fort Mill Paths */
+.memgraph-paths-list {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	margin-bottom: 8px;
+}
+
+.memgraph-path-card {
+	background: var(--surface);
+	border: 1px solid var(--outline);
+	border-radius: 6px;
+	padding: 14px 16px;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.memgraph-path-card.win-path {
+	border-left: 4px solid var(--win-color);
+}
+
+.memgraph-path-card.lose-path {
+	border-left: 4px solid var(--loss-color);
+}
+
+.path-card-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 12px;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.path-badge {
+	font-family: var(--font-headers);
+	font-size: 11px;
+	font-weight: 700;
+	padding: 3px 8px;
+	border-radius: 4px;
+}
+
+.path-badge.win-badge {
+	background: var(--win-bg);
+	color: var(--win-color);
+	border: 1px solid #a7f3d0;
+}
+
+.path-badge.lose-badge {
+	background: var(--loss-bg);
+	color: var(--loss-color);
+	border: 1px solid #fecaca;
+}
+
+.path-oldest-date {
+	font-family: var(--font-body);
+	font-size: 12px;
+	color: var(--on-surface-variant);
+	font-weight: 500;
+}
+
+.path-flow-container {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 8px 6px;
+	padding: 4px 0;
+}
+
+.path-step-row.wrestler-row {
+	display: flex;
+	align-items: center;
+}
+
+.path-step-row.match-row {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 0 4px;
+}
+
+.path-wrestler-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	background: var(--surface-container);
+	border: 1px solid var(--outline);
+	padding: 6px 12px;
+	border-radius: 20px;
+	font-family: var(--font-body);
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--on-surface);
+}
+
+.path-wrestler-chip.start-wrestler {
+	background: var(--surface-container-low);
+	border-color: var(--outline-variant);
+}
+
+.path-wrestler-chip.fortmill-target {
+	background: #fef3c7;
+	border-color: #fcd34d;
+	color: #78350f;
+}
+
+.fortmill-tag {
+	background: #d97706;
+	color: #ffffff;
+	font-family: var(--font-headers);
+	font-size: 10px;
+	padding: 2px 6px;
+	border-radius: 3px;
+	letter-spacing: 0.04em;
+}
+
+.path-step-details {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	line-height: 1.1;
+}
+
+.step-wintype {
+	font-family: var(--font-body);
+	font-size: 10px;
+	font-weight: 700;
+	color: var(--primary);
+	text-transform: uppercase;
+}
+
+.step-date {
+	font-family: var(--font-body);
+	font-size: 10px;
+	color: var(--on-surface-variant);
+}
+
+.arrow-line-wrapper {
+	display: flex;
+	align-items: center;
+	color: var(--on-surface-variant);
+	margin-top: 2px;
+}
+
+.arrow-icon {
+	color: var(--on-surface-variant);
+}
+
+.horizontal-arrow {
+	display: inline-block;
+}
+
+.vertical-arrow {
+	display: none;
+}
+
+/* Mobile Responsive Path Layout - Vertically Centered */
+@media (max-width: 650px) {
+	.path-flow-container {
+		flex-direction: column;
+		align-items: center;
+		width: 100%;
+		gap: 6px;
+	}
+
+	.path-step-row.wrestler-row {
+		display: flex;
+		justify-content: center;
+		width: 100%;
+	}
+
+	.path-step-row.match-row {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		width: 100%;
+		gap: 2px;
+		padding: 4px 0;
+	}
+
+	.path-step-details {
+		align-items: center;
+		text-align: center;
+	}
+
+	.arrow-line-wrapper {
+		justify-content: center;
+	}
+
+	.horizontal-arrow {
+		display: none;
+	}
+
+	.vertical-arrow {
+		display: inline-block;
+		margin-top: 2px;
+	}
+}
+
+/* Interactive Opponent Network SVG Graph */
+.graph-controls-group {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+
+.control-label {
+	font-family: var(--font-body);
+	font-size: 12px;
+	color: var(--on-surface-variant);
+	font-weight: 500;
+	margin-right: 4px;
+}
+
+.timeframe-btn {
+	font-family: var(--font-body);
+	font-size: 12px;
+	font-weight: 600;
+	padding: 4px 10px;
+	border-radius: 4px;
+	border: 1px solid var(--outline);
+	background: var(--surface);
+	color: var(--on-surface);
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+
+.timeframe-btn.active {
+	background: var(--primary);
+	color: #ffffff;
+	border-color: var(--primary);
+}
+
+.timeframe-btn:hover:not(.active) {
+	background: var(--surface-container-low);
+}
+
+.reset-graph-btn {
+	font-family: var(--font-body);
+	font-size: 12px;
+	font-weight: 600;
+	padding: 4px 10px;
+	border-radius: 4px;
+	border: 1px solid var(--outline-variant);
+	background: var(--surface-container-low);
+	color: var(--on-surface-variant);
+	cursor: pointer;
+	margin-left: 6px;
+	transition: all 0.15s ease;
+}
+
+.reset-graph-btn:hover {
+	background: var(--surface-container);
+	color: var(--on-surface);
+}
+
+/* Miller Multi-Column Opponent Network Explorer */
+.miller-columns-scroll-container {
+	position: relative;
+	min-height: 420px;
+	background: #f8fafc;
+	border: 1px solid var(--outline);
+	border-radius: 8px;
+	overflow-x: auto;
+	overflow-y: hidden;
+	padding: 12px;
+}
+
+.miller-columns-flow {
+	display: flex;
+	flex-direction: row;
+	gap: 16px;
+	min-height: 400px;
+	width: max-content;
+}
+
+.miller-column {
+	flex: 0 0 290px;
+	width: 290px;
+	background: #ffffff;
+	border: 1px solid var(--outline);
+	border-radius: 8px;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.miller-column-header {
+	padding: 12px 14px;
+	background: var(--surface-container-low);
+	border-bottom: 1px solid var(--outline-variant);
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.column-header-title {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.column-depth-tag {
+	font-family: var(--font-headers);
+	font-size: 10px;
+	font-weight: 700;
+	background: var(--primary);
+	color: #ffffff;
+	padding: 2px 6px;
+	border-radius: 4px;
+	letter-spacing: 0.05em;
+}
+
+.column-wrestler-name {
+	font-family: var(--font-body);
+	font-size: 14px;
+	font-weight: 700;
+	color: var(--on-surface);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.column-count-sub {
+	font-family: var(--font-body);
+	font-size: 12px;
+	color: var(--on-surface-variant);
+}
+
+.miller-column-list {
+	padding: 10px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	overflow-y: auto;
+	max-height: 400px;
+	flex: 1;
+}
+
+.empty-column-state {
+	padding: 24px 12px;
+	text-align: center;
+	font-family: var(--font-body);
+	font-size: 13px;
+	color: var(--on-surface-variant);
+}
+
+.miller-opponent-card {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 10px 12px;
+	background: #ffffff;
+	border: 1px solid var(--outline-variant);
+	border-radius: 6px;
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+
+.miller-opponent-card:hover {
+	border-color: var(--primary);
+	background: #f1f5f9;
+}
+
+.miller-opponent-card.active-selected {
+	background: #e0e7ff;
+	border-color: var(--primary);
+	box-shadow: 0 0 0 1px var(--primary);
+}
+
+.miller-opponent-card.fortmill-card {
+	border-left: 4px solid #d97706;
+}
+
+.miller-card-info {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	flex: 1;
+	min-width: 0;
+}
+
+.miller-name-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.miller-opponent-name {
+	font-family: var(--font-body);
+	font-size: 13px;
+	font-weight: 700;
+	color: var(--on-surface);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.miller-match-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 11px;
+}
+
+.match-result-badge {
+	font-family: var(--font-headers);
+	font-size: 9px;
+	font-weight: 700;
+	padding: 1px 5px;
+	border-radius: 3px;
+	color: #ffffff;
+}
+
+.match-result-badge.win {
+	background: var(--win-color);
+}
+
+.match-result-badge.loss {
+	background: var(--loss-color);
+}
+
+.miller-wintype {
+	font-family: var(--font-body);
+	font-size: 11px;
+	color: var(--on-surface-variant);
+}
+
+.miller-match-date {
+	font-family: var(--font-body);
+	font-size: 11px;
+	color: var(--on-surface-variant);
+	margin-left: auto;
+}
+
+.miller-card-arrow {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--on-surface-variant);
+	margin-left: 8px;
+	transition: transform 0.15s ease;
+}
+
+.miller-opponent-card.active-selected .miller-card-arrow {
+	color: var(--primary);
+	transform: translateX(3px);
+}
+
+.wrestler-external-link {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--on-surface-variant);
+	margin-left: 4px;
+	padding: 2px;
+	border-radius: 4px;
+	transition: all 0.15s ease;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.wrestler-external-link:hover {
+	color: var(--primary);
+	background: rgba(50, 70, 229, 0.1);
+}
+
+.graph-overlay-loading {
+	position: absolute;
+	top: 12px;
+	right: 16px;
+	background: rgba(255, 255, 255, 0.9);
+	padding: 4px 12px;
+	border-radius: 4px;
+	font-family: var(--font-body);
+	font-size: 12px;
+	color: var(--primary);
+	font-weight: 600;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+	z-index: 10;
+}
+
+.network-svg-canvas {
+	width: 100%;
+	height: auto;
+	max-height: 600px;
+	display: block;
+	user-select: none;
+}
+
+.network-edge-line {
+	stroke-width: 1.5px;
+	transition: stroke 0.2s ease;
+}
+
+.network-edge-line.win-edge {
+	stroke: var(--win-color);
+}
+
+.network-edge-line.lose-edge {
+	stroke: var(--loss-color);
+	stroke-dasharray: 4, 3;
+}
+
+.edge-detail-text {
+	font-family: var(--font-body);
+	font-size: 10px;
+	fill: var(--on-surface-variant);
+	font-weight: 500;
+	pointer-events: none;
+}
+
+.network-node-group {
+	cursor: pointer;
+	transition: transform 0.2s ease;
+}
+
+.node-circle {
+	fill: var(--surface);
+	stroke: var(--primary);
+	stroke-width: 2.5px;
+	transition: all 0.2s ease;
+}
+
+.node-circle.root-circle {
+	fill: var(--primary);
+	stroke: #ffffff;
+	stroke-width: 3px;
+}
+
+.node-circle.opponent-circle {
+	fill: #ffffff;
+	stroke: var(--tertiary);
+	stroke-width: 2px;
+}
+
+.node-circle.fortmill-circle {
+	stroke: #d97706;
+	stroke-width: 3px;
+}
+
+.network-node-group:hover .node-circle {
+	stroke-width: 4px;
+}
+
+.node-label-name {
+	font-family: var(--font-body);
+	font-size: 11px;
+	font-weight: 700;
+	fill: var(--on-surface);
+	pointer-events: none;
+}
+
+.root-node .node-label-name {
+	font-size: 12px;
+}
+
+.node-fortmill-rect {
+	fill: #d97706;
+}
+
+.node-fortmill-text {
+	font-family: var(--font-headers);
+	font-size: 8px;
+	fill: #ffffff;
+	letter-spacing: 0.04em;
+	pointer-events: none;
+}
+
+
+
+

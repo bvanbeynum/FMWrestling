@@ -1387,21 +1387,75 @@ export default {
 				)
 				.find(() => true);
 			
+			let isFortMill = false;
+			let winningPaths = [];
+			let losingPaths = [];
+			try {
+				if (wrestler.sqlId) {
+					const pathResponse = await client.get(`${ serverPath }/memgraph/wrestlerfortmillpaths?sqlid=${ wrestler.sqlId }`);
+					if (pathResponse.body) {
+						isFortMill = !!pathResponse.body.isFortMill;
+						const candidateWinning = pathResponse.body.candidateWinningPaths || pathResponse.body.winningPaths || [];
+						const candidateLosing = pathResponse.body.candidateLosingPaths || pathResponse.body.losingPaths || [];
+
+						const filterStrictUniquePaths = (candidatePaths = []) => {
+							const uniquePaths = [];
+							const usedNodeIds = new Set();
+
+							for (const path of candidatePaths) {
+								const pathNodeIds = (path.wrestlers || []).slice(1).map(w => w.id);
+								const isDuplicate = pathNodeIds.some(id => usedNodeIds.has(id));
+
+								if (!isDuplicate) {
+									pathNodeIds.forEach(id => usedNodeIds.add(id));
+									uniquePaths.push(path);
+									if (uniquePaths.length === 5) break;
+								}
+							}
+
+							return uniquePaths;
+						};
+
+						winningPaths = filterStrictUniquePaths(candidateWinning);
+						losingPaths = filterStrictUniquePaths(candidateLosing);
+					}
+				}
+			}
+			catch { }
+
 			wrestler = {
 				...wrestler,
 				division: lastEvent?.division,
-				weightClass: lastEvent?.weightClass
+				weightClass: lastEvent?.weightClass,
+				isFortMill,
+				winningPaths,
+				losingPaths
 			};
 
 			output.data.wrestler = wrestler;
+			output.status = 200;
+			return output;
 		}
 		catch (error) {
 			output.status = 563;
 			output.error = error.message;
 			return output;
 		}
+	},
 
-		output.status = 200;
+	wrestlerOpponentsGraph: async (wrestlerId, timeframeMonths, serverPath) => {
+		const output = { data: {} };
+
+		try {
+			const clientResponse = await client.get(`${ serverPath }/memgraph/wrestlergraph?sqlid=${ wrestlerId }&months=${ timeframeMonths || "" }`);
+			output.data = clientResponse.body;
+			output.status = 200;
+		}
+		catch (error) {
+			output.status = 500;
+			output.error = error.message;
+		}
+
 		return output;
 	},
 

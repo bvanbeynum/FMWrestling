@@ -7,6 +7,7 @@ import cookieParser from "cookie-parser";
 import busboy from "connect-busboy";
 import middleware from "./middleware.js";
 import routerData from "./datarouter.js";
+import routerMemgraph from "./memgraphrouter.js";
 import routerAPI from "./apirouter.js";
 
 // Declarations =======================================================================
@@ -28,6 +29,7 @@ app.use(busboy());
 
 app.use(middleware);
 app.use(routerData);
+app.use(routerMemgraph);
 app.use(routerAPI);
 
 app.use("/media", express.static(path.join(currentDirectory, "/client/media")));

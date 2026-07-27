@@ -3,6 +3,169 @@ import ReactDOM from "react-dom/client";
 import "./include/index.css";
 import "./include/wrestlerreport.css";
 
+const InteractiveOpponentGraphComponent = ({ wrestler }) => {
+	const [ timeframeMonths, setTimeframeMonths ] = useState("1");
+	const [ columns, setColumns ] = useState([]);
+	const [ isGraphLoading, setIsGraphLoading ] = useState(false);
+
+	const loadInitialColumn = async (monthsValue) => {
+		if (!wrestler || !wrestler.sqlId) return;
+		setIsGraphLoading(true);
+
+		try {
+			const fetchResponse = await fetch(`/api/wrestlergraph?id=${ wrestler.sqlId }&months=${ monthsValue || "" }`);
+			if (fetchResponse.ok) {
+				const graphData = await fetchResponse.json();
+				const initialColumn = {
+					depth: 0,
+					wrestlerId: wrestler.sqlId,
+					wrestlerName: wrestler.name,
+					selectedOpponentId: null,
+					opponents: graphData.connections || []
+				};
+
+				setColumns([ initialColumn ]);
+			}
+		}
+		catch (error) {
+			console.warn(error);
+		}
+		finally {
+			setIsGraphLoading(false);
+		}
+	};
+
+	useEffect(() => {
+		loadInitialColumn(timeframeMonths);
+	}, [ timeframeMonths, wrestler ]);
+
+	const handleOpponentClick = async (clickedOpponentItem, columnDepthIndex) => {
+		const clickedOpponentId = clickedOpponentItem.opponent.id;
+
+		const updatedColumns = columns.slice(0, columnDepthIndex + 1).map((columnItem, index) => {
+			if (index === columnDepthIndex) {
+				return { ...columnItem, selectedOpponentId: clickedOpponentId };
+			}
+			return columnItem;
+		});
+
+		setColumns(updatedColumns);
+		setIsGraphLoading(true);
+
+		try {
+			const fetchResponse = await fetch(`/api/wrestlergraph?id=${ clickedOpponentId }&months=${ timeframeMonths || "" }`);
+			if (fetchResponse.ok) {
+				const graphData = await fetchResponse.json();
+				const newColumn = {
+					depth: columnDepthIndex + 1,
+					wrestlerId: clickedOpponentId,
+					wrestlerName: clickedOpponentItem.opponent.name,
+					selectedOpponentId: null,
+					opponents: graphData.connections || []
+				};
+
+				setColumns([ ...updatedColumns, newColumn ]);
+			}
+		}
+		catch (error) {
+			console.warn(error);
+		}
+		finally {
+			setIsGraphLoading(false);
+		}
+	};
+
+	return (
+		<section className="report-section-panel">
+			<div className="section-panel-title">
+				<span>OPPONENT NETWORK EXPLORER</span>
+				<div className="graph-controls-group">
+					<span className="control-label">Timeframe:</span>
+					<button className={`timeframe-btn ${ timeframeMonths === "1" ? "active" : "" }`} onClick={ () => setTimeframeMonths("1") }>1 Month</button>
+					<button className={`timeframe-btn ${ timeframeMonths === "3" ? "active" : "" }`} onClick={ () => setTimeframeMonths("3") }>3 Months</button>
+					<button className={`timeframe-btn ${ timeframeMonths === "6" ? "active" : "" }`} onClick={ () => setTimeframeMonths("6") }>6 Months</button>
+					<button className={`timeframe-btn ${ timeframeMonths === "12" ? "active" : "" }`} onClick={ () => setTimeframeMonths("12") }>1 Year</button>
+					<button className={`timeframe-btn ${ timeframeMonths === "" ? "active" : "" }`} onClick={ () => setTimeframeMonths("") }>All Time</button>
+					<button className="reset-graph-btn" onClick={ () => loadInitialColumn(timeframeMonths) }>Reset</button>
+				</div>
+			</div>
+
+			<div className="miller-columns-scroll-container">
+				{ isGraphLoading ? <div className="graph-overlay-loading">Loading Opponent Data...</div> : null }
+
+				<div className="miller-columns-flow">
+					{ columns.map((columnItem, columnIndex) => (
+						<div key={ `${ columnItem.wrestlerId }-${ columnIndex }` } className="miller-column">
+							<div className="miller-column-header">
+								<div className="column-header-title">
+									<span className="column-depth-tag">DEPTH { columnItem.depth }</span>
+									<span className="column-wrestler-name">{ columnItem.wrestlerName }</span>
+									<a
+										href={ `/portal/wrestlerreport.html?id=${ columnItem.wrestlerId }` }
+										target="_blank"
+										rel="noopener noreferrer"
+										className="wrestler-external-link"
+										title="Open Wrestler Report in New Tab"
+										onClick={ (clickEvent) => clickEvent.stopPropagation() }
+									>
+										<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+											<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+											<polyline points="15 3 21 3 21 9" />
+											<line x1="10" y1="14" x2="21" y2="3" />
+										</svg>
+									</a>
+								</div>
+								<span className="column-count-sub">{ columnItem.opponents.length } { columnItem.opponents.length === 1 ? "Opponent" : "Opponents" }</span>
+							</div>
+
+							<div className="miller-column-list">
+								{ columnItem.opponents.length === 0 ? (
+									<div className="empty-column-state">No Opponents Found in Timeframe</div>
+								) : (
+									columnItem.opponents.map((opponentConnectionItem, opponentIndex) => {
+										const opponentObj = opponentConnectionItem.opponent;
+										const matchObj = opponentConnectionItem.match;
+										const isSelected = columnItem.selectedOpponentId === opponentObj.id;
+
+										return (
+											<div
+												key={ `${ opponentObj.id }-${ opponentIndex }` }
+												className={`miller-opponent-card ${ isSelected ? "active-selected" : "" } ${ opponentObj.isFortMill ? "fortmill-card" : "" }`}
+												onClick={ () => handleOpponentClick(opponentConnectionItem, columnIndex) }
+											>
+												<div className="miller-card-info">
+													<div className="miller-name-row">
+														<span className="miller-opponent-name">{ opponentObj.name }</span>
+														{ opponentObj.isFortMill ? <span className="fortmill-tag">FORT MILL</span> : null }
+													</div>
+
+													<div className="miller-match-row">
+														<span className={`match-result-badge ${ matchObj.isWinner ? "win" : "loss" }`}>
+															{ matchObj.isWinner ? "WIN" : "LOSS" }
+														</span>
+														{ matchObj.winType ? <span className="miller-wintype">{ matchObj.winType }</span> : null }
+														<span className="miller-match-date">{ matchObj.eventDate }</span>
+													</div>
+												</div>
+
+												<div className="miller-card-arrow">
+													<svg viewBox="0 0 24 24" width="16" height="16">
+														<path d="M9 5l7 7-7 7" stroke="currentColor" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+													</svg>
+												</div>
+											</div>
+										);
+									})
+								) }
+							</div>
+						</div>
+					)) }
+				</div>
+			</div>
+		</section>
+	);
+};
+
 const WrestlerReportComponent = () => {
 
 	const [ isLoading, setIsLoading ] = useState(false);
@@ -490,37 +653,189 @@ const WrestlerReportComponent = () => {
 						</div>
 					</div>
 				</section>
-			) : activeView === "opponents" ? (
-				<section className="report-section-panel">
-					<div className="section-panel-title">
-						<span>OPPONENT RECORD BREAKDOWN</span>
-						<span style={{ fontSize: "14px", fontWeight: "normal", color: "var(--on-surface-variant)" }}>
-							{ opponentsList.length } Unique Opponents
-						</span>
-					</div>
+			) : activeView === "opponents" && !wrestler.isFortMill ? (
+				<>
+					<InteractiveOpponentGraphComponent wrestler={ wrestler } />
 
-					<div className="opponents-grid-list">
-						{ opponentsList.length === 0 ? (
-							<div className="empty-state">No Opponents Recorded</div>
+					<section className="report-section-panel">
+						<div className="section-panel-title">
+							<span>TOP 5 WINNING PATHS TO FORT MILL</span>
+							<span style={{ fontSize: "14px", fontWeight: "normal", color: "var(--on-surface-variant)" }}>
+								{ (wrestler.winningPaths || []).length } Paths Found
+							</span>
+						</div>
+						{ (wrestler.winningPaths || []).length === 0 ? (
+							<div className="empty-state">No Winning Paths Found to a Fort Mill Wrestler</div>
 						) : (
-							opponentsList.map((opponentItem, opponentIndex) => (
-								<div key={ opponentIndex } className="opponent-card-item">
-									<div className="opponent-card-left">
-										<span className="opponent-card-name">{ opponentItem.name }</span>
-										{ opponentItem.teams.length > 0 ? (
-											<span className="opponent-card-teams">{ opponentItem.teams.join(", ") }</span>
-										) : "" }
+							<div className="memgraph-paths-list">
+								{ wrestler.winningPaths.map((pathItem, pathIndex) => (
+									<div key={ pathIndex } className="memgraph-path-card win-path">
+										<div className="path-card-header">
+											<span className="path-badge win-badge">
+												PATH #{ pathIndex + 1 } ({ pathItem.hops } { pathItem.hops === 1 ? "HOP" : "HOPS" })
+											</span>
+											<span className="path-oldest-date">Oldest Match Date: { pathItem.oldestDate }</span>
+										</div>
+										<div className="path-flow-container">
+											{ pathItem.wrestlers.map((wrestlerItem, wIndex) => {
+												const isTarget = wIndex === pathItem.wrestlers.length - 1;
+												const matchItem = wIndex < (pathItem.matches || []).length ? pathItem.matches[wIndex] : null;
+
+												return (
+													<React.Fragment key={ wIndex }>
+														<div className="path-step-row wrestler-row">
+															<div className={`path-wrestler-chip ${ isTarget ? "fortmill-target" : wIndex === 0 ? "start-wrestler" : "" }`}>
+																<span className="wrestler-chip-name">{ wrestlerItem.name }</span>
+																<a
+																	href={ `/portal/wrestlerreport.html?id=${ wrestlerItem.id }` }
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="wrestler-external-link"
+																	title="Open Wrestler Report in New Tab"
+																	onClick={ (clickEvent) => clickEvent.stopPropagation() }
+																>
+																	<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+																		<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+																		<polyline points="15 3 21 3 21 9" />
+																		<line x1="10" y1="14" x2="21" y2="3" />
+																	</svg>
+																</a>
+																{ wrestlerItem.isFortMill ? (
+																	<span className="fortmill-tag">FORT MILL</span>
+																) : null }
+															</div>
+														</div>
+														{ matchItem ? (
+															<div className="path-step-row match-row">
+																<div className="path-step-details">
+																	{ matchItem.winType ? <span className="step-wintype">{ matchItem.winType }</span> : null }
+																	<span className="step-date">{ matchItem.eventDate }</span>
+																</div>
+																<div className="arrow-line-wrapper">
+																	<svg className="arrow-icon horizontal-arrow" viewBox="0 0 24 24" width="16" height="16">
+																		<path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+																	</svg>
+																	<svg className="arrow-icon vertical-arrow" viewBox="0 0 24 24" width="16" height="16">
+																		<path d="M12 5v14M5 12l7 7 7-7" stroke="currentColor" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+																	</svg>
+																</div>
+															</div>
+														) : null }
+													</React.Fragment>
+												);
+											}) }
+										</div>
 									</div>
-									<div className="opponent-card-right">
-										<span className={`opponent-record-tag ${ opponentItem.wins > opponentItem.losses ? "better" : opponentItem.wins < opponentItem.losses ? "worse" : "" }`}>
-											{ opponentItem.wins } - { opponentItem.losses }
-										</span>
-									</div>
-								</div>
-							))
+								)) }
+							</div>
 						) }
-					</div>
-				</section>
+					</section>
+
+					<section className="report-section-panel">
+						<div className="section-panel-title">
+							<span>TOP 5 LOSING PATHS TO FORT MILL</span>
+							<span style={{ fontSize: "14px", fontWeight: "normal", color: "var(--on-surface-variant)" }}>
+								{ (wrestler.losingPaths || []).length } Paths Found
+							</span>
+						</div>
+						{ (wrestler.losingPaths || []).length === 0 ? (
+							<div className="empty-state">No Losing Paths Found to a Fort Mill Wrestler</div>
+						) : (
+							<div className="memgraph-paths-list">
+								{ wrestler.losingPaths.map((pathItem, pathIndex) => (
+									<div key={ pathIndex } className="memgraph-path-card lose-path">
+										<div className="path-card-header">
+											<span className="path-badge lose-badge">
+												PATH #{ pathIndex + 1 } ({ pathItem.hops } { pathItem.hops === 1 ? "HOP" : "HOPS" })
+											</span>
+											<span className="path-oldest-date">Oldest Match Date: { pathItem.oldestDate }</span>
+										</div>
+										<div className="path-flow-container">
+											{ pathItem.wrestlers.map((wrestlerItem, wIndex) => {
+												const isTarget = wIndex === pathItem.wrestlers.length - 1;
+												const matchItem = wIndex < (pathItem.matches || []).length ? pathItem.matches[wIndex] : null;
+
+												return (
+													<React.Fragment key={ wIndex }>
+														<div className="path-step-row wrestler-row">
+															<div className={`path-wrestler-chip ${ isTarget ? "fortmill-target" : wIndex === 0 ? "start-wrestler" : "" }`}>
+																<span className="wrestler-chip-name">{ wrestlerItem.name }</span>
+																<a
+																	href={ `/portal/wrestlerreport.html?id=${ wrestlerItem.id }` }
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="wrestler-external-link"
+																	title="Open Wrestler Report in New Tab"
+																	onClick={ (clickEvent) => clickEvent.stopPropagation() }
+																>
+																	<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+																		<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+																		<polyline points="15 3 21 3 21 9" />
+																		<line x1="10" y1="14" x2="21" y2="3" />
+																	</svg>
+																</a>
+																{ wrestlerItem.isFortMill ? (
+																	<span className="fortmill-tag">FORT MILL</span>
+																) : null }
+															</div>
+														</div>
+														{ matchItem ? (
+															<div className="path-step-row match-row">
+																<div className="path-step-details">
+																	{ matchItem.winType ? <span className="step-wintype">{ matchItem.winType }</span> : null }
+																	<span className="step-date">{ matchItem.eventDate }</span>
+																</div>
+																<div className="arrow-line-wrapper">
+																	<svg className="arrow-icon horizontal-arrow" viewBox="0 0 24 24" width="16" height="16">
+																		<path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+																	</svg>
+																	<svg className="arrow-icon vertical-arrow" viewBox="0 0 24 24" width="16" height="16">
+																		<path d="M12 5v14M5 12l7 7 7-7" stroke="currentColor" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+																	</svg>
+																</div>
+															</div>
+														) : null }
+													</React.Fragment>
+												);
+											}) }
+										</div>
+									</div>
+								)) }
+							</div>
+						) }
+					</section>
+
+					<section className="report-section-panel">
+						<div className="section-panel-title">
+							<span>OPPONENT RECORD BREAKDOWN</span>
+							<span style={{ fontSize: "14px", fontWeight: "normal", color: "var(--on-surface-variant)" }}>
+								{ opponentsList.length } Unique Opponents
+							</span>
+						</div>
+
+						<div className="opponents-grid-list">
+							{ opponentsList.length === 0 ? (
+								<div className="empty-state">No Opponents Recorded</div>
+							) : (
+								opponentsList.map((opponentItem, opponentIndex) => (
+									<div key={ opponentIndex } className="opponent-card-item">
+										<div className="opponent-card-left">
+											<span className="opponent-card-name">{ opponentItem.name }</span>
+											{ opponentItem.teams.length > 0 ? (
+												<span className="opponent-card-teams">{ opponentItem.teams.join(", ") }</span>
+											) : "" }
+										</div>
+										<div className="opponent-card-right">
+											<span className={`opponent-record-tag ${ opponentItem.wins > opponentItem.losses ? "better" : opponentItem.wins < opponentItem.losses ? "worse" : "" }`}>
+												{ opponentItem.wins } - { opponentItem.losses }
+											</span>
+										</div>
+									</div>
+								))
+							) }
+						</div>
+					</section>
+				</>
 			) : activeView === "style" ? (
 				<section className="report-section-panel">
 					<div className="section-panel-title">
@@ -600,18 +915,20 @@ const WrestlerReportComponent = () => {
 					<span>ratings</span>
 				</div>
 
-				<div 
-					className={`navItem ${ activeView === "opponents" ? "active" : "" }`}
-					onClick={ () => setActiveView("opponents") }
-				>
-					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-						<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-						<circle cx="9" cy="7" r="4" />
-						<path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-						<path d="M16 3.13a4 4 0 0 1 0 7.75" />
-					</svg>
-					<span>opponents</span>
-				</div>
+				{ !wrestler.isFortMill ? (
+					<div 
+						className={`navItem ${ activeView === "opponents" ? "active" : "" }`}
+						onClick={ () => setActiveView("opponents") }
+					>
+						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+							<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+							<circle cx="9" cy="7" r="4" />
+							<path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+							<path d="M16 3.13a4 4 0 0 1 0 7.75" />
+						</svg>
+						<span>opponents</span>
+					</div>
+				) : null }
 
 				<div 
 					className={`navItem ${ activeView === "style" ? "active" : "" }`}
