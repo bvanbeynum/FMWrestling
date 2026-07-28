@@ -3196,7 +3196,7 @@ Instructions for response:
 			return output;
 		}
 
-		for (let wrestlerIndex = 0; i < wrestlerEvents.length; wrestlerIndex++) {
+		for (let wrestlerIndex = 0; wrestlerIndex < wrestlerEvents.length; wrestlerIndex++) {
 			try {
 				const clientResponse = await client.post(`${ serverPath }/data/wrestlerevent`).send({ wrestlerEvent: wrestlerEvents[wrestlerIndex] }).then();
 				output.data.wrestlerEvents.push({ index: wrestlerIndex, id: clientResponse.body.id });
