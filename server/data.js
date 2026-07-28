@@ -2309,10 +2309,6 @@ export default {
 			saveObject.searchTeam = saveObject.team.toLowerCase();
 		}
 
-		if (saveObject.wrestlerId && typeof saveObject.wrestlerId === "string" && mongoose.Types.ObjectId.isValid(saveObject.wrestlerId)) {
-			saveObject.wrestlerId = new mongoose.Types.ObjectId(saveObject.wrestlerId);
-		}
-
 		if (saveObject.id) {
 			let record = null;
 			try {
