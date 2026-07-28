@@ -593,4 +593,14 @@ router.post("/api/aiemailsend", authAPI, async (requestObject, responseObject) =
 	responseObject.status(resultsObject.status || 200).json(resultsObject.error ? { error: resultsObject.error } : resultsObject);
 });
 
+router.post("/api/wrestlereventsbulksave", authAPI, async (request, response) => {
+	const results = await api.wrestlerEventBulkSave(request.body.wrestlerEvents || request.body.events || request.body.records, request.serverPath);
+
+	if (results.error) {
+		// client.post(request.logUrl).send({ log: { logTime: new Date(), message: `${ results.status }: ${results.error}` }}).then();
+	}
+
+	response.status(results.status).json(results.error ? { error: results.error } : results.data);
+});
+
 export default router;

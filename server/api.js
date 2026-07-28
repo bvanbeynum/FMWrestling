@@ -3181,6 +3181,34 @@ Instructions for response:
 		} catch (error) {
 			return { error: error.message, status: 500 };
 		}
+	},
+
+	wrestlerEventBulkSave: async (wrestlerEvents, serverPath) => {
+		const output = {
+			data: {
+				wrestlerEvents: []
+			}
+		};
+
+		if (!wrestlerEvents || !Array.isArray(wrestlerEvents) || wrestlerEvents.length === 0) {
+			output.status = 400;
+			output.error = "Missing or empty wrestlerEvents array for bulk save";
+			return output;
+		}
+
+		for (let wrestlerIndex = 0; i < wrestlerEvents.length; wrestlerIndex++) {
+			try {
+				const clientResponse = await client.post(`${ serverPath }/data/wrestlerevent`).send({ wrestlerEvent: wrestlerEvents[wrestlerIndex] }).then();
+				output.data.wrestlerEvents.push({ index: wrestlerIndex, id: clientResponse.body.id });
+			}
+			catch (error) {
+				output.status = 560;
+				output.data.wrestlerEvents.push({ index: wrestlerIndex, error: error.message });
+			}
+		}
+
+		output.status = output.status || 200;
+		return output;
 	}
 
 };
