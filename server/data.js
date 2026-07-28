@@ -2249,6 +2249,145 @@ export default {
 		output.status = 200;
 		output.data = { status: "ok" };
 		return output;
+	},
+
+	wrestlerEventGet: async (userFilter = {}) => {
+		let filter = {},
+			output = {};
+
+		if (userFilter.id) {
+			filter["_id"] = mongoose.Types.ObjectId.isValid(userFilter.id) ? userFilter.id : null;
+		}
+		if (userFilter.ids) {
+			filter["_id"] = { $in: userFilter.ids.map(id => mongoose.Types.ObjectId.isValid(id) ? id : null) };
+		}
+		if (userFilter.wrestlerId) {
+			filter.wrestlerId = mongoose.Types.ObjectId.isValid(userFilter.wrestlerId) ? userFilter.wrestlerId : null;
+		}
+		if (userFilter.wrestlerSqlId) {
+			filter.wrestlerSqlId = userFilter.wrestlerSqlId;
+		}
+		if (userFilter.sqlId) {
+			filter.sqlId = userFilter.sqlId;
+		}
+		if (userFilter.team) {
+			filter.searchTeam = userFilter.team.toLowerCase();
+		}
+		if (userFilter.startDate && userFilter.endDate) {
+			const startDate = new Date(Date.parse(userFilter.startDate)),
+				endDate = new Date(Date.parse(userFilter.endDate));
+
+			filter.date = {
+				$gte: startDate,
+				$lte: endDate
+			};
+		}
+
+		try {
+			const records = await data.wrestlerEvent.find(filter).lean().exec();
+			output.status = 200;
+			output.data = { wrestlerEvents: records.map(({ _id, __v, ...remainingFields }) => ({ id: _id, ...remainingFields })) };
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+		}
+
+		return output;
+	},
+
+	wrestlerEventSave: async (saveObject) => {
+		const output = {};
+
+		if (!saveObject) {
+			output.status = 550;
+			output.error = "Missing object to save";
+			return output;
+		}
+
+		if (saveObject.team) {
+			saveObject.searchTeam = saveObject.team.toLowerCase();
+		}
+
+		if (saveObject.wrestlerId && typeof saveObject.wrestlerId === "string" && mongoose.Types.ObjectId.isValid(saveObject.wrestlerId)) {
+			saveObject.wrestlerId = new mongoose.Types.ObjectId(saveObject.wrestlerId);
+		}
+
+		if (saveObject.id) {
+			let record = null;
+			try {
+				record = await data.wrestlerEvent.findById(saveObject.id).exec();
+			}
+			catch (error) {
+				output.status = 560;
+				output.error = error.message;
+				return output;
+			}
+
+			if (!record) {
+				output.status = 561;
+				output.error = "Record not found";
+				return output;
+			}
+
+			try {
+				Object.keys(saveObject).forEach(field => {
+					if (field !== "id" && field !== "_id") {
+						record[field] = saveObject[field];
+					}
+				});
+				record.modified = new Date();
+				record = await record.save();
+			}
+			catch (error) {
+				output.status = 562;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			output.data = { id: record._id };
+		}
+		else {
+			let record = null;
+			try {
+				const toSave = { ...saveObject, created: new Date(), modified: new Date() };
+				record = await (new data.wrestlerEvent(toSave)).save();
+			}
+			catch (error) {
+				output.status = 563;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			output.data = { id: record._id };
+		}
+
+		return output;
+	},
+
+	wrestlerEventDelete: async (recordId) => {
+		const output = {};
+
+		if (!recordId || !mongoose.Types.ObjectId.isValid(recordId)) {
+			output.status = 550;
+			output.error = "Missing ID to delete";
+			return output;
+		}
+
+		try {
+			await data.wrestlerEvent.deleteOne({ _id: recordId });
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		output.data = { status: "ok" };
+		return output;
 	}
 
 };

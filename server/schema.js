@@ -113,12 +113,15 @@ export default {
 	wrestler: mongoose.model("wrestler", {
 		sqlId: Number,
 		name: String,
-		division: String,
-		weightClass: String,
 		rating: Number,
 		deviation: Number,
+		grade: String,
 		searchNames: [String],
 		searchTeams: [String],
+		lastWeightClass: String,
+		schoolName: String,
+		schoolDivision: String,
+		schoolWeightClass: String,
 		events: [{
 			sqlId: Number,
 			date: Date,
@@ -140,17 +143,6 @@ export default {
 				sort: Number
 			}]
 		}],
-		lineage: [[{ 
-			wrestler1SqlId: Number,
-			wrestler1Name: String,
-			wrestler1Team: String,
-			wrestler2SqlId: Number,
-			wrestler2Name: String,
-			wrestler2Team: String,
-			isWinner: Boolean,
-			sort: Number,
-			eventDate: Date
-		}]],
 		ratingHistory: [{
 			periodEndDate: Date,
 			rating: Number,
@@ -222,7 +214,6 @@ export default {
 		schema.index({ endDate: 1 });
 		return mongoose.model("event", schema);
 	})(),
-
 
 	scmatTeam: mongoose.model("scmatteam", {
 		name: String,
@@ -302,6 +293,34 @@ export default {
 	serverConfig: mongoose.model("serverconfig", {
 		key: String,
 		value: mongoose.Schema.Types.Mixed,
+		created: Date,
+		modified: Date
+	}),
+
+	wrestlerEvent: mongoose.model("wrestlerevent", {
+		wrestlerId: String,
+		wrestlerSqlId: Number,
+		sqlId: Number,
+		date: Date,
+		name: String,
+		team: String,
+		searchTeam: String,
+		locationState: String,
+		seed: Number,
+		matches: [{
+			sqlId: Number,
+			division: String,
+			weightClass: String,
+			round: String,
+			vs: String,
+			vsTeam: String,
+			vsSqlId: Number,
+			vsRating: Number,
+			vsDeviation: Number,
+			isWinner: Boolean,
+			winType: String,
+			sort: Number
+		}],
 		created: Date,
 		modified: Date
 	})

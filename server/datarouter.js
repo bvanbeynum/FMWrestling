@@ -776,4 +776,49 @@ router.delete("/data/serverconfig", authInternal, async (request, response) => {
 	}
 });
 
+router.get("/data/wrestlerevent", authInternal, async (request, response) => {
+	try {
+		const results = await data.wrestlerEventGet({
+			id: request.query.id,
+			ids: request.query.ids ? JSON.parse(request.query.ids) : null,
+			wrestlerId: request.query.wrestlerid,
+			wrestlerSqlId: request.query.wrestlersqlid ? parseInt(request.query.wrestlersqlid) : null,
+			sqlId: request.query.sqlid ? parseInt(request.query.sqlid) : null,
+			team: request.query.team,
+			startDate: request.query.startdate,
+			endDate: request.query.enddate
+		});
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		response.status(570).json({ error: error.message });
+	}
+});
+
+router.post("/data/wrestlerevent", authInternal, async (request, response) => {
+	try {
+		const results = await data.wrestlerEventSave(request.body.wrestlerEvent || request.body.saveRecord || request.body);
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		response.status(570).json({ error: error.message });
+	}
+});
+
+router.delete("/data/wrestlerevent", authInternal, async (request, response) => {
+	try {
+		const results = await data.wrestlerEventDelete(request.query.id);
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		response.status(570).json({ error: error.message });
+	}
+});
+
 export default router;
