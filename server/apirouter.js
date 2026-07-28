@@ -594,7 +594,7 @@ router.post("/api/aiemailsend", authAPI, async (requestObject, responseObject) =
 });
 
 router.post("/api/wrestlereventsbulksave", authAPI, async (request, response) => {
-	const results = await api.wrestlerEventBulkSave(request.body.wrestlerEvents || request.body.events || request.body.records, request.serverPath);
+	const results = await api.wrestlerEventBulkSave(request.body.wrestlerEvents, request.serverPath);
 
 	if (results.error) {
 		// client.post(request.logUrl).send({ log: { logTime: new Date(), message: `${ results.status }: ${results.error}` }}).then();
