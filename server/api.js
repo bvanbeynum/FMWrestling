@@ -3183,58 +3183,27 @@ Instructions for response:
 		}
 	},
 
-	wrestlerBulkSave: async (wrestlers, serverPath) => {
+	wrestlerEventBulkSave: async (wrestlerEvents, serverPath) => {
 		const output = {
 			data: {
-				wrestlers: [],
 				wrestlerEvents: []
 			}
 		};
 
-		if (!wrestlers || !Array.isArray(wrestlers) || wrestlers.length === 0) {
+		if (!wrestlerEvents || !Array.isArray(wrestlerEvents) || wrestlerEvents.length === 0) {
 			output.status = 400;
-			output.error = "Missing or empty wrestlers array for bulk save";
+			output.error = "Missing or empty wrestlerEvents array for bulk save";
 			return output;
 		}
 
-		for (let wrestlerIndex = 0; wrestlerIndex < wrestlers.length; wrestlerIndex++) {
-			let wrestler = null,
-				wrestlerEvents = null;
-
+		for (let wrestlerIndex = 0; wrestlerIndex < wrestlerEvents.length; wrestlerIndex++) {
 			try {
-				const { events = [], ...newWrestler } = wrestlers[wrestlerIndex];
-				wrestler = newWrestler;
-				wrestlerEvents = events;
+				const clientResponse = await client.post(`${ serverPath }/data/wrestlerevent`).send({ wrestlerEvent: wrestlerEvents[wrestlerIndex] }).then();
+				output.data.wrestlerEvents.push({ index: wrestlerIndex, id: clientResponse.body.id });
 			}
 			catch (error) {
 				output.status = 560;
-				output.data.wrestlers.push({ index: wrestlerIndex, error: error.message });
-				continue;
-			}
-
-			let wrestlerId = null;
-			try {
-				const clientResponse = await client.post(`${ serverPath }/data/wrestler`).send({ wrestler: wrestler });
-				wrestlerId = clientResponse.body.id;
-				output.data.wrestlers.push({ index: wrestlerIndex, id: wrestlerId });
-				wrestlerEvents = wrestlerEvents.map(event => ({ wrestlerId: wrestlerId, ...event }));
-			}
-			catch (error) {
-				output.status = 561;
-				output.data.wrestlers.push({ index: wrestlerIndex, error: error.message });
-			}
-
-			if (wrestlerId) {
-				for (let eventIndex = 0; eventIndex < wrestlerEvents.length; eventIndex++) {
-					try {
-						const clientResponse = await client.post(`${ serverPath }/data/wrestlerevent`).send({ wrestlerEvent: wrestlerEvents[eventIndex] });
-						output.data.wrestlerEvents.push({ index: wrestlerIndex, eventIndex: eventIndex, id: clientResponse.body.id });
-					}
-					catch (error) {
-						output.status = 561;
-						output.data.wrestlerEvents.push({ index: wrestlerIndex, eventIndex: eventIndex, error: error.message });
-					}
-				}
+				output.data.wrestlerEvents.push({ index: wrestlerIndex, error: error.message });
 			}
 		}
 
