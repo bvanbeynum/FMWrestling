@@ -9,7 +9,12 @@ import express from "express";
 const port = config.port || 9201;
 const currentDirectory = path.resolve(process.cwd());
 
-mongoose.connect(`mongodb://${config.db.user}:${config.db.pass}@${config.db.servers.join(",")}/${config.db.db}?authSource=${config.db.authDB}`, {useNewUrlParser: true, useUnifiedTopology: true });
+mongoose.connect(`mongodb://${config.db.user}:${config.db.pass}@${config.db.servers.join(",")}/${config.db.db}?authSource=${config.db.authDB}`, {
+	useNewUrlParser: true, 
+	useUnifiedTopology: true,
+	socketTimeoutMS: 300000,
+	connectTimeoutMS: 300000
+});
 
 // Configure webpack ====================================================
 
