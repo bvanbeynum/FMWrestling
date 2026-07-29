@@ -33,6 +33,12 @@ else {
 
 // listen (start app with node server.js) ======================================
 
-app.listen(port, () => {
+const server = app.listen(port, () => {
 	console.log(`${ (new Date()).toLocaleDateString() } ${ (new Date()).toLocaleTimeString() }: App listening on port ${port}`);
 });
+
+// Extend Node.js HTTP server timeouts (in milliseconds)
+server.requestTimeout = 300000;    // 5 minutes (time allowed to receive full request)
+server.headersTimeout = 305000;    // Must be slightly higher than requestTimeout
+server.timeout = 300000;           // Socket timeout limit
+server.keepAliveTimeout = 300000;  // Idle Keep-Alive socket timeout limit
