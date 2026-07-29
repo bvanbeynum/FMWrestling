@@ -799,7 +799,7 @@ router.get("/data/wrestlerevent", authInternal, async (request, response) => {
 
 router.post("/data/wrestlerevent", authInternal, async (request, response) => {
 	try {
-		const results = await data.wrestlerEventSave(request.body.wrestlerEvent || request.body.saveRecord || request.body);
+		const results = await data.wrestlerEventSave(request.body.wrestlerEvent);
 
 		response.status(results.status).json(results.error ? { error: results.error } : results.data);
 		response.end();
