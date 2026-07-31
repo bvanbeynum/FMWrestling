@@ -485,6 +485,93 @@ export default {
 		return output;
 	},
 
+	wrestlerBulkSave: async (wrestlers) => {
+		const output = {};
+
+		if (!wrestlers || !Array.isArray(wrestlers) || wrestlers.length === 0) {
+			output.status = 550;
+			output.error = "Missing or empty wrestlers array for bulk save";
+			return output;
+		}
+
+		const operations = [];
+
+		for (const wrestler of wrestlers) {
+			if (!wrestler || typeof wrestler !== "object") continue;
+
+			const { id, _id, created, modified, ...updateFields } = wrestler;
+
+			if (updateFields.name) {
+				updateFields.searchName = updateFields.name.toLowerCase();
+			}
+
+			let filter = null;
+			if (id && mongoose.Types.ObjectId.isValid(id)) {
+				filter = { _id: id };
+			}
+			else if (_id && mongoose.Types.ObjectId.isValid(_id)) {
+				filter = { _id: _id };
+			}
+			else if (updateFields.sqlId !== undefined && updateFields.sqlId !== null) {
+				filter = { sqlId: updateFields.sqlId };
+			}
+
+			if (filter) {
+				operations.push({
+					updateOne: {
+						filter: filter,
+						update: {
+							$set: {
+								...updateFields,
+								modified: new Date()
+							},
+							$setOnInsert: {
+								created: new Date()
+							}
+						},
+						upsert: true
+					}
+				});
+			}
+			else {
+				operations.push({
+					insertOne: {
+						document: {
+							...updateFields,
+							created: new Date(),
+							modified: new Date()
+						}
+					}
+				});
+			}
+		}
+
+		if (operations.length === 0) {
+			output.status = 550;
+			output.error = "No valid wrestler operations to execute";
+			return output;
+		}
+
+		try {
+			const result = await data.wrestler.bulkWrite(operations, { ordered: false });
+
+			output.status = 200;
+			output.data = {
+				status: "ok",
+				matchedCount: result.matchedCount,
+				modifiedCount: result.modifiedCount,
+				upsertedCount: result.upsertedCount,
+				insertedCount: result.insertedCount
+			};
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+		}
+
+		return output;
+	},
+
 	schoolGet: async (userFilter = {}) => {
 		let filter = {},
 			select = {},
@@ -2386,6 +2473,96 @@ export default {
 		output.status = 200;
 		output.data = { status: "ok" };
 		return output;
-	}
+	},
+
+	wrestlerEventBulkSave: async (wrestlerEvents) => {
+		const output = {};
+
+		if (!wrestlerEvents || !Array.isArray(wrestlerEvents) || wrestlerEvents.length === 0) {
+			output.status = 550;
+			output.error = "Missing or empty wrestlerEvents array for bulk save";
+			return output;
+		}
+
+		const operations = [];
+
+		for (const wrestlerEvent of wrestlerEvents) {
+			if (!wrestlerEvent || typeof wrestlerEvent !== "object") continue;
+
+			const { id, _id, created, modified, ...updateFields } = wrestlerEvent;
+
+			if (updateFields.team) {
+				updateFields.searchTeam = updateFields.team.toLowerCase();
+			}
+
+			let filter = null;
+			if (id && mongoose.Types.ObjectId.isValid(id)) {
+				filter = { _id: id };
+			}
+			else if (_id && mongoose.Types.ObjectId.isValid(_id)) {
+				filter = { _id: _id };
+			}
+			else if (updateFields.wrestlerSqlId !== undefined && updateFields.wrestlerSqlId !== null && updateFields.sqlId !== undefined && updateFields.sqlId !== null) {
+				filter = { wrestlerSqlId: updateFields.wrestlerSqlId, sqlId: updateFields.sqlId };
+			}
+			else if (updateFields.wrestlerId && updateFields.sqlId !== undefined && updateFields.sqlId !== null) {
+				filter = { wrestlerId: updateFields.wrestlerId, sqlId: updateFields.sqlId };
+			}
+
+			if (filter) {
+				operations.push({
+					updateOne: {
+						filter: filter,
+						update: {
+							$set: {
+								...updateFields,
+								modified: new Date()
+							},
+							$setOnInsert: {
+								created: new Date()
+							}
+						},
+						upsert: true
+					}
+				});
+			}
+			else {
+				operations.push({
+					insertOne: {
+						document: {
+							...updateFields,
+							created: new Date(),
+							modified: new Date()
+						}
+					}
+				});
+			}
+		}
+
+		if (operations.length === 0) {
+			output.status = 550;
+			output.error = "No valid wrestler event operations to execute";
+			return output;
+		}
+
+		try {
+			const result = await data.wrestlerEvent.bulkWrite(operations, { ordered: false });
+
+			output.status = 200;
+			output.data = {
+				status: "ok",
+				matchedCount: result.matchedCount,
+				modifiedCount: result.modifiedCount,
+				upsertedCount: result.upsertedCount,
+				insertedCount: result.insertedCount
+			};
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+		}
+
+		return output;
+	},
 
 };

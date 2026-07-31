@@ -138,6 +138,22 @@ router.post("/data/wrestler", authInternal, async (request, response) => {
 	response.end();
 });
 
+router.post("/data/wrestler/bulk", authInternal, async (request, response) => {
+	try {
+		const results = await data.wrestlerBulkSave(request.body.wrestlers);
+
+		if (results.error) {
+			// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "641f00ec97f3b068a5626651", message: `${ results.status }: ${results.error}` }}).then();
+		}
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		response.status(570).json({ error: error.message });
+	}
+});
+
 router.delete("/data/wrestler", authInternal, async (request, response) => {
 	const results = await data.wrestlerDelete(request.query.id);
 
@@ -815,6 +831,18 @@ router.post("/data/wrestlerevent", authInternal, async (request, response) => {
 router.delete("/data/wrestlerevent", authInternal, async (request, response) => {
 	try {
 		const results = await data.wrestlerEventDelete(request.query.id);
+
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		response.status(570).json({ error: error.message });
+	}
+});
+
+router.post("/data/wrestlerevent/bulk", authInternal, async (request, response) => {
+	try {
+		const results = await data.wrestlerEventBulkSave(request.body.wrestlerevents);
 
 		response.status(results.status).json(results.error ? { error: results.error } : results.data);
 		response.end();
