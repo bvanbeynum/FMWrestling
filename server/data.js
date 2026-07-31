@@ -2515,6 +2515,26 @@ export default {
 			return output;
 		}
 
+		try {
+			const missingWrestlerIds = [...new Set(wrestlerEvents.filter(wrestlerEvent => !wrestlerEvent.wrestlerId).map(wrestlerEvent => wrestlerEvent.wrestlerSqlId))];
+			if (missingWrestlerIds.length > 0) {
+				const wrestlers = data.wrestler.find({ sqlId: { $in: missingWrestlerIds } });
+
+				wrestlerEvents.forEach(wrestlerEvent => {
+					if (!wrestlerEvent.wrestlerId && wrestlerEvent.wrestlerSqlId) {
+						wrestlerEvent.wrestlerId = wrestlers.filter(wrestler => wrestler.sqlId === wrestlerEvent.wrestlerSqlId)
+							.map(wrestler => wrestler._id)
+							.find(() => true);
+					}
+				});
+			}
+		}
+		catch (error) {
+			output.status = 562;
+			output.error = error.message;
+			return output;
+		}
+
 		const operations = [];
 
 		for (const wrestlerEvent of wrestlerEvents) {
