@@ -2518,7 +2518,7 @@ export default {
 		try {
 			const missingWrestlerIds = [...new Set(wrestlerEvents.filter(wrestlerEvent => !wrestlerEvent.wrestlerId).map(wrestlerEvent => wrestlerEvent.wrestlerSqlId))];
 			if (missingWrestlerIds.length > 0) {
-				const wrestlers = data.wrestler.find({ sqlId: { $in: missingWrestlerIds } });
+				const wrestlers = data.wrestler.find({ sqlId: { $in: missingWrestlerIds } }).select({ _id: 1, sqlId: 1 }).exec();
 
 				wrestlerEvents.forEach(wrestlerEvent => {
 					if (!wrestlerEvent.wrestlerId && wrestlerEvent.wrestlerSqlId) {
