@@ -564,6 +564,8 @@ const Opponent = () => {
 	};
 
 	const generateLineup = (weightClasses, teamA, teamBMatches, staticTeam = []) => {
+		console.log(teamA);
+		console.log(teamBMatches)
 		const weights = weightClasses.map((weightClass, weightClassIndex) => ({
 			weightClass: weightClass,
 			weightClassPosition: weightClassIndex,

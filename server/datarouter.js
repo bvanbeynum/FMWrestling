@@ -92,9 +92,12 @@ router.get("/data/wrestler", authInternal, async (request, response) => {
 			teams: request.query.teams ? JSON.parse(request.query.teams) : null,
 			teamName: request.query.teamname, 
 			teamPartial: request.query.teampartial,
+			state: request.query.state,
+			lastWeightClass: request.query.lastweightclass,
 			sqlId: request.query.sqlid,
 			sqlIds: sqlIdList,
 			select: request.query.select ? request.query.select.split(",") : null,
+			ratingSort: request.query.ratingsort === "true",
 			createdSince: request.query.createdsince
 		};
 

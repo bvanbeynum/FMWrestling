@@ -230,6 +230,8 @@ export default {
 	wrestlerGet: async (userFilter = {}) => {
 		let filter = {},
 			select = {},
+			sort = {},
+			limit = 0,
 			output = {};
 
 		if (userFilter.id) {
@@ -244,11 +246,17 @@ export default {
 		}
 		if (userFilter.teamPartial) {
 			const searchTeam = userFilter.teamPartial.toLowerCase();
-			filter["events.searchTeam"] = { $regex: new RegExp("^" + searchTeam) };
+			filter["searchTeams"] = { $regex: new RegExp("^" + searchTeam) };
 		}
 		if (userFilter.teamName) {
 			const searchTeam = userFilter.teamName.toLowerCase();
-			filter["events.searchTeam"] = searchTeam;
+			filter["searchTeams"] = searchTeam;
+		}
+		if (userFilter.state) {
+			filter.states = userFilter.state.toUpperCase();
+		}
+		if (userFilter.lastWeightClass) {
+			filter.lastWeightClass = userFilter.lastWeightClass;
 		}
 		if (userFilter.sqlId) {
 			filter.sqlId = userFilter.sqlId;
@@ -261,6 +269,10 @@ export default {
 		}
 		if (userFilter.createdSince) {
 			filter.created = { $gte: new Date(userFilter.createdSince) };
+		}
+		if (userFilter.ratingSort) {
+			sort = { rating: -1 };
+			limit = 20;
 		}
 		if (userFilter.initialSearch && userFilter.teams) {
 			const escapeRegExp = (str) => {
@@ -284,7 +296,7 @@ export default {
 		}
 
 		try {
-			const records = await data.wrestler.find(filter).select(select).lean().exec();
+			const records = await data.wrestler.find(filter).select(select).sort(sort).limit(limit).lean().exec();
 			output.status = 200;
 			output.data = { wrestlers: records.map(({ _id, __v, ...data }) => ({ id: _id, ...data })) };
 		}
@@ -312,18 +324,8 @@ export default {
 			if (rankingFilter.state) {
 				elemMatchFilter.locationState = rankingFilter.state.toUpperCase();
 			}
-			if (rankingFilter.team) {
-				elemMatchFilter.searchTeam = rankingFilter.team.toLowerCase();
-			}
 			if (rankingFilter.weightClass) {
 				elemMatchFilter["matches.weightClass"] = { $regex: new RegExp("^" + rankingFilter.weightClass) };
-			}
-			if (rankingFilter.classification) {
-				const schools = await data.school.find().select({lookupNames: 1, classification: 1}).lean().exec();
-				const schoolNames = schools
-					.filter(school => school.classification == rankingFilter.classification)
-					.flatMap(school => school.lookupNames.map(name => name.toLowerCase()));
-				elemMatchFilter.searchTeam = { $in: schoolNames };
 			}
 
 			const pipeline = [

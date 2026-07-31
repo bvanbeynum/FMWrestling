@@ -32,7 +32,7 @@ const WrestlerSearchComponent = () => {
 	
 	useEffect(() => {
 		if (!pageActive) {
-			fetch(`/api/wrestlersearchload?rankingstate=SC`)
+			fetch(`/api/wrestlersearchload`)
 				.then(response => {
 					if (response.ok) {
 						return response.json();
@@ -42,7 +42,7 @@ const WrestlerSearchComponent = () => {
 					}
 				})
 				.then(data => {
-					setWrestlerRankings(buildRankings(data.wrestlerRankings));
+					setWrestlerRankings(data.wrestlerRankings);
 					setSchools(data.schools);
 
 					setLoggedInUser(data.loggedInUser);
@@ -125,28 +125,12 @@ const WrestlerSearchComponent = () => {
 				}
 			})
 			.then(data => {
-				setWrestlerRankings(buildRankings(data.wrestlerRankings));
+				setWrestlerRankings(data.wrestlerRankings);
 				setPageActive(true);
 			})
 			.catch(error => {
 				console.warn(error);
 			});
-	};
-
-	const buildRankings = wrestlerRankings => {
-		return wrestlerRankings.map(wrestler => ({
-			...wrestler,
-			teamLast: wrestler.teams
-				.sort((teamA, teamB) => 
-					teamA.isSchoolTeam && !teamB.isSchoolTeam ? -1 
-					: teamB.isSchoolTeam && !teamA.isSchoolTeam ? 1 
-					: new Date(teamB.lastDate) - new Date(teamA.lastDate)
-				)
-				.find(() => true),
-			weightClass: wrestler.weightClasses
-				.sort((weightClassA, weightClassB) => new Date(weightClassB.lastDate) - new Date(weightClassA.lastDate))
-				.find(() => true)
-		}));
 	};
 
 	return (
@@ -271,23 +255,6 @@ const WrestlerSearchComponent = () => {
 								<option value="285">285</option>
 							</select>
 						</div>
-						<div className="filterItem">
-							<label htmlFor="classification-filter">Classification</label>
-							<select id="classification-filter" name="classification" value={ filterClassification } onChange={ event => updateFilter("classification", event.target.value) }>
-								<option value="">All</option>
-								{
-								[...new Set(schools.map(school => school.classification).filter(classification => classification))].sort().map((classification, index) => (
-									<option key={index} value={classification}>{ classification }</option>
-								))
-								}
-							</select>
-						</div>
-						<div className="filterItem">
-							<label htmlFor="team-filter">Team</label>
-							<select id="team-filter" name="team" value={ filterTeam } onChange={ event => updateFilter("state", event.target.value) }>
-								<option value="">All</option>
-							</select>
-						</div>
 					</div>
 				</div>
 
@@ -309,8 +276,8 @@ const WrestlerSearchComponent = () => {
 									<a onClick={() => selectWrestler(wrestler)}>{wrestler.name}</a>
 								</td>
 								<td>{wrestler.rating.toFixed(0)} ({wrestler.deviation.toFixed(0)})</td>
-								<td>{wrestler.weightClass.weightClass}</td>
-								<td>{wrestler.teamLast?.name}</td>
+								<td>{wrestler.weightClass}</td>
+								<td>{wrestler.team}</td>
 							</tr>
 						))}
 					</tbody>
