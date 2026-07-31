@@ -116,15 +116,20 @@ export default {
 		rating: Number,
 		deviation: Number,
 		grade: String,
-		searchNames: [String], // TODO: fix array formatting
-		searchTeams: [String], // TODO: fix array formatting
+		searchNames: [String],
+		searchTeams: [String],
 		lastWeightClass: String,
-		lastTeam: String, // TODO: Update job to populate
-		lastEvent: { name: String, date: Date }, // TODO: Update job to populate
+		lastTeam: String,
+		lastEvent: { 
+			name: String, 
+			date: Date,
+			state: String,
+			sqlId: Number
+		},
 		schoolName: String,
 		schoolDivision: String,
 		schoolWeightClass: String,
-		states: [String], // TODO: Update job to populate
+		states: [String],
 		events: [{
 			sqlId: Number,
 			date: Date,
@@ -310,6 +315,8 @@ export default {
 		searchTeam: String,
 		locationState: String,
 		seed: Number,
+		division: String,
+		weightClass: String,
 		matches: [{
 			sqlId: Number,
 			division: String,
