@@ -1586,7 +1586,7 @@ export default {
 		const output = {};
 
 		if (!events || !Array.isArray(events) || events.length === 0) {
-			output.status = 400;
+			output.status = 550;
 			output.error = "Missing or empty events array for bulk save";
 			return output;
 		}
@@ -1594,30 +1594,56 @@ export default {
 		const operations = [];
 
 		for (const event of events) {
-			if (event.sqlId === undefined || event.sqlId === null) {
-				output.status = 400;
-				output.error = "All events in bulk save must have a sqlId";
-				return output;
-			}
+			if (!event || typeof event !== "object") continue;
 
 			// Clean payload to prevent schema validation/immutability errors
 			const { id, _id, created, modified, ...updateFields } = event;
 
-			operations.push({
-				updateOne: {
-					filter: { sqlId: event.sqlId },
-					update: {
-						$set: {
-							...updateFields,
-							modified: new Date()
+			let filter = null;
+			if (id && mongoose.Types.ObjectId.isValid(id)) {
+				filter = { _id: id };
+			}
+			else if (_id && mongoose.Types.ObjectId.isValid(_id)) {
+				filter = { _id: _id };
+			}
+			else if (updateFields.sqlId !== undefined && updateFields.sqlId !== null) {
+				filter = { sqlId: updateFields.sqlId };
+			}
+
+			if (filter) {
+				operations.push({
+					updateOne: {
+						filter: filter,
+						update: {
+							$set: {
+								...updateFields,
+								modified: new Date()
+							},
+							$setOnInsert: {
+								created: new Date()
+							}
 						},
-						$setOnInsert: {
-							created: new Date()
+						upsert: true
+					}
+				});
+			}
+			else {
+				operations.push({
+					insertOne: {
+						document: {
+							...updateFields,
+							created: new Date(),
+							modified: new Date()
 						}
-					},
-					upsert: true
-				}
-			});
+					}
+				});
+			}
+		}
+
+		if (operations.length === 0) {
+			output.status = 550;
+			output.error = "No valid event operations to execute";
+			return output;
 		}
 
 		try {
@@ -1626,6 +1652,7 @@ export default {
 
 			output.status = 200;
 			output.data = {
+				status: "ok",
 				matchedCount: result.matchedCount,
 				modifiedCount: result.modifiedCount,
 				upsertedCount: result.upsertedCount,
@@ -1638,6 +1665,10 @@ export default {
 		}
 
 		return output;
+	},
+
+	eventBulkSave: async function (events) {
+		return await this.eventsBulkSave(events);
 	},
 
 	scmatTeamGet: async (userFilter = {}) => {
