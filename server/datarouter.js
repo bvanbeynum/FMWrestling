@@ -471,6 +471,7 @@ router.get("/data/event", authInternal, async (request, response) => {
 			sqlId: request.query.sqlid,
 			startDate: request.query.startdate, 
 			endDate: request.query.enddate,
+			eventSystem: request.query.eventsystem,
 			sqlIds: sqlIdList,
 			select: request.query.select ? request.query.select.split(",") : null,
 			excludeMatches: request.query.excludematches === "true",

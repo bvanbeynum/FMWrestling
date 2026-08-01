@@ -201,6 +201,7 @@ export default {
 			isUpset: Boolean, 
 			sort: Number,
 			wrestlers: [{
+				wrestlerId: String,
 				wrestlerSqlId: Number,
 				name: String,
 				team: String,

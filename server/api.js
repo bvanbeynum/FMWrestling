@@ -1750,42 +1750,6 @@ export default {
 				)
 				.sort((eventA, eventB) => +eventB.date - +eventA.date);
 			
-			// const allEvents = wrestlers.flatMap(wrestler => 
-			// 		wrestler.events.filter(event => event.team == opponentName)
-			// 			.map(event => ({
-			// 				lookupKey: `${ new Date(event.date).toLocaleDateString() }|${ event.name }`,
-			// 				name: event.name,
-			// 				date: new Date(event.date),
-			// 				division: event.matches[0] ? event.matches[0].division : null,
-			// 				weightClass: event.matches[0] ? event.matches[0].weightClass : null,
-			// 				matches: event.matches,
-			// 				wrestler: {
-			// 					id: wrestler.id,
-			// 					sqlId: wrestler.sqlId,
-			// 					name: wrestler.name,
-			// 					rating: wrestler.rating,
-			// 					deviation: wrestler.deviation
-			// 				}
-			// 			}))
-			// 	),
-			// 	uniqueEvents = [...new Set(allEvents.map(event => event.lookupKey))],
-			// 	teamEvents = uniqueEvents.map(eventKey => {
-			// 		const eventInfo = allEvents.find(event => event.lookupKey == eventKey);
-			// 		return {
-			// 			name: eventInfo.name,
-			// 			date: eventInfo.date,
-			// 			wrestlers: allEvents
-			// 				.filter(event => event.lookupKey == eventKey)
-			// 				.map(event => ({
-			// 					...event.wrestler, 
-			// 					division: event.division,
-			// 					weightClass: event.weightClass,
-			// 					matches: event.matches 
-			// 				}))
-			// 		};
-			// 	})
-			// 	.sort((eventA, eventB) => +eventB.date - +eventA.date);
-
 			output.data.events = teamEvents;
 		}
 		catch (error) {
@@ -1934,12 +1898,10 @@ Do not return any other text or markup.
 								name: wrestler.name,
 								team: wrestler.team,
 								isWinner: !!wrestler.isWinner,
-								scores: {
-									takedowns: scoreCounts.t,
-									escapes: scoreCounts.e,
-									nearfalls: scoreCounts.n,
-									reversals: scoreCounts.r
-								}
+								takedowns: scoreCounts.t,
+								escapes: scoreCounts.e,
+								nearfalls: scoreCounts.n,
+								reversals: scoreCounts.r
 							};
 						})
 					}
@@ -2087,7 +2049,10 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 							return {
 								...wrestler,
 								wrestlerId: dbWrestler ? dbWrestler.id : null,
-								name: dbWrestler ? dbWrestler.name : wrestler.name
+								wrestlerSqlId: dbWrestler ? dbWrestler.wrestlerSqlId : null,
+								name: dbWrestler ? dbWrestler.name : wrestler.name,
+								rating: dbWrestler ? dbWrestler.rating : null,
+								deviation: dbWrestler ? dbWrestler.deviation : null
 							};
 						})
 					};
@@ -2419,7 +2384,6 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 				const event = {
 					sqlId: null,
 					eventSystem: "WrestlingPortal",
-					systemId: newDualId.toString(),
 					eventType: "Dual",
 					name: teamEvent.name || "Fort Mill vs " + (opponentName || ""),
 					date: combinedDateTime,

@@ -1449,6 +1449,9 @@ export default {
 		if (userFilter.state) {
 			filter.state = userFilter.state;
 		}
+		if (userFilter.eventSystem) {
+			filter.eventSystem = { $regex: new RegExp("^" + userFilter.eventSystem + "$", "i")};
+		}
 		if (userFilter.select) {
 			select = userFilter.select.reduce((output, current) => ({...output, [current]: 1 }), {});
 			if (userFilter.select.includes("hasMatches")) {
