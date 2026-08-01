@@ -90,13 +90,22 @@ const TournamentSummary = () => {
 					}
 				})
 				.then(data => {
-					setEvent(data.event);
+					const eventUpdated = {
+						...data.event,
+						matches: data.event.matches.map(match => ({
+							...match,
+							winner: match.wrestlers.find(wrestler => wrestler.isWinner === true),
+							loser: match.wrestlers.find(wrestler => wrestler.isWinner === false)
+						}))
+					}
+
+					setEvent(eventUpdated);
 					setLoggedInUser(data.loggedInUser);
 					setPageActive(true);
 					setIsLoading(false);
 
 					// Determine available divisions and set default selected
-					const matches = data.event?.matches || [];
+					const matches = eventUpdated?.matches || [];
 					const uniqueDivs = Array.from(new Set(matches.map(m => m.division || "Varsity"))).filter(Boolean);
 					setSelectedDivision(uniqueDivs.includes("Varsity") ? "Varsity" : (uniqueDivs[0] || "Varsity"));
 				})

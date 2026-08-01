@@ -1831,13 +1831,6 @@ export default {
 	dualUpload: async (imageBuffer, mimetype, serverPath, updateProgress = () => {}) => {
 		const output = { data: {} };
 
-		// Mock response for testing without API calls
-		// const statsData = {"opponent": "East Side","wrestlers": [{"name": "Mason Fodel","weight": "106","results": 3,"scores": {"1": null,"takedowns": 2,"escapes": 4,"nearfalls": 0,"reversals": 0}},{"name": "Brame","weight": "106","results": 0,"scores": {"takedowns": 3,"escapes": 1,"nearfalls": 1,"reversals": 1,"s": null}},{"name": "Murphy","weight": "113","results": 6,"scores": {"takedowns": 1,"escapes": 0,"nearfalls": 2,"reversals": 0,"p": null}},{"name": "Merritt","weight": "113","results": 0,"scores": {"1": null,"takedowns": 0,"escapes": 0,"nearfalls": 0,"reversals": 0}},{"name": "L. Van Byrnum","weight": "120","results": 6,"scores": {"takedowns": 1,"escapes": 0,"nearfalls": 1,"reversals": 0,"p": null}},{"name": "Stolpork","weight": "120","results": 0,"scores": {"1": null,"takedowns": 0,"escapes": 0,"nearfalls": 0,"reversals": 0}},{"name": "Waller","weight": "126","results": 0,"scores": {"takedowns": 0,"escapes": 0,"nearfalls": 0,"reversals": 0}},{"name": "Johnson","weight": "126","results": 6,"scores": {"1": null,"takedowns": 1,"escapes": 0,"nearfalls": 1,"reversals": 0,"p": null}},{"name": "Wartman","weight": "132","results": 4,"scores": {"takedowns": 3,"escapes": 1,"nearfalls": 1,"reversals": 0}},{"name": "Sloan","weight": "132","results": 0,"scores": {"takedowns": 0,"escapes": 0,"nearfalls": 0,"reversals": 0}},{"name": "Van Byrnum","weight": "138","results": 3,"scores": {"takedowns": 3,"escapes": 0,"nearfalls": 1,"reversals": 0}},{"name": "Salvato","weight": "138","results": 0,"scores": {"takedowns": 0,"escapes": 0,"nearfalls": 0,"reversals": 0}},{"name": "Nguyen","weight": "144","results": 5,"scores": {"1": null,"takedowns": 5,"escapes": 0,"nearfalls": 1,"reversals": 0}},{"name": "Harding","weight": "144","results": 0,"scores": {"takedowns": 0,"escapes": 4,"nearfalls": 1,"reversals": 0,"s": null}},{"name": "Green","weight": "150","results": 6,"scores": {"takedowns": 1,"escapes": 0,"nearfalls": 1,"reversals": 0,"p": null}},{"name": "Smoure","weight": "150","results": 0,"scores": {"1": null,"takedowns": 0,"escapes": 0,"nearfalls": 0,"reversals": 0}},{"name": "Colton","weight": "157","results": 0,"scores": {"takedowns": 1,"escapes": 0,"nearfalls": 0,"reversals": 2}},{"name": "Wyland","weight": "157","results": 3,"scores": {"1": null,"takedowns": 2,"escapes": 0,"nearfalls": 2,"reversals": 0}},{"name": "Mitchenson","weight": "165","results": 4,"scores": {"takedowns": 4,"escapes": 1,"nearfalls": 0,"reversals": 0,"s": null}},{"name": "Johanning","weight": "165","results": 0,"scores": {"takedowns": 0,"escapes": 1,"nearfalls": 1,"reversals": 1}},{"name": "Metcalf","weight": "175","results": 0,"scores": {"takedowns": 0,"escapes": 1,"nearfalls": 0,"reversals": 0,"s": null}},{"name": "Schrader","weight": "175","results": 5,"scores": {"1": null,"takedowns": 3,"escapes": 2,"nearfalls": 2,"reversals": 0}},{"name": "Lawrence","weight": "190","results": 4,"scores": {"takedowns": 1,"escapes": 1,"nearfalls": 1,"reversals": 0,"s": null}},{"name": "Hyde","weight": "190","results": 0,"scores": {"1": null,"takedowns": 0,"escapes": 2,"nearfalls": 0,"reversals": 0,"s": null}},{"name": "Fortet","weight": "215","results": 0,"scores": {"takedowns": 0,"escapes": 0,"nearfalls": 0,"reversals": 0}},{"name": "Lee","weight": "215","results": 6,"scores": {"takedowns": 0,"escapes": 0,"nearfalls": 0,"reversals": 0,"p": null}},{"name": "Shope","weight": "285","results": 3,"scores": {"takedowns": 1,"escapes": 1,"nearfalls": 0,"reversals": 0,"v": null,"s": null,"=": null}},{"name": "McGee","weight": "285","results": 0,"scores": {"takedowns": 0,"escapes": 0,"nearfalls": 0,"reversals": 0,"s": null}}]};
-		// output.data.stats = statsData;
-		// output.data.fileName = "1772549673582.png";
-		// output.status = 200;
-		// return output;
-
 		const extension = mimetype.split('/')[1];
 		const fileName = `${Date.now()}.${extension}`;
 		const filePath = path.join(process.cwd(), 'client', 'media', 'temp', fileName);
@@ -2329,12 +2322,7 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 				const event = eventResponse.body.events[0];
 				
 				// 4. Extract team names
-				const teamNamesSet = new Set();
-				(event.matches || []).forEach(match => {
-					if (match.winner?.team) teamNamesSet.add(match.winner.team);
-					if (match.loser?.team) teamNamesSet.add(match.loser.team);
-				});
-				const teamNames = Array.from(teamNamesSet).filter(Boolean);
+				const teamNames = [...new Set(event.matches.flatMap(match => match.wrestlers.map(wrestler => wrestler.team)))]
 
 				// 5. Query schools matching team names
 				let familiarTeams = [];
