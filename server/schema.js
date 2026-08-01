@@ -205,14 +205,26 @@ export default {
 					name: String,
 					team: String,
 					rating: Number,
-					deviation: Number
+					deviation: Number,
+					actions: {
+						takedowns: Number,
+						escapes: Number,
+						nearfalls: Number,
+						reversals: Number
+					}
 				},
 				loser: {
 					wrestlerSqlId: Number,
 					name: String,
 					team: String,
 					rating: Number,
-					deviation: Number
+					deviation: Number,
+					actions: {
+						takedowns: Number,
+						escapes: Number,
+						nearfalls: Number,
+						reversals: Number
+					}
 				}
 			}]
 		});
@@ -329,7 +341,13 @@ export default {
 			vsDeviation: Number,
 			isWinner: Boolean,
 			winType: String,
-			sort: Number
+			sort: Number,
+			actions: {
+				takedowns: Number,
+				escapes: Number,
+				nearfalls: Number,
+				reversals: Number
+			}
 		}],
 		created: Date,
 		modified: Date
