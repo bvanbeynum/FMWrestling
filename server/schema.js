@@ -206,12 +206,10 @@ export default {
 					team: String,
 					rating: Number,
 					deviation: Number,
-					actions: {
-						takedowns: Number,
-						escapes: Number,
-						nearfalls: Number,
-						reversals: Number
-					}
+					takedowns: Number,
+					escapes: Number,
+					nearfalls: Number,
+					reversals: Number
 				},
 				loser: {
 					wrestlerSqlId: Number,
@@ -219,12 +217,10 @@ export default {
 					team: String,
 					rating: Number,
 					deviation: Number,
-					actions: {
-						takedowns: Number,
-						escapes: Number,
-						nearfalls: Number,
-						reversals: Number
-					}
+					takedowns: Number,
+					escapes: Number,
+					nearfalls: Number,
+					reversals: Number
 				}
 			}]
 		});
@@ -342,12 +338,10 @@ export default {
 			isWinner: Boolean,
 			winType: String,
 			sort: Number,
-			actions: {
-				takedowns: Number,
-				escapes: Number,
-				nearfalls: Number,
-				reversals: Number
-			}
+			takedowns: Number,
+			escapes: Number,
+			nearfalls: Number,
+			reversals: Number
 		}],
 		created: Date,
 		modified: Date
