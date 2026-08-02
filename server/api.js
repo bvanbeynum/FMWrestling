@@ -2097,6 +2097,43 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 		const output = {};
 
 		try {
+			if (eventRecord && Array.isArray(eventRecord.matches)) {
+				const wrestlerIds = eventRecord.matches
+					.filter(match => match.wrestlers && match.wrestlers.length > 0)
+					.flatMap(match => match.wrestlers.filter(wrestler => wrestler.wrestlerId).map(wrestler => wrestler.wrestlerId))
+
+				if (wrestlerIds.length > 0) {
+					const uniqueWrestlerIds = [...new Set(wrestlerIds)];
+					const wrestlerResponse = await client.get(`${ serverPath }/data/wrestler?ids=${ JSON.stringify(uniqueWrestlerIds) }`);
+					const dbWrestlers = (wrestlerResponse.body && wrestlerResponse.body.wrestlers) || [];
+
+					const sqlIdMap = new Map();
+					for (const dbWrestler of dbWrestlers) {
+						const fetchedSqlId = dbWrestler.sqlId !== undefined ? dbWrestler.sqlId : dbWrestler.wrestlerSqlId;
+						if (dbWrestler.id && fetchedSqlId !== undefined) {
+							sqlIdMap.set(String(dbWrestler.id), fetchedSqlId);
+						}
+						if (dbWrestler._id && fetchedSqlId !== undefined) {
+							sqlIdMap.set(String(dbWrestler._id), fetchedSqlId);
+						}
+					}
+
+					for (const match of eventRecord.matches) {
+						if (Array.isArray(match.wrestlers)) {
+							for (const wrestler of match.wrestlers) {
+								const wrestlerId = wrestler.wrestlerId || wrestler.id;
+								if (wrestlerId && sqlIdMap.has(String(wrestlerId))) {
+									const sqlId = sqlIdMap.get(String(wrestlerId));
+									if (sqlId !== undefined && sqlId !== null) {
+										wrestler.wrestlerSqlId = sqlId;
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+
 			const clientResponse = await client.post(`${ serverPath }/data/event`).send({ event: eventRecord }).then();
 			
 			output.status = 200;
