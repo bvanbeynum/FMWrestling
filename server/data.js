@@ -1038,6 +1038,9 @@ export default {
 		else if (!userFilter.includeExpired) {
 			filter = { $or: [ { expires: null }, { expires: { $gt: new Date() }} ] };
 		}
+		if (userFilter.modifiedSince) {
+			filter.modified = { $gte: new Date(userFilter.modifiedSince) };
+		}
 		if (userFilter.startDate && userFilter.endDate) {
 			const startDate = new Date(Date.parse(userFilter.startDate)),
 				endDate = new Date(Date.parse(userFilter.endDate));

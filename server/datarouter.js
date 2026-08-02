@@ -475,7 +475,8 @@ router.get("/data/event", authInternal, async (request, response) => {
 			sqlIds: sqlIdList,
 			select: request.query.select ? request.query.select.split(",") : null,
 			excludeMatches: request.query.excludematches === "true",
-			state: request.query.state
+			state: request.query.state,
+			modifiedSince: request.query.modifiedsince
 		};
 
 		const results = await data.eventGet(filter);
