@@ -19,6 +19,18 @@ const getHeatMapColor = (val, min, max) => {
 	return `hsl(${hue}, 75%, 90%)`;
 };
 
+const getWinner = (matchItem) => {
+	if (!matchItem) return null;
+	if (matchItem.winner) return matchItem.winner;
+	return (matchItem.wrestlers || []).find(wrestlerItem => wrestlerItem.isWinner) || null;
+};
+
+const getLoser = (matchItem) => {
+	if (!matchItem) return null;
+	if (matchItem.loser) return matchItem.loser;
+	return (matchItem.wrestlers || []).find(wrestlerItem => !wrestlerItem.isWinner) || null;
+};
+
 const TournamentSummary = () => {
 	const [pageActive, setPageActive] = useState(false);
 	const [isLoading, setIsLoading] = useState(true);
@@ -54,13 +66,11 @@ const TournamentSummary = () => {
 
 		// Resolve unique teams for this division
 		const teamsSet = new Set();
-		divisionMatches.forEach(match => {
-			if (match.winner?.team) {
-				teamsSet.add(match.winner.team);
-			}
-			if (match.loser?.team) {
-				teamsSet.add(match.loser.team);
-			}
+		divisionMatches.forEach(matchItem => {
+			const winnerWrestler = getWinner(matchItem);
+			const loserWrestler = getLoser(matchItem);
+			if (winnerWrestler?.team) teamsSet.add(winnerWrestler.team);
+			if (loserWrestler?.team) teamsSet.add(loserWrestler.team);
 		});
 		const divisionTeams = Array.from(teamsSet).sort();
 
@@ -167,37 +177,43 @@ const TournamentSummary = () => {
 	const wtClassesCount = uniqueWtClasses.length;
 
 	const teamsSet = new Set();
-	filteredMatches.forEach(m => {
-		if (m.winner?.team) teamsSet.add(m.winner.team);
-		if (m.loser?.team) teamsSet.add(m.loser.team);
+	filteredMatches.forEach(matchItem => {
+		const winnerWrestler = getWinner(matchItem);
+		const loserWrestler = getLoser(matchItem);
+		if (winnerWrestler?.team) teamsSet.add(winnerWrestler.team);
+		if (loserWrestler?.team) teamsSet.add(loserWrestler.team);
 	});
 	const teamsCount = teamsSet.size;
 
 	const wrestlersSet = new Set();
-	filteredMatches.forEach(m => {
-		if (m.winner?.wrestlerSqlId) wrestlersSet.add(m.winner.wrestlerSqlId);
-		if (m.loser?.wrestlerSqlId) wrestlersSet.add(m.loser.wrestlerSqlId);
+	filteredMatches.forEach(matchItem => {
+		const winnerWrestler = getWinner(matchItem);
+		const loserWrestler = getLoser(matchItem);
+		if (winnerWrestler?.wrestlerSqlId) wrestlersSet.add(winnerWrestler.wrestlerSqlId);
+		if (loserWrestler?.wrestlerSqlId) wrestlersSet.add(loserWrestler.wrestlerSqlId);
 	});
 	const wrestlersCount = wrestlersSet.size;
 
 	// Calculate ratings for Intensity Curve
 	const ratings = [];
-	filteredMatches.forEach(m => {
-		if (m.winner && typeof m.winner.rating === "number" && m.winner.rating > 0) ratings.push(m.winner.rating);
-		if (m.loser && typeof m.loser.rating === "number" && m.loser.rating > 0) ratings.push(m.loser.rating);
+	filteredMatches.forEach(matchItem => {
+		const winnerWrestler = getWinner(matchItem);
+		const loserWrestler = getLoser(matchItem);
+		if (winnerWrestler && typeof winnerWrestler.rating === "number" && winnerWrestler.rating > 0) ratings.push(winnerWrestler.rating);
+		if (loserWrestler && typeof loserWrestler.rating === "number" && loserWrestler.rating > 0) ratings.push(loserWrestler.rating);
 	});
 
 	const minGlicko = ratings.length > 0 ? Math.min(...ratings) : 800;
 	const maxGlicko = ratings.length > 0 ? Math.max(...ratings) : 2100;
-	const avgGlicko = ratings.length > 0 ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length : 1450;
+	const avgGlicko = ratings.length > 0 ? ratings.reduce((sum, ratingVal) => sum + ratingVal, 0) / ratings.length : 1450;
 
 	// Generate SVG normal distribution curve (separate open line and closed area paths)
 	const range = maxGlicko - minGlicko || 1;
 	const stdDev = range / 6 || 100;
 	const points = [];
-	for (let i = 0; i <= 50; i++) {
-		const xVal = i * 6; // 0 to 300
-		const rating = minGlicko + (i / 50) * range;
+	for (let pointIndex = 0; pointIndex <= 50; pointIndex++) {
+		const xVal = pointIndex * 6; // 0 to 300
+		const rating = minGlicko + (pointIndex / 50) * range;
 		const exponent = -Math.pow(rating - avgGlicko, 2) / (2 * Math.pow(stdDev, 2));
 		const yVal = Math.exp(exponent);
 		const yPos = 110 - yVal * 80; // peak height 80, baseline 110
@@ -211,44 +227,68 @@ const TournamentSummary = () => {
 
 	// Calculate top 10% threshold of ratings for the overall event
 	const allEventRatings = [];
-	matches.forEach(m => {
-		if (m.winner && typeof m.winner.rating === "number" && m.winner.rating > 0) allEventRatings.push(m.winner.rating);
-		if (m.loser && typeof m.loser.rating === "number" && m.loser.rating > 0) allEventRatings.push(m.loser.rating);
+	matches.forEach(matchItem => {
+		const winnerWrestler = getWinner(matchItem);
+		const loserWrestler = getLoser(matchItem);
+		if (winnerWrestler && typeof winnerWrestler.rating === "number" && winnerWrestler.rating > 0) allEventRatings.push(winnerWrestler.rating);
+		if (loserWrestler && typeof loserWrestler.rating === "number" && loserWrestler.rating > 0) allEventRatings.push(loserWrestler.rating);
 	});
-	allEventRatings.sort((a, b) => b - a);
+	allEventRatings.sort((firstRating, secondRating) => secondRating - firstRating);
 	const top10Index = Math.floor(allEventRatings.length * 0.1);
 	const top10PercentThreshold = allEventRatings.length > 0 ? allEventRatings[top10Index] : 0;
 
 	// Calculate Insights
 	// 1. Upsets: Winner rating < Loser rating - Loser deviation, sorted by Glicko difference descending, limited to top 5 (excludes forfeits/NC)
-	const upsets = filteredMatches.filter(m => 
-		m.winner?.rating && 
-		m.loser?.rating && 
-		m.winner.rating < m.loser.rating - (m.loser.deviation || 0) &&
-		!(m.winType && (m.winType.toLowerCase().includes("for") || m.winType.toLowerCase() === "nc"))
-	);
-	upsets.sort((a, b) => (b.loser.rating - b.winner.rating) - (a.loser.rating - a.winner.rating));
+	const upsets = filteredMatches.filter(matchItem => {
+		const winnerWrestler = getWinner(matchItem);
+		const loserWrestler = getLoser(matchItem);
+		return (
+			winnerWrestler?.rating && 
+			loserWrestler?.rating && 
+			winnerWrestler.rating < loserWrestler.rating - (loserWrestler.deviation || 0) &&
+			!(matchItem.winType && (matchItem.winType.toLowerCase().includes("for") || matchItem.winType.toLowerCase() === "nc"))
+		);
+	});
+	upsets.sort((firstMatchItem, secondMatchItem) => {
+		const firstWinner = getWinner(firstMatchItem);
+		const firstLoser = getLoser(firstMatchItem);
+		const secondWinner = getWinner(secondMatchItem);
+		const secondLoser = getLoser(secondMatchItem);
+		return (secondLoser.rating - secondWinner.rating) - (firstLoser.rating - firstWinner.rating);
+	});
 	const topUpsets = upsets.slice(0, 5);
 
 	// 2. Key Matches: Both wrestlers in top 10% rating for event, sorted by rating sum descending, limited to top 5 (excludes forfeits/NC)
-	const keyMatches = filteredMatches.filter(m => 
-		m.winner?.rating && 
-		m.loser?.rating && 
-		m.winner.rating >= top10PercentThreshold && 
-		m.loser.rating >= top10PercentThreshold &&
-		!upsets.includes(m) &&
-		!(m.winType && (m.winType.toLowerCase().includes("for") || m.winType.toLowerCase() === "nc"))
-	);
-	keyMatches.sort((a, b) => (b.winner.rating + b.loser.rating) - (a.winner.rating + a.loser.rating));
+	const keyMatches = filteredMatches.filter(matchItem => {
+		const winnerWrestler = getWinner(matchItem);
+		const loserWrestler = getLoser(matchItem);
+		return (
+			winnerWrestler?.rating && 
+			loserWrestler?.rating && 
+			winnerWrestler.rating >= top10PercentThreshold && 
+			loserWrestler.rating >= top10PercentThreshold &&
+			!upsets.includes(matchItem) &&
+			!(matchItem.winType && (matchItem.winType.toLowerCase().includes("for") || matchItem.winType.toLowerCase() === "nc"))
+		);
+	});
+	keyMatches.sort((firstMatchItem, secondMatchItem) => {
+		const firstWinner = getWinner(firstMatchItem);
+		const firstLoser = getLoser(firstMatchItem);
+		const secondWinner = getWinner(secondMatchItem);
+		const secondLoser = getLoser(secondMatchItem);
+		return (secondWinner.rating + secondLoser.rating) - (firstWinner.rating + firstLoser.rating);
+	});
 	const topKeyMatches = keyMatches.slice(0, 5);
 
 	// Calculate Team Statistics for the heat map
 	const teamStatsMap = {};
-	filteredMatches.forEach(m => {
-		const wTeam = m.winner?.team;
-		const lTeam = m.loser?.team;
-		const wId = m.winner?.wrestlerSqlId;
-		const lId = m.loser?.wrestlerSqlId;
+	filteredMatches.forEach(matchItem => {
+		const winnerWrestler = getWinner(matchItem);
+		const loserWrestler = getLoser(matchItem);
+		const wTeam = winnerWrestler?.team;
+		const lTeam = loserWrestler?.team;
+		const wId = winnerWrestler?.wrestlerSqlId;
+		const lId = loserWrestler?.wrestlerSqlId;
 
 		if (wTeam) {
 			if (!teamStatsMap[wTeam]) {
@@ -814,48 +854,56 @@ const TournamentSummary = () => {
 								<div className="emptyState">No insights found for this division.</div>
 							) : (
 								<div className="insightsList">
-									{topUpsets.map((match, index) => (
-										<div className="insightCard upset" key={`upset-${index}`}>
-											<div className="insightHeader">
-												<span className="insightTag upset">MAJOR UPSET</span>
-											</div>
-											<div className="insightMatchup">
-												<div className="wrestler win">
-													<span className="wrestlerName">W: {match.winner.name}</span>
-													<span className="wrestlerGlicko">Glicko: {match.winner.rating?.toFixed(0)}</span>
+									{topUpsets.map((matchItem, matchIndex) => {
+										const winnerWrestler = getWinner(matchItem);
+										const loserWrestler = getLoser(matchItem);
+										return (
+											<div className="insightCard upset" key={`upset-${matchIndex}`}>
+												<div className="insightHeader">
+													<span className="insightTag upset">MAJOR UPSET</span>
 												</div>
-												<span className="vs">{match.winType}</span>
-												<div className="wrestler">
-													<span className="wrestlerName">{match.loser.name}</span>
-													<span className="wrestlerGlicko">Glicko: {match.loser.rating?.toFixed(0)}</span>
+												<div className="insightMatchup">
+													<div className="wrestler win">
+														<span className="wrestlerName">W: {winnerWrestler?.name || "Unknown"}</span>
+														<span className="wrestlerGlicko">Glicko: {winnerWrestler?.rating?.toFixed(0)}</span>
+													</div>
+													<span className="vs">{matchItem.winType}</span>
+													<div className="wrestler">
+														<span className="wrestlerName">{loserWrestler?.name || "Unknown"}</span>
+														<span className="wrestlerGlicko">Glicko: {loserWrestler?.rating?.toFixed(0)}</span>
+													</div>
 												</div>
-											</div>
-											<div className="matchMeta">
-												{match.division || "Varsity"} • {isNaN(match.weightClass) ? match.weightClass : `${match.weightClass} lbs`} • {match.roundName || "N/A"}
-											</div>
-										</div>
-									))}
-									{topKeyMatches.map((match, index) => (
-										<div className="insightCard keyMatchup" key={`key-${index}`}>
-											<div className="insightHeader">
-												<span className="insightTag matchup">KEY MATCHUP</span>
-											</div>
-											<div className="insightMatchup">
-												<div className="wrestler win">
-													<span className="wrestlerName">W: {match.winner.name}</span>
-													<span className="wrestlerGlicko">Glicko: {match.winner.rating?.toFixed(0)}</span>
-												</div>
-												<span className="vs">{match.winType}</span>
-												<div className="wrestler">
-													<span className="wrestlerName">{match.loser.name}</span>
-													<span className="wrestlerGlicko">Glicko: {match.loser.rating?.toFixed(0)}</span>
+												<div className="matchMeta">
+													{matchItem.division || "Varsity"} • {isNaN(matchItem.weightClass) ? matchItem.weightClass : `${matchItem.weightClass} lbs`} • {matchItem.roundName || "N/A"}
 												</div>
 											</div>
-											<div className="matchMeta">
-												{match.division || "Varsity"} • {isNaN(match.weightClass) ? match.weightClass : `${match.weightClass} lbs`} • {match.roundName || "N/A"}
+										);
+									})}
+									{topKeyMatches.map((matchItem, matchIndex) => {
+										const winnerWrestler = getWinner(matchItem);
+										const loserWrestler = getLoser(matchItem);
+										return (
+											<div className="insightCard keyMatchup" key={`key-${matchIndex}`}>
+												<div className="insightHeader">
+													<span className="insightTag matchup">KEY MATCHUP</span>
+												</div>
+												<div className="insightMatchup">
+													<div className="wrestler win">
+														<span className="wrestlerName">W: {winnerWrestler?.name || "Unknown"}</span>
+														<span className="wrestlerGlicko">Glicko: {winnerWrestler?.rating?.toFixed(0)}</span>
+													</div>
+													<span className="vs">{matchItem.winType}</span>
+													<div className="wrestler">
+														<span className="wrestlerName">{loserWrestler?.name || "Unknown"}</span>
+														<span className="wrestlerGlicko">Glicko: {loserWrestler?.rating?.toFixed(0)}</span>
+													</div>
+												</div>
+												<div className="matchMeta">
+													{matchItem.division || "Varsity"} • {isNaN(matchItem.weightClass) ? matchItem.weightClass : `${matchItem.weightClass} lbs`} • {matchItem.roundName || "N/A"}
+												</div>
 											</div>
-										</div>
-									))}
+										);
+									})}
 								</div>
 							)}
 						</section>
@@ -1174,7 +1222,7 @@ const TournamentSummary = () => {
 											</div>
 											{/* Matches in this round */}
 											<div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-												{roundGroup.matches.map((match, matchIndex) => {
+												{roundGroup.matches.map((matchItem, matchIndex) => {
 													return (
 														<div 
 															key={matchIndex} 
@@ -1187,21 +1235,23 @@ const TournamentSummary = () => {
 														>
 															<div className="insightMatchup">
 																{(() => {
-																	const isUpsetMatch = match.winner?.rating && match.loser?.rating && 
-																		match.winner.rating < match.loser.rating - (match.loser.deviation || 0) &&
-																		!(match.winType && (match.winType.toLowerCase().includes("for") || match.winType.toLowerCase() === "nc"));
+																	const winnerWrestler = getWinner(matchItem);
+																	const loserWrestler = getLoser(matchItem);
+																	const isUpsetMatch = winnerWrestler?.rating && loserWrestler?.rating && 
+																		winnerWrestler.rating < loserWrestler.rating - (loserWrestler.deviation || 0) &&
+																		!(matchItem.winType && (matchItem.winType.toLowerCase().includes("for") || matchItem.winType.toLowerCase() === "nc"));
 																	return (
 																		<>
 																			<div className="wrestler win" style={{ display: "flex", flexDirection: "column" }}>
 																				<span className="wrestlerName" style={{ fontWeight: "bold", color: "var(--primary)" }}>
-																					W: {match.winner?.name || "Unknown"}
+																					W: {winnerWrestler?.name || "Unknown"}
 																				</span>
 																				<span style={{ fontSize: "10px", color: "#718096", marginTop: "1px" }}>
-																					{match.winner?.team || "Unknown"} • {match.winner?.rating ? `Rating: ${Math.round(match.winner.rating)}` : "No Rating"}
+																					{winnerWrestler?.team || "Unknown"} • {winnerWrestler?.rating ? `Rating: ${Math.round(winnerWrestler.rating)}` : "No Rating"}
 																				</span>
 																			</div>
 																			<span className="vs" style={{ fontSize: "11px", backgroundColor: "#edf2f7", borderRadius: "4px", padding: "4px 8px", display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
-																				<span style={{ fontWeight: "600" }}>{match.winType || "VS"}</span>
+																				<span style={{ fontWeight: "600" }}>{matchItem.winType || "VS"}</span>
 																				{isUpsetMatch && (
 																					<span style={{ fontSize: "8px", fontWeight: "800", backgroundColor: "var(--secondary)", color: "#ffffff", padding: "1px 4px", borderRadius: "2px", letterSpacing: "0.03em" }}>
 																						UPSET
@@ -1210,10 +1260,10 @@ const TournamentSummary = () => {
 																			</span>
 																			<div className="wrestler" style={{ display: "flex", flexDirection: "column" }}>
 																				<span className="wrestlerName" style={{ color: "#4a5568" }}>
-																					{match.loser?.name || "Unknown"}
+																					{loserWrestler?.name || "Unknown"}
 																				</span>
 																				<span style={{ fontSize: "10px", color: "#718096", marginTop: "1px" }}>
-																					{match.loser?.team || "Unknown"} • {match.loser?.rating ? `Rating: ${Math.round(match.loser.rating)}` : "No Rating"}
+																					{loserWrestler?.team || "Unknown"} • {loserWrestler?.rating ? `Rating: ${Math.round(loserWrestler.rating)}` : "No Rating"}
 																				</span>
 																			</div>
 																		</>

@@ -626,7 +626,7 @@ const Schedule = props => {
 													</div>
 													<div className="dayTimelineCardEvents">
 														{dayGroup.events.map((teamEventItem, indexVal) => {
-															const isDualEvent = teamEventItem.dualId ? true : false;
+															const isDualEvent = teamEventItem.eventType?.toLowerCase() === "dual" || teamEventItem.dualId ? true : false;
 															const badgeText = isDualEvent ? "DUAL MEET" : "TOURNAMENT";
 															const badgeClass = isDualEvent ? "dual" : "tournament";
 															return (
@@ -646,13 +646,14 @@ const Schedule = props => {
 																	</div>
 																	<div className="timelineEventRight">
 																		{(() => {
-																			const isDual = teamEventItem.eventType?.toLowerCase() === "dual" || teamEventItem.dualId;
-																			if (isDual) {
+																			const isDual = teamEventItem.eventType?.toLowerCase() === "dual";
+																			const targetEventId = teamEventItem.eventId;
+																			if (isDual && targetEventId) {
 																				return (
 																					<button
 																						className="timelineViewBtn"
 																						onClick={() => {
-																							window.location.href = `/portal/dual.html?id=${teamEventItem.dualId}`;
+																							window.location.href = `/portal/dual.html?id=${targetEventId}`;
 																						}}
 																					>
 																						View

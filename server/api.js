@@ -5,7 +5,7 @@ import config from "./config.js";
 import { google } from "googleapis";
 import fs, { stat } from "fs";
 import path from "path";
-import { getDualWrestlers, isGeminiQuotaError, isGeminiOverloadedError } from "./middleware.js";
+import { getDualWrestlers, isGeminiQuotaError, isGeminiOverloadedError, extractOpponentTeam, extractEventDivision } from "./middleware.js";
 
 
 export default {
@@ -1762,12 +1762,21 @@ export default {
 		return output;		
 	},
 
-	dualLoad: async (dualId, serverPath) => {
-		const output = { data: { duals: [], fortMillWrestlers: [], opponentWrestlers: [] } };
+	dualLoad: async (targetId, serverPath) => {
+		const output = { data: { dual: null, fortMillWrestlers: [], opponentWrestlers: [] } };
 
+		let eventRecord = null;
 		try {
-			const clientResponse = await client.get(`${ serverPath }/data/dual?id=${ dualId }`);
-			output.data.dual = clientResponse.body.duals[0];
+			const eventResponse = await client.get(`${ serverPath }/data/event?id=${ targetId }`);
+			eventRecord = eventResponse.body.events[0];
+
+			if (!eventRecord) {
+				output.status = 565;
+				output.error = "Event not found";
+				return output;
+			}
+
+			output.data.dual = eventRecord;
 		}
 		catch (error) {
 			output.status = 564;
@@ -1775,13 +1784,18 @@ export default {
 			return output;
 		}
 
+		const opponentTeamName = extractOpponentTeam(eventRecord);
 		let opponentSchool = null;
-		try {
-			const schoolResponse = await client.get(`${ serverPath }/data/school`);
-			const schools = schoolResponse.body.schools || [];
-			opponentSchool = schools.find(school => school.name === output.data.dual.opponent);
-		} catch (schoolError) {
-			console.error(`Error searching school: ${schoolError.message}`);
+		if (opponentTeamName) {
+			try {
+				const schoolResponse = await client.get(`${ serverPath }/data/school`);
+				const schools = schoolResponse.body.schools || [];
+				opponentSchool = schools.find(school => 
+					school.lookupNames && school.lookupNames.includes(opponentTeamName.trim())
+				);
+			} catch (schoolError) {
+				console.error(`Error searching school: ${schoolError.message}`);
+			}
 		}
 
 		const wrestlersData = await getDualWrestlers(opponentSchool, serverPath);
@@ -1868,6 +1882,7 @@ Do not return any other text or markup.
 			let text = jsonResponse["candidates"][0]["content"]["parts"][0]["text"];
 			text = text.replace("```json", "").replace("```", "");
 			const statsData = JSON.parse(text);
+			output.data.gemini = statsData;
 
 			output.data.stats = {
 				opponent: statsData.opponent,
@@ -2078,11 +2093,15 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 		return output;
 	},
 	
-	dualSave: async (dual, serverPath) => {
+	dualSave: async (eventRecord, serverPath) => {
 		const output = {};
 
 		try {
-			await client.post(`${ serverPath }/data/dual`).send({ dual: dual }).then();
+			const clientResponse = await client.post(`${ serverPath }/data/event`).send({ event: eventRecord }).then();
+			
+			output.status = 200;
+			output.data = { dualId: clientResponse.body.id };
+			return output;
 		}
 		catch (error) {
 			output.status = 561;
@@ -2090,30 +2109,22 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 			return output;
 		}
 
-		try {
-			const clientResponse = await client.get(`${ serverPath }/data/dual`);	
-
-			output.status = 200;
-			output.data = { duals: clientResponse.body.duals };
-			return output;
-		}
-		catch (error) {
-			output.status = 562;
-			output.error = error.message;
-			return output;
-		}
 	},
 
-	dualDelete: async (dualId, serverPath) => {
+	dualDelete: async (targetId, serverPath) => {
 		const output = {};
 
+		console.log(`Deleting event with ID: ${ targetId }`)
 		try {
-			const clientResponse = await client.get(`${ serverPath }/data/dual?id=${ dualId }`);
-			const dual = clientResponse.body.duals[0];
+			const clientResponse = await client.get(`${ serverPath }/data/event?id=${ targetId }`);
+			const eventRecord = (clientResponse.body.events && clientResponse.body.events.length > 0) ? clientResponse.body.events[0] : null;
 			
-			if (dual.imagePath) {
-				const imagePath = path.join(process.cwd(), 'client', 'media', 'temp', dual.imagePath);
-				await fs.promises.unlink(imagePath);
+			console.log(`deleting image ${ eventRecord?.imagePath }`);
+			if (eventRecord && eventRecord.imagePath) {
+				const imageFilePath = path.join(process.cwd(), 'client', 'media', 'temp', eventRecord.imagePath);
+				if (fs.existsSync(imageFilePath)) {
+					await fs.promises.unlink(imageFilePath);
+				}
 			}
 		}
 		catch (error) {
@@ -2123,7 +2134,8 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 		}
 
 		try {
-			await client.delete(`${ serverPath }/data/dual?id=${ dualId }`).then();
+			console.log(`Deleting event with ID: ${ targetId }`)
+			await client.delete(`${ serverPath }/data/event?id=${ targetId }`).then();
 		}
 		catch (error) {
 			output.status = 562;
@@ -2131,18 +2143,33 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 			return output;
 		}
 
+		let teamEvent = null;
 		try {
-			const clientResponse = await client.get(`${ serverPath }/data/dual`);
-
-			output.status = 200;
-			output.data = { duals: clientResponse.body.duals };
-			return output;
+			console.log(`getting team events`)
+			const clientResponse = await client.get(`${ serverPath }/data/teamevent?eventid=${ targetId }`).then();
+			teamEvent = clientResponse.body.teamEvents[0];
 		}
 		catch (error) {
 			output.status = 563;
 			output.error = error.message;
 			return output;
 		}
+
+		if (teamEvent) {
+			try {
+				console.log(`deleting team event with ID: ${ teamEvent.id }`)
+				await client.delete(`${ serverPath }/data/teamevent?id=${ teamEvent.id }`).then();
+			}
+			catch (error) {
+				output.status = 564;
+				output.error = error.message;
+				return output;
+			}
+		}
+
+		output.status = 200;
+		output.data = { status: "ok" }
+		return output;
 	},
 
 	duplicatesLoad: async () => {
@@ -2363,41 +2390,27 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 		}
 
 		// Orchestrate Dual creation if this is a new Dual teamEvent
-		if (teamEvent.eventType === "Dual" && !teamEvent.id && !teamEvent.dualId) {
+		if (teamEvent.eventType === "Dual" && !teamEvent.id && !teamEvent.eventId) {
 			try {
-				// 1. Create dual record with empty matches list for manual entry
-				const dual = {
-					opponent: opponentName,
-					dualDate: combinedDateTime,
-					division: teamEvent.division || "Varsity",
-					matches: [],
-					imagePath: null
-				};
-				const saveDualResponse = await client.post(`${ serverPath }/data/dual`).send({ dual: dual });
-				const newDualId = saveDualResponse.body?.id;
-
-				if (!newDualId) {
-					throw new Error("Failed to create dual record");
-				}
-
-				// 2. Create associated event record
-				const event = {
+				const eventRecord = {
 					sqlId: null,
 					eventSystem: "WrestlingPortal",
 					eventType: "Dual",
 					name: teamEvent.name || "Fort Mill vs " + (opponentName || ""),
 					date: combinedDateTime,
 					location: teamEvent.location || null,
-					state: "SC"
+					state: "SC",
+					matches: [],
+					imagePath: null
 				};
-				const saveEventResponse = await client.post(`${ serverPath }/data/event`).send({ event: event });
+				const saveEventResponse = await client.post(`${ serverPath }/data/event`).send({ event: eventRecord });
 				const newEventId = saveEventResponse.body?.id;
 
-				// 3. Link records to teamEvent
-				teamEvent.dualId = newDualId;
-				if (newEventId) {
-					teamEvent.eventId = newEventId;
+				if (!newEventId) {
+					throw new Error("Failed to create event record");
 				}
+
+				teamEvent.eventId = newEventId;
 			} catch (error) {
 				output.status = 562;
 				output.error = `Error orchestrating dual creation: ${error.message}`;
@@ -2447,19 +2460,18 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 			const startDate = `${startYear}-09-01`;
 			const endDate = `${endYear}-08-31`;
 			
-			const seasonDualsResponse = await client.get(`${ serverPath }/data/dual?startdate=${startDate}&enddate=${endDate}`);
-			output.data.duals = seasonDualsResponse.body.duals || [];
+			const seasonEventsResponse = await client.get(`${ serverPath }/data/event?eventType=Dual&startdate=${startDate}&enddate=${endDate}`);
+			output.data.duals = seasonEventsResponse.body.events || [];
 			
 			const shortStart = startYear.toString().slice(-2);
 			const shortEnd = endYear.toString().slice(-2);
 			output.data.seasonName = `${shortStart}-${shortEnd}`;
 
-			// Fetch duals from the previous season to determine if baseline comparison should be shown
 			const prevSeasonStart = `${startYear - 1}-09-01`;
 			const prevSeasonEnd = `${startYear}-08-31`;
-			const prevSeasonResponse = await client.get(`${ serverPath }/data/dual?startdate=${prevSeasonStart}&enddate=${prevSeasonEnd}`);
-			const prevSeasonDuals = prevSeasonResponse.body.duals || [];
-			output.data.hasPreviousSeasonData = prevSeasonDuals.length > 0;
+			const prevSeasonResponse = await client.get(`${ serverPath }/data/event?eventType=Dual&startdate=${prevSeasonStart}&enddate=${prevSeasonEnd}`);
+			const prevSeasonEvents = prevSeasonResponse.body.events || [];
+			output.data.hasPreviousSeasonData = prevSeasonEvents.length > 0;
 			
 			output.status = 200;
 		} catch (error) {

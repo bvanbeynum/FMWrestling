@@ -87,6 +87,20 @@ const getBarPath = (x, y, width, height, isUp, r = 4) => {
 	}
 };
 
+const extractOpponentName = (dualItem) => {
+	if (!dualItem) return "";
+	const nonFortMillWrestler = (dualItem.matches || [])
+		.flatMap(matchItem => matchItem.wrestlers || [])
+		.find(wrestlerItem => wrestlerItem.team && !/fort mill/i.test(wrestlerItem.team.trim()));
+	if (nonFortMillWrestler) return nonFortMillWrestler.team.trim();
+	if (dualItem.opponent) return dualItem.opponent;
+	if (dualItem.name && dualItem.name.includes(" vs ")) {
+		const candidate = dualItem.name.split(" vs ")[1]?.trim();
+		if (candidate && !/fort mill/i.test(candidate)) return candidate;
+	}
+	return "";
+};
+
 const SeasonChart = ({ dualsList }) => {
 	const completedDuals = dualsList.filter(
 		(dualItem) => dualItem.matches && dualItem.matches.length > 0
@@ -118,14 +132,17 @@ const SeasonChart = ({ dualsList }) => {
 			}
 		});
 
+		const opponentName = extractOpponentName(dualItem);
+		const targetDate = dualItem.date || dualItem.dualDate;
+
 		return {
 			id: dualItem.id || dualItem._id,
-			opponent: dualItem.opponent,
+			opponent: opponentName,
 			teamScore: scoreResult.teamScore,
 			opponentScore: scoreResult.opponentScore,
 			fortMillMatchesWon,
 			opponentMatchesWon,
-			dateObject: parseEventDate(dualItem.dualDate)
+			dateObject: parseEventDate(targetDate)
 		};
 	}).sort((first, second) => second.dateObject - first.dateObject); // Most recent to oldest
 
@@ -542,7 +559,7 @@ const MatchDetailMatrix = ({ dualsList }) => {
 								style={{ cursor: "pointer" }}
 							>
 								<div>{formattedDate}</div>
-								<div className="opponent-name-cell">{dualItem.opponent}</div>
+								<div className="opponent-name-cell">{extractOpponentName(dualItem)}</div>
 								<div className={`result-badge-cell ${resultValueText.toLowerCase()}`}>{resultValueText}</div>
 								<div className="score-cell-val" style={{ textAlign: "right" }}>{scoreDisplay}</div>
 								<div className={`score-cell-val ${isCompleted ? (scoreResult.teamScore >= scoreResult.opponentScore ? "positive-val" : "negative-val") : ""}`} style={{ textAlign: "right" }}>

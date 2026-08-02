@@ -1949,6 +1949,9 @@ export default {
 				$lte: endDate
 			};
 		}
+		if (userFilter.eventId) {
+			filter.eventId = userFilter.eventId;
+		}
 		if (userFilter.division && userFilter.division !== "All") {
 			filter.division = userFilter.division;
 		}
@@ -1995,11 +1998,7 @@ export default {
 			try {
 				Object.keys(saveObject).forEach(field => {
 					if (field !== "id" && field !== "_id") {
-						if ((field === "eventId" || field === "dualId") && saveObject[field]) {
-							record[field] = mongoose.Types.ObjectId.isValid(saveObject[field]) ? new mongoose.Types.ObjectId(saveObject[field]) : null;
-						} else {
-							record[field] = saveObject[field];
-						}
+						record[field] = saveObject[field];
 					}
 				});
 				record.modified = new Date();

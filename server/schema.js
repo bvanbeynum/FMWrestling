@@ -189,6 +189,7 @@ export default {
 		endDate: Date,
 		location: String,
 		state: String,
+		imagePath: String,
 		created: Date,
 		modified: Date,
 		matches: [{
@@ -267,8 +268,8 @@ export default {
 		date: Date,
 		endDate: Date,
 		startTime: String,
-		eventId: mongoose.Schema.Types.ObjectId,
-		dualId: mongoose.Schema.Types.ObjectId,
+		eventId: String,
+		dualId: String,
 		division: String,
 		location: String,
 		eventType: String,

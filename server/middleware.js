@@ -39,6 +39,38 @@ router.use(async (request, response, next) => {
 
 export default router;
 
+export const extractOpponentTeam = (eventRecord) => {
+	if (!eventRecord) return "";
+	const matchesList = eventRecord.matches || [];
+	for (let matchIndex = 0; matchIndex < matchesList.length; matchIndex++) {
+		const matchItem = matchesList[matchIndex];
+		const wrestlersList = matchItem.wrestlers || [];
+		for (let wrestlerIndex = 0; wrestlerIndex < wrestlersList.length; wrestlerIndex++) {
+			const wrestlerItem = wrestlersList[wrestlerIndex];
+			if (wrestlerItem && wrestlerItem.team && !/fort mill/i.test(wrestlerItem.team.trim())) {
+				return wrestlerItem.team.trim();
+			}
+		}
+	}
+	if (eventRecord.name && eventRecord.name.includes(" vs ")) {
+		const nameParts = eventRecord.name.split(" vs ");
+		const candidateOpponent = nameParts[1] ? nameParts[1].trim() : "";
+		if (candidateOpponent && !/fort mill/i.test(candidateOpponent)) {
+			return candidateOpponent;
+		}
+	}
+	return "";
+};
+
+export const extractEventDivision = (eventRecord) => {
+	if (!eventRecord) return "Varsity";
+	const matchesList = eventRecord.matches || [];
+	if (matchesList.length > 0 && matchesList[0].division) {
+		return matchesList[0].division;
+	}
+	return "Varsity";
+};
+
 export const getDualWrestlers = async (opponentSchool, serverPath) => {
 	const result = { fortMillWrestlers: [], opponentWrestlers: [] };
 
@@ -51,31 +83,14 @@ export const getDualWrestlers = async (opponentSchool, serverPath) => {
 		const clientResponse = await client.get(`${ serverPath }/data/wrestler?teamname=fort+mill`);
 		const wrestlers = clientResponse.body.wrestlers || [];
 		result.fortMillWrestlers = wrestlers
-			.map(wrestler => {
-				const matchingEvents = wrestler.events
-					.filter(event => /^fort mill$/gi.test(event.team) && event.matches && !isNaN(event.matches[0].weightClass.replace("lbs", "").trim()))
-					.sort((eventA, eventB) => new Date(eventB.date) - new Date(eventA.date));
-
-				const lastEvent = matchingEvents[0];
-				const lastTeamEventDate = lastEvent ? new Date(lastEvent.date) : null;
-				let lastWeightClass = null;
-				let lastDivision = null;
-
-				if (lastEvent && lastEvent.matches && lastEvent.matches.length > 0) {
-					const matchWt = lastEvent.matches[0].weightClass;
-					lastWeightClass = matchWt ? matchWt.replace("lbs", "").trim() : null;
-					lastDivision = lastEvent.matches[0].division || lastEvent.division || null;
-				}
-				
-				return {
-					id: wrestler.id,
-					name: wrestler.name,
-					rating: wrestler.rating ? Math.round(wrestler.rating) : null,
-					weightClass: lastWeightClass,
-					division: lastDivision,
-					lastEventDate: lastTeamEventDate
-				};
-			})
+			.map(wrestler => ({
+				id: wrestler.id,
+				name: wrestler.name,
+				rating: wrestler.rating,
+				weightClass: wrestler.schoolWeightClass || wrestler.lastWeightClass,
+				division: wrestler.schoolDivision,
+				lastEventDate: wrestler.lastEvent ? new Date(wrestler.lastEvent.date) : null
+			}))
 			.filter(wrestler => wrestler.lastEventDate && wrestler.lastEventDate >= seasonStart)
 			.sort((firstWrestler, secondWrestler) => firstWrestler.name.localeCompare(secondWrestler.name));
 	}
@@ -91,32 +106,15 @@ export const getDualWrestlers = async (opponentSchool, serverPath) => {
 			const opponentWrestlers = clientResponse.body.wrestlers || [];
 
 			result.opponentWrestlers = opponentWrestlers
-				.filter(wrestler => wrestler.events.some(event => /^sc$/gi.test(event.locationState)))
-				.map(wrestler => {
-					const matchingEvents = wrestler.events
-						.filter(event => schoolNames.includes(event.team) && event.matches && !isNaN(event.matches[0].weightClass.replace("lbs", "").trim()))
-						.sort((eventA, eventB) => new Date(eventB.date) - new Date(eventA.date));
-
-					const lastEvent = matchingEvents[0];
-					const lastTeamEventDate = lastEvent ? new Date(lastEvent.date) : null;
-					let lastWeightClass = null;
-					let lastDivision = null;
-
-					if (lastEvent && lastEvent.matches && lastEvent.matches.length > 0) {
-						const matchWt = lastEvent.matches[0].weightClass;
-						lastWeightClass = matchWt ? matchWt.replace("lbs", "").trim() : null;
-						lastDivision = lastEvent.matches[0].division || lastEvent.division || null;
-					}
-
-					return {
-						id: wrestler.id,
-						name: wrestler.name,
-						rating: wrestler.rating ? Math.round(wrestler.rating) : null,
-						weightClass: lastWeightClass,
-						division: lastDivision,
-						lastEventDate: lastTeamEventDate
-					};
-				})
+				.filter(wrestler => wrestler.states && wrestler.states.includes("SC"))
+				.map(wrestler => ({
+					id: wrestler.id,
+					name: wrestler.name,
+					rating: wrestler.rating,
+					weightClass: wrestler.schoolWeightClass || wrestler.lastWeightClass,
+					division: wrestler.schoolDivision,
+					lastEventDate: wrestler.lastEvent ? new Date(wrestler.lastEvent.date) : null
+				}))
 				.filter(wrestler => 
 					wrestler.lastEventDate
 					&& wrestler.lastEventDate >= seasonStart

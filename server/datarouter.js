@@ -677,7 +677,8 @@ router.get("/data/teamevent", authInternal, async (request, response) => {
 			id: request.query.id,
 			startDate: request.query.startdate,
 			endDate: request.query.enddate,
-			division: request.query.division
+			division: request.query.division,
+			eventId: request.query.eventid
 		});
 
 		response.status(results.status).json(results.error ? { error: results.error } : results.data);

@@ -128,9 +128,19 @@ const Dual = () => {
 		}
 	}, []);
 
-	const loadDualData = (dual) => {
-		setDualId(dual.id || dual._id);
-		const opponentName = dual.opponent || "";
+	const loadDualData = (eventRecord) => {
+		setDualId(eventRecord.id || eventRecord._id);
+		
+		const nonFortMillWrestler = (eventRecord.matches || [])
+			.flatMap(matchItem => matchItem.wrestlers || [])
+			.find(wrestlerItem => wrestlerItem.team && !/fort mill/i.test(wrestlerItem.team.trim()));
+		let opponentName = nonFortMillWrestler ? nonFortMillWrestler.team.trim() : (eventRecord.opponent || "");
+		if (!opponentName && eventRecord.name && eventRecord.name.includes(" vs ")) {
+			const candidateOpponent = eventRecord.name.split(" vs ")[1]?.trim();
+			if (candidateOpponent && !/fort mill/i.test(candidateOpponent)) {
+				opponentName = candidateOpponent;
+			}
+		}
 		setOpponent(opponentName);
 		
 		const extractTime = (dateObject) => {
@@ -141,18 +151,16 @@ const Dual = () => {
 			return `${String(hours).padStart(2, '0')}:${roundedMinutes}`;
 		};
 
-		if (dual.dualDateObj && !isNaN(dual.dualDateObj.getTime())) {
-			setDualDate(dual.dualDateObj.toISOString().split("T")[0]);
-			setDualTime(extractTime(dual.dualDateObj));
-		} else if (dual.dualDate) {
-			const date = new Date(dual.dualDate);
-			setDualDate(date.toISOString().split("T")[0]);
-			setDualTime(extractTime(date));
+		const targetDate = parseEventDate(eventRecord.date || eventRecord.dualDate);
+		if (targetDate && !isNaN(targetDate.getTime())) {
+			setDualDate(targetDate.toISOString().split("T")[0]);
+			setDualTime(extractTime(targetDate));
 		}
 
-		setMatches(dual.matches || []);
-		setDivision(dual.division || "Varsity");
-		setImagePath(dual.imagePath ? `/media/temp/${dual.imagePath}` : null);
+		setMatches(eventRecord.matches || []);
+		const firstMatchDivision = (eventRecord.matches && eventRecord.matches[0] && eventRecord.matches[0].division) ? eventRecord.matches[0].division : (eventRecord.division || "Varsity");
+		setDivision(firstMatchDivision);
+		setImagePath(eventRecord.imagePath ? `/media/temp/${eventRecord.imagePath}` : null);
 		setIsStarted(true);
 	};
 
@@ -304,15 +312,15 @@ const Dual = () => {
 		// Ensure wrestlers array exists and has home/visitor
 		if (!match.wrestlers || match.wrestlers.length === 0) {
 			match.wrestlers = [
-				{ name: "", team: "Fort Mill", isWinner: false, scores: { takedowns: 0, escapes: 0, reversals: 0, nearfalls: 0 } },
-				{ name: "", team: opponent || "Visitor", isWinner: false, scores: { takedowns: 0, escapes: 0, reversals: 0, nearfalls: 0 } }
+				{ name: "", team: "Fort Mill", isWinner: false, takedowns: 0, escapes: 0, reversals: 0, nearfalls: 0 },
+				{ name: "", team: opponent || "Visitor", isWinner: false, takedowns: 0, escapes: 0, reversals: 0, nearfalls: 0 }
 			];
 		} else if (match.wrestlers.length === 1) {
 			const existing = match.wrestlers[0];
 			if (existing.team.toLowerCase() === "fort mill") {
-				match.wrestlers.push({ name: "", team: opponent || "Visitor", isWinner: false, scores: { takedowns: 0, escapes: 0, reversals: 0, nearfalls: 0 } });
+				match.wrestlers.push({ name: "", team: opponent || "Visitor", isWinner: false, takedowns: 0, escapes: 0, reversals: 0, nearfalls: 0 });
 			} else {
-				match.wrestlers.unshift({ name: "", team: "Fort Mill", isWinner: false, scores: { takedowns: 0, escapes: 0, reversals: 0, nearfalls: 0 } });
+				match.wrestlers.unshift({ name: "", team: "Fort Mill", isWinner: false, takedowns: 0, escapes: 0, reversals: 0, nearfalls: 0 });
 			}
 		}
 
@@ -321,10 +329,8 @@ const Dual = () => {
 			match.wrestlers.findIndex(wrestler => wrestler.team.toLowerCase() !== "fort mill");
 			
 		if (wrestlerIndex === -1) return;
-
-		if (isScore) {
-			match.wrestlers[wrestlerIndex].scores = { ...match.wrestlers[wrestlerIndex].scores, [field]: Number(value) || 0 };
-		} else if (field === "isWinner") {
+		
+		if (field === "isWinner") {
 			// Select winner and reset the other wrestler's winner status
 			match.wrestlers.forEach((wrestler, wrestlerItemIndex) => {
 				wrestler.isWinner = (wrestlerItemIndex === wrestlerIndex) ? !!value : false;
@@ -345,15 +351,15 @@ const Dual = () => {
 		
 		if (!match.wrestlers || match.wrestlers.length === 0) {
 			match.wrestlers = [
-				{ name: "", team: "Fort Mill", isWinner: false, scores: { takedowns: 0, escapes: 0, reversals: 0, nearfalls: 0 } },
-				{ name: "", team: opponent || "Visitor", isWinner: false, scores: { takedowns: 0, escapes: 0, reversals: 0, nearfalls: 0 } }
+				{ name: "", team: "Fort Mill", isWinner: false, takedowns: 0, escapes: 0, reversals: 0, nearfalls: 0 },
+				{ name: "", team: opponent || "Visitor", isWinner: false, takedowns: 0, escapes: 0, reversals: 0, nearfalls: 0 }
 			];
 		} else if (match.wrestlers.length === 1) {
 			const existing = match.wrestlers[0];
 			if (existing.team.toLowerCase() === "fort mill") {
-				match.wrestlers.push({ name: "", team: opponent || "Visitor", isWinner: false, scores: { takedowns: 0, escapes: 0, reversals: 0, nearfalls: 0 } });
+				match.wrestlers.push({ name: "", team: opponent || "Visitor", isWinner: false, takedowns: 0, escapes: 0, reversals: 0, nearfalls: 0 });
 			} else {
-				match.wrestlers.unshift({ name: "", team: "Fort Mill", isWinner: false, scores: { takedowns: 0, escapes: 0, reversals: 0, nearfalls: 0 } });
+				match.wrestlers.unshift({ name: "", team: "Fort Mill", isWinner: false, takedowns: 0, escapes: 0, reversals: 0, nearfalls: 0 });
 			}
 		}
 
@@ -397,13 +403,19 @@ const Dual = () => {
 					name: "",
 					team: "Fort Mill",
 					isWinner: false,
-					scores: { takedowns: 0, escapes: 0, reversals: 0, nearfalls: 0 }
+					takedowns: 0,
+					escapes: 0,
+					reversals: 0,
+					nearfalls: 0
 				},
 				{
 					name: "",
 					team: opponent || "Visitor",
 					isWinner: false,
-					scores: { takedowns: 0, escapes: 0, reversals: 0, nearfalls: 0 }
+					takedowns: 0,
+					escapes: 0,
+					reversals: 0,
+					nearfalls: 0
 				}
 			]
 		});
@@ -422,39 +434,37 @@ const Dual = () => {
 			combinedDateTime = new Date(`${dualDate}T${dualTime}`).toISOString();
 		}
 
-		// Ensure correct team names are synchronized
-		const cleanedMatches = matches.map(match => ({
-			...match,
-			wrestlers: (match.wrestlers || []).map(wrestler => ({
-				...wrestler,
-				team: wrestler.team.toLowerCase() === "fort mill" ? "Fort Mill" : (opponent || "Visitor")
-			}))
+		const cleanedMatches = matches.map(matchItem => ({
+			...matchItem,
+			division: matchItem.division || division || "Varsity",
+			wrestlers: (matchItem.wrestlers || [])
 		}));
 
-		const dualData = {
+		const eventRecordPayload = {
 			id: dualId,
-			opponent,
+			eventType: "Dual",
+			eventSystem: "WrestlingPortal",
+			name: `Fort Mill vs ${opponent}`,
+			date: combinedDateTime,
 			imagePath: imagePath ? imagePath.replace("/media/temp/", "") : null,
-			dualDate: combinedDateTime,
-			division: division,
 			matches: cleanedMatches
 		};
 
 		fetch("/api/dualsave", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ dual: dualData })
+			body: JSON.stringify({ dual: eventRecordPayload })
 		})
-			.then(res => res.json())
-			.then(data => {
-				if (data.error) {
-					console.error("Save error:", data.error);
+			.then(response => response.json())
+			.then(responseData => {
+				if (responseData.error) {
+					console.error("Save error:", responseData.error);
 					alert("Failed to save dual meet.");
 				} else {
 					window.location.href = "/portal/schedule.html";
 				}
 			})
-			.catch(err => console.error("Save catch error:", err));
+			.catch(error => console.error("Save catch error:", error));
 	};
 
 	const handleCancel = () => {
@@ -499,21 +509,21 @@ const Dual = () => {
 		else if (["F", "FALL", "PIN", "FF", "FOR", "DQ", "DEF"].includes(winType)) pts = 6;
 		else pts = 3; // fallback default to decision points
 
-		const homeW = (match.wrestlers || []).find(w => w.team.toLowerCase() === "fort mill");
-		const visitorW = (match.wrestlers || []).find(w => w.team.toLowerCase() !== "fort mill");
+		const homeWrestler = (match.wrestlers || []).find(w => w.team.toLowerCase() === "fort mill");
+		const visitorWrestler = (match.wrestlers || []).find(w => w.team.toLowerCase() !== "fort mill");
 
-		if (homeW && homeW.isWinner) {
+		if (homeWrestler && homeWrestler.isWinner) {
 			homeTotalScore += pts;
 			if (["F", "FALL", "PIN"].includes(winType)) winStats.pins++;
 			else if (winType === "TF") winStats.techs++;
 			else if (winType === "MD") winStats.majors++;
 			else winStats.decs++;
-		} else if (visitorW && visitorW.isWinner) {
+		} else if (visitorWrestler && visitorWrestler.isWinner) {
 			visitorTotalScore += pts;
 		}
 	});
 
-	const formatMatchResult = (match, homeW, visitorW) => {
+	const formatMatchResult = (match, homeWrestler, visitorWrestler) => {
 		const winType = (match.winType || "DEC").toUpperCase();
 		let label = winType;
 		if (["F", "FALL", "PIN"].includes(winType)) label = "Pin";
@@ -527,8 +537,8 @@ const Dual = () => {
 		else if (label === "TF") pts = 5;
 		else if (["F", "FALL", "PIN", "FF", "FOR", "DQ", "DEF"].includes(winType) || label === "Pin") pts = 6;
 
-		const homeIsWinner = !!homeW?.isWinner;
-		const visitorIsWinner = !!visitorW?.isWinner;
+		const homeIsWinner = !!homeWrestler?.isWinner;
+		const visitorIsWinner = !!visitorWrestler?.isWinner;
 
 		let pointsStr = "";
 		if (homeIsWinner) {
@@ -727,30 +737,27 @@ const Dual = () => {
 							) : (
 								matches.map((match, mIdx) => {
 									const wt = match.weightClass || "—";
-									const homeW = (match.wrestlers || []).find(w => w.team.toLowerCase() === "fort mill") || {};
-									const visitorW = (match.wrestlers || []).find(w => w.team.toLowerCase() !== "fort mill") || {};
+									const homeWrestler = (match.wrestlers || []).find(wrestler => wrestler.team.toLowerCase() === "fort mill") || {};
+									const visitorWrestler = (match.wrestlers || []).find(wrestler => wrestler.team.toLowerCase() !== "fort mill") || {};
 
-									const homeIsWinner = !!homeW.isWinner;
-									const visitorIsWinner = !!visitorW.isWinner;
-									const resultText = formatMatchResult(match, homeW, visitorW);
-
-									const hScores = homeW.scores || {};
-									const vScores = visitorW.scores || {};
+									const homeIsWinner = !!homeWrestler.isWinner;
+									const visitorIsWinner = !!visitorWrestler.isWinner;
+									const resultText = formatMatchResult(match, homeWrestler, visitorWrestler);
 
 									return (
 										<div className="report-match-row" key={ mIdx }>
 											{/* Left: Home Wrestler Stats */}
 											<div className="report-cell home">
 												<div className={`wrestler-name ${ homeIsWinner ? "win" : visitorIsWinner ? "loss" : "" }`}>
-													<span>{ homeW.name || "—" }</span>
-													{ homeW.wrestlerId && (
+													<span>{ homeWrestler.name || "—" }</span>
+													{ homeWrestler.wrestlerId && (
 														<svg className="wrestler-status-icon linked report-check" viewBox="0 0 24 24" fill="currentColor" title="Associated with roster">
 															<path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
 														</svg>
 													)}
 												</div>
 												<div className="wrestler-stats-line">
-													TD: { hScores.takedowns || 0 } &nbsp;&nbsp; NF: { hScores.nearfalls || 0 } &nbsp;&nbsp; REV: { hScores.reversals || 0 } &nbsp;&nbsp; ESC: { hScores.escapes || 0 }
+													TD: { homeWrestler.takedowns || 0 } &nbsp;&nbsp; NF: { homeWrestler.nearfalls || 0 } &nbsp;&nbsp; REV: { homeWrestler.reversals || 0 } &nbsp;&nbsp; ESC: { homeWrestler.escapes || 0 }
 												</div>
 											</div>
 
@@ -765,15 +772,15 @@ const Dual = () => {
 											{/* Right: Opponent Wrestler Stats */}
 											<div className="report-cell visitor">
 												<div className={`wrestler-name ${ visitorIsWinner ? "win" : homeIsWinner ? "loss" : "" }`}>
-													{ visitorW.wrestlerId && (
+													{ visitorWrestler.wrestlerId && (
 														<svg className="wrestler-status-icon linked report-check" viewBox="0 0 24 24" fill="currentColor" title="Associated with roster">
 															<path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
 														</svg>
 													)}
-													<span>{ visitorW.name || "—" }</span>
+													<span>{ visitorWrestler.name || "—" }</span>
 												</div>
 												<div className="wrestler-stats-line">
-													TD: { vScores.takedowns || 0 } &nbsp;&nbsp; NF: { vScores.nearfalls || 0 } &nbsp;&nbsp; REV: { vScores.reversals || 0 } &nbsp;&nbsp; ESC: { vScores.escapes || 0 }
+													TD: { visitorWrestler.takedowns || 0 } &nbsp;&nbsp; NF: { visitorWrestler.nearfalls || 0 } &nbsp;&nbsp; REV: { visitorWrestler.reversals || 0 } &nbsp;&nbsp; ESC: { visitorWrestler.escapes || 0 }
 												</div>
 											</div>
 										</div>
@@ -939,8 +946,8 @@ const Dual = () => {
 							<div className="scoresheet-list-body">
 								{ matches.map((match, mIdx) => {
 									const wt = match.weightClass || "106";
-									const homeItem = (match.wrestlers || []).find(w => w.team.toLowerCase() === "fort mill") || { name: "", isWinner: false, scores: { takedowns: 0, escapes: 0, reversals: 0, nearfalls: 0 } };
-									const visitorItem = (match.wrestlers || []).find(w => w.team.toLowerCase() !== "fort mill") || { name: "", isWinner: false, scores: { takedowns: 0, escapes: 0, reversals: 0, nearfalls: 0 } };
+									const homeItem = (match.wrestlers || []).find(w => w.team.toLowerCase() === "fort mill") || { name: "", isWinner: false, takedowns: 0, escapes: 0, reversals: 0, nearfalls: 0 };
+									const visitorItem = (match.wrestlers || []).find(w => w.team.toLowerCase() !== "fort mill") || { name: "", isWinner: false, takedowns: 0, escapes: 0, reversals: 0, nearfalls: 0 };
 
 									return (
 										<div className="weight-card" key={ mIdx }>
@@ -1064,7 +1071,7 @@ const Dual = () => {
 																<input 
 																	type="number" 
 																	className="stat-input" 
-																	value={ homeItem.scores?.takedowns || 0 } 
+																	value={ homeItem.takedowns || 0 } 
 																	onChange={ event => handleWrestlerChange(mIdx, true, "takedowns", true, event.target.value) }
 																/>
 															</div>
@@ -1075,7 +1082,7 @@ const Dual = () => {
 																<input 
 																	type="number" 
 																	className="stat-input" 
-																	value={ homeItem.scores?.nearfalls || 0 } 
+																	value={ homeItem.nearfalls || 0 } 
 																	onChange={ event => handleWrestlerChange(mIdx, true, "nearfalls", true, event.target.value) }
 																/>
 															</div>
@@ -1086,7 +1093,7 @@ const Dual = () => {
 																<input 
 																	type="number" 
 																	className="stat-input" 
-																	value={ homeItem.scores?.reversals || 0 } 
+																	value={ homeItem.reversals || 0 } 
 																	onChange={ event => handleWrestlerChange(mIdx, true, "reversals", true, event.target.value) }
 																/>
 															</div>
@@ -1097,7 +1104,7 @@ const Dual = () => {
 																<input 
 																	type="number" 
 																	className="stat-input" 
-																	value={ homeItem.scores?.escapes || 0 } 
+																	value={ homeItem.escapes || 0 } 
 																	onChange={ event => handleWrestlerChange(mIdx, true, "escapes", true, event.target.value) }
 																/>
 															</div>
@@ -1188,7 +1195,7 @@ const Dual = () => {
 																<input 
 																	type="number" 
 																	className="stat-input visitor" 
-																	value={ visitorItem.scores?.takedowns || 0 } 
+																	value={ visitorItem.takedowns || 0 } 
 																	onChange={ event => handleWrestlerChange(mIdx, false, "takedowns", true, event.target.value) }
 																/>
 															</div>
@@ -1199,7 +1206,7 @@ const Dual = () => {
 																<input 
 																	type="number" 
 																	className="stat-input visitor" 
-																	value={ visitorItem.scores?.nearfalls || 0 } 
+																	value={ visitorItem.nearfalls || 0 } 
 																	onChange={ event => handleWrestlerChange(mIdx, false, "nearfalls", true, event.target.value) }
 																/>
 															</div>
@@ -1210,7 +1217,7 @@ const Dual = () => {
 																<input 
 																	type="number" 
 																	className="stat-input visitor" 
-																	value={ visitorItem.scores?.reversals || 0 } 
+																	value={ visitorItem.reversals || 0 } 
 																	onChange={ event => handleWrestlerChange(mIdx, false, "reversals", true, event.target.value) }
 																/>
 															</div>
@@ -1221,7 +1228,7 @@ const Dual = () => {
 																<input 
 																	type="number" 
 																	className="stat-input visitor" 
-																	value={ visitorItem.scores?.escapes || 0 } 
+																	value={ visitorItem.escapes || 0 } 
 																	onChange={ event => handleWrestlerChange(mIdx, false, "escapes", true, event.target.value) }
 																/>
 															</div>
