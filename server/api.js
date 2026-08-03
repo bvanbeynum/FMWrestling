@@ -1212,8 +1212,12 @@ export default {
 			return output;
 		}
 
+		const seasonStart = new Date() > new Date(new Date().getFullYear(), 11, 1) ?
+				new Date(new Date().getFullYear(), 8, 1)
+				: new Date(new Date().getFullYear() - 1, 8, 1);
+
 		try {
-			const clientResponse = await client.get(`${ serverPath }/data/wrestler?ratingsort=true&${ state ? `state=${ state }&` : "" }${ weightClass ? `lastweightclass=${ encodeURIComponent(weightClass) }` : "" }`);
+			const clientResponse = await client.get(`${ serverPath }/data/wrestler?ratingsort=true&wrestledsince=${ seasonStart.toLocaleDateString() }&${ state ? `state=${ state }&` : "" }${ weightClass ? `lastweightclass=${ encodeURIComponent(weightClass) }` : "" }`);
 			output.data.wrestlerRankings = clientResponse.body.wrestlers.map(wrestler => ({
 				id: wrestler.id,
 				name: wrestler.name,
@@ -2151,12 +2155,10 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 	dualDelete: async (targetId, serverPath) => {
 		const output = {};
 
-		console.log(`Deleting event with ID: ${ targetId }`)
 		try {
 			const clientResponse = await client.get(`${ serverPath }/data/event?id=${ targetId }`);
 			const eventRecord = (clientResponse.body.events && clientResponse.body.events.length > 0) ? clientResponse.body.events[0] : null;
 			
-			console.log(`deleting image ${ eventRecord?.imagePath }`);
 			if (eventRecord && eventRecord.imagePath) {
 				const imageFilePath = path.join(process.cwd(), 'client', 'media', 'temp', eventRecord.imagePath);
 				if (fs.existsSync(imageFilePath)) {
@@ -2171,7 +2173,6 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 		}
 
 		try {
-			console.log(`Deleting event with ID: ${ targetId }`)
 			await client.delete(`${ serverPath }/data/event?id=${ targetId }`).then();
 		}
 		catch (error) {
@@ -2182,7 +2183,6 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 
 		let teamEvent = null;
 		try {
-			console.log(`getting team events`)
 			const clientResponse = await client.get(`${ serverPath }/data/teamevent?eventid=${ targetId }`).then();
 			teamEvent = clientResponse.body.teamEvents[0];
 		}
@@ -2194,7 +2194,6 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 
 		if (teamEvent) {
 			try {
-				console.log(`deleting team event with ID: ${ teamEvent.id }`)
 				await client.delete(`${ serverPath }/data/teamevent?id=${ teamEvent.id }`).then();
 			}
 			catch (error) {

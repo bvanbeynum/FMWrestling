@@ -256,7 +256,10 @@ export default {
 			filter.states = userFilter.state.toUpperCase();
 		}
 		if (userFilter.lastWeightClass) {
-			filter.lastWeightClass = userFilter.lastWeightClass;
+			filter.lastWeightClass = { $regex: new RegExp("^" + userFilter.lastWeightClass) };
+		}
+		if (userFilter.wrestledSince) {
+			filter["lastEvent.date"] = { $gte: new Date(userFilter.wrestledSince) };
 		}
 		if (userFilter.sqlId) {
 			filter.sqlId = userFilter.sqlId;
