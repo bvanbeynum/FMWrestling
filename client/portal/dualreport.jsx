@@ -120,10 +120,10 @@ const SeasonChart = ({ dualsList }) => {
 
 		(dualItem.matches || []).forEach((matchItem) => {
 			const homeWrestler = (matchItem.wrestlers || []).find(
-				(w) => w.team.toLowerCase() === "fort mill"
+				(wrestler) => wrestler.team.toLowerCase() === "fort mill"
 			);
 			const visitorWrestler = (matchItem.wrestlers || []).find(
-				(w) => w.team.toLowerCase() !== "fort mill"
+				(wrestler) => wrestler.team.toLowerCase() !== "fort mill"
 			);
 			if (homeWrestler && homeWrestler.isWinner) {
 				fortMillMatchesWon++;
@@ -133,7 +133,6 @@ const SeasonChart = ({ dualsList }) => {
 		});
 
 		const opponentName = extractOpponentName(dualItem);
-		const targetDate = dualItem.date || dualItem.dualDate;
 
 		return {
 			id: dualItem.id || dualItem._id,
@@ -142,7 +141,7 @@ const SeasonChart = ({ dualsList }) => {
 			opponentScore: scoreResult.opponentScore,
 			fortMillMatchesWon,
 			opponentMatchesWon,
-			dateObject: parseEventDate(targetDate)
+			dateObject: parseEventDate(dualItem.date)
 		};
 	}).sort((first, second) => second.dateObject - first.dateObject); // Most recent to oldest
 
@@ -243,12 +242,12 @@ const SeasonChart = ({ dualsList }) => {
 					))}
 
 					{/* Vertical Gridlines & X-axis columns */}
-					{completedDualsData.map((d, i) => (
+					{completedDualsData.map((dual, dualIndex) => (
 						<line
-							key={`grid-v-${i}`}
-							x1={getXCoordinate(i)}
+							key={`grid-v-${dualIndex}`}
+							x1={getXCoordinate(dualIndex)}
 							y1={45}
-							x2={getXCoordinate(i)}
+							x2={getXCoordinate(dualIndex)}
 							y2={305}
 							stroke="var(--outline)"
 							strokeWidth={0.5}
@@ -469,16 +468,16 @@ const SeasonChart = ({ dualsList }) => {
 
 			{/* Tooltip */}
 			{hoveredIndex !== null && (() => {
-				const d = completedDualsData[hoveredIndex];
-				const rawDate = d.dateObject;
+				const dual = completedDualsData[hoveredIndex];
+				const rawDate = dual.dateObject;
 				const formattedDate = `${String(rawDate.getMonth() + 1).padStart(2, "0")}/${String(rawDate.getDate()).padStart(2, "0")}/${rawDate.getFullYear()}`;
-				const fmWinner = d.teamScore > d.opponentScore;
-				const oppWinner = d.opponentScore > d.teamScore;
+				const fmWinner = dual.teamScore > dual.opponentScore;
+				const oppWinner = dual.opponentScore > dual.teamScore;
 				
 				return (
 					<div className="season-chart-tooltip">
 						<div className="season-chart-tooltip-title">
-							{d.opponent} ({formattedDate})
+							{dual.opponent} ({formattedDate})
 						</div>
 						<div className="season-chart-tooltip-content">
 							<div className="season-chart-tooltip-col">
@@ -486,18 +485,18 @@ const SeasonChart = ({ dualsList }) => {
 									FORT MILL
 								</span>
 								<br />
-								Matches: {d.fortMillMatchesWon}
+								Matches: {dual.fortMillMatchesWon}
 								<br />
-								Points: {d.teamScore}
+								Points: {dual.teamScore}
 							</div>
 							<div className="season-chart-tooltip-col opponent-col">
 								<span className={`season-chart-tooltip-team-name ${oppWinner ? "winner-opp" : ""}`}>
 									OPPONENT
 								</span>
 								<br />
-								Matches: {d.opponentMatchesWon}
+								Matches: {dual.opponentMatchesWon}
 								<br />
-								Points: {d.opponentScore}
+								Points: {dual.opponentScore}
 							</div>
 						</div>
 					</div>
@@ -533,7 +532,7 @@ const MatchDetailMatrix = ({ dualsList }) => {
 						else resultValueText = "T";
 					}
 
-					const rawDate = parseEventDate(dualItem.dualDate);
+					const rawDate = parseEventDate(dualItem.date);
 					const formattedDate = `${String(rawDate.getMonth() + 1).padStart(2, "0")}/${String(rawDate.getDate()).padStart(2, "0")}/${rawDate.getFullYear().toString().substring(2,4)}`;
 
 					const scoreDisplay = isCompleted ? `${scoreResult.teamScore}-${scoreResult.opponentScore}` : "-";

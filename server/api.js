@@ -2496,20 +2496,19 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 			
 			const startDate = `${startYear}-09-01`;
 			const endDate = `${endYear}-08-31`;
-			console.log(`${ startDate } - ${ endDate }`)
-			
-			const seasonEventsResponse = await client.get(`${ serverPath }/data/event?eventType=Dual&startdate=${startDate}&enddate=${endDate}`);
-			output.data.duals = seasonEventsResponse.body.events || [];
+			const prevSeasonStart = `${startYear - 1}-09-01`;
+			const prevSeasonEnd = `${startYear}-08-31`;
 			
 			const shortStart = startYear.toString().slice(-2);
 			const shortEnd = endYear.toString().slice(-2);
 			output.data.seasonName = `${shortStart}-${shortEnd}`;
 
-			const prevSeasonStart = `${startYear - 1}-09-01`;
-			const prevSeasonEnd = `${startYear}-08-31`;
-			const prevSeasonResponse = await client.get(`${ serverPath }/data/event?eventType=Dual&startdate=${prevSeasonStart}&enddate=${prevSeasonEnd}`);
-			const prevSeasonEvents = prevSeasonResponse.body.events || [];
-			output.data.hasPreviousSeasonData = prevSeasonEvents.length > 0;
+			const seasonEventsResponse = await client.get(`${ serverPath }/data/event?eventtype=Dual&startdate=${prevSeasonStart}&enddate=${endDate}`);
+			const duals = seasonEventsResponse.body.events || [];
+
+			output.data.duals = duals.filter(dual => new Date(dual.date) >= new Date(startDate) && dual.date <= endDate)
+			
+			output.data.hasPreviousSeasonData = duals.filter(dual => new Date(dual.date) <= prevSeasonEnd).length > 0;
 			
 			output.status = 200;
 		} catch (error) {
