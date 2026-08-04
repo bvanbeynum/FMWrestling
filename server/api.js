@@ -2481,6 +2481,7 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 
 	dualReportLoad: async (season, serverPath) => {
 		const output = { data: { duals: [], seasonName: "", hasPreviousSeasonData: false } };
+
 		try {
 			let startYear;
 			if (season && /^\d{2}-\d{2}$/.test(season)) {
@@ -2495,6 +2496,7 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 			
 			const startDate = `${startYear}-09-01`;
 			const endDate = `${endYear}-08-31`;
+			console.log(`${ startDate } - ${ endDate }`)
 			
 			const seasonEventsResponse = await client.get(`${ serverPath }/data/event?eventType=Dual&startdate=${startDate}&enddate=${endDate}`);
 			output.data.duals = seasonEventsResponse.body.events || [];

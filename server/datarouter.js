@@ -457,13 +457,13 @@ router.get("/data/event", authInternal, async (request, response) => {
 			startDate: request.query.startdate, 
 			endDate: request.query.enddate,
 			eventSystem: request.query.eventsystem,
+			eventType: request.query.eventtype, 
 			sqlIds: sqlIdList,
 			select: request.query.select ? request.query.select.split(",") : null,
-			excludeMatches: request.query.excludematches === "true",
 			state: request.query.state,
 			modifiedSince: request.query.modifiedsince
 		};
-
+		
 		const results = await data.eventGet(filter);
 
 		if (results.error) {
@@ -499,7 +499,7 @@ router.post("/data/event", authInternal, async (request, response) => {
 router.post("/data/event/bulk", authInternal, async (request, response) => {
 	try {
 		const eventsList = request.body.events || request.body.event || request.body.records || (Array.isArray(request.body) ? request.body : null);
-		const results = await data.eventsBulkSave(eventsList);
+		const results = await data.eventBulkSave(eventsList);
 
 		if (results.error) {
 			// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64ed20be26539d4ed2915eed", message: `${ results.status }: ${results.error}` }}).then();
@@ -512,24 +512,6 @@ router.post("/data/event/bulk", authInternal, async (request, response) => {
 		response.status(570).json({ error: error.message });
 	}
 });
-
-router.post("/data/events/bulk", authInternal, async (request, response) => {
-	try {
-		const eventsList = request.body.events || request.body.event || request.body.records || (Array.isArray(request.body) ? request.body : null);
-		const results = await data.eventsBulkSave(eventsList);
-
-		if (results.error) {
-			// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "64ed20be26539d4ed2915eed", message: `${ results.status }: ${results.error}` }}).then();
-		}
-
-		response.status(results.status).json(results.error ? { error: results.error } : results.data);
-		response.end();
-	}
-	catch (error) {
-		response.status(570).json({ error: error.message });
-	}
-});
-
 
 router.delete("/data/event", authInternal, async (request, response) => {
 	try {

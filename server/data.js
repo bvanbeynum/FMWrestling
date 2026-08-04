@@ -1033,46 +1033,45 @@ export default {
 
 	eventGet: async (userFilter = {}) => {
 		let filter = {},
-			output = {};
+			select = {},
+			output = {},
+			filterInclude = [];
 
 		if (userFilter.id) {
-			filter["_id"] = mongoose.Types.ObjectId.isValid(userFilter.id) ? userFilter.id : null;
+			filterInclude.push({ _id: mongoose.Types.ObjectId.isValid(userFilter.id) ? userFilter.id : null });
 		}
-		else if (!userFilter.includeExpired) {
-			filter = { $or: [ { expires: null }, { expires: { $gt: new Date() }} ] };
+		if (userFilter.sqlId) {
+			filterInclude.push({ sqlId: userFilter.sqlId });
+		}
+		if (userFilter.sqlIds) {
+			filterInclude.push({ sqlId: { $in: userFilter.sqlIds } });
+		}
+		if (userFilter.eventSystem) {
+			filterInclude.push({ eventSystem: userFilter.eventSystem });
+		}
+		if (userFilter.eventType) {
+			filterInclude.push({ eventType: userFilter.eventType });
+		}
+		if (userFilter.state) {
+			filterInclude.push({ state: userFilter.state.toUpperCase() });
 		}
 		if (userFilter.modifiedSince) {
-			filter.modified = { $gte: new Date(userFilter.modifiedSince) };
+			filterInclude.push({ modified: { $gte: new Date(userFilter.modifiedSince) } });
+		}
+		if (userFilter.select) {
+			select = userFilter.select.reduce((output, current) => ({...output, [current]: 1 }), {});
 		}
 		if (userFilter.startDate && userFilter.endDate) {
 			const startDate = new Date(Date.parse(userFilter.startDate)),
 				endDate = new Date(Date.parse(userFilter.endDate));
 
-			filter = {
-				$or: [
-					{
-						$and: [
-							{ date: { $gte: startDate } },
-							{ date: { $lte: endDate } },
-						]
-					},
-					{
-						$and: [
-							{ endDate: { $lte: endDate } },
-							{ endDate: { $gte: startDate } }
-						]
-					}
-				]
-			}
+			filterInclude.push({ date: { $gte: startDate } });
+			filterInclude.push({ date: { $lte: endDate } });
 		}
+		filter = { $and: filterInclude }
 
 		try {
-			const records = await data.event.find(filter).lean().exec();
-			records.forEach(eventRecord => {
-				if (eventRecord.matches) {
-					eventRecord.matches.sort((matchA, matchB) => (matchA.sort || 0) - (matchB.sort || 0));
-				}
-			});
+			const records = await data.event.find(filter).select(select).lean().exec();
 			output.status = 200;
 			output.data = { events: records.map(({ _id, __v, ...data }) => ({ id: _id, ...data })) };
 		}
@@ -1147,8 +1146,105 @@ export default {
 		return output;
 	},
 
-	eventDelete: async (id) => {
+	eventBulkSave: async (events) => {
 		const output = {};
+
+		if (!events || !Array.isArray(events) || events.length === 0) {
+			output.status = 550;
+			output.error = "Missing or empty events array for bulk save";
+			return output;
+		}
+
+		const operations = [];
+
+		for (const event of events) {
+			if (!event || typeof event !== "object") continue;
+
+			// Clean payload to prevent schema validation/immutability errors
+			const { id, _id, created, modified, ...updateFields } = event;
+
+			let filter = null;
+			if (id && mongoose.Types.ObjectId.isValid(id)) {
+				filter = { _id: id };
+			}
+			else if (_id && mongoose.Types.ObjectId.isValid(_id)) {
+				filter = { _id: _id };
+			}
+			else if (updateFields.sqlId !== undefined && updateFields.sqlId !== null) {
+				filter = { sqlId: updateFields.sqlId };
+			}
+
+			if (filter) {
+				operations.push({
+					updateOne: {
+						filter: filter,
+						update: {
+							$set: {
+								...updateFields,
+								modified: new Date()
+							},
+							$setOnInsert: {
+								created: new Date()
+							}
+						},
+						upsert: true
+					}
+				});
+			}
+			else {
+				operations.push({
+					insertOne: {
+						document: {
+							...updateFields,
+							created: new Date(),
+							modified: new Date()
+						}
+					}
+				});
+			}
+		}
+
+		if (operations.length === 0) {
+			output.status = 550;
+			output.error = "No valid event operations to execute";
+			return output;
+		}
+
+		try {
+			// ordered: false lets operations continue even if one fails
+			const result = await data.event.bulkWrite(operations, { ordered: false });
+
+			output.status = 200;
+			output.data = {
+				status: "ok",
+				matchedCount: result.matchedCount,
+				modifiedCount: result.modifiedCount,
+				upsertedCount: result.upsertedCount,
+				insertedCount: result.insertedCount
+			};
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+		}
+
+		return output;
+	},
+
+	eventDelete: async (id, sqlId) => {
+		const output = {};
+
+		if (sqlId) {
+			try {
+				const record = await data.event.findOne({ sqlId: sqlId });
+				id = record["_id"]
+			}
+			catch (error) {
+				output.status = 561;
+				output.error = "Record not found";
+				return output;
+			}
+		}
 
 		if (!id || !mongoose.Types.ObjectId.isValid(id)) {
 			output.status = 550;
@@ -1415,269 +1511,6 @@ export default {
 		output.status = 200;
 		output.data = { status: "ok" };
 		return output;
-	},
-
-	eventGet: async (userFilter = {}) => {
-		let filter = {},
-			select = {},
-			output = {};
-
-		if (userFilter.id) {
-			filter["_id"] = mongoose.Types.ObjectId.isValid(userFilter.id) ? userFilter.id : null;
-		}
-		if (userFilter.startDate && userFilter.endDate) {
-			const startDate = new Date(Date.parse(userFilter.startDate)),
-				endDate = new Date(Date.parse(userFilter.endDate));
-
-			filter = {
-				$or: [
-					{
-						$and: [
-							{ date: { $gte: startDate } },
-							{ date: { $lte: endDate } },
-						]
-					},
-					{
-						$and: [
-							{ endDate: { $lte: endDate } },
-							{ endDate: { $gte: startDate } }
-						]
-					}
-				]
-			}
-		}
-		if (userFilter.sqlId) {
-			filter.sqlId = userFilter.sqlId;
-		}
-		if (userFilter.sqlIds) {
-			filter.sqlId = { $in: userFilter.sqlIds };
-		}
-		if (userFilter.state) {
-			filter.state = userFilter.state;
-		}
-		if (userFilter.eventSystem) {
-			filter.eventSystem = { $regex: new RegExp("^" + userFilter.eventSystem + "$", "i")};
-		}
-		if (userFilter.select) {
-			select = userFilter.select.reduce((output, current) => ({...output, [current]: 1 }), {});
-			if (userFilter.select.includes("hasMatches")) {
-				if (userFilter.select.includes("matches")) {
-					select["matches"] = 1;
-				} else {
-					select["matches"] = { $slice: 1 };
-				}
-			}
-		}
-
-		try {
-			const records = await data.event.find(filter).select(select).lean().exec();
-			output.status = 200;
-			output.data = { 
-				events: records.map(({ _id, __v, matches, ...data }) => {
-					const hasMatches = !!(matches && matches.length > 0);
-					const item = { id: _id, hasMatches, ...data };
-					if (!userFilter.excludeMatches && (!userFilter.select || userFilter.select.includes("matches"))) {
-						item.matches = [...(matches || [])].sort((matchA, matchB) => (matchA.sort || 0) - (matchB.sort || 0));
-					} else {
-						delete item.matches;
-					}
-					return item;
-				}) 
-			};
-		}
-		catch (error) {
-			output.status = 560;
-			output.error = error.message;
-		}
-
-		return output;
-	},
-
-	eventSave: async (saveObject) => {
-		const output = {};
-
-		if (!saveObject) {
-			output.status = 550;
-			output.error = "Missing object to save";
-			return output;
-		}
-
-		if (saveObject.id) {
-			let record = null;
-			try {
-				record = await data.event.findById(saveObject.id).exec();
-			}
-			catch (error) {
-				output.status = 560;
-				output.error = error.message;
-				return output;
-			}
-
-			if (!record) {
-				output.status = 561;
-				output.error = "Record not found";
-				return output;
-			}
-
-			try {
-				Object.keys(saveObject).forEach(field => {
-					if (field != "id" && field != "_id") {
-						record[field] = saveObject[field];
-					}
-				});
-				record.modified = new Date();
-
-				record = await record.save();
-			}
-			catch (error) {
-				output.status = 562;
-				output.error = error.message;
-				return output;
-			}
-
-			output.status = 200;
-			output.data = { id: record._id };
-		}
-		else {
-			let record = null;
-			try {
-				record = await (new data.event({ ...saveObject, created: new Date(), modified: new Date() })).save();
-			}
-			catch (error) {
-				output.status = 563;
-				output.error = error.message;
-				return output;
-			}
-
-			output.status = 200;
-			output.data = { id: record._id };
-		}
-
-		return output;
-	},
-
-	eventDelete: async (id, sqlId) => {
-		const output = {};
-
-		if (sqlId) {
-			try {
-				const record = await data.event.findOne({ sqlId: sqlId });
-				id = record["_id"]
-			}
-			catch (error) {
-				output.status = 561;
-				output.error = "Record not found";
-				return output;
-			}
-		}
-
-		if (!id || !mongoose.Types.ObjectId.isValid(id)) {
-			output.status = 550;
-			output.error = "Missing ID to delete";
-			return output;
-		}
-
-		try {
-			await data.event.deleteOne({ _id: id });
-		}
-		catch (error) {
-			output.status = 560;
-			output.error = error.message;
-			return output;
-		}
-
-		output.status = 200;
-		output.data = { status: "ok" };
-		return output;
-	},
-
-	eventsBulkSave: async (events) => {
-		const output = {};
-
-		if (!events || !Array.isArray(events) || events.length === 0) {
-			output.status = 550;
-			output.error = "Missing or empty events array for bulk save";
-			return output;
-		}
-
-		const operations = [];
-
-		for (const event of events) {
-			if (!event || typeof event !== "object") continue;
-
-			// Clean payload to prevent schema validation/immutability errors
-			const { id, _id, created, modified, ...updateFields } = event;
-
-			let filter = null;
-			if (id && mongoose.Types.ObjectId.isValid(id)) {
-				filter = { _id: id };
-			}
-			else if (_id && mongoose.Types.ObjectId.isValid(_id)) {
-				filter = { _id: _id };
-			}
-			else if (updateFields.sqlId !== undefined && updateFields.sqlId !== null) {
-				filter = { sqlId: updateFields.sqlId };
-			}
-
-			if (filter) {
-				operations.push({
-					updateOne: {
-						filter: filter,
-						update: {
-							$set: {
-								...updateFields,
-								modified: new Date()
-							},
-							$setOnInsert: {
-								created: new Date()
-							}
-						},
-						upsert: true
-					}
-				});
-			}
-			else {
-				operations.push({
-					insertOne: {
-						document: {
-							...updateFields,
-							created: new Date(),
-							modified: new Date()
-						}
-					}
-				});
-			}
-		}
-
-		if (operations.length === 0) {
-			output.status = 550;
-			output.error = "No valid event operations to execute";
-			return output;
-		}
-
-		try {
-			// ordered: false lets operations continue even if one fails
-			const result = await data.event.bulkWrite(operations, { ordered: false });
-
-			output.status = 200;
-			output.data = {
-				status: "ok",
-				matchedCount: result.matchedCount,
-				modifiedCount: result.modifiedCount,
-				upsertedCount: result.upsertedCount,
-				insertedCount: result.insertedCount
-			};
-		}
-		catch (error) {
-			output.status = 560;
-			output.error = error.message;
-		}
-
-		return output;
-	},
-
-	eventBulkSave: async function (events) {
-		return await this.eventsBulkSave(events);
 	},
 
 	scmatTeamGet: async (userFilter = {}) => {
