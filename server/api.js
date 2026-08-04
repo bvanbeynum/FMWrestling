@@ -2986,6 +2986,33 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 
 		const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
 
+		let cleanedEmailBody = emailBody || "";
+
+		const replyHeaderPatterns = [
+			/\n\s*On\s+.*?\s+wrote:\s*/i,
+			/\n\s*-{3,}\s*Original Message\s*-{3,}/i,
+			/\n\s*From:\s+.*?\nSent:\s+.*?\n/i,
+			/\n\s*_{3,}/
+		];
+
+		for (const patternItem of replyHeaderPatterns) {
+			const patternMatch = cleanedEmailBody.match(patternItem);
+			if (patternMatch && patternMatch.index !== undefined) {
+				cleanedEmailBody = cleanedEmailBody.substring(0, patternMatch.index);
+			}
+		}
+
+		const bodyLines = cleanedEmailBody.split('\n');
+		const nonQuotedBodyLines = [];
+		for (const currentLine of bodyLines) {
+			if (currentLine.trim().startsWith('>')) {
+				break;
+			}
+			nonQuotedBodyLines.push(currentLine);
+		}
+
+		cleanedEmailBody = nonQuotedBodyLines.join('\n').trim() || (emailBody || "").trim();
+
 		const prompt = `
 You are a helpful team parent coordinator for the Fort Mill High School Wrestling Team. 
 Your task is to review the following email received in our team inbox and draft a friendly, professional, clear, and informative response to be sent out to team parents or back to the sender.
@@ -2995,8 +3022,9 @@ From: ${emailSender || "Parent / Coach"}
 Subject: ${emailSubject || "Team Update"}
 Body:
 ---
-${emailBody || "(No body text)"}
+${cleanedEmailBody || "(No body text)"}
 ---
+
 
 Instructions for response:
 - Tone: Friendly, supportive, athletic, clear, and encouraging.
