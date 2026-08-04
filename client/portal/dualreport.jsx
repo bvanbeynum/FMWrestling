@@ -617,13 +617,17 @@ const processWeightClassData = (dualsList) => {
 
 			if (fortMillWrestler) {
 				const wrestlerName = fortMillWrestler.name || "Unknown Wrestler";
+				const wrestlerId = fortMillWrestler.wrestlerId || fortMillWrestler.id || fortMillWrestler.sqlId || fortMillWrestler._id;
 				if (!statsMap[weightClass].wrestlers[wrestlerName]) {
 					statsMap[weightClass].wrestlers[wrestlerName] = {
+						id: wrestlerId,
 						name: wrestlerName,
 						wins: 0,
 						losses: 0,
 						points: 0
 					};
+				} else if (!statsMap[weightClass].wrestlers[wrestlerName].id && wrestlerId) {
+					statsMap[weightClass].wrestlers[wrestlerName].id = wrestlerId;
 				}
 
 				statsMap[weightClass].totalMatches += 1;
@@ -1005,10 +1009,17 @@ const WeightClassListCards = ({ data }) => {
 											colorClass = "win-pct-low";
 										}
 									}
+									const wrestlerId = wrestlerItem.id || wrestlerItem.wrestlerId || wrestlerItem.sqlId || wrestlerItem._id;
 									return (
 										<div
 											key={wrestlerItem.name}
 											className={`wrestler-comparison-row ${colorClass}`}
+											onClick={() => {
+												if (wrestlerId) {
+													window.open(`/portal/wrestlerreport.html?id=${wrestlerId}`, "_blank");
+												}
+											}}
+											style={{ cursor: wrestlerId ? "pointer" : "default" }}
 										>
 											<div className="wrestler-identity">
 												<span className="wrestler-name-label">{wrestlerItem.name}</span>
