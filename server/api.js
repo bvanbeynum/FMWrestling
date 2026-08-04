@@ -6,6 +6,8 @@ import { google } from "googleapis";
 import fs, { stat } from "fs";
 import path from "path";
 import { getDualWrestlers, isGeminiQuotaError, isGeminiOverloadedError, extractOpponentTeam, extractEventDivision } from "./middleware.js";
+import * as marked from './marked.cjs';
+const markedParse = marked.marked;
 
 
 export default {
@@ -3013,8 +3015,11 @@ Instructions for response:
 				.set('Content-Type', 'application/json');
 
 			if (response.status === 200 && response.body.candidates && response.body.candidates[0].content.parts[0].text) {
-				return { text: response.body.candidates[0].content.parts[0].text };
+				const rawText = response.body.candidates[0].content.parts[0].text;
+				const htmlText = markedParse(rawText);
+				return { text: htmlText };
 			} else {
+
 				return { error: `Gemini API returned status ${response.status}`, status: 580 };
 			}
 		} catch (error) {
@@ -3094,6 +3099,53 @@ Instructions for response:
 			return { error: error.message, status: 500 };
 		}
 	},
+
+	aiEmailArchiveMessage: async (serverPath, messageId) => {
+		try {
+			if (!messageId) {
+				return { error: "Missing message ID", status: 400 };
+			}
+
+			const configResponse = await client.get(`${serverPath}/data/serverconfig?key=googleAuth`);
+			const serverConfigs = configResponse.body && configResponse.body.serverConfigs;
+			if (!serverConfigs || serverConfigs.length === 0 || !serverConfigs[0].value || !serverConfigs[0].value.refreshToken) {
+				return { error: "Google account not connected", status: 401 };
+			}
+
+			const googleAuthVal = serverConfigs[0].value;
+			const algorithm = 'aes-256-cbc';
+			const keyString = config.sessionSecret || config.jwt || "fortmill_wrestling_session_secret_key_123456789";
+			const key = crypto.createHash('sha256').update(keyString).digest();
+			const textParts = googleAuthVal.refreshToken.split(':');
+			const iv = Buffer.from(textParts.shift(), 'hex');
+			const encryptedBuffer = Buffer.from(textParts.join(':'), 'hex');
+			const decipher = crypto.createDecipheriv(algorithm, key, iv);
+			let decrypted = decipher.update(encryptedBuffer);
+			decrypted = Buffer.concat([decrypted, decipher.final()]);
+			const decryptedRefreshToken = decrypted.toString();
+
+			const oAuth2Client = new google.auth.OAuth2(
+				config.google.client_id,
+				config.google.client_secret,
+				config.google.redirect_uris[0]
+			);
+			oAuth2Client.setCredentials({ refresh_token: decryptedRefreshToken });
+
+			const Gmail = google.gmail({ version: 'v1', auth: oAuth2Client });
+			await Gmail.users.messages.modify({
+				userId: 'me',
+				id: messageId,
+				requestBody: {
+					removeLabelIds: ['INBOX']
+				}
+			});
+
+			return { success: true, message: "Email archived successfully" };
+		} catch (error) {
+			return { error: error.message, status: 500 };
+		}
+	},
+
 
 	wrestlerEventBulkSave: async (wrestlerEvents, serverPath) => {
 		const output = {

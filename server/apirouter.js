@@ -593,6 +593,17 @@ router.post("/api/aiemailsend", authAPI, async (requestObject, responseObject) =
 	responseObject.status(resultsObject.status || 200).json(resultsObject.error ? { error: resultsObject.error } : resultsObject);
 });
 
+router.post("/api/aiemailarchive", authAPI, async (requestObject, responseObject) => {
+	if (!requestObject.user || !requestObject.user.privileges || (!requestObject.user.privileges.includes("parentManage") && !requestObject.user.privileges.includes("parentmanage"))) {
+		return responseObject.status(401).json({ error: "Unauthorized access" });
+	}
+
+	const { messageId } = requestObject.body;
+	const resultsObject = await api.aiEmailArchiveMessage(requestObject.serverPath, messageId);
+	responseObject.status(resultsObject.status || 200).json(resultsObject.error ? { error: resultsObject.error } : resultsObject);
+});
+
+
 router.post("/api/wrestlereventsbulksave", authAPI, async (request, response) => {
 	const results = await api.wrestlerEventBulkSave(request.body.wrestlerEvents, request.serverPath);
 

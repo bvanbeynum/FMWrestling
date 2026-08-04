@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import ReactDOM from "react-dom/client";
 import Nav from "./nav.jsx";
 import "./include/index.css";
@@ -17,6 +17,8 @@ const AIEmailPage = () => {
 	const [ inboxMessagesList, setInboxMessagesList ] = useState([]);
 	const [ isInboxLoadingBoolean, setIsInboxLoadingBoolean ] = useState(false);
 	const [ inboxErrorString, setInboxErrorString ] = useState("");
+	const [ expandedEmailIdsList, setExpandedEmailIdsList ] = useState([]);
+	const [ archivingEmailIdString, setArchivingEmailIdString ] = useState(null);
 
 	// Parent Emails Directory List (for recipient selection)
 	const [ parentEmailsList, setParentEmailsList ] = useState([]);
@@ -24,11 +26,26 @@ const AIEmailPage = () => {
 	// Selected Email & AI Composer Modal State
 	const [ selectedEmailObject, setSelectedEmailObject ] = useState(null);
 	const [ isComposerOpenBoolean, setIsComposerOpenBoolean ] = useState(false);
+	const [ isModalEmailExpandedBoolean, setIsModalEmailExpandedBoolean ] = useState(false);
 	const [ isGeneratingAiBoolean, setIsGeneratingAiBoolean ] = useState(false);
 	const [ generatedResponseText, setGeneratedResponseText ] = useState("");
 	const [ replySubjectText, setReplySubjectText ] = useState("");
 	const [ isSendingEmailBoolean, setIsSendingEmailBoolean ] = useState(false);
 	const [ statusMessageString, setStatusMessageString ] = useState("");
+	const editorRef = useRef(null);
+
+	useEffect(() => {
+		if (editorRef.current && generatedResponseText !== editorRef.current.innerHTML) {
+			editorRef.current.innerHTML = generatedResponseText;
+		}
+	}, [generatedResponseText]);
+
+	const handleExecCommand = (commandString, valueString = null) => {
+		document.execCommand(commandString, false, valueString);
+		if (editorRef.current) {
+			setGeneratedResponseText(editorRef.current.innerHTML);
+		}
+	};
 
 	// Additive Recipient Filter State
 	const [ activeFilterTabString, setActiveFilterTabString ] = useState("active");
@@ -89,6 +106,43 @@ const AIEmailPage = () => {
 			});
 	};
 
+	const handleToggleExpandEmail = (emailIdString) => {
+		setExpandedEmailIdsList(previousList => (
+			previousList.includes(emailIdString)
+				? previousList.filter(idItem => idItem !== emailIdString)
+				: [...previousList, emailIdString]
+		));
+	};
+
+	const handleArchiveEmail = (targetEmailIdString) => {
+		if (!confirm("Are you sure you want to archive this email?")) {
+			return;
+		}
+
+		setArchivingEmailIdString(targetEmailIdString);
+		fetch("/api/aiemailarchive", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ messageId: targetEmailIdString })
+		})
+			.then(responseObject => responseObject.json())
+			.then(responseDataObject => {
+				setArchivingEmailIdString(null);
+				if (responseDataObject.error) {
+					alert(`Archive error: ${responseDataObject.error}`);
+				} else {
+					setStatusMessageString("Email archived successfully!");
+					fetchInboxMessages();
+					setTimeout(() => setStatusMessageString(""), 4000);
+				}
+			})
+			.catch(errorObject => {
+				setArchivingEmailIdString(null);
+				alert(`Failed to archive email: ${errorObject.message}`);
+			});
+	};
+
+
 	useEffect(() => {
 		fetchParentEmailsDirectory();
 		fetchGoogleStatus();
@@ -128,6 +182,7 @@ const AIEmailPage = () => {
 		setGeneratedResponseText("");
 		setSelectedRecipientEmailsList([]);
 		setIsComposerOpenBoolean(true);
+		setIsModalEmailExpandedBoolean(false);
 		setIsGeneratingAiBoolean(true);
 
 		// Trigger AI generation
@@ -256,7 +311,7 @@ const AIEmailPage = () => {
 				messageId: selectedEmailObject.id,
 				recipients: selectedRecipientEmailsList,
 				subject: replySubjectText,
-				body: generatedResponseText.replace(/\n/g, '<br/>')
+				body: generatedResponseText
 			})
 		})
 			.then(responseObject => responseObject.json())
@@ -349,21 +404,48 @@ const AIEmailPage = () => {
 								</div>
 							) : (
 								<div className="email-cards-list">
-									{inboxMessagesList.map(emailItem => (
-										<div key={emailItem.id} className="email-card">
-											<div className="email-main-info">
-												<div className="email-sender">{emailItem.from}</div>
-												<div className="email-subject">{emailItem.subject}</div>
-												<div className="email-snippet">{emailItem.snippet}</div>
-												<div className="email-date">{emailItem.date}</div>
+									{inboxMessagesList.map(emailItem => {
+										const isExpandedBoolean = expandedEmailIdsList.includes(emailItem.id);
+										return (
+											<div key={emailItem.id} className="email-card">
+												<div className="email-main-info">
+													<div className="email-sender">{emailItem.from}</div>
+													<div className="email-subject">{emailItem.subject}</div>
+													{isExpandedBoolean ? (
+														<div className="email-body">
+															{emailItem.body || emailItem.snippet}
+														</div>
+													) : (
+														<div className="email-snippet">{emailItem.snippet}</div>
+													)}
+													<button
+														type="button"
+														className="email-more-btn"
+														onClick={() => handleToggleExpandEmail(emailItem.id)}
+													>
+														{isExpandedBoolean ? "less" : "more"}
+													</button>
+													<div className="email-date">{emailItem.date}</div>
+												</div>
+												<div className="email-card-actions">
+													<button
+														className="btn-accent-sm"
+														onClick={() => handleOpenAiComposer(emailItem)}
+													>
+														⚡ Generate AI Response
+													</button>
+													<button
+														className="btn-archive-sm"
+														onClick={() => handleArchiveEmail(emailItem.id)}
+														disabled={archivingEmailIdString === emailItem.id}
+													>
+														{archivingEmailIdString === emailItem.id ? "Archiving..." : "📥 Archive"}
+													</button>
+												</div>
+
 											</div>
-											<div>
-												<button className="btn-accent" onClick={() => handleOpenAiComposer(emailItem)}>
-													⚡ Generate AI Response
-												</button>
-											</div>
-										</div>
-									))}
+										);
+									})}
 								</div>
 							)}
 						</div>
@@ -385,10 +467,27 @@ const AIEmailPage = () => {
 							<div className="original-email-box">
 								<div><strong>Original Sender:</strong> {selectedEmailObject.from}</div>
 								<div><strong>Subject:</strong> {selectedEmailObject.subject}</div>
-								<div style={{ marginTop: "6px" }}><strong>Snippet:</strong> {selectedEmailObject.snippet}</div>
+								<div style={{ marginTop: "6px" }}>
+									<strong>Message:</strong>{" "}
+									{isModalEmailExpandedBoolean ? (
+										<span style={{ whiteSpace: "pre-wrap" }}>
+											{selectedEmailObject.body || selectedEmailObject.snippet}
+										</span>
+									) : (
+										<span>{selectedEmailObject.snippet}</span>
+									)}
+									<button
+										type="button"
+										className="email-more-btn"
+										style={{ marginLeft: "6px" }}
+										onClick={() => setIsModalEmailExpandedBoolean(!isModalEmailExpandedBoolean)}
+									>
+										{isModalEmailExpandedBoolean ? "less" : "more"}
+									</button>
+								</div>
 							</div>
 
-							{/* AI Response Textarea */}
+							{/* AI Response Rich Text Editor */}
 							<div className="response-editor-group">
 								<label>Subject Line</label>
 								<input
@@ -402,12 +501,20 @@ const AIEmailPage = () => {
 								<label style={{ marginTop: "12px" }}>
 									AI Generated Response Draft {isGeneratingAiBoolean && "(Generating with Gemini...)"}
 								</label>
-								<textarea
-									className="response-textarea"
-									value={generatedResponseText}
-									onChange={(e) => setGeneratedResponseText(e.target.value)}
-									placeholder={isGeneratingAiBoolean ? "Gemini is writing the draft response..." : "Draft text will appear here..."}
-									disabled={isGeneratingAiBoolean}
+
+								<div className="editor-toolbar">
+									<button type="button" className="toolbar-btn" onClick={() => handleExecCommand('bold')} title="Bold"><b>B</b></button>
+									<button type="button" className="toolbar-btn" onClick={() => handleExecCommand('italic')} title="Italic"><i>I</i></button>
+									<button type="button" className="toolbar-btn" onClick={() => handleExecCommand('insertUnorderedList')} title="Bullet List">• List</button>
+									<button type="button" className="toolbar-btn" onClick={() => handleExecCommand('insertOrderedList')} title="Numbered List">1. List</button>
+								</div>
+
+								<div
+									ref={editorRef}
+									contentEditable={!isGeneratingAiBoolean}
+									className="response-editor-contenteditable"
+									onInput={(e) => setGeneratedResponseText(e.currentTarget.innerHTML)}
+									onBlur={(e) => setGeneratedResponseText(e.currentTarget.innerHTML)}
 								/>
 							</div>
 
