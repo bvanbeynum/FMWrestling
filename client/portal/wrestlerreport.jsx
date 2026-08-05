@@ -498,10 +498,7 @@ const WrestlerReportComponent = () => {
 				.then(data => {
 					const processedEvents = (data.wrestler.events || []).map(eventItem => {
 						const eventDate = new Date(eventItem.date);
-						const formattedDivision = /(hs|high school|high)/i.test(eventItem.division) ? "Varsity"
-							: /(jv|junior varsity)/i.test(eventItem.division) ? "JV"
-							: /(ms|middle school)/i.test(eventItem.division) ? "MS"
-							: (eventItem.division || "").trim();
+						const formattedDivision = eventItem.divisionConvert.trim();
 
 						const eventWins = (eventItem.matches || []).filter(matchItem => matchItem.isWinner && matchItem.vs).length;
 						const eventLosses = (eventItem.matches || []).filter(matchItem => !matchItem.isWinner && matchItem.vs).length;
@@ -931,10 +928,11 @@ const WrestlerReportComponent = () => {
 						</div>
 					</div>
 				</section>
-			) : activeView === "opponents" && !wrestler.isFortMill ? (
+			) : activeView === "opponents" ? (
 				<>
 					<InteractiveOpponentGraphComponent wrestler={ wrestler } />
 
+					{ !wrestler.isFortMill && (
 					<section className="report-section-panel">
 						<div className="section-panel-title">
 							<span>TOP 5 WINNING PATHS TO FORT MILL</span>
@@ -1008,7 +1006,9 @@ const WrestlerReportComponent = () => {
 							</div>
 						) }
 					</section>
+					) }
 
+					{ !wrestler.isFortMill && (
 					<section className="report-section-panel">
 						<div className="section-panel-title">
 							<span>TOP 5 LOSING PATHS TO FORT MILL</span>
@@ -1082,6 +1082,7 @@ const WrestlerReportComponent = () => {
 							</div>
 						) }
 					</section>
+					) }
 
 					<section className="report-section-panel">
 						<div className="section-panel-title">
@@ -1230,20 +1231,18 @@ const WrestlerReportComponent = () => {
 					<span>ratings</span>
 				</div>
 
-				{ !wrestler.isFortMill ? (
-					<div 
-						className={`navItem ${ activeView === "opponents" ? "active" : "" }`}
-						onClick={ () => setActiveView("opponents") }
-					>
-						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-							<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-							<circle cx="9" cy="7" r="4" />
-							<path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-							<path d="M16 3.13a4 4 0 0 1 0 7.75" />
-						</svg>
-						<span>opponents</span>
-					</div>
-				) : null }
+				<div 
+					className={`navItem ${ activeView === "opponents" ? "active" : "" }`}
+					onClick={ () => setActiveView("opponents") }
+				>
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+						<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+						<circle cx="9" cy="7" r="4" />
+						<path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+						<path d="M16 3.13a4 4 0 0 1 0 7.75" />
+					</svg>
+					<span>opponents</span>
+				</div>
 
 				<div 
 					className={`navItem ${ activeView === "style" ? "active" : "" }`}

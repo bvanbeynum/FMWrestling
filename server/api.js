@@ -1327,12 +1327,7 @@ export default {
 				deviation: wrestler.deviation,
 				events: wrestlerEvents.map(event => ({
 					...event,
-					division: event.matches[0] ?
-						/(hs|high school|high)/i.test(event.matches[0].division) ? "Varsity"
-						: /(jv|junior varsity)/i.test(event.matches[0].division) ? "JV"
-						: /(ms|middle school)/i.test(event.matches[0].division) ? "MS"
-						: (event.matches[0].division || "").trim()
-						: "",
+					division: event.divisionConvert,
 					weightClass: event.matches[0]?.weightClass || "",
 					matches: event.matches
 				}))
