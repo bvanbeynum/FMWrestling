@@ -1112,12 +1112,477 @@ const WeightClassOverview = ({ dualsList }) => {
 	);
 };
 
+const getSeasonStartYear = (seasonNameValue) => {
+	if (seasonNameValue && /^\d{2}-\d{2}$/.test(seasonNameValue)) {
+		const startYearShortValue = parseInt(seasonNameValue.split("-")[0], 10);
+		return 2000 + startYearShortValue;
+	}
+	const currentTodayDate = new Date();
+	return currentTodayDate.getMonth() >= 8 ? currentTodayDate.getFullYear() : currentTodayDate.getFullYear() - 1;
+};
+
+const processLeaderboardData = (eventsData, selectedDivisionSetting, seasonNameValue) => {
+	const wrestlerRecordsByName = {};
+	const startYearNumber = getSeasonStartYear(seasonNameValue);
+	const inSeasonStartDate = new Date(startYearNumber, 10, 1, 0, 0, 0);
+	const inSeasonEndDate = new Date(startYearNumber + 1, 2, 1, 23, 59, 59);
+
+	(eventsData || []).forEach((eventItem) => {
+		const rawEventDate = parseEventDate(eventItem.date);
+		if (!rawEventDate) return;
+
+		if (rawEventDate < inSeasonStartDate || rawEventDate > inSeasonEndDate) {
+			return;
+		}
+
+		(eventItem.matches || []).forEach((matchItem) => {
+			const matchDivisionValue = matchItem.divisionConvert || eventItem.divisionConvert || matchItem.division;
+			if (selectedDivisionSetting !== "All Divisions" && matchDivisionValue !== selectedDivisionSetting) {
+				return;
+			}
+
+			const fortMillWrestler = (matchItem.wrestlers || []).find((wrestlerItem) => {
+				return wrestlerItem.team && wrestlerItem.team.toLowerCase() === "fort mill";
+			});
+
+			if (!fortMillWrestler || !fortMillWrestler.name) {
+				return;
+			}
+
+			const wrestlerNameKey = fortMillWrestler.name.trim();
+			const wrestlerIdentifier = fortMillWrestler.wrestlerId || fortMillWrestler.id || fortMillWrestler.sqlId || fortMillWrestler._id;
+
+			if (!wrestlerRecordsByName[wrestlerNameKey]) {
+				wrestlerRecordsByName[wrestlerNameKey] = {
+					id: wrestlerIdentifier,
+					name: wrestlerNameKey,
+					totalMatches: 0,
+					wins: 0,
+					points: 0,
+					pins: 0,
+					techfalls: 0,
+					majorDecisions: 0,
+					decisions: 0,
+					forfeits: 0,
+					takedowns: 0,
+					nearfalls: 0,
+					reversals: 0,
+					escapes: 0
+				};
+			} else if (!wrestlerRecordsByName[wrestlerNameKey].id && wrestlerIdentifier) {
+				wrestlerRecordsByName[wrestlerNameKey].id = wrestlerIdentifier;
+			}
+
+			const currentRecord = wrestlerRecordsByName[wrestlerNameKey];
+			currentRecord.totalMatches += 1;
+
+			if (fortMillWrestler.isWinner) {
+				currentRecord.wins += 1;
+
+				const winTypeNormalized = (matchItem.winType || "").toUpperCase();
+				let matchPointsValue = 3;
+
+				if (winTypeNormalized === "DEC") {
+					matchPointsValue = 3;
+					currentRecord.decisions += 1;
+				} else if (winTypeNormalized === "MD") {
+					matchPointsValue = 4;
+					currentRecord.majorDecisions += 1;
+				} else if (winTypeNormalized === "TF") {
+					matchPointsValue = 5;
+					currentRecord.techfalls += 1;
+				} else if (["F", "FALL", "PIN"].includes(winTypeNormalized)) {
+					matchPointsValue = 6;
+					currentRecord.pins += 1;
+				} else if (["FF", "FOR", "FORFEIT", "DQ", "DEF", "DEFAULT"].includes(winTypeNormalized)) {
+					matchPointsValue = 6;
+					currentRecord.forfeits += 1;
+				} else {
+					matchPointsValue = 3;
+					currentRecord.decisions += 1;
+				}
+
+				currentRecord.points += matchPointsValue;
+			}
+
+			const takedownCount = Number(fortMillWrestler.takedowns || fortMillWrestler.takedown || fortMillWrestler.scores?.takedowns || 0);
+			const nearfallCount = Number(fortMillWrestler.nearfalls || fortMillWrestler.nearfall || fortMillWrestler.scores?.nearfalls || 0);
+			const reversalCount = Number(fortMillWrestler.reversals || fortMillWrestler.reversal || fortMillWrestler.scores?.reversals || 0);
+			const escapeCount = Number(fortMillWrestler.escapes || fortMillWrestler.escape || fortMillWrestler.scores?.escapes || 0);
+
+			currentRecord.takedowns += takedownCount;
+			currentRecord.nearfalls += nearfallCount;
+			currentRecord.reversals += reversalCount;
+			currentRecord.escapes += escapeCount;
+		});
+	});
+
+	return Object.values(wrestlerRecordsByName);
+};
+
+const WrestlerLeaderboard = ({ eventsData, seasonName }) => {
+	const [selectedDivisionSetting, setSelectedDivisionSetting] = useState("Varsity");
+	const [viewModeSetting, setViewModeSetting] = useState("overall");
+	const [sortMetricKey, setSortMetricKey] = useState("points");
+	const [sortDirectionDescending, setSortDirectionDescending] = useState(true);
+
+	const wrestlerRecords = processLeaderboardData(eventsData, selectedDivisionSetting, seasonName);
+
+	const formatMetricValue = (wrestlerRecord, metricKey) => {
+		const rawValue = wrestlerRecord[metricKey] || 0;
+		if (viewModeSetting === "per_match") {
+			if (!wrestlerRecord.totalMatches || wrestlerRecord.totalMatches === 0) {
+				return "0.00";
+			}
+			return (rawValue / wrestlerRecord.totalMatches).toFixed(2);
+		}
+		return rawValue;
+	};
+
+	const sortWrestlers = (firstRecord, secondRecord) => {
+		const firstValue = viewModeSetting === "per_match" 
+			? (firstRecord.totalMatches > 0 ? firstRecord[sortMetricKey] / firstRecord.totalMatches : 0)
+			: (firstRecord[sortMetricKey] || 0);
+		const secondValue = viewModeSetting === "per_match"
+			? (secondRecord.totalMatches > 0 ? secondRecord[sortMetricKey] / secondRecord.totalMatches : 0)
+			: (secondRecord[sortMetricKey] || 0);
+
+		if (firstValue !== secondValue) {
+			return sortDirectionDescending ? secondValue - firstValue : firstValue - secondValue;
+		}
+		return secondRecord.points - firstRecord.points;
+	};
+
+	const sortedWrestlerRecords = [...wrestlerRecords].sort(sortWrestlers);
+
+	const handleColumnHeaderClick = (targetMetricKey) => {
+		if (sortMetricKey === targetMetricKey) {
+			setSortDirectionDescending(!sortDirectionDescending);
+		} else {
+			setSortMetricKey(targetMetricKey);
+			setSortDirectionDescending(true);
+		}
+	};
+
+	const getMetricDisplayName = (targetMetricKey) => {
+		const metricDisplayNames = {
+			points: "Points",
+			wins: "Wins",
+			pins: "Pins",
+			techfalls: "Tech Falls",
+			majorDecisions: "Major Decisions",
+			decisions: "Decisions",
+			forfeits: "Forfeits",
+			takedowns: "Takedowns",
+			nearfalls: "Nearfalls",
+			reversals: "Reversals",
+			escapes: "Escapes",
+			totalMatches: "Matches"
+		};
+		return metricDisplayNames[targetMetricKey] || "Points";
+	};
+
+	const getTopThreeLeaders = (metricKey) => {
+		if (wrestlerRecords.length === 0) return [];
+		return [...wrestlerRecords].sort((firstEntry, secondEntry) => {
+			const valOne = viewModeSetting === "per_match"
+				? (firstEntry.totalMatches > 0 ? firstEntry[metricKey] / firstEntry.totalMatches : 0)
+				: (firstEntry[metricKey] || 0);
+			const valTwo = viewModeSetting === "per_match"
+				? (secondEntry.totalMatches > 0 ? secondEntry[metricKey] / secondEntry.totalMatches : 0)
+				: (secondEntry[metricKey] || 0);
+			if (valOne !== valTwo) {
+				return valTwo - valOne;
+			}
+			return secondEntry.points - firstEntry.points;
+		}).slice(0, 3);
+	};
+
+	const topThreeLeaders = getTopThreeLeaders(sortMetricKey);
+	const activeMetricLabel = getMetricDisplayName(sortMetricKey);
+
+	return (
+		<div className="leaderboard-section-container">
+			<div className="leaderboard-header-row">
+				<div className="leaderboard-controls-group">
+					<div className="division-selector-wrapper">
+						<label htmlFor="division-select-dropdown" className="control-label" style={{ margin: 0 }}>Division:</label>
+						<select
+							id="division-select-dropdown"
+							value={selectedDivisionSetting}
+							onChange={(changeEvent) => setSelectedDivisionSetting(changeEvent.target.value)}
+							className="season-dropdown-select division-dropdown-select"
+						>
+							<option value="Varsity">Varsity</option>
+							<option value="JV">JV</option>
+							<option value="Middle School">Middle School</option>
+							<option value="Girls">Girls</option>
+							<option value="All Divisions">All Divisions</option>
+						</select>
+					</div>
+
+					<div className="leaderboard-toggle-group">
+						<button
+							className={`leaderboard-toggle-btn ${viewModeSetting === "overall" ? "active" : ""}`}
+							onClick={() => setViewModeSetting("overall")}
+						>
+							Overall Numbers
+						</button>
+						<button
+							className={`leaderboard-toggle-btn ${viewModeSetting === "per_match" ? "active" : ""}`}
+							onClick={() => setViewModeSetting("per_match")}
+						>
+							Per Match
+						</button>
+					</div>
+				</div>
+			</div>
+
+			<div className="report-kpis-grid leaderboard-leaders-grid">
+				{[0, 1, 2].map((rankIndexPosition) => {
+					const leaderRecord = topThreeLeaders[rankIndexPosition];
+					const ordinalLabel = rankIndexPosition === 0 ? "#1" : rankIndexPosition === 1 ? "#2" : "#3";
+					const rankClass = `rank-${rankIndexPosition + 1}`;
+
+					return (
+						<div key={`top-leader-${rankIndexPosition}`} className={`report-kpi-card leaderboard-kpi-card ${rankClass}`}>
+							<span className="kpi-label">{ordinalLabel} {activeMetricLabel.toUpperCase()} LEADER</span>
+							<span className="kpi-value-text Russo">{leaderRecord ? leaderRecord.name : "-"}</span>
+							<span className="kpi-sub-text">
+								{leaderRecord 
+									? `${formatMetricValue(leaderRecord, sortMetricKey)} ${viewModeSetting === "per_match" ? `${activeMetricLabel} / Match` : activeMetricLabel}` 
+									: "No data"}
+							</span>
+						</div>
+					);
+				})}
+			</div>
+
+			<div className="leaderboard-table-wrapper">
+				<div className="leaderboard-table-scroll">
+					<table className="leaderboard-table">
+						<thead>
+							<tr>
+								<th className="rank-header">#</th>
+								<th className="wrestler-header">Wrestler</th>
+								<th className="matches-header" onClick={() => handleColumnHeaderClick("totalMatches")}>
+									Matches {sortMetricKey === "totalMatches" ? (sortDirectionDescending ? "↓" : "↑") : ""}
+								</th>
+
+								<th className="win-type-group-header" colSpan={7}>Win Type</th>
+
+								<th className="scoring-group-header" colSpan={4}>Scoring</th>
+							</tr>
+							<tr className="sub-header-row">
+								<th></th>
+								<th></th>
+								<th></th>
+
+								<th onClick={() => handleColumnHeaderClick("points")} className={sortMetricKey === "points" ? "active-sort" : ""}>
+									Pts {sortMetricKey === "points" ? (sortDirectionDescending ? "↓" : "↑") : ""}
+								</th>
+								<th onClick={() => handleColumnHeaderClick("wins")} className={sortMetricKey === "wins" ? "active-sort" : ""}>
+									Wins {sortMetricKey === "wins" ? (sortDirectionDescending ? "↓" : "↑") : ""}
+								</th>
+								<th onClick={() => handleColumnHeaderClick("pins")} className={sortMetricKey === "pins" ? "active-sort" : ""}>
+									Pins {sortMetricKey === "pins" ? (sortDirectionDescending ? "↓" : "↑") : ""}
+								</th>
+								<th onClick={() => handleColumnHeaderClick("techfalls")} className={sortMetricKey === "techfalls" ? "active-sort" : ""}>
+									TF {sortMetricKey === "techfalls" ? (sortDirectionDescending ? "↓" : "↑") : ""}
+								</th>
+								<th onClick={() => handleColumnHeaderClick("majorDecisions")} className={sortMetricKey === "majorDecisions" ? "active-sort" : ""}>
+									MD {sortMetricKey === "majorDecisions" ? (sortDirectionDescending ? "↓" : "↑") : ""}
+								</th>
+								<th onClick={() => handleColumnHeaderClick("decisions")} className={sortMetricKey === "decisions" ? "active-sort" : ""}>
+									Dec {sortMetricKey === "decisions" ? (sortDirectionDescending ? "↓" : "↑") : ""}
+								</th>
+								<th onClick={() => handleColumnHeaderClick("forfeits")} className={sortMetricKey === "forfeits" ? "active-sort" : ""}>
+									Forf {sortMetricKey === "forfeits" ? (sortDirectionDescending ? "↓" : "↑") : ""}
+								</th>
+
+								<th onClick={() => handleColumnHeaderClick("takedowns")} className={sortMetricKey === "takedowns" ? "active-sort" : ""}>
+									TD {sortMetricKey === "takedowns" ? (sortDirectionDescending ? "↓" : "↑") : ""}
+								</th>
+								<th onClick={() => handleColumnHeaderClick("nearfalls")} className={sortMetricKey === "nearfalls" ? "active-sort" : ""}>
+									NF {sortMetricKey === "nearfalls" ? (sortDirectionDescending ? "↓" : "↑") : ""}
+								</th>
+								<th onClick={() => handleColumnHeaderClick("reversals")} className={sortMetricKey === "reversals" ? "active-sort" : ""}>
+									Rev {sortMetricKey === "reversals" ? (sortDirectionDescending ? "↓" : "↑") : ""}
+								</th>
+								<th onClick={() => handleColumnHeaderClick("escapes")} className={sortMetricKey === "escapes" ? "active-sort" : ""}>
+									Esc {sortMetricKey === "escapes" ? (sortDirectionDescending ? "↓" : "↑") : ""}
+								</th>
+							</tr>
+						</thead>
+						<tbody>
+							{sortedWrestlerRecords.length === 0 ? (
+								<tr>
+									<td colSpan={14} className="no-leaderboard-data">No wrestler performance records found for this season.</td>
+								</tr>
+							) : (
+								sortedWrestlerRecords.map((wrestlerItem, indexValue) => {
+									const rankPosition = indexValue + 1;
+									const rankBadgeClass = rankPosition === 1 ? "gold" : rankPosition === 2 ? "silver" : rankPosition === 3 ? "bronze" : "";
+
+									return (
+										<tr key={wrestlerItem.name} className="leaderboard-row">
+											<td className="rank-cell">
+												<span className={`rank-badge ${rankBadgeClass}`}>{rankPosition}</span>
+											</td>
+											<td className="wrestler-name-cell">
+												{wrestlerItem.id ? (
+													<a
+														href={`/portal/wrestlerreport.html?id=${wrestlerItem.id}`}
+														target="_blank"
+														rel="noopener noreferrer"
+														className="wrestler-link"
+													>
+														{wrestlerItem.name}
+													</a>
+												) : (
+													<span>{wrestlerItem.name}</span>
+												)}
+											</td>
+											<td className="metric-cell matches-cell">{wrestlerItem.totalMatches}</td>
+
+											<td className={`metric-cell ${sortMetricKey === "points" ? "highlight-col" : ""}`}>{formatMetricValue(wrestlerItem, "points")}</td>
+											<td className={`metric-cell ${sortMetricKey === "wins" ? "highlight-col" : ""}`}>{formatMetricValue(wrestlerItem, "wins")}</td>
+											<td className={`metric-cell ${sortMetricKey === "pins" ? "highlight-col" : ""}`}>{formatMetricValue(wrestlerItem, "pins")}</td>
+											<td className={`metric-cell ${sortMetricKey === "techfalls" ? "highlight-col" : ""}`}>{formatMetricValue(wrestlerItem, "techfalls")}</td>
+											<td className={`metric-cell ${sortMetricKey === "majorDecisions" ? "highlight-col" : ""}`}>{formatMetricValue(wrestlerItem, "majorDecisions")}</td>
+											<td className={`metric-cell ${sortMetricKey === "decisions" ? "highlight-col" : ""}`}>{formatMetricValue(wrestlerItem, "decisions")}</td>
+											<td className={`metric-cell ${sortMetricKey === "forfeits" ? "highlight-col" : ""}`}>{formatMetricValue(wrestlerItem, "forfeits")}</td>
+
+											<td className={`metric-cell ${sortMetricKey === "takedowns" ? "highlight-col" : ""}`}>{formatMetricValue(wrestlerItem, "takedowns")}</td>
+											<td className={`metric-cell ${sortMetricKey === "nearfalls" ? "highlight-col" : ""}`}>{formatMetricValue(wrestlerItem, "nearfalls")}</td>
+											<td className={`metric-cell ${sortMetricKey === "reversals" ? "highlight-col" : ""}`}>{formatMetricValue(wrestlerItem, "reversals")}</td>
+											<td className={`metric-cell ${sortMetricKey === "escapes" ? "highlight-col" : ""}`}>{formatMetricValue(wrestlerItem, "escapes")}</td>
+										</tr>
+									);
+								})
+							)}
+						</tbody>
+					</table>
+				</div>
+			</div>
+
+			{/* Card-Based View for Mobile Devices */}
+			<div className="leaderboard-mobile-cards-container">
+				<div className="mobile-sort-selector-wrapper">
+					<label htmlFor="mobile-sort-select-dropdown" className="control-label" style={{ margin: 0 }}>Sort By:</label>
+					<select
+						id="mobile-sort-select-dropdown"
+						value={sortMetricKey}
+						onChange={(changeEvent) => handleColumnHeaderClick(changeEvent.target.value)}
+						className="season-dropdown-select division-dropdown-select"
+					>
+						<option value="points">Points</option>
+						<option value="wins">Wins</option>
+						<option value="pins">Pins</option>
+						<option value="techfalls">Tech Falls</option>
+						<option value="majorDecisions">Major Decisions</option>
+						<option value="decisions">Decisions</option>
+						<option value="forfeits">Forfeits</option>
+						<option value="takedowns">Takedowns</option>
+						<option value="nearfalls">Nearfalls</option>
+						<option value="reversals">Reversals</option>
+						<option value="escapes">Escapes</option>
+						<option value="totalMatches">Matches</option>
+					</select>
+				</div>
+
+				{sortedWrestlerRecords.length === 0 ? (
+					<div className="no-leaderboard-data">No wrestler performance records found for this season.</div>
+				) : (
+					sortedWrestlerRecords.map((wrestlerItem, indexValue) => {
+						const rankPosition = indexValue + 1;
+						const rankBadgeClass = rankPosition === 1 ? "gold" : rankPosition === 2 ? "silver" : rankPosition === 3 ? "bronze" : "";
+
+						return (
+							<div key={wrestlerItem.name} className="leaderboard-mobile-card">
+								<div className="mobile-card-header">
+									<div className="mobile-card-identity">
+										<span className={`rank-badge ${rankBadgeClass}`}>{rankPosition}</span>
+										{wrestlerItem.id ? (
+											<a
+												href={`/portal/wrestlerreport.html?id=${wrestlerItem.id}`}
+												target="_blank"
+												rel="noopener noreferrer"
+												className="wrestler-link mobile-wrestler-name"
+											>
+												{wrestlerItem.name}
+											</a>
+										) : (
+											<span className="mobile-wrestler-name">{wrestlerItem.name}</span>
+										)}
+									</div>
+									<div className="mobile-matches-badge">
+										{wrestlerItem.totalMatches} Matches
+									</div>
+								</div>
+
+								<div className="mobile-card-metrics-summary">
+									<div className="mobile-metric-section">
+										<span className="mobile-section-title">Win Type:</span>
+										<div className="mobile-inline-stats">
+											<span className={`stat-inline-item ${sortMetricKey === "points" ? "highlight" : ""}`}>
+												<strong className="stat-label">Pts:</strong> {formatMetricValue(wrestlerItem, "points")}
+											</span>
+											<span className={`stat-inline-item ${sortMetricKey === "wins" ? "highlight" : ""}`}>
+												<strong className="stat-label">Wins:</strong> {formatMetricValue(wrestlerItem, "wins")}
+											</span>
+											<span className={`stat-inline-item ${sortMetricKey === "pins" ? "highlight" : ""}`}>
+												<strong className="stat-label">Pins:</strong> {formatMetricValue(wrestlerItem, "pins")}
+											</span>
+											<span className={`stat-inline-item ${sortMetricKey === "techfalls" ? "highlight" : ""}`}>
+												<strong className="stat-label">TF:</strong> {formatMetricValue(wrestlerItem, "techfalls")}
+											</span>
+											<span className={`stat-inline-item ${sortMetricKey === "majorDecisions" ? "highlight" : ""}`}>
+												<strong className="stat-label">MD:</strong> {formatMetricValue(wrestlerItem, "majorDecisions")}
+											</span>
+											<span className={`stat-inline-item ${sortMetricKey === "decisions" ? "highlight" : ""}`}>
+												<strong className="stat-label">Dec:</strong> {formatMetricValue(wrestlerItem, "decisions")}
+											</span>
+											<span className={`stat-inline-item ${sortMetricKey === "forfeits" ? "highlight" : ""}`}>
+												<strong className="stat-label">Forf:</strong> {formatMetricValue(wrestlerItem, "forfeits")}
+											</span>
+										</div>
+									</div>
+
+									<div className="mobile-metric-section">
+										<span className="mobile-section-title">Scoring:</span>
+										<div className="mobile-inline-stats">
+											<span className={`stat-inline-item ${sortMetricKey === "takedowns" ? "highlight" : ""}`}>
+												<strong className="stat-label">TD:</strong> {formatMetricValue(wrestlerItem, "takedowns")}
+											</span>
+											<span className={`stat-inline-item ${sortMetricKey === "nearfalls" ? "highlight" : ""}`}>
+												<strong className="stat-label">NF:</strong> {formatMetricValue(wrestlerItem, "nearfalls")}
+											</span>
+											<span className={`stat-inline-item ${sortMetricKey === "reversals" ? "highlight" : ""}`}>
+												<strong className="stat-label">Rev:</strong> {formatMetricValue(wrestlerItem, "reversals")}
+											</span>
+											<span className={`stat-inline-item ${sortMetricKey === "escapes" ? "highlight" : ""}`}>
+												<strong className="stat-label">Esc:</strong> {formatMetricValue(wrestlerItem, "escapes")}
+											</span>
+										</div>
+									</div>
+								</div>
+							</div>
+						);
+					})
+				)}
+			</div>
+		</div>
+	);
+};
+
 const DualReport = () => {
 	const seasonOptions = getSeasonOptions(new Date());
 	
 	const [pageActive, setPageActive] = useState(false);
 	const [isLoading, setIsLoading] = useState(true);
 	const [loggedInUser, setLoggedInUser] = useState(null);
+	const [events, setEvents] = useState([]);
 	const [duals, setDuals] = useState([]);
 	const [seasonName, setSeasonName] = useState("");
 	const [hasPreviousSeasonData, setHasPreviousSeasonData] = useState(false);
@@ -1138,8 +1603,12 @@ const DualReport = () => {
 				}
 			})
 			.then(responseData => {
+				const fetchedEvents = responseData.events || [];
+				const filteredDuals = fetchedEvents.filter(eventItem => eventItem.eventType === "Dual");
+
 				setLoggedInUser(responseData.loggedInUser);
-				setDuals(responseData.duals || []);
+				setEvents(fetchedEvents);
+				setDuals(filteredDuals);
 				setSeasonName(responseData.seasonName || selectedSeason);
 				setHasPreviousSeasonData(responseData.hasPreviousSeasonData || false);
 				setPageActive(true);
@@ -1276,6 +1745,8 @@ const DualReport = () => {
 							</>
 						) : activeView === "weight_classes" ? (
 							<WeightClassOverview dualsList={duals} />
+						) : activeView === "leaderboard" ? (
+							<WrestlerLeaderboard eventsData={events} seasonName={seasonName} />
 						) : null}
 
 					</div>
@@ -1303,6 +1774,15 @@ const DualReport = () => {
 								<path d="M12 3v18M12 7l-8-2M12 7l8-2M4 5v4a4 4 0 0 0 8 0V5M20 5v4a4 4 0 0 1-8 0V5M4 19h16" />
 							</svg>
 							<span>Weight Classes</span>
+						</div>
+						<div 
+							className={`navItem ${activeView === "leaderboard" ? "active" : ""}`}
+							onClick={() => setActiveView("leaderboard")}
+						>
+							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+								<path d="M6 9H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h3M18 9h3a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1h-3M4 22h16M10 14.66V17M14 14.66V17M18 2h-4v7a2 2 0 0 1-4 0V2H6v7a6 6 0 0 0 6 6 6 6 0 0 0 6-6V2z" />
+							</svg>
+							<span>Leaderboard</span>
 						</div>
 					</div>
 					</>

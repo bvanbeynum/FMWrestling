@@ -2482,7 +2482,7 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 	},
 
 	dualReportLoad: async (season, serverPath) => {
-		const output = { data: { duals: [], seasonName: "", hasPreviousSeasonData: false } };
+		const output = { data: { events: [], seasonName: "", hasPreviousSeasonData: false } };
 
 		try {
 			let startYear;
@@ -2490,9 +2490,9 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 				const startYearShort = parseInt(season.split("-")[0], 10);
 				startYear = 2000 + startYearShort;
 			} else {
-				const today = new Date();
-				const year = today.getFullYear();
-				startYear = today.getMonth() >= 8 ? year : year - 1;
+				const todayDate = new Date();
+				const currentCalendarYear = todayDate.getFullYear();
+				startYear = todayDate.getMonth() >= 8 ? currentCalendarYear : currentCalendarYear - 1;
 			}
 			const endYear = startYear + 1;
 			
@@ -2505,12 +2505,12 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 			const shortEnd = endYear.toString().slice(-2);
 			output.data.seasonName = `${shortStart}-${shortEnd}`;
 
-			const seasonEventsResponse = await client.get(`${ serverPath }/data/event?eventtype=Dual&startdate=${prevSeasonStart}&enddate=${endDate}`);
-			const duals = seasonEventsResponse.body.events || [];
+			const seasonEventsResponse = await client.get(`${ serverPath }/data/event?team=Fort Mill&startdate=${prevSeasonStart}&enddate=${endDate}`);
+			const allSeasonEvents = seasonEventsResponse.body.events || [];
 
-			output.data.duals = duals.filter(dual => new Date(dual.date) >= new Date(startDate) && dual.date <= endDate)
+			output.data.events = allSeasonEvents.filter(eventItem => new Date(eventItem.date) >= new Date(startDate) && eventItem.date <= endDate);
 			
-			output.data.hasPreviousSeasonData = duals.filter(dual => new Date(dual.date) <= prevSeasonEnd).length > 0;
+			output.data.hasPreviousSeasonData = allSeasonEvents.filter(eventItem => new Date(eventItem.date) <= new Date(prevSeasonEnd)).length > 0;
 			
 			output.status = 200;
 		} catch (error) {
