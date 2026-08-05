@@ -1061,6 +1061,9 @@ export default {
 		if (userFilter.select) {
 			select = userFilter.select.reduce((output, current) => ({...output, [current]: 1 }), {});
 		}
+		if (userFilter.team) {
+			filterInclude.push({ searchTeam: userFilter.team.toLowerCase() });
+		}
 		if (userFilter.startDate && userFilter.endDate) {
 			const startDate = new Date(Date.parse(userFilter.startDate)),
 				endDate = new Date(Date.parse(userFilter.endDate));

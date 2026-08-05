@@ -192,6 +192,7 @@ export default {
 		imagePath: String,
 		created: Date,
 		modified: Date,
+		searchTeams: [String],
 		matches: [{
 			matchSqlId: Number,
 			division: String,

@@ -461,6 +461,7 @@ router.get("/data/event", authInternal, async (request, response) => {
 			sqlIds: sqlIdList,
 			select: request.query.select ? request.query.select.split(",") : null,
 			state: request.query.state,
+			team: request.query.team,
 			modifiedSince: request.query.modifiedsince
 		};
 		
