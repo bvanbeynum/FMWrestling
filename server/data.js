@@ -1062,7 +1062,7 @@ export default {
 			select = userFilter.select.reduce((output, current) => ({...output, [current]: 1 }), {});
 		}
 		if (userFilter.team) {
-			filterInclude.push({ searchTeam: userFilter.team.toLowerCase() });
+			filterInclude.push({ searchTeams: userFilter.team.toLowerCase() });
 		}
 		if (userFilter.startDate && userFilter.endDate) {
 			const startDate = new Date(Date.parse(userFilter.startDate)),
