@@ -1095,6 +1095,13 @@ export default {
 			return output;
 		}
 
+		if (saveObject.matches) {
+			saveObject.searchTeams = [...new Set(saveObject.matches
+				.filter(match => match.wrestlers)
+				.flatMap(match => match.wrestlers.map(wrestler => wrestler.team?.toLowerCase()))
+			)]
+		}
+
 		if (saveObject.id) {
 			let record = null;
 			try {
