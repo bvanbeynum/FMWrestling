@@ -196,6 +196,7 @@ export default {
 		matches: [{
 			matchSqlId: Number,
 			division: String,
+			divisionConvert: String,
 			weightClass: String,
 			roundName: String,
 			videoUrl: String,
