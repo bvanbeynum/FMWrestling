@@ -1060,6 +1060,9 @@ export default {
 		}
 		if (userFilter.select) {
 			select = userFilter.select.reduce((output, current) => ({...output, [current]: 1 }), {});
+			if (userFilter.select.includes("hasMatches")) {
+				select["matches"] = { $slice: 1 };
+			}
 		}
 		if (userFilter.team) {
 			filterInclude.push({ searchTeams: userFilter.team.toLowerCase() });
@@ -1076,7 +1079,13 @@ export default {
 		try {
 			const records = await data.event.find(filter).select(select).lean().exec();
 			output.status = 200;
-			output.data = { events: records.map(({ _id, __v, ...data }) => ({ id: _id, ...data })) };
+			output.data = { 
+				events: records.map(({ _id, __v, matches, ...data }) => ({ 
+					id: _id,
+					...data,
+					hasMatches: !!(matches && matches.length > 0)
+				})) 
+			};
 		}
 		catch (error) {
 			output.status = 560;
