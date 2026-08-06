@@ -363,6 +363,11 @@ body {
 	word-break: break-word;
 }
 
+.teamsTable td.teamNameCell div:nth-child(2) {
+	font-weight: initial;
+	font-size: 11px;
+}
+
 .familiarRow .teamNameCell {
 	color: var(--primary);
 	font-weight: 700;

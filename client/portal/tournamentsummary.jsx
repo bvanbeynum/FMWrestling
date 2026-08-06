@@ -303,7 +303,7 @@ const TournamentSummary = () => {
 			if (wId) teamStatsMap[wTeam].wrestlers.add(wId);
 			teamStatsMap[wTeam].wins += 1;
 
-			if (isPlacementRound(m.roundName)) {
+			if (isPlacementRound(matchItem.roundName)) {
 				if (wId) teamStatsMap[wTeam].placers.add(wId);
 			}
 		}
@@ -321,7 +321,7 @@ const TournamentSummary = () => {
 			if (lId) teamStatsMap[lTeam].wrestlers.add(lId);
 			teamStatsMap[lTeam].losses += 1;
 
-			if (isPlacementRound(m.roundName)) {
+			if (isPlacementRound(matchItem.roundName)) {
 				if (lId) teamStatsMap[lTeam].placers.add(lId);
 			}
 		}
@@ -573,6 +573,7 @@ const TournamentSummary = () => {
 				weightClassWrestlerStatsMap[winnerId] = {
 					wrestlerSqlId: winnerId,
 					name: match.winner.name,
+					team: match.winner.team,
 					rating: match.winner.rating,
 					deviation: match.winner.deviation,
 					seed: match.winner.seed,
@@ -593,6 +594,7 @@ const TournamentSummary = () => {
 				weightClassWrestlerStatsMap[loserId] = {
 					wrestlerSqlId: loserId,
 					name: match.loser.name,
+					team: match.loser.team,
 					rating: match.loser.rating,
 					deviation: match.loser.deviation,
 					seed: match.loser.seed,
@@ -1166,12 +1168,15 @@ const TournamentSummary = () => {
 															</td>
 														)}
 														<td className="teamNameCell">
-															{wrestler.name}
-															{rankDisplay !== "—" && (
-																<span className="familiarBadge" style={{ backgroundColor: "#e6fffa", color: "#319795", borderColor: "#b2f5ea" }}>
-																	{rankDisplay} Place
-																</span>
-															)}
+															<div>
+																{wrestler.name}
+																{rankDisplay !== "—" && (
+																	<span className="familiarBadge" style={{ backgroundColor: "#e6fffa", color: "#319795", borderColor: "#b2f5ea" }}>
+																		{rankDisplay} Place
+																	</span>
+																)}
+															</div>
+															<div>({wrestler.team})</div>
 														</td>
 														<td style={{ textAlign: "center", color: "#4a5568" }}>
 															<div style={{ fontWeight: 600 }}>{wrestler.rating ? Math.round(wrestler.rating) : "N/A"}</div>
