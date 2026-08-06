@@ -1289,12 +1289,13 @@ export default {
 		return output;
 	},
 
-	wrestlerDetails: async (wrestlerId, serverPath) => {
+	wrestlerDetails: async (wrestlerId, wrestlerSqlId, serverPath) => {
 		const output = { data: {} };
 
 		let wrestler = null;
 		try {
-			const clientResponse = await client.get(`${ serverPath }/data/wrestler?id=${ wrestlerId }`);
+			let parameters = wrestlerId ? `id=${ wrestlerId }` : `sqlid=${ wrestlerSqlId }`;
+			const clientResponse = await client.get(`${ serverPath }/data/wrestler?${ parameters }`);
 			wrestler = clientResponse.body.wrestlers[0];
 		}
 		catch (error) {
@@ -1305,7 +1306,7 @@ export default {
 
 		let wrestlerEvents = null;
 		try {
-			const clientResponse = await client.get(`${ serverPath }/data/wrestlerevent?wrestlerid=${ wrestlerId }`);
+			const clientResponse = await client.get(`${ serverPath }/data/wrestlerevent?wrestlerid=${ wrestler.id }`);
 			wrestlerEvents = clientResponse.body.wrestlerEvents;
 		}
 		catch (error) {
@@ -1327,7 +1328,7 @@ export default {
 				deviation: wrestler.deviation,
 				events: wrestlerEvents.map(event => ({
 					...event,
-					division: event.divisionConvert,
+					division: event.divisionConvert || event.division,
 					weightClass: event.matches[0]?.weightClass || "",
 					matches: event.matches
 				}))

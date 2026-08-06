@@ -485,8 +485,10 @@ const WrestlerReportComponent = () => {
 
 			const urlParameters = new window.URLSearchParams(window.location.search);
 			const wrestlerId = urlParameters.get("id");
+			const wrestlerSqlId = urlParameters.get("sqlid")
+			const parameters = wrestlerId && wrestlerId != "null" ? `id=${ wrestlerId }` : `sqlid=${ wrestlerSqlId }`;
 
-			fetch(`/api/wrestlerdetails?id=${ wrestlerId }`)
+			fetch(`/api/wrestlerdetails?${ parameters }`)
 				.then(response => {
 					if (response.ok) {
 						return response.json();
@@ -498,7 +500,7 @@ const WrestlerReportComponent = () => {
 				.then(data => {
 					const processedEvents = (data.wrestler.events || []).map(eventItem => {
 						const eventDate = new Date(eventItem.date);
-						const formattedDivision = eventItem.divisionConvert.trim();
+						const formattedDivision = (eventItem.divisionConvert || eventItem.division || "").trim();
 
 						const eventWins = (eventItem.matches || []).filter(matchItem => matchItem.isWinner && matchItem.vs).length;
 						const eventLosses = (eventItem.matches || []).filter(matchItem => !matchItem.isWinner && matchItem.vs).length;
@@ -759,7 +761,16 @@ const WrestlerReportComponent = () => {
 																	<div className="match-item-left">
 																		<span className="match-round-tag">{ matchItem.round || "Match" }</span>
 																		<span className="match-opponent-info">
-																			<span className="match-opponent-name">{ matchItem.vs }</span>
+																			<a
+																				href={ `/portal/wrestlerreport.html?sqlid=${ matchItem.vsSqlId }` }
+																				target="_blank"
+																				rel="noopener noreferrer"
+																				className="wrestler-external-link"
+																				title="Open Wrestler Report in New Tab"
+																				onClick={ (clickEvent) => clickEvent.stopPropagation() }
+																			>
+																				<span className="match-opponent-name">{ matchItem.vs }</span>
+																			</a>
 																			{ matchItem.vsTeam ? (
 																				<span className="match-opponent-team">({ matchItem.vsTeam })</span>
 																			) : "" }

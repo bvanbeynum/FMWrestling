@@ -305,6 +305,8 @@ export default {
 	wrestlerEvent: mongoose.model("wrestlerevent", {
 		wrestlerId: String,
 		wrestlerSqlId: Number,
+		eventSystem: String,
+		systemId: String,
 		sqlId: Number,
 		date: Date,
 		name: String,
@@ -317,6 +319,7 @@ export default {
 		matches: [{
 			sqlId: Number,
 			division: String,
+			divisionConvert: String,
 			weightClass: String,
 			round: String,
 			videoUrl: String,
