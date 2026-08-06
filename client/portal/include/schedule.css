@@ -662,27 +662,6 @@ button.lineupButton.addDual:hover {
 	}
 }
 
-/* Bottom Navigation Bar Styles */
-.bottomNav {
-	position: fixed;
-	bottom: 0;
-	left: 0;
-	height: 56px;
-	background-color: #f8f9fa; /* Matches --surface */
-	border-top: 1.5px solid #cbd5e1;
-	display: flex;
-	justify-content: space-around;
-	align-items: center;
-	z-index: 1000;
-}
-
-/* Desktop menu shift */
-@media (min-width: 1024px) {
-	.bottomNav {
-		left: 20rem;
-	}
-}
-
 .navItem {
 	display: flex;
 	flex-direction: column;

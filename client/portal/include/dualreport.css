@@ -346,21 +346,6 @@
 	font-family: var(--font-headers);
 }
 
-/* Sticky Bottom Navigation Bar (Matching tournamentsummary.css / index.css) */
-.bottomNav {
-	position: fixed;
-	bottom: 0;
-	left: 0;
-	width: 100%;
-	height: 56px;
-	background-color: var(--surface);
-	border-top: 1.5px solid var(--outline);
-	display: flex;
-	justify-content: space-around;
-	align-items: center;
-	z-index: 1000;
-}
-
 .navItem {
 	display: flex;
 	flex-direction: column;

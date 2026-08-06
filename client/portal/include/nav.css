@@ -67,7 +67,7 @@ nav li.sub.active {
 	nav {
 		transform: none;
 		transition: none;
-		position: initial;
+		position: sticky;
 		min-width: 250px;
 	}
 	nav.active {

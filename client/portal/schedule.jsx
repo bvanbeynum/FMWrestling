@@ -851,7 +851,7 @@ const Schedule = props => {
 																			}
 																		}}
 																	>
-																		VIEW BRACKETS &rarr;
+																		VIEW ON FLO &rarr;
 																	</button>
 																)
 															)}
