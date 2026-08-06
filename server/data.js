@@ -1080,10 +1080,12 @@ export default {
 			const records = await data.event.find(filter).select(select).lean().exec();
 			output.status = 200;
 			output.data = { 
-				events: records.map(({ _id, __v, matches, ...data }) => ({ 
+				events: records.map(({ _id, __v, ...data }) => ({ 
 					id: _id,
 					...data,
-					hasMatches: !!(matches && matches.length > 0)
+					hasMatches: userFilter.select && userFilter.select.includes("hasMatches") ?
+						!!(data.matches && data.matches.length > 0) 
+						: null
 				})) 
 			};
 		}
