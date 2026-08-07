@@ -171,14 +171,6 @@ export default {
 		modified: Date
 	}),
 
-	post: mongoose.model("post", {
-		content: String,
-		scope: String,
-		created: Date,
-		modified: Date,
-		expires: Date
-	}),
-
 	event: mongoose.model("event", {
 		sqlId: Number,
 		eventSystem: String,

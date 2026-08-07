@@ -190,45 +190,6 @@ router.delete("/data/school", authInternal, async (request, response) => {
 	response.end();
 });
 
-router.get("/data/post", authInternal, async (request, response) => {
-	const results = await data.postGet(request.query.id, /^true$/i.test(request.query.all));
-
-	if (results.error) {
-		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "647b3795f18254fde708e57e", message: `${ results.status }: ${results.error}` }}).then();
-	}
-
-	response.status(results.status).json(results.error ? { error: results.error } : results.data);
-	response.end();
-});
-
-router.post("/data/post", authInternal, async (request, response) => {
-	try {
-		const results = await data.postSave(request.body.post);
-
-		if (results.error) {
-			// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "647b37b8f18254fde708e581", message: `${ results.status }: ${results.error}` }}).then();
-		}
-
-		response.status(results.status).json(results.error ? { error: results.error } : results.data);
-		response.end();
-	}
-	catch (error) {
-		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "647b37b8f18254fde708e581", message: `570: ${error.message}` }}).then();
-		response.status(570).json({ error: error.message });
-	}
-});
-
-router.delete("/data/post", authInternal, async (request, response) => {
-	const results = await data.postDelete(request.query.id);
-
-	if (results.error) {
-		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "647b37c7f18254fde708e583", message: `${ results.status }: ${results.error}` }}).then();
-	}
-
-	response.status(results.status).json(results.error ? { error: results.error } : results.data);
-	response.end();
-});
-
 router.get("/data/role", authInternal, async (request, response) => {
 	try {
 		const results = await data.roleGet(request.query.id);

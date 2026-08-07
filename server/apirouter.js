@@ -52,26 +52,6 @@ router.post("/api/requestaccess", [authAPI, browser.express()], async (request, 
 	response.end();
 });
 
-router.get("/api/postload", authAPI, async (request, response) => {
-	const results = await api.postLoad(request.serverPath);
-
-	if (results.error) {
-		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "647b4c2ef18254fde708ec96", message: `${ results.status }: ${results.error}` }}).then();
-	}
-
-	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
-});
-
-router.post("/api/postsave", authAPI, async (request, response) => {
-	const results = await api.postSave(request.body, request.serverPath);
-
-	if (results.error) {
-		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6477f531f18254fde707c125", message: `${ results.status }: ${results.error}` }}).then();
-	}
-
-	response.status(results.status).json(results.error ? { error: results.error } : results.data);
-});
-
 router.get("/api/teamscheduleload", authAPI, async (request, response) => {
 	const results = await api.teamscheduleLoad(request.serverPath, request.query.startdate, request.query.enddate);
 	const output = { loggedInUser: request.user, ...results.data };

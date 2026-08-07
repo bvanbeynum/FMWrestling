@@ -244,105 +244,6 @@ describe("Middleware", () => {
 
 });
 
-describe("API Post functions", () => {
-
-	it("loads the post data", async () => {
-		// ********** Given
-
-		const output = [
-				{ content: "Test2", expires: null },
-				{ content: "unexpired content", expires: new Date(new Date(Date.now()).setDate(new Date().getDate() + 5)) },
-				{ content: "expired content", expires: new Date(new Date(Date.now()).setDate(new Date().getDate() - 5)) }
-			];
-		
-		client.get = jest.fn().mockResolvedValue({ body: {
-			posts: output
-		}});
-
-		// ********** When
-
-		const results = await api.postLoad(serverPath);
-
-		// ********** Then
-
-		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/post`);
-
-		expect(results).toHaveProperty("status", 200);
-		expect(results).toHaveProperty("data");
-		expect(results.data).toHaveProperty("posts");
-
-		// No expired posts
-		expect(results.data.posts).toHaveLength(output.filter(post => !post.expires || post.expires < new Date()).length);
-
-		// First post matches mock
-		expect(results.data.posts[0]).toHaveProperty("content", output[0].content);
-	});
-
-	it("saves post", async () => {
-		// ********** Given
-
-		const expireDate = new Date();
-		expireDate.setDate(expireDate.getDate() + 5);
-
-		const body = { save: { content: "Test post", expires: expireDate }},
-			returnId = "testid";
-
-		const send = jest.fn().mockResolvedValue({
-			body: { id: returnId }
-		});
-		client.post = jest.fn(() => ({
-			send: send
-		}));
-
-		client.get = jest.fn().mockResolvedValue({ body: {
-			posts: [{ ...body.save, id: returnId, created: new Date() }]
-		}});
-
-		// ********** When
-
-		const results = await api.postSave(body, serverPath);
-
-		// ********** Then
-
-		expect(client.post).toHaveBeenCalledWith(`${ serverPath }/data/post`);
-		expect(send).toHaveBeenCalledWith(
-			expect.objectContaining({
-				post: expect.objectContaining({ content: body.save.content })
-			})
-		);
-		
-		expect(client.get).toHaveBeenCalledWith(`${ serverPath }/data/post?id=${ returnId }`);
-
-		expect(results).toHaveProperty("status", 200);
-		expect(results).toHaveProperty("data");
-		expect(results.data).toHaveProperty("post", expect.objectContaining({ id: returnId }));
-	});
-
-	it("deletes post", async () => {
-		// ********** Given
-
-		const deleteId = "testid",
-			body = { delete: deleteId };
-
-		client.delete = jest.fn(() => ({
-			status: "ok"
-		}));
-
-		// ********** When
-
-		const results = await api.postSave(body, serverPath);
-
-		// ********** Then
-
-		expect(client.delete).toHaveBeenCalledWith(`${ serverPath }/data/post?id=${ deleteId }`);
-
-		expect(results).toHaveProperty("status", 200);
-		expect(results).toHaveProperty("data");
-		expect(results.data).toHaveProperty("status", "ok");
-	});
-
-});
-
 describe("API Schedule", () => {
 
 	it("loads the schedule data", async () => {
@@ -1153,6 +1054,7 @@ describe("Users", () => {
 
 	});
 
+});
 
 
 describe("External Wrestler", () => {
