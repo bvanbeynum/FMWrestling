@@ -402,6 +402,31 @@ export default {
 
 		if (saveObject.name) {
 			saveObject.searchName = saveObject.name.toLowerCase();
+			const trimmedName = saveObject.name.toLowerCase().trim();
+			const spaceIndex = trimmedName.indexOf(' ');
+
+			let firstName = "";
+			let lastName = "";
+
+			if (spaceIndex === -1) {
+				// Handle single-word names
+				firstName = trimmedName;
+				lastName = "";
+			} else {
+				// Everything before the first space
+				firstName = trimmedName.substring(0, spaceIndex);
+				// Everything after the first space
+				lastName = trimmedName.substring(spaceIndex + 1);
+			}
+
+			const firstInitial = firstName.length > 0 ? firstName.charAt(0) : "";
+			const lastInitial = lastName.length > 0 ? lastName.charAt(0) : "";
+
+			saveObject.searchName = trimmedName;
+			saveObject.searchFirstName = firstName;
+			saveObject.searchLastName = lastName;
+			saveObject.searchFirstInitial = firstInitial;
+			saveObject.searchLastInitial = lastInitial;
 		}
 
 		if (saveObject.events) {

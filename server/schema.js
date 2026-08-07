@@ -113,6 +113,10 @@ export default {
 	wrestler: mongoose.model("wrestler", {
 		sqlId: Number,
 		name: String,
+		firstName: String,
+		firstInitial: String,
+		lastName: String,
+		lastInitial: String,
 		rating: Number,
 		deviation: Number,
 		grade: String,
