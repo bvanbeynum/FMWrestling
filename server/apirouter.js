@@ -587,4 +587,19 @@ router.post("/api/newwrestlerdelete", authAPI, async (requestObject, responseObj
 	responseObject.status(executionResults.status).json(executionResults.error ? { error: executionResults.error } : executionResults.data);
 });
 
+router.get("/api/wrestlerduplicateload", authAPI, async (requestObject, responseObject) => {
+	const executionResults = await api.wrestlerduplicateLoad(requestObject.serverPath);
+	responseObject.status(executionResults.status).json(executionResults.error ? { error: executionResults.error } : { loggedInUser: requestObject.user, ...executionResults.data });
+});
+
+router.post("/api/wrestlerduplicatesearch", authAPI, async (requestObject, responseObject) => {
+	const executionResults = await api.wrestlerduplicateSearch(requestObject.body, requestObject.serverPath);
+	responseObject.status(executionResults.status).json(executionResults.error ? { error: executionResults.error } : executionResults.data);
+});
+
+router.post("/api/wrestlerduplicatelookup", authAPI, async (requestObject, responseObject) => {
+	const executionResults = await api.wrestlerduplicateLookup(requestObject.body.wrestlerId, requestObject.serverPath);
+	responseObject.status(executionResults.status).json(executionResults.error ? { error: executionResults.error } : executionResults.data);
+});
+
 export default router;

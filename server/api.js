@@ -3134,6 +3134,132 @@ Instructions for response:
 		}
 
 		return outputResults;
+	},
+
+	wrestlerduplicateLoad: async (serverPath) => {
+		const outputResults = {};
+
+		try {
+			const schoolResponse = await client.get(`${ serverPath }/data/school`);
+			const schoolsList = schoolResponse.body?.schools || schoolResponse.body || [];
+
+			outputResults.status = 200;
+			outputResults.data = {
+				schools: Array.isArray(schoolsList) ? schoolsList : []
+			};
+		}
+		catch (error) {
+			outputResults.status = 560;
+			outputResults.error = error.message;
+		}
+
+		return outputResults;
+	},
+
+	wrestlerduplicateSearch: async (searchCriteria = {}, serverPath) => {
+		const outputResults = {};
+		const searchNameInput = searchCriteria.searchName ? searchCriteria.searchName.trim() : "";
+		const teamNameInput = searchCriteria.teamName ? searchCriteria.teamName.trim() : "";
+
+		if (!searchNameInput && !teamNameInput) {
+			outputResults.status = 400;
+			outputResults.error = "Please provide either a wrestler name or select a team to search.";
+			return outputResults;
+		}
+
+		try {
+			let queryParameterString = "";
+			if (searchNameInput) {
+				queryParameterString = `name=${ encodeURIComponent(searchNameInput) }`;
+			}
+			else if (teamNameInput) {
+				queryParameterString = `teamname=${ encodeURIComponent(teamNameInput) }&state=SC`;
+			}
+
+			const wrestlerResponse = await client.get(`${ serverPath }/data/wrestler?${ queryParameterString }`);
+			const fetchedWrestlersList = wrestlerResponse.body?.wrestlers || wrestlerResponse.body || [];
+			const fetchedWrestlersArray = Array.isArray(fetchedWrestlersList) ? fetchedWrestlersList : [];
+
+			// Sort wrestlers by lastEvent.date descending (newest first)
+			fetchedWrestlersArray.sort((wrestlerRecordA, wrestlerRecordB) => {
+				const dateRawA = wrestlerRecordA?.lastEvent?.date || wrestlerRecordA?.lastEvent || wrestlerRecordA?.created;
+				const dateRawB = wrestlerRecordB?.lastEvent?.date || wrestlerRecordB?.lastEvent || wrestlerRecordB?.created;
+
+				const timestampA = dateRawA ? new Date(dateRawA).getTime() : 0;
+				const timestampB = dateRawB ? new Date(dateRawB).getTime() : 0;
+
+				const validTimeA = isNaN(timestampA) ? 0 : timestampA;
+				const validTimeB = isNaN(timestampB) ? 0 : timestampB;
+
+				return validTimeB - validTimeA;
+			});
+
+			outputResults.status = 200;
+			outputResults.data = {
+				wrestlers: fetchedWrestlersArray
+			};
+		}
+		catch (error) {
+			outputResults.status = 560;
+			outputResults.error = error.message;
+		}
+
+		return outputResults;
+	},
+
+	wrestlerduplicateLookup: async (targetWrestlerIdentifier, serverPath) => {
+		const outputResults = {};
+
+		if (!targetWrestlerIdentifier) {
+			outputResults.status = 400;
+			outputResults.error = "Missing wrestler identifier for duplicate lookup.";
+			return outputResults;
+		}
+
+		try {
+			const duplicatesSearchResponse = await client.post(`${ serverPath }/data/wrestlerduplicates`).send({
+				wrestlerIds: [ targetWrestlerIdentifier ]
+			});
+
+			const returnedWrestlersList = duplicatesSearchResponse.body?.wrestlers || [];
+			const foundWrestlerRecord = returnedWrestlersList.find(() => true) || null;
+
+			// Fetch existing saved duplicates to check submit status
+			const duplicatesResponse = await client.get(`${ serverPath }/data/duplicate`);
+			const existingDuplicates = duplicatesResponse.body?.duplicates || [];
+
+			const savedWrestlerSqlIds = new Set();
+			for (const duplicateRecord of existingDuplicates) {
+				if (duplicateRecord.primary?.sqlId) {
+					savedWrestlerSqlIds.add(duplicateRecord.primary.sqlId);
+				}
+				for (const duplicateItem of duplicateRecord.duplicates || []) {
+					if (duplicateItem?.sqlId) {
+						savedWrestlerSqlIds.add(duplicateItem.sqlId);
+					}
+				}
+			}
+
+			let processedWrestler = null;
+			if (foundWrestlerRecord) {
+				const isAlreadySubmitted = savedWrestlerSqlIds.has(foundWrestlerRecord.sqlId);
+				processedWrestler = {
+					...foundWrestlerRecord,
+					isSubmitted: isAlreadySubmitted
+				};
+			}
+
+			outputResults.status = 200;
+			outputResults.data = {
+				wrestler: processedWrestler
+			};
+		}
+		catch (error) {
+			outputResults.status = 560;
+			outputResults.error = error.message;
+		}
+
+		return outputResults;
 	}
 
 };

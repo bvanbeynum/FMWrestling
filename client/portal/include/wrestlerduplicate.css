@@ -1,0 +1,475 @@
+/* Variables & Design Tokens matching Athletic Clarity system (identical to newwrestler.css) */
+:root {
+	--primary: #3246e5;
+	--primary-variant: #0f28d1;
+	--on-primary: #ffffff;
+	
+	--secondary: #ff0000;
+	--secondary-accent: #fd8b00;
+	
+	--background: #f8f9fa;
+	--surface: #ffffff;
+	--on-surface: #191c1d;
+	--on-surface-variant: #444655;
+	--inverse-surface: #2e3132;
+	--inverse-on-surface: #f0f1f2;
+	
+	--outline: #e1e3e4;
+	--outline-variant: #c5c5d8;
+	
+	--font-headers: 'Russo One', sans-serif;
+	--font-body: 'Roboto', sans-serif;
+	
+	--rounded-sm: 4px;
+	--rounded-md: 8px;
+}
+
+.wrestlerduplicate-container {
+	display: block;
+	width: 100%;
+	max-width: 1200px;
+	margin: 0 auto;
+	padding: 24px 24px 80px 24px;
+	box-sizing: border-box;
+}
+
+.page-header {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	border-bottom: 2px solid var(--outline);
+	padding-bottom: 16px;
+	margin-bottom: 24px;
+}
+
+.page-title {
+	font-family: var(--font-headers);
+	font-size: 28px;
+	color: var(--on-surface);
+	text-transform: uppercase;
+	margin: 0;
+}
+
+.error-alert-banner {
+	color: #dc2626;
+	background-color: #fee2e2;
+	border: 1px solid #fca5a5;
+	border-radius: var(--rounded-sm);
+	padding: 12px 16px;
+	margin-bottom: 20px;
+	font-family: var(--font-body);
+	font-size: 14px;
+}
+
+/* Search Controls Card (Matching wrestler-duplicate-group-card) */
+.search-controls-card {
+	background: var(--surface);
+	border: 1.5px solid var(--outline);
+	border-radius: var(--rounded-md);
+	padding: 20px;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+	margin: 24px 0px;
+}
+
+.search-inputs-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+	gap: 16px;
+	align-items: end;
+}
+
+.input-field-wrapper {
+	display: flex;
+	flex-direction: column;
+}
+
+.input-field-label {
+	font-family: var(--font-body);
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--on-surface-variant);
+	margin-bottom: 6px;
+	display: block;
+}
+
+.search-form-input,
+.search-form-select {
+	font-family: var(--font-body);
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--primary);
+	background-color: var(--surface);
+	border: 1.5px solid var(--outline);
+	border-radius: var(--rounded-sm);
+	padding: 8px 16px;
+	outline: none;
+	width: 100%;
+	box-sizing: border-box;
+	transition: border-color 0.15s ease;
+}
+
+.search-form-input:focus,
+.search-form-select:focus {
+	border-color: var(--primary);
+}
+
+.button-execute-search {
+	background-color: var(--primary);
+	color: var(--on-primary);
+	border: none;
+	border-radius: var(--rounded-sm);
+	padding: 10px 24px;
+	font-family: var(--font-headers);
+	font-size: 14px;
+	text-transform: uppercase;
+	cursor: pointer;
+	width: 100%;
+	box-sizing: border-box;
+	transition: background-color 0.15s ease;
+}
+
+.button-execute-search:hover:not(:disabled) {
+	background-color: var(--primary-variant);
+}
+
+.button-execute-search:disabled {
+	background-color: #9ca3af;
+	cursor: not-allowed;
+}
+
+/* Sections & Headings */
+.search-results-section {
+	margin-bottom: 28px;
+}
+
+.section-sub-heading {
+	font-family: var(--font-headers);
+	font-size: 20px;
+	color: var(--on-surface);
+	text-transform: uppercase;
+	margin: 0 0 12px 0;
+}
+
+.no-records-message {
+	font-family: var(--font-body);
+	font-size: 14px;
+	color: var(--on-surface-variant);
+	text-align: center;
+	padding: 24px;
+}
+
+.loading-candidates-container {
+	min-height: 150px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.back-button-wrapper {
+	margin-bottom: 16px;
+}
+
+.button-back-results {
+	background-color: var(--surface);
+	color: var(--primary);
+	border: 1.5px solid var(--primary);
+	border-radius: var(--rounded-sm);
+	padding: 8px 18px;
+	font-family: var(--font-body);
+	font-size: 13px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+
+.button-back-results:hover {
+	background-color: #eff6ff;
+}
+
+/* Candidate Matrix Table (Matching newwrestler.css) */
+.candidate-matrix-table {
+	width: 100%;
+	border-collapse: collapse;
+	margin-bottom: 16px;
+}
+
+.candidate-matrix-table th {
+	font-family: var(--font-headers);
+	font-size: 11px;
+	color: var(--on-surface-variant);
+	text-transform: uppercase;
+	text-align: left;
+	padding: 8px 12px;
+	border-bottom: 1.5px solid var(--outline);
+}
+
+.candidate-matrix-table td {
+	font-family: var(--font-body);
+	font-size: 12px;
+	color: var(--on-surface);
+	padding: 10px 12px;
+	border-bottom: 1px solid var(--outline);
+}
+
+.candidate-matrix-table tr.selected-row {
+	background-color: #eff6ff;
+}
+
+.wrestler-link {
+	color: var(--primary);
+	text-decoration: none;
+	font-weight: 600;
+}
+
+.wrestler-link:hover {
+	text-decoration: underline;
+}
+
+.button-lookup-candidate {
+	background-color: var(--primary);
+	color: var(--on-primary);
+	border: none;
+	border-radius: var(--rounded-sm);
+	padding: 6px 14px;
+	font-family: var(--font-headers);
+	font-size: 11px;
+	text-transform: uppercase;
+	cursor: pointer;
+	transition: background-color 0.15s ease;
+}
+
+.button-lookup-candidate:hover:not(:disabled) {
+	background-color: var(--primary-variant);
+}
+
+.button-lookup-candidate:disabled {
+	background-color: #9ca3af;
+	cursor: not-allowed;
+}
+
+.chip-zero-candidates {
+	display: inline-block;
+	color: #6b7280;
+	background-color: #f3f4f6;
+	border: 1px solid #d1d5db;
+	border-radius: var(--rounded-sm);
+	padding: 4px 10px;
+	font-family: var(--font-body);
+	font-size: 12px;
+	font-weight: 500;
+}
+
+/* Candidate Group Cards (Matching newwrestler.css) */
+.wrestler-duplicate-group-card {
+	background: var(--surface);
+	border: 1.5px solid var(--outline);
+	border-radius: var(--rounded-md);
+	padding: 20px;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+	transition: opacity 0.2s ease, border-color 0.2s ease;
+}
+
+.wrestler-duplicate-group-card.submitted-card {
+	opacity: 0.55;
+	background-color: #f3f4f6;
+	border-color: #d1d5db;
+}
+
+.group-card-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	border-bottom: 1.5px solid var(--outline);
+	padding-bottom: 12px;
+	margin-bottom: 16px;
+}
+
+.wrestler-title-info {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.wrestler-main-name {
+	font-family: var(--font-headers);
+	font-size: 20px;
+	color: var(--on-surface);
+}
+
+.wrestler-sub-team {
+	font-family: var(--font-body);
+	font-size: 14px;
+	color: var(--on-surface-variant);
+	font-weight: 500;
+}
+
+.wrestler-sql-id {
+	font-family: var(--font-body);
+	font-size: 12px;
+	color: #6b7280;
+}
+
+.submitted-status-badge {
+	background-color: #10b981;
+	color: #ffffff;
+	font-family: var(--font-headers);
+	font-size: 11px;
+	padding: 4px 10px;
+	border-radius: var(--rounded-sm);
+	text-transform: uppercase;
+}
+
+.primary-badge-blue {
+	background-color: #0284c7;
+	color: var(--on-primary);
+	font-family: var(--font-headers);
+	font-size: 10px;
+	padding: 3px 8px;
+	border-radius: var(--rounded-sm);
+	text-transform: uppercase;
+}
+
+.duplicate-chip {
+	background-color: var(--surface);
+	border: 1px solid var(--outline-variant);
+	border-radius: var(--rounded-sm);
+	padding: 4px 10px;
+	font-family: var(--font-body);
+	font-size: 13px;
+	color: var(--on-surface-variant);
+}
+
+.submit-actions-row {
+	display: flex;
+	justify-content: flex-end;
+	align-items: center;
+	margin-top: 12px;
+}
+
+.button-submit-duplicate {
+	background-color: var(--primary);
+	color: var(--on-primary);
+	border: none;
+	border-radius: var(--rounded-sm);
+	padding: 6px 16px;
+	font-family: var(--font-headers);
+	font-size: 13px;
+	text-transform: uppercase;
+	cursor: pointer;
+	transition: background-color 0.15s ease;
+}
+
+.button-submit-duplicate:hover:not(:disabled) {
+	background-color: var(--primary-variant);
+}
+
+.button-submit-duplicate:disabled {
+	background-color: #9ca3af;
+	cursor: not-allowed;
+}
+
+/* Responsive Desktop vs Mobile Display Rules (Matching newwrestler.css) */
+.desktop-only {
+	display: table;
+}
+
+.mobile-only {
+	display: none;
+}
+
+@media (max-width: 768px) {
+	.desktop-only {
+		display: none !important;
+	}
+
+	.mobile-only {
+		display: flex !important;
+		flex-direction: column;
+		gap: 12px;
+	}
+
+	.wrestlerduplicate-container {
+		padding: 16px 12px 60px 12px;
+	}
+
+	.page-header {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 12px;
+	}
+
+	.wrestler-duplicate-group-card {
+		padding: 14px;
+	}
+
+	.candidate-mobile-card {
+		background: var(--background);
+		border: 1px solid var(--outline);
+		border-radius: var(--rounded-md);
+		padding: 12px 14px;
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		transition: background-color 0.15s ease, border-color 0.15s ease;
+	}
+
+	.candidate-mobile-card.selected-card {
+		background-color: #eff6ff;
+		border-color: #93c5fd;
+	}
+
+	.mobile-card-top {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-start;
+		padding-bottom: 8px;
+		border-bottom: 1px solid var(--outline-variant);
+	}
+
+	.mobile-selection-controls {
+		display: flex;
+		align-items: center;
+		gap: 16px;
+		padding-top: 4px;
+	}
+
+	.mobile-control-label {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		font-family: var(--font-body);
+		font-size: 13px;
+		font-weight: 600;
+		color: var(--on-surface);
+		cursor: pointer;
+		margin: 0;
+	}
+
+	.mobile-control-label input[type="radio"],
+	.mobile-control-label input[type="checkbox"] {
+		cursor: pointer;
+		width: 16px;
+		height: 16px;
+	}
+
+	.mobile-card-info {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+
+	.mobile-card-meta {
+		font-family: var(--font-body);
+		font-size: 12px;
+		color: var(--on-surface-variant);
+	}
+
+	.submit-actions-row {
+		justify-content: stretch;
+	}
+
+	.button-submit-duplicate {
+		width: 100%;
+	}
+}
