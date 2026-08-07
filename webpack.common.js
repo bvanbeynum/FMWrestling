@@ -19,7 +19,8 @@ export default {
 		dualreport: "./client/portal/dualreport.jsx",
 		parentemail: "./client/portal/parentemail.jsx",
 		aiemail: "./client/portal/aiemail.jsx",
-		wrestlerreport: "./client/portal/wrestlerreport.jsx"
+		wrestlerreport: "./client/portal/wrestlerreport.jsx",
+		newwrestler: "./client/portal/newwrestler.jsx"
 	},
 	plugins: [
 		new HtmlWebpackPlugin({ 
@@ -190,6 +191,16 @@ export default {
 				viewport: "width=device-width, initial-scale=1"
 			},
 			chunks: [ "wrestlerreport" ],
+			templateContent: "<html><body><div id='root'></div></body></html>"
+		}),
+		new HtmlWebpackPlugin({ 
+			filename: "./portal/newwrestler.html",
+			title: "Fort Mill Wrestling - New Wrestlers",
+			favicon: "./client/media/favicon.ico",
+			meta: {
+				viewport: "width=device-width, initial-scale=1"
+			},
+			chunks: [ "newwrestler" ],
 			templateContent: "<html><body><div id='root'></div></body></html>"
 		}),
 		new HtmlWebpackPlugin({ 

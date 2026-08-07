@@ -3014,6 +3014,99 @@ Instructions for response:
 
 		output.status = output.status || 200;
 		return output;
+	},
+
+	newwrestlerLoad: async (timespanDays = 3, serverPath) => {
+		const outputResults = {};
+
+		try {
+			const wrestlersNewResponse = await client.get(`${ serverPath }/data/wrestlernew?timespan=${ timespanDays }`);
+			const duplicatesResponse = await client.get(`${ serverPath }/data/duplicate`);
+
+			const newWrestlersList = wrestlersNewResponse.body?.newWrestlers || [];
+			const existingDuplicates = duplicatesResponse.body?.duplicates || [];
+			const summaryMetrics = {
+				newWrestlerCount: newWrestlersList.length,
+				lastWrestlerAddedDate: newWrestlersList.map(wrestler => wrestler.lastEvent?.date).sort((wrestlerA, wrestlerB) => new Date(wrestlerB) - new Date(wrestlerA)).find(() => true)
+			};
+			
+			const savedWrestlerSqlIds = new Set();
+			for (const duplicateRecord of existingDuplicates) {
+				if (duplicateRecord.primary?.sqlId) {
+					savedWrestlerSqlIds.add(duplicateRecord.primary.sqlId);
+				}
+				for (const duplicateItem of duplicateRecord.duplicates || []) {
+					if (duplicateItem?.sqlId) {
+						savedWrestlerSqlIds.add(duplicateItem.sqlId);
+					}
+				}
+			}
+
+			const processedNewWrestlers = newWrestlersList.map(wrestlerItem => {
+				const isAlreadySubmitted = savedWrestlerSqlIds.has(wrestlerItem.sqlId);
+				return {
+					...wrestlerItem,
+					isSubmitted: isAlreadySubmitted
+				};
+			});
+
+			outputResults.status = 200;
+			outputResults.data = {
+				newWrestlers: processedNewWrestlers,
+				existingDuplicates: existingDuplicates,
+				summary: summaryMetrics
+			};
+		}
+		catch (error) {
+			outputResults.status = 560;
+			outputResults.error = error.message;
+		}
+
+		return outputResults;
+	},
+
+	newwrestlerSave: async (savePayload, serverPath) => {
+		const outputResults = {};
+
+		if (!savePayload || !savePayload.primary) {
+			outputResults.status = 400;
+			outputResults.error = "Missing primary wrestler details to save duplicate group";
+			return outputResults;
+		}
+
+		try {
+			const saveResponse = await client.post(`${ serverPath }/data/duplicate`).send({ duplicate: savePayload });
+			outputResults.status = saveResponse.status || 200;
+			outputResults.data = saveResponse.body;
+		}
+		catch (error) {
+			outputResults.status = 560;
+			outputResults.error = error.message;
+		}
+
+		return outputResults;
+	},
+
+	newwrestlerDelete: async (recordIdentifier, serverPath) => {
+		const outputResults = {};
+
+		if (!recordIdentifier) {
+			outputResults.status = 400;
+			outputResults.error = "Missing duplicate record identifier to delete";
+			return outputResults;
+		}
+
+		try {
+			const deleteResponse = await client.delete(`${ serverPath }/data/duplicate?id=${ recordIdentifier }`);
+			outputResults.status = deleteResponse.status || 200;
+			outputResults.data = deleteResponse.body;
+		}
+		catch (error) {
+			outputResults.status = 560;
+			outputResults.error = error.message;
+		}
+
+		return outputResults;
 	}
 
 };

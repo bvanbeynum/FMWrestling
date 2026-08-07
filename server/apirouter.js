@@ -572,4 +572,19 @@ router.post("/api/wrestlereventsbulksave", authAPI, async (request, response) =>
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 });
 
+router.get("/api/newwrestlerload", authAPI, async (requestObject, responseObject) => {
+	const executionResults = await api.newwrestlerLoad(requestObject.query.timespan, requestObject.serverPath);
+	responseObject.status(executionResults.status).json(executionResults.error ? { error: executionResults.error } : { loggedInUser: requestObject.user, ...executionResults.data });
+});
+
+router.post("/api/newwrestlersave", authAPI, async (requestObject, responseObject) => {
+	const executionResults = await api.newwrestlerSave(requestObject.body, requestObject.serverPath);
+	responseObject.status(executionResults.status).json(executionResults.error ? { error: executionResults.error } : executionResults.data);
+});
+
+router.post("/api/newwrestlerdelete", authAPI, async (requestObject, responseObject) => {
+	const executionResults = await api.newwrestlerDelete(requestObject.body.id || requestObject.query.id, requestObject.serverPath);
+	responseObject.status(executionResults.status).json(executionResults.error ? { error: executionResults.error } : executionResults.data);
+});
+
 export default router;

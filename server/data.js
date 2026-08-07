@@ -600,6 +600,164 @@ export default {
 		return output;
 	},
 
+	wrestlerNew: async (timespanDays = 3) => {
+		const startTimeMs = Date.now();
+		const outputResults = {};
+		const parsedDays = parseInt(timespanDays, 10) || 3;
+		const cutoffDate = new Date(Date.now() - (parsedDays * 24 * 60 * 60 * 1000));
+
+		try {
+			// Query 1: Fetch all new wrestlers created within the selected timespan
+			const newWrestlerRecords = await data.wrestler
+				.find({ created: { $gte: cutoffDate } })
+				.sort({ created: -1 })
+				.lean()
+				.exec();
+
+			console.log(`${ (Date.now() - startTimeMs) / 1000 }: Found ${ newWrestlerRecords.length } new wrestlers.`);
+
+			if (newWrestlerRecords.length === 0) {
+				outputResults.status = 200;
+				outputResults.data = {
+					newWrestlers: [],
+					summary: {
+						newWrestlerCount: 0,
+						lastWrestlerAddedDate: null,
+						potentialDuplicateCount: 0
+					}
+				};
+				return outputResults;
+			}
+
+			// Collect unique search teams across all new wrestlers
+			const searchTeamsSet = new Set();
+			for (const currentWrestler of newWrestlerRecords) {
+				for (const searchTeamItem of currentWrestler.searchTeams || []) {
+					if (searchTeamItem) {
+						searchTeamsSet.add(searchTeamItem);
+					}
+				}
+			}
+
+			const uniqueSearchTeams = Array.from(searchTeamsSet);
+
+			// Query 2: Fetch all candidate duplicate records sharing any search team in 1 bulk query
+			let candidatePoolRecords = [];
+			if (uniqueSearchTeams.length > 0) {
+				candidatePoolRecords = await data.wrestler
+					.find({ searchTeams: { $in: uniqueSearchTeams } })
+					.select({ _id: 1, sqlId: 1, name: 1, firstName: 1, firstInitial: 1, lastName: 1, lastInitial: 1, lastTeam: 1, created: 1, searchTeams: 1 })
+					.lean()
+					.exec();
+			}
+
+			console.log(`${ (Date.now() - startTimeMs) / 1000 }: Fetched candidate pool of ${ candidatePoolRecords.length } records.`);
+
+			// Index candidate pool by team for fast in-memory lookup
+			const candidateMapByTeam = new Map();
+			for (const candidateRecord of candidatePoolRecords) {
+				for (const teamName of candidateRecord.searchTeams || []) {
+					if (!candidateMapByTeam.has(teamName)) {
+						candidateMapByTeam.set(teamName, []);
+					}
+					candidateMapByTeam.get(teamName).push(candidateRecord);
+				}
+			}
+
+			// In-Memory Matching loop
+			const processedNewWrestlers = [];
+			let totalPotentialDuplicatesCount = 0;
+
+			for (const currentWrestler of newWrestlerRecords) {
+				const currentWrestlerId = currentWrestler._id ? currentWrestler._id.toString() : null;
+				const currentWrestlerSqlId = currentWrestler.sqlId;
+				const currentFirstName = (currentWrestler.firstName || "").toLowerCase().trim();
+				const currentFirstInitial = (currentWrestler.firstInitial || currentFirstName.charAt(0) || "").toLowerCase().trim();
+				const currentLastName = (currentWrestler.lastName || "").toLowerCase().trim();
+				const currentLastInitial = (currentWrestler.lastInitial || currentLastName.charAt(0) || "").toLowerCase().trim();
+
+				// Gather candidate pool for this wrestler's teams
+				const candidateCandidatesSet = new Map();
+				for (const teamName of currentWrestler.searchTeams || []) {
+					const matchingTeamCandidates = candidateMapByTeam.get(teamName) || [];
+					for (const candidateRecord of matchingTeamCandidates) {
+						if (candidateRecord.sqlId !== currentWrestlerSqlId) {
+							candidateCandidatesSet.set(candidateRecord.sqlId, candidateRecord);
+						}
+					}
+				}
+
+				// Filter candidates by name criteria
+				const matchingCandidateDuplicates = [];
+				for (const candidateRecord of candidateCandidatesSet.values()) {
+					const candidateFirstName = (candidateRecord.firstName || "").toLowerCase().trim();
+					const candidateFirstInitial = (candidateRecord.firstInitial || candidateFirstName.charAt(0) || "").toLowerCase().trim();
+					const candidateLastName = (candidateRecord.lastName || "").toLowerCase().trim();
+					const candidateLastInitial = (candidateRecord.lastInitial || candidateLastName.charAt(0) || "").toLowerCase().trim();
+
+					const isFirstNameAndLastInitialMatch = (currentFirstName && candidateFirstName && currentFirstName === candidateFirstName) &&
+						(currentLastInitial && candidateLastInitial && currentLastInitial === candidateLastInitial);
+
+					const isFirstInitialAndLastNameMatch = (currentFirstInitial && candidateFirstInitial && currentFirstInitial === candidateFirstInitial) &&
+						(currentLastName && candidateLastName && currentLastName === candidateLastName);
+
+					if (isFirstNameAndLastInitialMatch || isFirstInitialAndLastNameMatch) {
+						matchingCandidateDuplicates.push({
+							wrestlerId: candidateRecord._id ? candidateRecord._id.toString() : null,
+							id: candidateRecord._id ? candidateRecord._id.toString() : null,
+							sqlId: candidateRecord.sqlId,
+							name: candidateRecord.name,
+							firstName: candidateRecord.firstName,
+							lastName: candidateRecord.lastName,
+							lastTeam: candidateRecord.lastTeam,
+							created: candidateRecord.created,
+							searchTeams: candidateRecord.searchTeams
+						});
+					}
+				}
+
+				if (matchingCandidateDuplicates.length > 0) {
+					totalPotentialDuplicatesCount += matchingCandidateDuplicates.length;
+					const formattedWrestler = {
+						id: currentWrestlerId,
+						wrestlerId: currentWrestlerId,
+						wrestlerName: currentWrestler.name || `${ currentWrestler.firstName || "" } ${ currentWrestler.lastName || "" }`.trim(),
+						...currentWrestler,
+						candidates: matchingCandidateDuplicates,
+						potentialDuplicates: matchingCandidateDuplicates
+					};
+					processedNewWrestlers.push(formattedWrestler);
+				}
+			}
+
+			const executionDurationMs = Date.now() - startTimeMs;
+			console.log(`${ executionDurationMs / 1000 }: Completed in ${ executionDurationMs }ms for ${ newWrestlerRecords.length } new wrestlers (${ processedNewWrestlers.length } with candidates).`);
+
+			const newestWrestlerAddedDate = newWrestlerRecords.length > 0 ? newWrestlerRecords[0].created : null;
+
+			outputResults.status = 200;
+			outputResults.data = {
+				newWrestlers: processedNewWrestlers,
+				summary: {
+					newWrestlerCount: newWrestlerRecords.length,
+					lastWrestlerAddedDate: newestWrestlerAddedDate,
+					potentialDuplicateCount: totalPotentialDuplicatesCount
+				}
+			};
+		}
+		catch (error) {
+			console.log(`${ (Date.now() - startTimeMs) / 1000 }: Error in wrestlerNew: ${ error.message }`);
+			outputResults.status = 560;
+			outputResults.error = error.message;
+		}
+
+		return outputResults;
+	},
+
+	wrestlersNew: async (timespanDays = 3) => {
+		return await this.wrestlerNew(timespanDays);
+	},
+
 	schoolGet: async (userFilter = {}) => {
 		let filter = {},
 			select = {},
@@ -2442,5 +2600,102 @@ export default {
 
 		return output;
 	},
+
+	duplicateGet: async (filterParameters = {}) => {
+		const outputResults = {};
+		const queryFilter = {};
+
+		if (filterParameters.id) {
+			queryFilter["_id"] = mongoose.Types.ObjectId.isValid(filterParameters.id) ? filterParameters.id : null;
+		}
+
+		try {
+			const duplicateRecords = await data.duplicate.find(queryFilter).sort({ created: -1 }).lean().exec();
+			outputResults.status = 200;
+			outputResults.data = {
+				duplicates: duplicateRecords.map(({ _id, __v, ...remainingFields }) => ({ id: _id ? _id.toString() : null, ...remainingFields }))
+			};
+		}
+		catch (error) {
+			outputResults.status = 560;
+			outputResults.error = error.message;
+		}
+
+		return outputResults;
+	},
+
+	duplicateSave: async (saveRecord = {}) => {
+		const outputResults = {};
+
+		if (!saveRecord || !saveRecord.primary) {
+			outputResults.status = 550;
+			outputResults.error = "Missing record or primary wrestler details to save";
+			return outputResults;
+		}
+
+		try {
+			let savedRecord = null;
+			const timeStampNow = new Date();
+
+			if (saveRecord.id) {
+				savedRecord = await data.duplicate.findById(saveRecord.id).exec();
+				if (!savedRecord) {
+					outputResults.status = 561;
+					outputResults.error = "Duplicate record not found";
+					return outputResults;
+				}
+
+				savedRecord.primary = saveRecord.primary;
+				savedRecord.duplicates = saveRecord.duplicates || [];
+				savedRecord.modified = timeStampNow;
+				await savedRecord.save();
+			}
+			else {
+				const newDuplicateModel = new data.duplicate({
+					primary: saveRecord.primary,
+					duplicates: saveRecord.duplicates || [],
+					created: timeStampNow,
+					modified: timeStampNow
+				});
+				savedRecord = await newDuplicateModel.save();
+			}
+
+			const recordData = savedRecord.toObject ? savedRecord.toObject() : savedRecord;
+			const { _id, __v, ...remainingFields } = recordData;
+
+			outputResults.status = 200;
+			outputResults.data = {
+				duplicate: { id: _id ? _id.toString() : null, ...remainingFields }
+			};
+		}
+		catch (error) {
+			outputResults.status = 560;
+			outputResults.error = error.message;
+		}
+
+		return outputResults;
+	},
+
+	duplicateDelete: async (recordId) => {
+		const outputResults = {};
+
+		if (!recordId) {
+			outputResults.status = 550;
+			outputResults.error = "Missing duplicate record ID to delete";
+			return outputResults;
+		}
+
+		try {
+			await data.duplicate.deleteOne({ _id: recordId });
+			outputResults.status = 200;
+			outputResults.data = { status: "deleted", id: recordId };
+		}
+		catch (error) {
+			outputResults.status = 560;
+			outputResults.error = error.message;
+		}
+
+		return outputResults;
+	}
 
 };

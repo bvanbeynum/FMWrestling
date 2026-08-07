@@ -1,0 +1,533 @@
+/* Variables & Design Tokens matching Athletic Clarity system */
+:root {
+	--primary: #3246e5;
+	--primary-variant: #0f28d1;
+	--on-primary: #ffffff;
+	
+	--secondary: #ff0000;
+	--secondary-accent: #fd8b00;
+	
+	--background: #f8f9fa;
+	--surface: #ffffff;
+	--on-surface: #191c1d;
+	--on-surface-variant: #444655;
+	--inverse-surface: #2e3132;
+	--inverse-on-surface: #f0f1f2;
+	
+	--outline: #e1e3e4;
+	--outline-variant: #c5c5d8;
+	
+	--font-headers: 'Russo One', sans-serif;
+	--font-body: 'Roboto', sans-serif;
+	
+	--rounded-sm: 4px;
+	--rounded-md: 8px;
+}
+
+.newwrestler-container {
+	display: block;
+	width: 100%;
+	max-width: 1200px;
+	margin: 0 auto;
+	padding: 24px 24px 80px 24px;
+	box-sizing: border-box;
+}
+
+.page-header {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	border-bottom: 2px solid var(--outline);
+	padding-bottom: 16px;
+	margin-bottom: 24px;
+}
+
+.timespan-selector-wrapper {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	justify-content: center;
+}
+
+.timespan-selector-label {
+	font-family: var(--font-body);
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--on-surface-variant);
+}
+
+.timespan-dropdown-select {
+	font-family: var(--font-body);
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--primary);
+	background-color: var(--surface);
+	border: 1.5px solid var(--outline);
+	border-radius: var(--rounded-sm);
+	padding: 8px 16px;
+	cursor: pointer;
+	outline: none;
+	transition: border-color 0.15s ease;
+}
+
+.timespan-dropdown-select:focus {
+	border-color: var(--primary);
+}
+
+/* KPI Cards Grid */
+.kpis-grid {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 20px;
+	margin-bottom: 32px;
+}
+
+@media (max-width: 900px) {
+	.kpis-grid {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+@media (max-width: 600px) {
+	.kpis-grid {
+		grid-template-columns: 1fr;
+	}
+}
+
+.kpi-card {
+	background: var(--surface);
+	border: 1px solid var(--outline);
+	border-left: 6px solid var(--primary);
+	border-radius: var(--rounded-md);
+	padding: 16px 20px;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+.kpi-card.accent-card {
+	border-left-color: var(--secondary-accent);
+}
+
+.kpi-label {
+	font-family: var(--font-headers);
+	font-size: 12px;
+	color: var(--on-surface-variant);
+	letter-spacing: 0.5px;
+	margin-bottom: 6px;
+	text-transform: uppercase;
+}
+
+.kpi-value-text {
+	font-family: var(--font-headers);
+	font-size: 24px;
+	font-weight: 700;
+	color: var(--on-surface);
+	margin-bottom: 4px;
+}
+
+.kpi-sub-text {
+	font-family: var(--font-body);
+	font-size: 12px;
+	color: var(--on-surface-variant);
+}
+
+/* Section Titles */
+.section-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 16px;
+}
+
+.section-title {
+	font-family: var(--font-headers);
+	font-size: 20px;
+	color: var(--on-surface);
+	text-transform: uppercase;
+	margin: 0;
+}
+
+/* Existing Duplicates Section */
+.existing-duplicates-container {
+	background: var(--surface);
+	border: 1px solid var(--outline);
+	border-radius: var(--rounded-md);
+	padding: 20px;
+	margin-bottom: 36px;
+}
+
+.existing-duplicates-list {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	margin: 30px 0px;
+}
+
+.existing-duplicate-card {
+	background: var(--surface);
+	border: 1.5px solid var(--outline);
+	border-radius: var(--rounded-md);
+	padding: 16px;
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	gap: 16px;
+}
+
+@media (max-width: 768px) {
+	.existing-duplicate-card {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+}
+
+.existing-duplicate-details {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	flex: 1;
+}
+
+.primary-wrestler-info {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	font-family: var(--font-body);
+	font-size: 15px;
+	font-weight: 700;
+	color: var(--primary);
+}
+
+.primary-badge {
+	background-color: var(--primary);
+	color: var(--on-primary);
+	font-family: var(--font-headers);
+	font-size: 10px;
+	padding: 3px 8px;
+	border-radius: var(--rounded-sm);
+	text-transform: uppercase;
+}
+
+.duplicates-linked-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+	margin-top: 4px;
+}
+
+.duplicate-chip {
+	background-color: var(--surface);
+	border: 1px solid var(--outline-variant);
+	border-radius: var(--rounded-sm);
+	padding: 4px 10px;
+	font-family: var(--font-body);
+	font-size: 13px;
+	color: var(--on-surface-variant);
+}
+
+.button-remove-duplicate {
+	background-color: #fee2e2;
+	color: #dc2626;
+	border: 1px solid #fca5a5;
+	border-radius: var(--rounded-sm);
+	padding: 8px 16px;
+	font-family: var(--font-body);
+	font-size: 13px;
+	font-weight: 700;
+	cursor: pointer;
+	transition: all 0.15s ease;
+	white-space: nowrap;
+}
+
+.button-remove-duplicate:hover {
+	background-color: #fca5a5;
+	color: #991b1b;
+}
+
+/* New Wrestler Duplicate Cards List */
+.new-wrestlers-list {
+	display: flex;
+	flex-direction: column;
+	gap: 24px;
+}
+
+.wrestler-duplicate-group-card {
+	background: var(--surface);
+	border: 1.5px solid var(--outline);
+	border-radius: var(--rounded-md);
+	padding: 20px;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+	transition: opacity 0.2s ease, border-color 0.2s ease;
+}
+
+.wrestler-duplicate-group-card.submitted-card {
+	opacity: 0.55;
+	background-color: #f3f4f6;
+	border-color: #d1d5db;
+}
+
+.group-card-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	border-bottom: 1.5px solid var(--outline);
+	padding-bottom: 12px;
+	margin-bottom: 16px;
+}
+
+.wrestler-title-info {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.wrestler-main-name {
+	font-family: var(--font-headers);
+	font-size: 20px;
+	color: var(--on-surface);
+}
+
+.wrestler-sub-team {
+	font-family: var(--font-body);
+	font-size: 14px;
+	color: var(--on-surface-variant);
+	font-weight: 500;
+}
+
+.wrestler-sql-id {
+	font-family: var(--font-body);
+	font-size: 12px;
+	color: #6b7280;
+}
+
+.submitted-status-badge {
+	background-color: #10b981;
+	color: #ffffff;
+	font-family: var(--font-headers);
+	font-size: 11px;
+	padding: 4px 10px;
+	border-radius: var(--rounded-sm);
+	text-transform: uppercase;
+}
+
+/* Candidate Wrestlers Selection Matrix */
+.candidate-matrix-table {
+	width: 100%;
+	border-collapse: collapse;
+	margin-bottom: 16px;
+}
+
+.candidate-matrix-table th {
+	font-family: var(--font-headers);
+	font-size: 11px;
+	color: var(--on-surface-variant);
+	text-transform: uppercase;
+	text-align: left;
+	padding: 8px 12px;
+	border-bottom: 1.5px solid var(--outline);
+}
+
+.candidate-matrix-table td {
+	font-family: var(--font-body);
+	font-size: 12px;
+	color: var(--on-surface);
+	padding: 10px 12px;
+	border-bottom: 1px solid var(--outline);
+}
+
+.candidate-matrix-table tr.selected-row {
+	background-color: #eff6ff;
+}
+
+.wrestler-link {
+	color: var(--primary);
+	text-decoration: none;
+	font-weight: 600;
+}
+
+.wrestler-link:hover {
+	text-decoration: underline;
+}
+
+.submit-actions-row {
+	display: flex;
+	justify-content: flex-end;
+	align-items: center;
+	margin-top: 12px;
+}
+
+.button-submit-duplicate {
+	background-color: var(--primary);
+	color: var(--on-primary);
+	border: none;
+	border-radius: var(--rounded-sm);
+	padding: 6px 16px;
+	font-family: var(--font-headers);
+	font-size: 13px;
+	text-transform: uppercase;
+	cursor: pointer;
+	transition: background-color 0.15s ease;
+}
+
+.button-submit-duplicate:hover:not(:disabled) {
+	background-color: var(--primary-variant);
+}
+
+.button-submit-duplicate:disabled {
+	background-color: #9ca3af;
+	cursor: not-allowed;
+}
+
+.no-records-message {
+	font-family: var(--font-body);
+	font-size: 14px;
+	color: var(--on-surface-variant);
+	text-align: center;
+	padding: 24px;
+}
+
+/* Responsive Desktop vs Mobile Display Rules */
+.desktop-only {
+	display: table;
+}
+
+.mobile-only {
+	display: none;
+}
+
+@media (max-width: 768px) {
+	.desktop-only {
+		display: none !important;
+	}
+
+	.mobile-only {
+		display: flex !important;
+		flex-direction: column;
+		gap: 12px;
+	}
+
+	.newwrestler-container {
+		padding: 16px 12px 60px 12px;
+	}
+
+	.page-header {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 12px;
+	}
+
+	.wrestler-duplicate-group-card {
+		padding: 14px;
+	}
+
+	.candidate-mobile-card {
+		background: var(--background);
+		border: 1px solid var(--outline);
+		border-radius: var(--rounded-md);
+		padding: 12px 14px;
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		transition: background-color 0.15s ease, border-color 0.15s ease;
+	}
+
+	.candidate-mobile-card.selected-card {
+		background-color: #eff6ff;
+		border-color: #93c5fd;
+	}
+
+	.mobile-card-top {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-start;
+		padding-bottom: 8px;
+		border-bottom: 1px solid var(--outline-variant);
+	}
+
+	.mobile-selection-controls {
+		display: flex;
+		align-items: center;
+		gap: 16px;
+		padding-top: 4px;
+	}
+
+	.mobile-control-label {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		font-family: var(--font-body);
+		font-size: 13px;
+		font-weight: 600;
+		color: var(--on-surface);
+		cursor: pointer;
+		margin: 0;
+	}
+
+	.mobile-control-label input[type="radio"],
+	.mobile-control-label input[type="checkbox"] {
+		cursor: pointer;
+		width: 16px;
+		height: 16px;
+	}
+
+	.mobile-card-info {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+
+	.mobile-card-meta {
+		font-family: var(--font-body);
+		font-size: 12px;
+		color: var(--on-surface-variant);
+	}
+
+	.submit-actions-row {
+		justify-content: stretch;
+	}
+
+	.button-submit-duplicate {
+		width: 100%;
+	}
+}
+
+.navItem {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	color: var(--on-surface-variant);
+	font-family: var(--font-body);
+	font-size: 11px;
+	font-weight: 500;
+	cursor: pointer;
+	text-decoration: none;
+	flex: 1;
+	padding: 6px 0;
+	transition: color 0.2s ease;
+	position: relative;
+}
+
+.navItem.active {
+	color: var(--primary);
+	font-weight: 700;
+}
+
+.navItem svg {
+	margin-bottom: 3px;
+}
+
+.notification-blue-dot {
+	position: absolute;
+	top: 6px;
+	right: calc(50% - 16px);
+	width: 8px;
+	height: 8px;
+	background-color: var(--primary);
+	border-radius: 50%;
+	border: 1.5px solid var(--surface);
+}

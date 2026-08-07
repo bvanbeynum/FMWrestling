@@ -334,6 +334,23 @@ export default {
 		}],
 		created: Date,
 		modified: Date
+	}),
+
+	duplicate: mongoose.model("duplicate", {
+		primary: {
+			wrestlerId: String,
+			sqlId: Number,
+			lastTeam: String,
+			wrestlerName: String
+		},
+		duplicates: [{
+			wrestlerId: String,
+			sqlId: Number,
+			lastTeam: String,
+			wrestlerName: String
+		}],
+		created: Date,
+		modified: Date
 	})
 	
 };

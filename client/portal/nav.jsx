@@ -21,6 +21,9 @@ const Nav = props => {
 		else if (/(parentemail|aiemail)/i.test(window.location)) {
 			setSubExpanded("parent");
 		}
+		else if (/(newwrestler)/i.test(window.location)) {
+			setSubExpanded("data");
+		}
 	}, []);
 
 	useEffect(() => {
@@ -196,6 +199,25 @@ const Nav = props => {
 				<span>Roles</span>
 			</li>
 
+			</>
+			: ""
+			}
+
+			{
+			privileges.includes("dataManage") ?
+			<>
+			<li role="button" className="button" onClick={ () => setSubExpanded(previousExpanded => previousExpanded === "data" ? null : "data") } aria-label="Data">
+				{/* Database icon */}
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960">
+					<path d="M480-120q-150 0-255-33.5T120-240v-480q0-54 105-87t255-33q150 0 255 33t105 87v480q0 54-105 87.5T480-120Zm0-640q112 0 196-20.5T760-800q-20-8-104-28.5T480-848q-112 0-196 20.5T200-800q20 8 104 28.5T480-760Zm0 180q44 0 94.5-5.5T668-601q57-13 92-30.5v-104q-24 16-83 31t-197 15q-114 0-173-15t-83-31v104q35 17.5 92 30.5t173 13.5Zm0 180q44 0 94.5-5.5T668-421q57-13 92-30.5v-104q-24 16-83 31t-197 15q-114 0-173-15t-83-31v104q35 17.5 92 30.5t173 13.5Zm0 180q44 0 94.5-5.5T668-241q57-13 92-30.5v-104q-24 16-83 31t-197 15q-114 0-173-15t-83-31v104q35 17.5 92 30.5t173 13.5Z"/>
+				</svg>
+
+				<span>Data</span>
+			</li>
+
+			<li role="button" onClick={ () => window.location = "/portal/newwrestler.html" } className={`button sub ${ subExpanded === "data" ? "active" : "" }`} aria-label="New Wrestler">
+				<span>New Wrestler</span>
+			</li>
 			</>
 			: ""
 			}

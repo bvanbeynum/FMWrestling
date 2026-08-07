@@ -70,6 +70,7 @@ header {
 header h1 {
 	flex: 1;
 	color: rgb(10 66 115);
+	margin-top: 15px;
 }
 
 header h1.subTitle {
