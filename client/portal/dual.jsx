@@ -461,7 +461,7 @@ const Dual = () => {
 					console.error("Save error:", responseData.error);
 					alert("Failed to save dual meet.");
 				} else {
-					window.location.href = "/portal/schedule.html";
+					window.location.href = "/portal/teamschedule.html";
 				}
 			})
 			.catch(error => console.error("Save catch error:", error));
@@ -471,7 +471,7 @@ const Dual = () => {
 		if (window.history.length > 1) {
 			window.history.back();
 		} else {
-			window.location.href = "/portal/schedule.html";
+			window.location.href = "/portal/teamschedule.html";
 		}
 	};
 
@@ -488,7 +488,7 @@ const Dual = () => {
 					console.error("Delete error:", data.error);
 					alert("Failed to delete dual meet.");
 				} else {
-					window.location.href = "/portal/schedule.html";
+					window.location.href = "/portal/teamschedule.html";
 				}
 			})
 			.catch(err => console.error("Delete catch error:", err));

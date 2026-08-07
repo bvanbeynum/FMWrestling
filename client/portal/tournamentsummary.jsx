@@ -157,7 +157,7 @@ const TournamentSummary = () => {
 				<div className="container">
 					<div className="emptyState">
 						<h3>No event details could be found.</h3>
-						<a href="/portal/schedule.html">Return to Schedule</a>
+						<a href="/portal/allschedule.html">Return to Schedule</a>
 					</div>
 				</div>
 			</div>

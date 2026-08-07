@@ -72,15 +72,15 @@ router.post("/api/postsave", authAPI, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 });
 
-router.get("/api/scheduleload", authAPI, async (request, response) => {
-	const results = await api.scheduleLoad(request.serverPath, request.query.startdate, request.query.enddate, request.query.state);
-
-	if (results.error) {
-		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "6480db2b4d7f52ba05e8180d", message: `${ results.status }: ${results.error}` }}).then();
-	}
-	
+router.get("/api/teamscheduleload", authAPI, async (request, response) => {
+	const results = await api.teamscheduleLoad(request.serverPath, request.query.startdate, request.query.enddate);
 	const output = { loggedInUser: request.user, ...results.data };
+	response.status(results.status).json(results.error ? { error: results.error } : output);
+});
 
+router.get("/api/allscheduleload", authAPI, async (request, response) => {
+	const results = await api.allscheduleLoad(request.serverPath, request.query.startdate, request.query.enddate, request.query.state);
+	const output = { loggedInUser: request.user, ...results.data };
 	response.status(results.status).json(results.error ? { error: results.error } : output);
 });
 
@@ -480,21 +480,21 @@ router.post("/api/duplicatesmerge", authAPI, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : results.data );
 });
 
-router.post("/api/schedulesave", authAPI, async (request, response) => {
+router.post("/api/teamschedulesave", authAPI, async (request, response) => {
 	if (!request.user || !request.user.privileges || !request.user.privileges.includes("scheduleManage")) {
 		return response.status(401).json({ error: "Unauthorized" });
 	}
 
-	const results = await api.scheduleSave(request.body.teamEvent, request.body.opponent, request.serverPath);
+	const results = await api.teamscheduleSave(request.body.teamEvent, request.body.opponent, request.serverPath);
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 });
 
-router.post("/api/teameventdelete", authAPI, async (request, response) => {
+router.post("/api/teamscheduledelete", authAPI, async (request, response) => {
 	if (!request.user || !request.user.privileges || !request.user.privileges.includes("scheduleManage")) {
 		return response.status(401).json({ error: "Unauthorized" });
 	}
 
-	const results = await api.teamEventDelete(request.body.id, request.serverPath);
+	const results = await api.teamscheduleDelete(request.body.id, request.serverPath);
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 });
 

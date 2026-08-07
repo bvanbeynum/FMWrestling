@@ -5,7 +5,8 @@ export default {
 		index: "./client/public/index.jsx",
 		portal: "./client/portal/index.jsx",
 		posts: "./client/portal/posts.jsx",
-		schedule: "./client/portal/schedule.jsx",
+		teamschedule: "./client/portal/teamschedule.jsx",
+		allschedule: "./client/portal/allschedule.jsx",
 		users: "./client/portal/users.jsx",
 		roles: "./client/portal/roles.jsx",
 		requests: "./client/portal/requests.jsx",
@@ -115,13 +116,23 @@ export default {
 			templateContent: "<html><body><div id='root'></div></body></html>"
 		}),
 		new HtmlWebpackPlugin({ 
-			filename: "./portal/schedule.html",
-			title: "Fort Mill Wrestling - Portal",
+			filename: "./portal/teamschedule.html",
+			title: "Fort Mill Wrestling - Team Schedule",
 			favicon: "./client/media/favicon.ico",
 			meta: {
 				viewport: "width=device-width, initial-scale=1"
 			},
-			chunks: [ "schedule" ],
+			chunks: [ "teamschedule" ],
+			templateContent: "<html><body><div id='root'></div></body></html>"
+		}),
+		new HtmlWebpackPlugin({ 
+			filename: "./portal/allschedule.html",
+			title: "Fort Mill Wrestling - All Events Schedule",
+			favicon: "./client/media/favicon.ico",
+			meta: {
+				viewport: "width=device-width, initial-scale=1"
+			},
+			chunks: [ "allschedule" ],
 			templateContent: "<html><body><div id='root'></div></body></html>"
 		}),
 		new HtmlWebpackPlugin({ 

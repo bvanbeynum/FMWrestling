@@ -360,50 +360,68 @@ export default {
 		}
 	},
 
-	scheduleLoad: async (serverPath, startDate, endDate, state) => {
+	teamscheduleLoad: async (serverPath, startDate, endDate) => {
 		const output = { data: {} };
-		let eventParams = [];
-
-		if (startDate && endDate) {
-			eventParams.push(`startdate=${ startDate }`);
-			eventParams.push(`enddate=${ endDate }`);
-		}
-		if (state) {
-			eventParams.push(`state=${ state }`);
-		}
-
-		const eventSelect = "sqlId,eventSystem,systemId,eventType,name,date,endDate,location,state,hasMatches";
-
-		eventParams.push(`select=${ eventSelect }`);
-
-		const eventUrl = `${ serverPath }/data/event?${ eventParams.join("&") }`;
 		const teamEventUrl = `${ serverPath }/data/teamevent?${ startDate && endDate ? `startdate=${startDate}&enddate=${endDate}` : "" }`;
+		const eventSelect = "sqlId,eventSystem,systemId,eventType,name,date,endDate,location,state,hasMatches";
+		const eventUrl = `${ serverPath }/data/event?select=${ eventSelect }`;
 
 		try {
-			// 1. Fetch general events
-			const clientResponse = await client.get(eventUrl);
-			output.data.events = clientResponse.body.events;
-
-			// 2. Fetch team events
 			const teamEventResponse = await client.get(teamEventUrl);
 			output.data.teamEvents = teamEventResponse.body.teamEvents || [];
 
-			// 5. Fetch schools / opponent options directly
 			try {
 				const schoolResponse = await client.get(`${ serverPath }/data/school`);
 				output.data.schools = (schoolResponse.body.schools || [])
-					.map(school => ({
-						id: school.id || school._id,
-						name: school.name,
-						classification: school.classification,
-						region: school.region
+					.map(schoolRecord => ({
+						id: schoolRecord.id || schoolRecord._id,
+						name: schoolRecord.name,
+						classification: schoolRecord.classification,
+						region: schoolRecord.region
 					}));
 			} catch (schoolError) {
-				console.error("Error preloading schools in scheduleLoad:", schoolError.message);
+				console.error("Error loading schools in teamscheduleLoad:", schoolError.message);
 				output.data.schools = [];
 			}
+
+			try {
+				const eventResponse = await client.get(eventUrl);
+				output.data.events = eventResponse.body.events || [];
+			} catch (eventError) {
+				console.error("Error loading general events in teamscheduleLoad:", eventError.message);
+				output.data.events = [];
+			}
+		} catch (error) {
+			output.status = 562;
+			output.error = error.message;
+			return output;
 		}
-		catch (error) {
+		
+		output.status = 200;		
+		return output;
+	},
+
+	allscheduleLoad: async (serverPath, startDate, endDate, state) => {
+		const output = { data: {} };
+		let eventParameters = [];
+
+		if (startDate && endDate) {
+			eventParameters.push(`startdate=${ startDate }`);
+			eventParameters.push(`enddate=${ endDate }`);
+		}
+		if (state) {
+			eventParameters.push(`state=${ state }`);
+		}
+
+		const eventSelect = "sqlId,eventSystem,systemId,eventType,name,date,endDate,location,state,hasMatches";
+		eventParameters.push(`select=${ eventSelect }`);
+
+		const eventUrl = `${ serverPath }/data/event?${ eventParameters.join("&") }`;
+
+		try {
+			const eventResponse = await client.get(eventUrl);
+			output.data.events = eventResponse.body.events || [];
+		} catch (error) {
 			output.status = 562;
 			output.error = error.message;
 			return output;
@@ -2387,38 +2405,38 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 		return output;
 	},
 
-	scheduleSave: async (teamEvent, opponentName, serverPath) => {
+	teamscheduleSave: async (teamEvent, opponentName, serverPath) => {
 		const output = {};
 
 		// Extract unshifted date string YYYY-MM-DD
-		let dateString = "";
+		let dateFormatted = "";
 		if (teamEvent.date) {
-			const str = String(teamEvent.date).trim();
-			const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
-			if (match) {
-				dateString = `${match[1]}-${match[2]}-${match[3]}`;
+			const dateString = String(teamEvent.date).trim();
+			const matchPattern = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/);
+			if (matchPattern) {
+				dateFormatted = `${matchPattern[1]}-${matchPattern[2]}-${matchPattern[3]}`;
 			} else {
-				const dObj = new Date(teamEvent.date);
-				const year = dObj.getUTCFullYear();
-				const month = String(dObj.getUTCMonth() + 1).padStart(2, '0');
-				const day = String(dObj.getUTCDate()).padStart(2, '0');
-				dateString = `${year}-${month}-${day}`;
+				const dateObject = new Date(teamEvent.date);
+				const yearValue = dateObject.getUTCFullYear();
+				const monthValue = String(dateObject.getUTCMonth() + 1).padStart(2, '0');
+				const dayValue = String(dateObject.getUTCDate()).padStart(2, '0');
+				dateFormatted = `${yearValue}-${monthValue}-${dayValue}`;
 			}
 		}
 
-		let hours = "00";
-		let minutes = "00";
+		let hoursFormatted = "00";
+		let minutesFormatted = "00";
 		if (teamEvent.startTime) {
-			const [time, modifier] = teamEvent.startTime.split(' ');
-			let [h, m] = time.split(':');
-			let hNum = parseInt(h, 10);
-			if (modifier === 'PM' && hNum < 12) hNum += 12;
-			if (modifier === 'AM' && hNum === 12) hNum = 0;
-			hours = String(hNum).padStart(2, '0');
-			minutes = String(m || "00").padStart(2, '0');
+			const [timePart, periodModifier] = teamEvent.startTime.split(' ');
+			let [hourPart, minutePart] = timePart.split(':');
+			let hourNumber = parseInt(hourPart, 10);
+			if (periodModifier === 'PM' && hourNumber < 12) hourNumber += 12;
+			if (periodModifier === 'AM' && hourNumber === 12) hourNumber = 0;
+			hoursFormatted = String(hourNumber).padStart(2, '0');
+			minutesFormatted = String(minutePart || "00").padStart(2, '0');
 		}
 
-		const combinedDateTime = dateString ? `${dateString}T${hours}:${minutes}:00.000Z` : null;
+		const combinedDateTime = dateFormatted ? `${dateFormatted}T${hoursFormatted}:${minutesFormatted}:00.000Z` : null;
 		if (combinedDateTime) {
 			teamEvent.date = combinedDateTime;
 		}
@@ -2464,7 +2482,7 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 		return output;
 	},
 
-	teamEventDelete: async (recordId, serverPath) => {
+	teamscheduleDelete: async (recordId, serverPath) => {
 		const output = {};
 		try {
 			const deleteResponse = await client.delete(`${ serverPath }/data/teamevent?id=${ recordId }`);
