@@ -196,10 +196,6 @@ const Nav = props => {
 				<span>Roles</span>
 			</li>
 
-			<li role="button" onClick={ () => window.location = "/portal/duplicates.html" } className={`button sub ${ subExpanded === "user" ? "active" : "" }`}>
-				<span>Duplicates</span>
-			</li>
-
 			</>
 			: ""
 			}

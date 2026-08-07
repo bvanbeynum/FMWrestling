@@ -438,28 +438,6 @@ router.post("/api/dualdelete", authAPI, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : results.data );
 });
 
-router.get("/api/duplicatesload", authAPI, async (request, response) => {
-	const results = await api.duplicatesLoad();
-
-	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
-});
-
-router.get("/api/duplicatessearch", authAPI, async (request, response) => {
-	const results = await api.duplicatesSearch(request.query.dayspast, request.serverPath);
-
-	response.status(results.status).json(results.error ? { error: results.error } : results.data );
-});
-
-router.post("/api/duplicatesmerge", authAPI, async (request, response) => {
-	const results = await api.duplicatesMerge(request.body.duplicatesets, request.serverPath);
-
-	if (results.error) {
-		console.log(`Error ${results.status}: ${ results.error }`);
-	}
-
-	response.status(results.status).json(results.error ? { error: results.error } : results.data );
-});
-
 router.post("/api/teamschedulesave", authAPI, async (request, response) => {
 	if (!request.user || !request.user.privileges || !request.user.privileges.includes("scheduleManage")) {
 		return response.status(401).json({ error: "Unauthorized" });

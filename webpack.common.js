@@ -14,7 +14,6 @@ export default {
 		opponentEvent: "./client/portal/opponentevent.jsx",
 		wrestlerSearch: "./client/portal/wrestlersearch.jsx",
 		wrestler: "./client/portal/wrestler.jsx",
-		duplicates: "./client/portal/duplicates.jsx",
 		noaccess: "./client/portal/noaccess.jsx",
 		tournamentsummary: "./client/portal/tournamentsummary.jsx",
 		dualreport: "./client/portal/dualreport.jsx",
@@ -191,16 +190,6 @@ export default {
 				viewport: "width=device-width, initial-scale=1"
 			},
 			chunks: [ "wrestlerreport" ],
-			templateContent: "<html><body><div id='root'></div></body></html>"
-		}),
-		new HtmlWebpackPlugin({ 
-			filename: "./portal/duplicates.html",
-			title: "Fort Mill Wrestling - Duplicates",
-			favicon: "./client/media/favicon.ico",
-			meta: {
-				viewport: "width=device-width, initial-scale=1"
-			},
-			chunks: [ "duplicates" ],
 			templateContent: "<html><body><div id='root'></div></body></html>"
 		}),
 		new HtmlWebpackPlugin({ 
