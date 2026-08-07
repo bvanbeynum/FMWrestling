@@ -20,7 +20,8 @@ export default {
 		parentemail: "./client/portal/parentemail.jsx",
 		aiemail: "./client/portal/aiemail.jsx",
 		wrestlerreport: "./client/portal/wrestlerreport.jsx",
-		newwrestler: "./client/portal/newwrestler.jsx"
+		newwrestler: "./client/portal/newwrestler.jsx",
+		duplicates: "./client/portal/duplicates.jsx"
 	},
 	plugins: [
 		new HtmlWebpackPlugin({ 
@@ -201,6 +202,16 @@ export default {
 				viewport: "width=device-width, initial-scale=1"
 			},
 			chunks: [ "newwrestler" ],
+			templateContent: "<html><body><div id='root'></div></body></html>"
+		}),
+		new HtmlWebpackPlugin({ 
+			filename: "./portal/duplicates.html",
+			title: "Fort Mill Wrestling - Duplicates",
+			favicon: "./client/media/favicon.ico",
+			meta: {
+				viewport: "width=device-width, initial-scale=1"
+			},
+			chunks: [ "duplicates" ],
 			templateContent: "<html><body><div id='root'></div></body></html>"
 		}),
 		new HtmlWebpackPlugin({ 

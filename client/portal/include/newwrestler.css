@@ -156,7 +156,7 @@
 	border: 1px solid var(--outline);
 	border-radius: var(--rounded-md);
 	padding: 20px;
-	margin-bottom: 36px;
+	margin: 36px 0px;
 }
 
 .existing-duplicates-list {

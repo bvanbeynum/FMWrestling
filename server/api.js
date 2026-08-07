@@ -3018,18 +3018,32 @@ Instructions for response:
 
 	newwrestlerLoad: async (timespanDays = 3, serverPath) => {
 		const outputResults = {};
+		const parsedDays = parseInt(timespanDays, 10) || 3;
+		const cutoffDate = new Date(Date.now() - (parsedDays * 24 * 60 * 60 * 1000));
 
 		try {
-			const wrestlersNewResponse = await client.get(`${ serverPath }/data/wrestlernew?timespan=${ timespanDays }`);
-			const duplicatesResponse = await client.get(`${ serverPath }/data/duplicate`);
+			// Step 1: Call data layer wrestler (get) with createdSince parameter
+			const wrestlerResponse = await client.get(`${ serverPath }/data/wrestler?createdsince=${ cutoffDate.toISOString() }`);
+			const wrestlers = wrestlerResponse.body?.wrestlers || wrestlerResponse.body || [];
 
-			const newWrestlersList = wrestlersNewResponse.body?.newWrestlers || [];
+			// Step 2: Extract list of wrestler IDs
+			const wrestlerIds = wrestlers
+				.map(wrestlerRecord => wrestlerRecord._id || wrestlerRecord.id);
+
+			// Step 3: Fetch duplicates for target wrestler IDs from data layer function wrestlerDuplicates
+			let wrestlersWithDuplicatesList = [];
+			if (wrestlerIds.length > 0) {
+				const duplicatesSearchResponse = await client.post(`${ serverPath }/data/wrestlerduplicates`, {
+					wrestlerids: wrestlerIds
+				});
+				wrestlersWithDuplicatesList = duplicatesSearchResponse.body?.wrestlers || [];
+			}
+
+			// Step 4: Fetch existing saved duplicates
+			const duplicatesResponse = await client.get(`${ serverPath }/data/duplicate`);
 			const existingDuplicates = duplicatesResponse.body?.duplicates || [];
-			const summaryMetrics = {
-				newWrestlerCount: newWrestlersList.length,
-				lastWrestlerAddedDate: newWrestlersList.map(wrestler => wrestler.lastEvent?.date).sort((wrestlerA, wrestlerB) => new Date(wrestlerB) - new Date(wrestlerA)).find(() => true)
-			};
-			
+
+			// Index saved wrestler SQL IDs
 			const savedWrestlerSqlIds = new Set();
 			for (const duplicateRecord of existingDuplicates) {
 				if (duplicateRecord.primary?.sqlId) {
@@ -3042,13 +3056,26 @@ Instructions for response:
 				}
 			}
 
-			const processedNewWrestlers = newWrestlersList.map(wrestlerItem => {
-				const isAlreadySubmitted = savedWrestlerSqlIds.has(wrestlerItem.sqlId);
-				return {
-					...wrestlerItem,
-					isSubmitted: isAlreadySubmitted
-				};
-			});
+			let totalPotentialDuplicatesCount = 0;
+			const processedNewWrestlers = wrestlersWithDuplicatesList
+				.filter(wrestlerItem => (wrestlerItem.potentialDuplicates || wrestlerItem.candidates || []).length > 0)
+				.map(wrestlerItem => {
+					const candidateList = wrestlerItem.potentialDuplicates || wrestlerItem.candidates || [];
+					totalPotentialDuplicatesCount += candidateList.length;
+					const isAlreadySubmitted = savedWrestlerSqlIds.has(wrestlerItem.sqlId);
+					return {
+						...wrestlerItem,
+						isSubmitted: isAlreadySubmitted
+					};
+				});
+
+			const newestWrestlerAddedDate = wrestlers.length > 0 ? wrestlers[0].created : null;
+
+			const summaryMetrics = {
+				newWrestlerCount: wrestlers.length,
+				lastWrestlerAddedDate: newestWrestlerAddedDate,
+				potentialDuplicateCount: totalPotentialDuplicatesCount
+			};
 
 			outputResults.status = 200;
 			outputResults.data = {

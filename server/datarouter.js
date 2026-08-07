@@ -803,47 +803,47 @@ router.post("/data/wrestlerevent/bulk", authInternal, async (request, response) 
 	}
 });
 
-router.get("/data/wrestlernew", authInternal, async (requestObject, responseObject) => {
+router.post("/data/wrestlerduplicates", authInternal, async (request, response) => {
 	try {
-		const executionResults = await data.wrestlerNew(requestObject.query.timespan);
-		responseObject.status(executionResults.status).json(executionResults.error ? { error: executionResults.error } : executionResults.data);
-		responseObject.end();
+		const executionResults = await data.wrestlerDuplicates(request.body.wrestlerids);
+		response.status(executionResults.status).json(executionResults.error ? { error: executionResults.error } : executionResults.data);
+		response.end();
 	}
 	catch (error) {
-		responseObject.status(570).json({ error: error.message });
+		response.status(570).json({ error: error.message });
 	}
 });
 
-router.get("/data/duplicate", authInternal, async (requestObject, responseObject) => {
+router.get("/data/duplicate", authInternal, async (request, response) => {
 	try {
-		const executionResults = await data.duplicateGet({ id: requestObject.query.id });
-		responseObject.status(executionResults.status).json(executionResults.error ? { error: executionResults.error } : executionResults.data);
-		responseObject.end();
+		const executionResults = await data.duplicateGet({ id: request.query.id });
+		response.status(executionResults.status).json(executionResults.error ? { error: executionResults.error } : executionResults.data);
+		response.end();
 	}
 	catch (error) {
-		responseObject.status(570).json({ error: error.message });
+		response.status(570).json({ error: error.message });
 	}
 });
 
-router.post("/data/duplicate", authInternal, async (requestObject, responseObject) => {
+router.post("/data/duplicate", authInternal, async (request, response) => {
 	try {
-		const executionResults = await data.duplicateSave(requestObject.body.duplicate);
-		responseObject.status(executionResults.status).json(executionResults.error ? { error: executionResults.error } : executionResults.data);
-		responseObject.end();
+		const executionResults = await data.duplicateSave(request.body.duplicate);
+		response.status(executionResults.status).json(executionResults.error ? { error: executionResults.error } : executionResults.data);
+		response.end();
 	}
 	catch (error) {
-		responseObject.status(570).json({ error: error.message });
+		response.status(570).json({ error: error.message });
 	}
 });
 
-router.delete("/data/duplicate", authInternal, async (requestObject, responseObject) => {
+router.delete("/data/duplicate", authInternal, async (request, response) => {
 	try {
-		const executionResults = await data.duplicateDelete(requestObject.query.id);
-		responseObject.status(executionResults.status).json(executionResults.error ? { error: executionResults.error } : executionResults.data);
-		responseObject.end();
+		const executionResults = await data.duplicateDelete(request.query.id);
+		response.status(executionResults.status).json(executionResults.error ? { error: executionResults.error } : executionResults.data);
+		response.end();
 	}
 	catch (error) {
-		responseObject.status(570).json({ error: error.message });
+		response.status(570).json({ error: error.message });
 	}
 });
 

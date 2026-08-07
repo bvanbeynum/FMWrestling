@@ -1,7 +1,7 @@
 import data from "./schema.js";
 import mongoose from "mongoose";
 
-export default {
+const dataFunctionsObject = {
 
 	userGet: async (userFilter = {}) => {
 		const filter = {},
@@ -600,58 +600,49 @@ export default {
 		return output;
 	},
 
-	wrestlerNew: async (timespanDays = 3) => {
+	wrestlerDuplicates: async (wrestlerIds = []) => {
 		const startTimeMs = Date.now();
 		const outputResults = {};
-		const parsedDays = parseInt(timespanDays, 10) || 3;
-		const cutoffDate = new Date(Date.now() - (parsedDays * 24 * 60 * 60 * 1000));
 
 		try {
-			// Query 1: Fetch all new wrestlers created within the selected timespan
-			const newWrestlerRecords = await data.wrestler
-				.find({ created: { $gte: cutoffDate } })
-				.sort({ created: -1 })
-				.lean()
-				.exec();
+			let targetWrestlerIdsList = [];
+			if (wrestlerIds && Array.isArray(wrestlerIds)) {
+				targetWrestlerIdsList = wrestlerIds;
+			}
 
-			console.log(`${ (Date.now() - startTimeMs) / 1000 }: Found ${ newWrestlerRecords.length } new wrestlers.`);
-
-			if (newWrestlerRecords.length === 0) {
+			if (targetWrestlerIdsList.length === 0) {
 				outputResults.status = 200;
-				outputResults.data = {
-					newWrestlers: [],
-					summary: {
-						newWrestlerCount: 0,
-						lastWrestlerAddedDate: null,
-						potentialDuplicateCount: 0
-					}
-				};
+				outputResults.data = { wrestlers: [] };
 				return outputResults;
 			}
 
-			// Collect unique search teams across all new wrestlers
-			const searchTeamsSet = new Set();
-			for (const currentWrestler of newWrestlerRecords) {
-				for (const searchTeamItem of currentWrestler.searchTeams || []) {
-					if (searchTeamItem) {
-						searchTeamsSet.add(searchTeamItem);
-					}
-				}
+			// Query 1: Fetch target wrestler records for the requested IDs
+			const objectIdList = targetWrestlerIdsList
+				.filter(idValue => mongoose.Types.ObjectId.isValid(idValue))
+				.map(idValue => new mongoose.Types.ObjectId(idValue));
+
+			const wrestlers = await data.wrestler
+				.find({ _id: { $in: objectIdList } })
+				.lean()
+				.exec();
+
+			if (wrestlers.length === 0) {
+				outputResults.status = 200;
+				outputResults.data = { wrestlers: [] };
+				return outputResults;
 			}
 
-			const uniqueSearchTeams = Array.from(searchTeamsSet);
+			const searchTeams = [...new Set(wrestlers.flatMap(wrestler => wrestler.searchTeams || []))];
 
 			// Query 2: Fetch all candidate duplicate records sharing any search team in 1 bulk query
 			let candidatePoolRecords = [];
-			if (uniqueSearchTeams.length > 0) {
+			if (searchTeams.length > 0) {
 				candidatePoolRecords = await data.wrestler
-					.find({ searchTeams: { $in: uniqueSearchTeams } })
+					.find({ searchTeams: { $in: searchTeams } })
 					.select({ _id: 1, sqlId: 1, name: 1, firstName: 1, firstInitial: 1, lastName: 1, lastInitial: 1, lastTeam: 1, created: 1, searchTeams: 1 })
 					.lean()
 					.exec();
 			}
-
-			console.log(`${ (Date.now() - startTimeMs) / 1000 }: Fetched candidate pool of ${ candidatePoolRecords.length } records.`);
 
 			// Index candidate pool by team for fast in-memory lookup
 			const candidateMapByTeam = new Map();
@@ -665,10 +656,9 @@ export default {
 			}
 
 			// In-Memory Matching loop
-			const processedNewWrestlers = [];
-			let totalPotentialDuplicatesCount = 0;
+			const processedWrestlers = [];
 
-			for (const currentWrestler of newWrestlerRecords) {
+			for (const currentWrestler of wrestlers) {
 				const currentWrestlerId = currentWrestler._id ? currentWrestler._id.toString() : null;
 				const currentWrestlerSqlId = currentWrestler.sqlId;
 				const currentFirstName = (currentWrestler.firstName || "").toLowerCase().trim();
@@ -716,46 +706,30 @@ export default {
 					}
 				}
 
-				if (matchingCandidateDuplicates.length > 0) {
-					totalPotentialDuplicatesCount += matchingCandidateDuplicates.length;
-					const formattedWrestler = {
-						id: currentWrestlerId,
-						wrestlerId: currentWrestlerId,
-						wrestlerName: currentWrestler.name || `${ currentWrestler.firstName || "" } ${ currentWrestler.lastName || "" }`.trim(),
-						...currentWrestler,
-						candidates: matchingCandidateDuplicates,
-						potentialDuplicates: matchingCandidateDuplicates
-					};
-					processedNewWrestlers.push(formattedWrestler);
-				}
+				const formattedWrestler = {
+					id: currentWrestlerId,
+					wrestlerId: currentWrestlerId,
+					wrestlerName: currentWrestler.name || `${ currentWrestler.firstName || "" } ${ currentWrestler.lastName || "" }`.trim(),
+					...currentWrestler,
+					candidates: matchingCandidateDuplicates,
+					potentialDuplicates: matchingCandidateDuplicates
+				};
+				processedWrestlers.push(formattedWrestler);
 			}
 
 			const executionDurationMs = Date.now() - startTimeMs;
-			console.log(`${ executionDurationMs / 1000 }: Completed in ${ executionDurationMs }ms for ${ newWrestlerRecords.length } new wrestlers (${ processedNewWrestlers.length } with candidates).`);
-
-			const newestWrestlerAddedDate = newWrestlerRecords.length > 0 ? newWrestlerRecords[0].created : null;
 
 			outputResults.status = 200;
 			outputResults.data = {
-				newWrestlers: processedNewWrestlers,
-				summary: {
-					newWrestlerCount: newWrestlerRecords.length,
-					lastWrestlerAddedDate: newestWrestlerAddedDate,
-					potentialDuplicateCount: totalPotentialDuplicatesCount
-				}
+				wrestlers: processedWrestlers
 			};
 		}
 		catch (error) {
-			console.log(`${ (Date.now() - startTimeMs) / 1000 }: Error in wrestlerNew: ${ error.message }`);
 			outputResults.status = 560;
 			outputResults.error = error.message;
 		}
 
 		return outputResults;
-	},
-
-	wrestlersNew: async (timespanDays = 3) => {
-		return await this.wrestlerNew(timespanDays);
 	},
 
 	schoolGet: async (userFilter = {}) => {
@@ -2699,3 +2673,5 @@ export default {
 	}
 
 };
+
+export default dataFunctionsObject;

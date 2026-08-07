@@ -21,7 +21,7 @@ const Nav = props => {
 		else if (/(parentemail|aiemail)/i.test(window.location)) {
 			setSubExpanded("parent");
 		}
-		else if (/(newwrestler)/i.test(window.location)) {
+		else if (/(newwrestler|duplicates)/i.test(window.location)) {
 			setSubExpanded("data");
 		}
 	}, []);
@@ -217,6 +217,10 @@ const Nav = props => {
 
 			<li role="button" onClick={ () => window.location = "/portal/newwrestler.html" } className={`button sub ${ subExpanded === "data" ? "active" : "" }`} aria-label="New Wrestler">
 				<span>New Wrestler</span>
+			</li>
+
+			<li role="button" onClick={ () => window.location = "/portal/duplicates.html" } className={`button sub ${ subExpanded === "data" ? "active" : "" }`} aria-label="Duplicates">
+				<span>Duplicates</span>
 			</li>
 			</>
 			: ""
