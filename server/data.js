@@ -2613,7 +2613,7 @@ const dataFunctionsObject = {
 		if (saveObject.id) {
 			let record = null;
 			try {
-				record = await data.team.findById(saveObject.id).exec();
+				record = await data.duplicate.findById(saveObject.id).exec();
 			}
 			catch (error) {
 				output.status = 560;
@@ -2649,7 +2649,7 @@ const dataFunctionsObject = {
 		else {
 			let record = null;
 			try {
-				record = await (new data.team({ ...saveObject, created: new Date(), modified: new Date() })).save();
+				record = await (new data.duplicate({ ...saveObject, created: new Date(), modified: new Date() })).save();
 			}
 			catch (error) {
 				output.status = 563;
