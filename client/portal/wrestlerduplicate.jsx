@@ -224,6 +224,7 @@ const WrestlerSearchManagement = () => {
 
 		try {
 			const savePayload = {
+				status: "pending",
 				primary: selectedPrimary,
 				duplicates: selectedDuplicates
 			};

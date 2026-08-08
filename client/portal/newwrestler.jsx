@@ -126,6 +126,7 @@ const NewWrestlerManagement = () => {
 
 		try {
 			const savePayload = {
+				status: "pending",
 				primary: targetPrimary,
 				duplicates: targetDuplicates
 			};

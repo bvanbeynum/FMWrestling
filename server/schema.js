@@ -349,6 +349,7 @@ export default {
 			lastTeam: String,
 			wrestlerName: String
 		}],
+		status: String,
 		created: Date,
 		modified: Date
 	})

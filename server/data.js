@@ -2582,9 +2582,12 @@ const dataFunctionsObject = {
 		if (filterParameters.id) {
 			queryFilter["_id"] = mongoose.Types.ObjectId.isValid(filterParameters.id) ? filterParameters.id : null;
 		}
+		if (filterParameters.status) {
+			queryFilter.status = filterParameters.status;
+		}
 
 		try {
-			const duplicateRecords = await data.duplicate.find(queryFilter).sort({ created: -1 }).lean().exec();
+			const duplicateRecords = await data.duplicate.find(queryFilter).lean().exec();
 			outputResults.status = 200;
 			outputResults.data = {
 				duplicates: duplicateRecords.map(({ _id, __v, ...remainingFields }) => ({ id: _id ? _id.toString() : null, ...remainingFields }))
@@ -2599,55 +2602,66 @@ const dataFunctionsObject = {
 	},
 
 	duplicateSave: async (saveRecord = {}) => {
-		const outputResults = {};
+		const output = {};
 
 		if (!saveRecord || !saveRecord.primary) {
-			outputResults.status = 550;
-			outputResults.error = "Missing record or primary wrestler details to save";
-			return outputResults;
+			output.status = 550;
+			output.error = "Missing record or primary wrestler details to save";
+			return output;
 		}
 
-		try {
-			let savedRecord = null;
-			const timeStampNow = new Date();
-
-			if (saveRecord.id) {
-				savedRecord = await data.duplicate.findById(saveRecord.id).exec();
-				if (!savedRecord) {
-					outputResults.status = 561;
-					outputResults.error = "Duplicate record not found";
-					return outputResults;
-				}
-
-				savedRecord.primary = saveRecord.primary;
-				savedRecord.duplicates = saveRecord.duplicates || [];
-				savedRecord.modified = timeStampNow;
-				await savedRecord.save();
+		if (saveObject.id) {
+			let record = null;
+			try {
+				record = await data.team.findById(saveObject.id).exec();
 			}
-			else {
-				const newDuplicateModel = new data.duplicate({
-					primary: saveRecord.primary,
-					duplicates: saveRecord.duplicates || [],
-					created: timeStampNow,
-					modified: timeStampNow
+			catch (error) {
+				output.status = 560;
+				output.error = error.message;
+				return output;
+			}
+
+			if (!record) {
+				output.status = 561;
+				output.error = "Record not found";
+				return output;
+			}
+
+			try {
+				Object.keys(saveObject).forEach(field => {
+					if (field != "id" && field != "_id") {
+						record[field] = saveObject[field];
+					}
 				});
-				savedRecord = await newDuplicateModel.save();
+				record.modified = new Date();
+
+				record = await record.save();
+			}
+			catch (error) {
+				output.status = 562;
+				output.error = error.message;
+				return output;
 			}
 
-			const recordData = savedRecord.toObject ? savedRecord.toObject() : savedRecord;
-			const { _id, __v, ...remainingFields } = recordData;
-
-			outputResults.status = 200;
-			outputResults.data = {
-				duplicate: { id: _id ? _id.toString() : null, ...remainingFields }
-			};
+			output.status = 200;
+			output.data = { id: record._id };
 		}
-		catch (error) {
-			outputResults.status = 560;
-			outputResults.error = error.message;
+		else {
+			let record = null;
+			try {
+				record = await (new data.team({ ...saveObject, created: new Date(), modified: new Date() })).save();
+			}
+			catch (error) {
+				output.status = 563;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			output.data = { id: record._id };
 		}
 
-		return outputResults;
+		return output;
 	},
 
 	duplicateDelete: async (recordId) => {

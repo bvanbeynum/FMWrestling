@@ -3040,7 +3040,7 @@ Instructions for response:
 			}
 
 			// Step 4: Fetch existing saved duplicates
-			const duplicatesResponse = await client.get(`${ serverPath }/data/duplicate`);
+			const duplicatesResponse = await client.get(`${ serverPath }/data/duplicate?status=pending`);
 			const existingDuplicates = duplicatesResponse.body?.duplicates || [];
 
 			// Index saved wrestler SQL IDs
@@ -3225,7 +3225,7 @@ Instructions for response:
 			const foundWrestlerRecord = returnedWrestlersList.find(() => true) || null;
 
 			// Fetch existing saved duplicates to check submit status
-			const duplicatesResponse = await client.get(`${ serverPath }/data/duplicate`);
+			const duplicatesResponse = await client.get(`${ serverPath }/data/duplicate?status=pending`);
 			const existingDuplicates = duplicatesResponse.body?.duplicates || [];
 
 			const savedWrestlerSqlIds = new Set();
