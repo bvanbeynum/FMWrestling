@@ -816,7 +816,7 @@ router.post("/data/wrestlerduplicates", authInternal, async (request, response) 
 
 router.get("/data/duplicate", authInternal, async (request, response) => {
 	try {
-		const executionResults = await data.duplicateGet({ id: request.query.id });
+		const executionResults = await data.duplicateGet({ id: request.query.id, status: request.query.status });
 		response.status(executionResults.status).json(executionResults.error ? { error: executionResults.error } : executionResults.data);
 		response.end();
 	}
