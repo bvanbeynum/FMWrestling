@@ -805,8 +805,8 @@ router.post("/data/wrestlerevent/bulk", authInternal, async (request, response) 
 
 router.post("/data/wrestlerduplicates", authInternal, async (request, response) => {
 	try {
-		const executionResults = await data.wrestlerDuplicates(request.body.wrestlerids);
-		response.status(executionResults.status).json(executionResults.error ? { error: executionResults.error } : executionResults.data);
+		const results = await data.wrestlerDuplicates(request.body.wrestlerids);
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
 		response.end();
 	}
 	catch (error) {
@@ -816,8 +816,8 @@ router.post("/data/wrestlerduplicates", authInternal, async (request, response) 
 
 router.get("/data/duplicate", authInternal, async (request, response) => {
 	try {
-		const executionResults = await data.duplicateGet({ id: request.query.id, status: request.query.status });
-		response.status(executionResults.status).json(executionResults.error ? { error: executionResults.error } : executionResults.data);
+		const results = await data.duplicateGet({ id: request.query.id, status: request.query.status });
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
 		response.end();
 	}
 	catch (error) {
@@ -827,8 +827,8 @@ router.get("/data/duplicate", authInternal, async (request, response) => {
 
 router.post("/data/duplicate", authInternal, async (request, response) => {
 	try {
-		const executionResults = await data.duplicateSave(request.body.duplicate);
-		response.status(executionResults.status).json(executionResults.error ? { error: executionResults.error } : executionResults.data);
+		const results = await data.duplicateSave(request.body.duplicate);
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
 		response.end();
 	}
 	catch (error) {
@@ -838,8 +838,8 @@ router.post("/data/duplicate", authInternal, async (request, response) => {
 
 router.delete("/data/duplicate", authInternal, async (request, response) => {
 	try {
-		const executionResults = await data.duplicateDelete(request.query.id);
-		response.status(executionResults.status).json(executionResults.error ? { error: executionResults.error } : executionResults.data);
+		const results = await data.duplicateDelete(request.query.id);
+		response.status(results.status).json(results.error ? { error: results.error } : results.data);
 		response.end();
 	}
 	catch (error) {

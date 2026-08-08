@@ -243,20 +243,20 @@ const NewWrestlerManagement = () => {
 									const isSubmittingCurrentGroup = submittingSqlIds.has(groupSqlId);
 
 									const mainWrestlerCandidate = {
-										wrestlerId: wrestlerItem.wrestlerId || wrestlerItem.id,
+										id: wrestlerItem.id,
 										sqlId: wrestlerItem.sqlId,
 										lastTeam: wrestlerItem.lastTeam || "",
-										wrestlerName: wrestlerItem.wrestlerName || wrestlerItem.name || `${ wrestlerItem.firstName || "" } ${ wrestlerItem.lastName || "" }`.trim(),
+										wrestlerName: wrestlerItem.name,
 										isMainNewRecord: true
 									};
 
 									const allGroupCandidates = [
 										mainWrestlerCandidate,
 										...(wrestlerItem.potentialDuplicates || []).map(candidateItem => ({
-											wrestlerId: candidateItem.wrestlerId || candidateItem.id,
+											id: candidateItem.id,
 											sqlId: candidateItem.sqlId,
 											lastTeam: candidateItem.lastTeam || "",
-											wrestlerName: candidateItem.name || `${ candidateItem.firstName || "" } ${ candidateItem.lastName || "" }`.trim(),
+											wrestlerName: candidateItem.name,
 											isMainNewRecord: false
 										}))
 									];

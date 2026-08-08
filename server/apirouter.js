@@ -458,107 +458,107 @@ router.post("/api/teamscheduledelete", authAPI, async (request, response) => {
 
 // ***************** Parent Email ********************
 
-router.get("/api/parentemailload", authAPI, async (requestObject, responseObject) => {
-	if (!requestObject.user || !requestObject.user.privileges || (!requestObject.user.privileges.includes("parentManage") && !requestObject.user.privileges.includes("parentmanage"))) {
-		return responseObject.status(401).json({ error: "Unauthorized access" });
+router.get("/api/parentemailload", authAPI, async (request, response) => {
+	if (!request.user || !request.user.privileges || (!request.user.privileges.includes("parentManage") && !request.user.privileges.includes("parentmanage"))) {
+		return response.status(401).json({ error: "Unauthorized access" });
 	}
 
-	const resultsObject = await api.parentEmailLoad(requestObject.serverPath, requestObject.query.status);
-	responseObject.status(resultsObject.status).json(resultsObject.error ? { error: resultsObject.error } : { loggedInUser: requestObject.user, ...resultsObject.data });
+	const resultsObject = await api.parentEmailLoad(request.serverPath, request.query.status);
+	response.status(resultsObject.status).json(resultsObject.error ? { error: resultsObject.error } : { loggedInUser: request.user, ...resultsObject.data });
 });
 
-router.post("/api/parentemailsave", authAPI, async (requestObject, responseObject) => {
-	if (!requestObject.user || !requestObject.user.privileges || (!requestObject.user.privileges.includes("parentManage") && !requestObject.user.privileges.includes("parentmanage"))) {
-		return responseObject.status(401).json({ error: "Unauthorized access" });
+router.post("/api/parentemailsave", authAPI, async (request, response) => {
+	if (!request.user || !request.user.privileges || (!request.user.privileges.includes("parentManage") && !request.user.privileges.includes("parentmanage"))) {
+		return response.status(401).json({ error: "Unauthorized access" });
 	}
 
-	const resultsObject = await api.parentEmailSave(requestObject.body.saveRecord, requestObject.serverPath);
-	responseObject.status(resultsObject.status).json(resultsObject.error ? { error: resultsObject.error } : resultsObject.data);
+	const resultsObject = await api.parentEmailSave(request.body.saveRecord, request.serverPath);
+	response.status(resultsObject.status).json(resultsObject.error ? { error: resultsObject.error } : resultsObject.data);
 });
 
-router.post("/api/parentemailbulkupload", authAPI, async (requestObject, responseObject) => {
-	if (!requestObject.user || !requestObject.user.privileges || (!requestObject.user.privileges.includes("parentManage") && !requestObject.user.privileges.includes("parentmanage"))) {
-		return responseObject.status(401).json({ error: "Unauthorized access" });
+router.post("/api/parentemailbulkupload", authAPI, async (request, response) => {
+	if (!request.user || !request.user.privileges || (!request.user.privileges.includes("parentManage") && !request.user.privileges.includes("parentmanage"))) {
+		return response.status(401).json({ error: "Unauthorized access" });
 	}
 
-	const resultsObject = await api.parentEmailBulkUpload(requestObject.body.records, requestObject.serverPath);
-	responseObject.status(resultsObject.status).json(resultsObject.error ? { error: resultsObject.error } : resultsObject.data);
+	const resultsObject = await api.parentEmailBulkUpload(request.body.records, request.serverPath);
+	response.status(resultsObject.status).json(resultsObject.error ? { error: resultsObject.error } : resultsObject.data);
 });
 
-router.post("/api/parentemailbulkstatus", authAPI, async (requestObject, responseObject) => {
-	if (!requestObject.user || !requestObject.user.privileges || (!requestObject.user.privileges.includes("parentManage") && !requestObject.user.privileges.includes("parentmanage"))) {
-		return responseObject.status(401).json({ error: "Unauthorized access" });
+router.post("/api/parentemailbulkstatus", authAPI, async (request, response) => {
+	if (!request.user || !request.user.privileges || (!request.user.privileges.includes("parentManage") && !request.user.privileges.includes("parentmanage"))) {
+		return response.status(401).json({ error: "Unauthorized access" });
 	}
 
-	const resultsObject = await api.parentEmailBulkStatus(requestObject.body.ids, requestObject.body.status, requestObject.serverPath);
-	responseObject.status(resultsObject.status).json(resultsObject.error ? { error: resultsObject.error } : resultsObject.data);
+	const resultsObject = await api.parentEmailBulkStatus(request.body.ids, request.body.status, request.serverPath);
+	response.status(resultsObject.status).json(resultsObject.error ? { error: resultsObject.error } : resultsObject.data);
 });
 
-router.post("/api/parentemaildelete", authAPI, async (requestObject, responseObject) => {
-	if (!requestObject.user || !requestObject.user.privileges || (!requestObject.user.privileges.includes("parentManage") && !requestObject.user.privileges.includes("parentmanage"))) {
-		return responseObject.status(401).json({ error: "Unauthorized access" });
+router.post("/api/parentemaildelete", authAPI, async (request, response) => {
+	if (!request.user || !request.user.privileges || (!request.user.privileges.includes("parentManage") && !request.user.privileges.includes("parentmanage"))) {
+		return response.status(401).json({ error: "Unauthorized access" });
 	}
 
-	const resultsObject = await api.parentEmailDelete(requestObject.body.id, requestObject.serverPath);
-	responseObject.status(resultsObject.status).json(resultsObject.error ? { error: resultsObject.error } : resultsObject.data);
+	const resultsObject = await api.parentEmailDelete(request.body.id, request.serverPath);
+	response.status(resultsObject.status).json(resultsObject.error ? { error: resultsObject.error } : resultsObject.data);
 });
 
 // ***************** AI Email & Google OAuth ********************
 
-router.get("/api/aiemailgoogleauth", async (requestObject, responseObject) => {
-	await api.authGoogle(requestObject, responseObject);
+router.get("/api/aiemailgoogleauth", async (request, response) => {
+	await api.authGoogle(request, response);
 });
 
-router.get("/api/aiemailgoogleauthcallback", async (requestObject, responseObject) => {
-	await api.authGoogleCallback(requestObject, responseObject);
+router.get("/api/aiemailgoogleauthcallback", async (request, response) => {
+	await api.authGoogleCallback(request, response);
 });
 
-router.get("/api/aiemailstatus", authAPI, async (requestObject, responseObject) => {
-	if (!requestObject.user || !requestObject.user.privileges || (!requestObject.user.privileges.includes("parentManage") && !requestObject.user.privileges.includes("parentmanage"))) {
-		return responseObject.status(401).json({ error: "Unauthorized access" });
+router.get("/api/aiemailstatus", authAPI, async (request, response) => {
+	if (!request.user || !request.user.privileges || (!request.user.privileges.includes("parentManage") && !request.user.privileges.includes("parentmanage"))) {
+		return response.status(401).json({ error: "Unauthorized access" });
 	}
 
-	const resultsObject = await api.aiEmailGetStatus(requestObject.serverPath);
-	responseObject.status(resultsObject.status || 200).json(resultsObject);
+	const resultsObject = await api.aiEmailGetStatus(request.serverPath);
+	response.status(resultsObject.status || 200).json(resultsObject);
 });
 
-router.get("/api/aiemailinbox", authAPI, async (requestObject, responseObject) => {
-	if (!requestObject.user || !requestObject.user.privileges || (!requestObject.user.privileges.includes("parentManage") && !requestObject.user.privileges.includes("parentmanage"))) {
-		return responseObject.status(401).json({ error: "Unauthorized access" });
+router.get("/api/aiemailinbox", authAPI, async (request, response) => {
+	if (!request.user || !request.user.privileges || (!request.user.privileges.includes("parentManage") && !request.user.privileges.includes("parentmanage"))) {
+		return response.status(401).json({ error: "Unauthorized access" });
 	}
 
-	const resultsObject = await api.aiEmailLoadInbox(requestObject.serverPath);
-	responseObject.status(resultsObject.status || 200).json(resultsObject.error ? { error: resultsObject.error } : resultsObject);
+	const resultsObject = await api.aiEmailLoadInbox(request.serverPath);
+	response.status(resultsObject.status || 200).json(resultsObject.error ? { error: resultsObject.error } : resultsObject);
 });
 
-router.post("/api/aiemailgenerate", authAPI, async (requestObject, responseObject) => {
-	if (!requestObject.user || !requestObject.user.privileges || (!requestObject.user.privileges.includes("parentManage") && !requestObject.user.privileges.includes("parentmanage"))) {
-		return responseObject.status(401).json({ error: "Unauthorized access" });
+router.post("/api/aiemailgenerate", authAPI, async (request, response) => {
+	if (!request.user || !request.user.privileges || (!request.user.privileges.includes("parentManage") && !request.user.privileges.includes("parentmanage"))) {
+		return response.status(401).json({ error: "Unauthorized access" });
 	}
 
-	const { subject, body, from } = requestObject.body;
+	const { subject, body, from } = request.body;
 	const resultsObject = await api.aiEmailGenerateResponse(subject, body, from);
-	responseObject.status(resultsObject.status || 200).json(resultsObject.error ? { error: resultsObject.error } : resultsObject);
+	response.status(resultsObject.status || 200).json(resultsObject.error ? { error: resultsObject.error } : resultsObject);
 });
 
-router.post("/api/aiemailsend", authAPI, async (requestObject, responseObject) => {
-	if (!requestObject.user || !requestObject.user.privileges || (!requestObject.user.privileges.includes("parentManage") && !requestObject.user.privileges.includes("parentmanage"))) {
-		return responseObject.status(401).json({ error: "Unauthorized access" });
+router.post("/api/aiemailsend", authAPI, async (request, response) => {
+	if (!request.user || !request.user.privileges || (!request.user.privileges.includes("parentManage") && !request.user.privileges.includes("parentmanage"))) {
+		return response.status(401).json({ error: "Unauthorized access" });
 	}
 
-	const { messageId, recipients, subject, body } = requestObject.body;
-	const resultsObject = await api.aiEmailSendAndArchive(requestObject.serverPath, messageId, recipients, subject, body);
-	responseObject.status(resultsObject.status || 200).json(resultsObject.error ? { error: resultsObject.error } : resultsObject);
+	const { messageId, recipients, subject, body } = request.body;
+	const resultsObject = await api.aiEmailSendAndArchive(request.serverPath, messageId, recipients, subject, body);
+	response.status(resultsObject.status || 200).json(resultsObject.error ? { error: resultsObject.error } : resultsObject);
 });
 
-router.post("/api/aiemailarchive", authAPI, async (requestObject, responseObject) => {
-	if (!requestObject.user || !requestObject.user.privileges || (!requestObject.user.privileges.includes("parentManage") && !requestObject.user.privileges.includes("parentmanage"))) {
-		return responseObject.status(401).json({ error: "Unauthorized access" });
+router.post("/api/aiemailarchive", authAPI, async (request, response) => {
+	if (!request.user || !request.user.privileges || (!request.user.privileges.includes("parentManage") && !request.user.privileges.includes("parentmanage"))) {
+		return response.status(401).json({ error: "Unauthorized access" });
 	}
 
-	const { messageId } = requestObject.body;
-	const resultsObject = await api.aiEmailArchiveMessage(requestObject.serverPath, messageId);
-	responseObject.status(resultsObject.status || 200).json(resultsObject.error ? { error: resultsObject.error } : resultsObject);
+	const { messageId } = request.body;
+	const resultsObject = await api.aiEmailArchiveMessage(request.serverPath, messageId);
+	response.status(resultsObject.status || 200).json(resultsObject.error ? { error: resultsObject.error } : resultsObject);
 });
 
 
@@ -572,34 +572,34 @@ router.post("/api/wrestlereventsbulksave", authAPI, async (request, response) =>
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 });
 
-router.get("/api/newwrestlerload", authAPI, async (requestObject, responseObject) => {
-	const executionResults = await api.newwrestlerLoad(requestObject.query.timespan, requestObject.serverPath);
-	responseObject.status(executionResults.status).json(executionResults.error ? { error: executionResults.error } : { loggedInUser: requestObject.user, ...executionResults.data });
+router.get("/api/newwrestlerload", authAPI, async (request, response) => {
+	const results = await api.newwrestlerLoad(request.query.timespan, request.serverPath);
+	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
 });
 
-router.post("/api/newwrestlersave", authAPI, async (requestObject, responseObject) => {
-	const executionResults = await api.newwrestlerSave(requestObject.body, requestObject.serverPath);
-	responseObject.status(executionResults.status).json(executionResults.error ? { error: executionResults.error } : executionResults.data);
+router.post("/api/newwrestlersave", authAPI, async (request, response) => {
+	const results = await api.newwrestlerSave(request.body, request.serverPath);
+	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 });
 
-router.post("/api/newwrestlerdelete", authAPI, async (requestObject, responseObject) => {
-	const executionResults = await api.newwrestlerDelete(requestObject.body.id || requestObject.query.id, requestObject.serverPath);
-	responseObject.status(executionResults.status).json(executionResults.error ? { error: executionResults.error } : executionResults.data);
+router.post("/api/newwrestlerdelete", authAPI, async (request, response) => {
+	const results = await api.newwrestlerDelete(request.body.id || request.query.id, request.serverPath);
+	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 });
 
-router.get("/api/wrestlerduplicateload", authAPI, async (requestObject, responseObject) => {
-	const executionResults = await api.wrestlerduplicateLoad(requestObject.serverPath);
-	responseObject.status(executionResults.status).json(executionResults.error ? { error: executionResults.error } : { loggedInUser: requestObject.user, ...executionResults.data });
+router.get("/api/wrestlerduplicateload", authAPI, async (request, response) => {
+	const results = await api.wrestlerduplicateLoad(request.serverPath);
+	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
 });
 
-router.post("/api/wrestlerduplicatesearch", authAPI, async (requestObject, responseObject) => {
-	const executionResults = await api.wrestlerduplicateSearch(requestObject.body, requestObject.serverPath);
-	responseObject.status(executionResults.status).json(executionResults.error ? { error: executionResults.error } : executionResults.data);
+router.post("/api/wrestlerduplicatesearch", authAPI, async (request, response) => {
+	const results = await api.wrestlerduplicateSearch(request.body, request.serverPath);
+	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 });
 
-router.post("/api/wrestlerduplicatelookup", authAPI, async (requestObject, responseObject) => {
-	const executionResults = await api.wrestlerduplicateLookup(requestObject.body.wrestlerId, requestObject.serverPath);
-	responseObject.status(executionResults.status).json(executionResults.error ? { error: executionResults.error } : executionResults.data);
+router.get("/api/wrestlerduplicatelookup", authAPI, async (request, response) => {
+	const results = await api.wrestlerduplicateLookup(request.query.wrestlerid, request.serverPath);
+	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 });
 
 export default router;

@@ -621,10 +621,11 @@ const dataFunctionsObject = {
 				.filter(idValue => mongoose.Types.ObjectId.isValid(idValue))
 				.map(idValue => new mongoose.Types.ObjectId(idValue));
 
-			const wrestlers = await data.wrestler
+			const records = await data.wrestler
 				.find({ _id: { $in: objectIdList } })
 				.lean()
 				.exec();
+			const wrestlers = records.map(({ _id, __v, ...data }) => ({ id: _id, ...data }));
 
 			if (wrestlers.length === 0) {
 				outputResults.status = 200;
@@ -632,92 +633,110 @@ const dataFunctionsObject = {
 				return outputResults;
 			}
 
-			const searchTeams = [...new Set(wrestlers.flatMap(wrestler => wrestler.searchTeams || []))];
+			let query = {},
+				searchTeams = [];
+			if (wrestlers.length === 1) {
+				const firstName = (wrestlers[0].firstName || "").toLowerCase().trim();
+				const firstInitial = (wrestlers[0].firstInitial || firstName.charAt(0) || "").toLowerCase().trim();
+				const lastName = (wrestlers[0].lastName || "").toLowerCase().trim();
+				const lastInitial = (wrestlers[0].lastInitial || lastName.charAt(0) || "").toLowerCase().trim();
+				const sqlId = wrestlers[0].sqlId;
 
-			// Query 2: Fetch all candidate duplicate records sharing any search team in 1 bulk query
-			let candidatePoolRecords = [];
-			if (searchTeams.length > 0) {
-				candidatePoolRecords = await data.wrestler
-					.find({ searchTeams: { $in: searchTeams } })
+				query["sqlId"] = { $ne: sqlId };
+				query["$or"] = [
+					{ firstInitial: firstInitial, lastName: lastName },
+					{ firstName: firstName, lastInitial: lastInitial }
+				];
+			}
+			else {
+				searchTeams = [...new Set(wrestlers.flatMap(wrestler => wrestler.searchTeams || []))];
+				query["searchTeams"] = { $in: searchTeams };
+			}
+
+			// Fetch all candidate duplicate records sharing any search team in 1 bulk query
+			const candidatePoolRecords = await data.wrestler
+					.find(query)
 					.select({ _id: 1, sqlId: 1, name: 1, firstName: 1, firstInitial: 1, lastName: 1, lastInitial: 1, lastTeam: 1, created: 1, searchTeams: 1 })
 					.lean()
 					.exec();
-			}
-
-			// Index candidate pool by team for fast in-memory lookup
-			const candidateMapByTeam = new Map();
-			for (const candidateRecord of candidatePoolRecords) {
-				for (const teamName of candidateRecord.searchTeams || []) {
-					if (!candidateMapByTeam.has(teamName)) {
-						candidateMapByTeam.set(teamName, []);
-					}
-					candidateMapByTeam.get(teamName).push(candidateRecord);
-				}
-			}
 
 			// In-Memory Matching loop
 			const processedWrestlers = [];
+			if (wrestlers.length === 1) {
+				processedWrestlers.push({
+					...wrestlers[0],
+					potentialDuplicates: candidatePoolRecords.map(candidateRecord => ({
+						id: candidateRecord._id ? candidateRecord._id.toString() : null,
+						sqlId: candidateRecord.sqlId,
+						name: candidateRecord.name,
+						lastTeam: candidateRecord.lastTeam,
+						created: candidateRecord.created,
+						searchTeams: candidateRecord.searchTeams
+					}))
+				});
+			}
+			else {
+				// Index candidate pool by team for fast in-memory lookup
+				const candidateMapByTeam = new Map();
+				for (const candidateRecord of candidatePoolRecords) {
+					for (const teamName of candidateRecord.searchTeams || []) {
+						if (!candidateMapByTeam.has(teamName)) {
+							candidateMapByTeam.set(teamName, []);
+						}
+						candidateMapByTeam.get(teamName).push(candidateRecord);
+					}
+				}
 
-			for (const currentWrestler of wrestlers) {
-				const currentWrestlerId = currentWrestler._id ? currentWrestler._id.toString() : null;
-				const currentWrestlerSqlId = currentWrestler.sqlId;
-				const currentFirstName = (currentWrestler.firstName || "").toLowerCase().trim();
-				const currentFirstInitial = (currentWrestler.firstInitial || currentFirstName.charAt(0) || "").toLowerCase().trim();
-				const currentLastName = (currentWrestler.lastName || "").toLowerCase().trim();
-				const currentLastInitial = (currentWrestler.lastInitial || currentLastName.charAt(0) || "").toLowerCase().trim();
+				for (const wrestler of wrestlers) {
+					const wrestlerSqlId = wrestler.sqlId;
+					const firstName = (wrestler.firstName || "").toLowerCase().trim();
+					const firstInitial = (wrestler.firstInitial || firstName.charAt(0) || "").toLowerCase().trim();
+					const lastName = (wrestler.lastName || "").toLowerCase().trim();
+					const lastInitial = (wrestler.lastInitial || lastName.charAt(0) || "").toLowerCase().trim();
 
-				// Gather candidate pool for this wrestler's teams
-				const candidateCandidatesSet = new Map();
-				for (const teamName of currentWrestler.searchTeams || []) {
-					const matchingTeamCandidates = candidateMapByTeam.get(teamName) || [];
-					for (const candidateRecord of matchingTeamCandidates) {
-						if (candidateRecord.sqlId !== currentWrestlerSqlId) {
-							candidateCandidatesSet.set(candidateRecord.sqlId, candidateRecord);
+					// Gather candidate pool for this wrestler's teams
+					const candidateCandidatesSet = new Map();
+					for (const teamName of wrestler.searchTeams || []) {
+						const matchingTeamCandidates = candidateMapByTeam.get(teamName) || [];
+						for (const candidateRecord of matchingTeamCandidates) {
+							if (candidateRecord.sqlId !== wrestlerSqlId) {
+								candidateCandidatesSet.set(candidateRecord.sqlId, candidateRecord);
+							}
 						}
 					}
-				}
 
-				// Filter candidates by name criteria
-				const matchingCandidateDuplicates = [];
-				for (const candidateRecord of candidateCandidatesSet.values()) {
-					const candidateFirstName = (candidateRecord.firstName || "").toLowerCase().trim();
-					const candidateFirstInitial = (candidateRecord.firstInitial || candidateFirstName.charAt(0) || "").toLowerCase().trim();
-					const candidateLastName = (candidateRecord.lastName || "").toLowerCase().trim();
-					const candidateLastInitial = (candidateRecord.lastInitial || candidateLastName.charAt(0) || "").toLowerCase().trim();
+					// Filter candidates by name criteria
+					const matchingCandidateDuplicates = [];
+					for (const candidateRecord of candidateCandidatesSet.values()) {
+						const candidateFirstName = (candidateRecord.firstName || "").toLowerCase().trim();
+						const candidateFirstInitial = (candidateRecord.firstInitial || candidateFirstName.charAt(0) || "").toLowerCase().trim();
+						const candidateLastName = (candidateRecord.lastName || "").toLowerCase().trim();
+						const candidateLastInitial = (candidateRecord.lastInitial || candidateLastName.charAt(0) || "").toLowerCase().trim();
 
-					const isFirstNameAndLastInitialMatch = (currentFirstName && candidateFirstName && currentFirstName === candidateFirstName) &&
-						(currentLastInitial && candidateLastInitial && currentLastInitial === candidateLastInitial);
+						const isFirstNameAndLastInitialMatch = (firstName && candidateFirstName && firstName === candidateFirstName) &&
+							(lastInitial && candidateLastInitial && lastInitial === candidateLastInitial);
 
-					const isFirstInitialAndLastNameMatch = (currentFirstInitial && candidateFirstInitial && currentFirstInitial === candidateFirstInitial) &&
-						(currentLastName && candidateLastName && currentLastName === candidateLastName);
+						const isFirstInitialAndLastNameMatch = (firstInitial && candidateFirstInitial && firstInitial === candidateFirstInitial) &&
+							(lastName && candidateLastName && lastName === candidateLastName);
 
-					if (isFirstNameAndLastInitialMatch || isFirstInitialAndLastNameMatch) {
-						matchingCandidateDuplicates.push({
-							wrestlerId: candidateRecord._id ? candidateRecord._id.toString() : null,
-							id: candidateRecord._id ? candidateRecord._id.toString() : null,
-							sqlId: candidateRecord.sqlId,
-							name: candidateRecord.name,
-							firstName: candidateRecord.firstName,
-							lastName: candidateRecord.lastName,
-							lastTeam: candidateRecord.lastTeam,
-							created: candidateRecord.created,
-							searchTeams: candidateRecord.searchTeams
-						});
+						if (isFirstNameAndLastInitialMatch || isFirstInitialAndLastNameMatch) {
+							matchingCandidateDuplicates.push({
+								id: candidateRecord._id ? candidateRecord._id.toString() : null,
+								sqlId: candidateRecord.sqlId,
+								name: candidateRecord.name,
+								lastTeam: candidateRecord.lastTeam,
+								created: candidateRecord.created,
+								searchTeams: candidateRecord.searchTeams
+							});
+						}
 					}
+
+					processedWrestlers.push({
+						...wrestler,
+						potentialDuplicates: matchingCandidateDuplicates
+					});
 				}
-
-				const formattedWrestler = {
-					id: currentWrestlerId,
-					wrestlerId: currentWrestlerId,
-					wrestlerName: currentWrestler.name || `${ currentWrestler.firstName || "" } ${ currentWrestler.lastName || "" }`.trim(),
-					...currentWrestler,
-					candidates: matchingCandidateDuplicates,
-					potentialDuplicates: matchingCandidateDuplicates
-				};
-				processedWrestlers.push(formattedWrestler);
 			}
-
-			const executionDurationMs = Date.now() - startTimeMs;
 
 			outputResults.status = 200;
 			outputResults.data = {

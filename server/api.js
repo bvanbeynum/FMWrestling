@@ -3058,23 +3058,17 @@ Instructions for response:
 
 			let totalPotentialDuplicatesCount = 0;
 			const processedNewWrestlers = wrestlersWithDuplicatesList
-				.filter(wrestlerItem => (wrestlerItem.potentialDuplicates || wrestlerItem.candidates || []).length > 0)
-				.map(wrestlerItem => {
-					const candidateList = wrestlerItem.potentialDuplicates || wrestlerItem.candidates || [];
-					totalPotentialDuplicatesCount += candidateList.length;
-					const isAlreadySubmitted = savedWrestlerSqlIds.has(wrestlerItem.sqlId);
-					return {
+				.filter(wrestlerItem => (wrestlerItem.potentialDuplicates || []).length > 0)
+				.map(wrestlerItem => ({
 						...wrestlerItem,
-						isSubmitted: isAlreadySubmitted
-					};
-				});
+						isSubmitted: savedWrestlerSqlIds.has(wrestlerItem.sqlId)
+				}));
 
 			const newestWrestlerAddedDate = wrestlers.length > 0 ? wrestlers[0].created : null;
 
 			const summaryMetrics = {
 				newWrestlerCount: wrestlers.length,
-				lastWrestlerAddedDate: newestWrestlerAddedDate,
-				potentialDuplicateCount: totalPotentialDuplicatesCount
+				lastWrestlerAddedDate: newestWrestlerAddedDate
 			};
 
 			outputResults.status = 200;
@@ -3207,22 +3201,20 @@ Instructions for response:
 		return outputResults;
 	},
 
-	wrestlerduplicateLookup: async (targetWrestlerIdentifier, serverPath) => {
-		const outputResults = {};
+	wrestlerduplicateLookup: async (wrestlerId, serverPath) => {
+		const output = {};
 
-		if (!targetWrestlerIdentifier) {
-			outputResults.status = 400;
-			outputResults.error = "Missing wrestler identifier for duplicate lookup.";
-			return outputResults;
+		if (!wrestlerId) {
+			output.status = 400;
+			output.error = "Missing wrestler identifier for duplicate lookup.";
+			return output;
 		}
 
 		try {
 			const duplicatesSearchResponse = await client.post(`${ serverPath }/data/wrestlerduplicates`).send({
-				wrestlerIds: [ targetWrestlerIdentifier ]
+				wrestlerids: [ wrestlerId ]
 			});
-
-			const returnedWrestlersList = duplicatesSearchResponse.body?.wrestlers || [];
-			const foundWrestlerRecord = returnedWrestlersList.find(() => true) || null;
+			const wrestler = duplicatesSearchResponse.body?.wrestlers[0];
 
 			// Fetch existing saved duplicates to check submit status
 			const duplicatesResponse = await client.get(`${ serverPath }/data/duplicate?status=pending`);
@@ -3240,26 +3232,26 @@ Instructions for response:
 				}
 			}
 
-			let processedWrestler = null;
-			if (foundWrestlerRecord) {
-				const isAlreadySubmitted = savedWrestlerSqlIds.has(foundWrestlerRecord.sqlId);
-				processedWrestler = {
-					...foundWrestlerRecord,
+			const isAlreadySubmitted = savedWrestlerSqlIds.has(wrestler.sqlId);
+			output.status = 200;
+			output.data = {
+				wrestler: {
+					id: wrestler.id,
+					sqlId: wrestler.sqlId,
+					name: wrestler.name,
+					lastTeam: wrestler.lastTeam,
+					created: wrestler.created,
+					potentialDuplicates: wrestler.potentialDuplicates,
 					isSubmitted: isAlreadySubmitted
-				};
-			}
-
-			outputResults.status = 200;
-			outputResults.data = {
-				wrestler: processedWrestler
+				}
 			};
 		}
 		catch (error) {
-			outputResults.status = 560;
-			outputResults.error = error.message;
+			output.status = 560;
+			output.error = error.message;
 		}
 
-		return outputResults;
+		return output;
 	}
 
 };

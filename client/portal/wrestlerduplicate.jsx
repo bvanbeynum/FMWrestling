@@ -132,12 +132,7 @@ const WrestlerSearchManagement = () => {
 		setErrorMessage("");
 
 		try {
-			const lookupResponse = await fetch("/api/wrestlerduplicatelookup", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ wrestlerId: targetWrestlerIdentifier })
-			});
-
+			const lookupResponse = await fetch(`/api/wrestlerduplicatelookup?wrestlerid=${encodeURIComponent(targetWrestlerIdentifier)}`);
 			const responseData = await lookupResponse.json();
 
 			if (responseData.error) {
@@ -149,7 +144,7 @@ const WrestlerSearchManagement = () => {
 			}
 			else {
 				const fetchedWrestler = responseData.wrestler;
-				const candidateDuplicatesList = (fetchedWrestler?.potentialDuplicates || fetchedWrestler?.candidates || []);
+				const candidateDuplicatesList = (fetchedWrestler?.potentialDuplicates || []);
 
 				if (candidateDuplicatesList.length === 0) {
 					// 0 Candidates: stay on search results and update button to "0 Candidates" badge
@@ -321,7 +316,7 @@ const WrestlerSearchManagement = () => {
 										{ schoolGroups.map(groupItem => (
 											<optgroup key={ groupItem.groupName } label={ groupItem.groupName }>
 												{ groupItem.schools.map(schoolItem => (
-													<option key={ schoolItem.id || schoolItem.name } value={ schoolItem.name }>
+													<option key={ schoolItem.id } value={ schoolItem.name }>
 														{ schoolItem.name }
 													</option>
 												))}
@@ -363,7 +358,7 @@ const WrestlerSearchManagement = () => {
 										</thead>
 										<tbody>
 											{ searchWrestlerResults.map(wrestlerItem => {
-												const wrestlerIdentifier = wrestlerItem.id || wrestlerItem._id || wrestlerItem.sqlId;
+												const wrestlerIdentifier = wrestlerItem.id;
 												const currentLookupStatus = lookupStatusByWrestlerId[wrestlerIdentifier];
 												const rawEventDate = wrestlerItem.lastEvent?.date || wrestlerItem.lastEvent || wrestlerItem.created;
 
@@ -420,32 +415,32 @@ const WrestlerSearchManagement = () => {
 								</div>
 
 								<h2 className="section-sub-heading">
-									Duplicate Candidates for { activeDuplicateGroup.wrestlerName }
+									Duplicate Candidates for { activeDuplicateGroup.name }
 								</h2>
 
-								{ (activeDuplicateGroup.potentialDuplicates || activeDuplicateGroup.candidates || []).length === 0 ? (
+								{ (activeDuplicateGroup.potentialDuplicates || []).length === 0 ? (
 									<div className="no-records-message">
-										No candidate duplicate records found for { activeDuplicateGroup.wrestlerName }.
+										No candidate duplicate records found for { activeDuplicateGroup.name }.
 									</div>
 								) : (() => {
 									const groupSqlId = activeDuplicateGroup.sqlId;
 									const isGroupSubmitted = activeDuplicateGroup.isSubmitted;
 
 									const mainWrestlerCandidate = {
-										wrestlerId: activeDuplicateGroup.wrestlerId || activeDuplicateGroup.id,
+										id: activeDuplicateGroup.id,
 										sqlId: activeDuplicateGroup.sqlId,
 										lastTeam: activeDuplicateGroup.lastTeam || "",
-										wrestlerName: activeDuplicateGroup.wrestlerName || activeDuplicateGroup.name || `${ activeDuplicateGroup.firstName || "" } ${ activeDuplicateGroup.lastName || "" }`.trim(),
+										name: activeDuplicateGroup.name,
 										isMainNewRecord: true
 									};
 
 									const allGroupCandidates = [
 										mainWrestlerCandidate,
-										...(activeDuplicateGroup.potentialDuplicates || activeDuplicateGroup.candidates || []).map(candidateItem => ({
-											wrestlerId: candidateItem.wrestlerId || candidateItem.id,
+										...(activeDuplicateGroup.potentialDuplicates || []).map(candidateItem => ({
+											id: candidateItem.id,
 											sqlId: candidateItem.sqlId,
 											lastTeam: candidateItem.lastTeam || "",
-											wrestlerName: candidateItem.name || `${ candidateItem.firstName || "" } ${ candidateItem.lastName || "" }`.trim(),
+											name: candidateItem.name,
 											isMainNewRecord: false
 										}))
 									];
@@ -455,7 +450,7 @@ const WrestlerSearchManagement = () => {
 											{/* Card Header */}
 											<div className="group-card-header">
 												<div className="wrestler-title-info">
-													<span className="wrestler-main-name">{ activeDuplicateGroup.wrestlerName }</span>
+													<span className="wrestler-main-name">{ activeDuplicateGroup.name }</span>
 													<span className="wrestler-sub-team">{ activeDuplicateGroup.lastTeam || "No Team Specified" }</span>
 													<span className="wrestler-sql-id">
 														SQL ID: { activeDuplicateGroup.sqlId } • Created: { formatDateDisplay(activeDuplicateGroup.created) }
@@ -480,13 +475,13 @@ const WrestlerSearchManagement = () => {
 													</tr>
 												</thead>
 												<tbody>
-													{ allGroupCandidates.map((candidateRecord) => {
+													{ allGroupCandidates.map((candidateRecord, candidateIndex) => {
 														const isCurrentPrimary = Boolean(selectedPrimary && selectedPrimary.sqlId === candidateRecord.sqlId);
 														const isCurrentDuplicate = Boolean(selectedDuplicates && selectedDuplicates.some(item => item.sqlId === candidateRecord.sqlId));
 
 														return (
 															<tr
-																key={ candidateRecord.sqlId }
+																key={ candidateIndex }
 																className={ isCurrentPrimary || isCurrentDuplicate ? "selected-row" : "" }
 															>
 																<td style={{ textAlign: "center" }}>
@@ -513,7 +508,7 @@ const WrestlerSearchManagement = () => {
 																		rel="noreferrer"
 																		className="wrestler-link"
 																	>
-																		{ candidateRecord.wrestlerName }
+																		{ candidateRecord.name }
 																	</a>
 																</td>
 																<td>{ candidateRecord.lastTeam || "-" }</td>
@@ -533,13 +528,13 @@ const WrestlerSearchManagement = () => {
 
 											{/* Mobile Candidate Cards */}
 											<div className="candidate-cards-list mobile-only">
-												{ allGroupCandidates.map((candidateRecord) => {
+												{ allGroupCandidates.map((candidateRecord, candidateIndex) => {
 													const isCurrentPrimary = Boolean(selectedPrimary && selectedPrimary.sqlId === candidateRecord.sqlId);
 													const isCurrentDuplicate = Boolean(selectedDuplicates && selectedDuplicates.some(item => item.sqlId === candidateRecord.sqlId));
 
 													return (
 														<div
-															key={ candidateRecord.sqlId }
+															key={ candidateIndex }
 															className={`candidate-mobile-card ${ isCurrentPrimary || isCurrentDuplicate ? "selected-card" : "" }`}
 														>
 															<div className="mobile-card-top">
@@ -550,7 +545,7 @@ const WrestlerSearchManagement = () => {
 																		rel="noreferrer"
 																		className="wrestler-link"
 																	>
-																		{ candidateRecord.wrestlerName }
+																		{ candidateRecord.name }
 																	</a>
 																	<div className="mobile-card-meta">
 																		<span>SQL ID: { candidateRecord.sqlId }</span>
