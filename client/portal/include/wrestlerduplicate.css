@@ -473,3 +473,11 @@
 		width: 100%;
 	}
 }
+
+.diff {
+	background-color: #ffeb3b;
+	color: #000;
+	font-weight: bold;
+	text-decoration: underline;
+}
+

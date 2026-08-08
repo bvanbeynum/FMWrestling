@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom/client";
 import Nav from "./nav.jsx";
+import { getNameDiffNodes } from "./include/nameDiff.jsx";
 import "./include/index.css";
 import "./include/newwrestler.css";
+
 
 const NewWrestlerManagement = () => {
 	const [ timespanDays, setTimespanDays ] = useState(3);
@@ -264,6 +266,9 @@ const NewWrestlerManagement = () => {
 									const selectedPrimary = primarySelections[groupSqlId] || null;
 									const selectedDuplicates = duplicateSelections[groupSqlId] || [];
 
+									const activePrimaryCandidate = selectedPrimary || mainWrestlerCandidate;
+									const activePrimaryWrestlerName = activePrimaryCandidate?.name || "";
+
 									return (
 										<div
 											key={ groupSqlId }
@@ -297,13 +302,14 @@ const NewWrestlerManagement = () => {
 													</tr>
 												</thead>
 												<tbody>
-													{ allGroupCandidates.map((candidateRecord) => {
-														const isCurrentPrimary = Boolean(selectedPrimary && selectedPrimary.sqlId === candidateRecord.sqlId);
-														const isCurrentDuplicate = Boolean(selectedDuplicates && selectedDuplicates.some(item => item.sqlId === candidateRecord.sqlId));
+													{ allGroupCandidates.map((wrestlerCandidate) => {
+														const isCurrentPrimary = Boolean(selectedPrimary && selectedPrimary.sqlId === wrestlerCandidate.sqlId);
+														const isCurrentDuplicate = Boolean(selectedDuplicates && selectedDuplicates.some(dup => dup.sqlId === wrestlerCandidate.sqlId));
+														const { candidateHighlightedName } = getNameDiffNodes(activePrimaryWrestlerName, wrestlerCandidate.wrestlerName);
 
 														return (
 															<tr
-																key={ candidateRecord.sqlId }
+																key={ wrestlerCandidate.sqlId }
 																className={ isCurrentPrimary || isCurrentDuplicate ? "selected-row" : "" }
 															>
 																<td style={{ textAlign: "center" }}>
@@ -312,7 +318,7 @@ const NewWrestlerManagement = () => {
 																		name={`primary_radio_${ groupSqlId }`}
 																		checked={ isCurrentPrimary }
 																		disabled={ isGroupSubmitted }
-																		onChange={ () => handlePrimaryChange(groupSqlId, candidateRecord) }
+																		onChange={ () => handlePrimaryChange(groupSqlId, wrestlerCandidate) }
 																	/>
 																</td>
 																<td style={{ textAlign: "center" }}>
@@ -320,23 +326,23 @@ const NewWrestlerManagement = () => {
 																		type="checkbox"
 																		checked={ isCurrentDuplicate }
 																		disabled={ isGroupSubmitted || isCurrentPrimary }
-																		onChange={ (eventObject) => handleDuplicateToggle(groupSqlId, candidateRecord, eventObject.target.checked) }
+																		onChange={ (eventObject) => handleDuplicateToggle(groupSqlId, wrestlerCandidate, eventObject.target.checked) }
 																	/>
 																</td>
 																<td>
 																	<a
-																		href={`/portal/wrestler.html?sqlid=${ candidateRecord.sqlId }`}
+																		href={`/portal/wrestler.html?sqlid=${ wrestlerCandidate.sqlId }`}
 																		target="_blank"
 																		rel="noreferrer"
 																		className="wrestler-link"
 																	>
-																		{ candidateRecord.wrestlerName }
+																		{ candidateHighlightedName }
 																	</a>
 																</td>
-																<td>{ candidateRecord.lastTeam || "-" }</td>
-																<td>{ candidateRecord.sqlId }</td>
+																<td>{ wrestlerCandidate.lastTeam || "-" }</td>
+																<td>{ wrestlerCandidate.sqlId }</td>
 																<td>
-																	{ candidateRecord.isMainNewRecord ? (
+																	{ wrestlerCandidate.isMainNewRecord ? (
 																		<span className="primary-badge" style={{ backgroundColor: "#0284c7" }}>New Wrestler</span>
 																	) : (
 																		<span className="duplicate-chip">Candidate</span>
@@ -350,32 +356,33 @@ const NewWrestlerManagement = () => {
 
 											{/* Mobile Candidate Cards */}
 											<div className="candidate-cards-list mobile-only">
-												{ allGroupCandidates.map((candidateRecord) => {
-													const isCurrentPrimary = Boolean(selectedPrimary && selectedPrimary.sqlId === candidateRecord.sqlId);
-													const isCurrentDuplicate = Boolean(selectedDuplicates && selectedDuplicates.some(item => item.sqlId === candidateRecord.sqlId));
+												{ allGroupCandidates.map((wrestlerCandidate) => {
+													const isCurrentPrimary = Boolean(selectedPrimary && selectedPrimary.sqlId === wrestlerCandidate.sqlId);
+													const isCurrentDuplicate = Boolean(selectedDuplicates && selectedDuplicates.some(dup => dup.sqlId === wrestlerCandidate.sqlId));
+													const { candidateHighlightedName } = getNameDiffNodes(activePrimaryWrestlerName, wrestlerCandidate.wrestlerName);
 
 													return (
 														<div
-															key={ candidateRecord.sqlId }
+															key={ wrestlerCandidate.sqlId }
 															className={`candidate-mobile-card ${ isCurrentPrimary || isCurrentDuplicate ? "selected-card" : "" }`}
 														>
 															<div className="mobile-card-top">
 																<div className="mobile-card-info">
 																	<a
-																		href={`/portal/wrestler.html?sqlid=${ candidateRecord.sqlId }`}
+																		href={`/portal/wrestler.html?sqlid=${ wrestlerCandidate.sqlId }`}
 																		target="_blank"
 																		rel="noreferrer"
 																		className="wrestler-link"
 																	>
-																		{ candidateRecord.wrestlerName }
+																		{ candidateHighlightedName }
 																	</a>
 																	<div className="mobile-card-meta">
-																		<span>SQL ID: { candidateRecord.sqlId }</span>
-																		{ candidateRecord.lastTeam && <span> • Team: { candidateRecord.lastTeam }</span> }
+																		<span>SQL ID: { wrestlerCandidate.sqlId }</span>
+																		{ wrestlerCandidate.lastTeam && <span> • Team: { wrestlerCandidate.lastTeam }</span> }
 																	</div>
 																</div>
 
-																{ candidateRecord.isMainNewRecord ? (
+																{ wrestlerCandidate.isMainNewRecord ? (
 																	<span className="primary-badge" style={{ backgroundColor: "#0284c7" }}>New Wrestler</span>
 																) : (
 																	<span className="duplicate-chip">Candidate</span>
@@ -389,7 +396,7 @@ const NewWrestlerManagement = () => {
 																		name={`primary_radio_mobile_${ groupSqlId }`}
 																		checked={ isCurrentPrimary }
 																		disabled={ isGroupSubmitted }
-																		onChange={ () => handlePrimaryChange(groupSqlId, candidateRecord) }
+																		onChange={ () => handlePrimaryChange(groupSqlId, wrestlerCandidate) }
 																	/>
 																	<span>Primary</span>
 																</label>
@@ -399,7 +406,7 @@ const NewWrestlerManagement = () => {
 																		type="checkbox"
 																		checked={ isCurrentDuplicate }
 																		disabled={ isGroupSubmitted || isCurrentPrimary }
-																		onChange={ (eventObject) => handleDuplicateToggle(groupSqlId, candidateRecord, eventObject.target.checked) }
+																		onChange={ (eventObject) => handleDuplicateToggle(groupSqlId, wrestlerCandidate, eventObject.target.checked) }
 																	/>
 																	<span>Duplicate</span>
 																</label>
