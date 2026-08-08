@@ -2601,10 +2601,10 @@ const dataFunctionsObject = {
 		return outputResults;
 	},
 
-	duplicateSave: async (saveRecord = {}) => {
+	duplicateSave: async (saveObject = {}) => {
 		const output = {};
 
-		if (!saveRecord || !saveRecord.primary) {
+		if (!saveObject || !saveObject.primary) {
 			output.status = 550;
 			output.error = "Missing record or primary wrestler details to save";
 			return output;
