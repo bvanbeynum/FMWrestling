@@ -602,4 +602,9 @@ router.get("/api/wrestlerduplicatelookup", authAPI, async (request, response) =>
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 });
 
+router.get("/api/duplicatesload", authAPI, async (request, response) => {
+	const results = await api.duplicatesLoad(request.serverPath);
+	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
+});
+
 export default router;

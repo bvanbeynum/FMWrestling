@@ -14,7 +14,7 @@ const DuplicatesManagement = () => {
 		setIsLoading(true);
 		setErrorMessage("");
 		try {
-			const fetchResponse = await fetch("/api/newwrestlerload?timespan=3");
+			const fetchResponse = await fetch("/api/duplicatesload");
 			const responseData = await fetchResponse.json();
 
 			if (responseData.error) {
@@ -125,10 +125,10 @@ const DuplicatesManagement = () => {
 															rel="noreferrer"
 															className="wrestler-link"
 														>
-															{ primaryWrestler.wrestlerName }
+															{ primaryWrestler.name }
 														</a>
 														<span>(SQL ID: { primaryWrestler.sqlId })</span>
-														{ primaryWrestler.lastTeam && <span>Team: { primaryWrestler.lastTeam }</span> }
+														{ primaryWrestler.team && <span>Team: { primaryWrestler.team }</span> }
 													</div>
 
 													<div className="duplicates-linked-list">
@@ -141,10 +141,10 @@ const DuplicatesManagement = () => {
 																	rel="noreferrer"
 																	className="wrestler-link"
 																>
-																	{ duplicateItem.wrestlerName }
+																	{ duplicateItem.name }
 																</a>
 																{` (SQL ID: ${ duplicateItem.sqlId })`}
-																{ duplicateItem.lastTeam ? ` • ${ duplicateItem.lastTeam }` : "" }
+																{ duplicateItem.team ? ` • ${ duplicateItem.team }` : "" }
 															</span>
 														))}
 													</div>

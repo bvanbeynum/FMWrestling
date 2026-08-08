@@ -338,16 +338,16 @@ export default {
 
 	duplicate: mongoose.model("duplicate", {
 		primary: {
-			wrestlerId: String,
+			id: String,
 			sqlId: Number,
-			lastTeam: String,
-			wrestlerName: String
+			team: String,
+			name: String
 		},
 		duplicates: [{
-			wrestlerId: String,
+			id: String,
 			sqlId: Number,
-			lastTeam: String,
-			wrestlerName: String
+			team: String,
+			name: String
 		}],
 		status: String,
 		created: Date,

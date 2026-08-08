@@ -248,7 +248,7 @@ const NewWrestlerManagement = () => {
 										id: wrestlerItem.id,
 										sqlId: wrestlerItem.sqlId,
 										lastTeam: wrestlerItem.lastTeam || "",
-										wrestlerName: wrestlerItem.name,
+										name: wrestlerItem.name,
 										isMainNewRecord: true
 									};
 
@@ -258,7 +258,7 @@ const NewWrestlerManagement = () => {
 											id: candidateItem.id,
 											sqlId: candidateItem.sqlId,
 											lastTeam: candidateItem.lastTeam || "",
-											wrestlerName: candidateItem.name,
+											name: candidateItem.name,
 											isMainNewRecord: false
 										}))
 									];
@@ -277,7 +277,7 @@ const NewWrestlerManagement = () => {
 											{/* Card Header */}
 											<div className="group-card-header">
 												<div className="wrestler-title-info">
-													<span className="wrestler-main-name">{ wrestlerItem.wrestlerName }</span>
+													<span className="wrestler-main-name">{ wrestlerItem.name }</span>
 													<span className="wrestler-sub-team">{ wrestlerItem.lastTeam || "No Team Specified" }</span>
 													<span className="wrestler-sql-id">
 														SQL ID: { wrestlerItem.sqlId } • Created: { formatDateDisplay(wrestlerItem.created) }
@@ -305,7 +305,7 @@ const NewWrestlerManagement = () => {
 													{ allGroupCandidates.map((wrestlerCandidate) => {
 														const isCurrentPrimary = Boolean(selectedPrimary && selectedPrimary.sqlId === wrestlerCandidate.sqlId);
 														const isCurrentDuplicate = Boolean(selectedDuplicates && selectedDuplicates.some(dup => dup.sqlId === wrestlerCandidate.sqlId));
-														const { candidateHighlightedName } = getNameDiffNodes(activePrimaryWrestlerName, wrestlerCandidate.wrestlerName);
+														const { candidateHighlightedName } = getNameDiffNodes(activePrimaryWrestlerName, wrestlerCandidate.name);
 
 														return (
 															<tr
@@ -359,7 +359,7 @@ const NewWrestlerManagement = () => {
 												{ allGroupCandidates.map((wrestlerCandidate) => {
 													const isCurrentPrimary = Boolean(selectedPrimary && selectedPrimary.sqlId === wrestlerCandidate.sqlId);
 													const isCurrentDuplicate = Boolean(selectedDuplicates && selectedDuplicates.some(dup => dup.sqlId === wrestlerCandidate.sqlId));
-													const { candidateHighlightedName } = getNameDiffNodes(activePrimaryWrestlerName, wrestlerCandidate.wrestlerName);
+													const { candidateHighlightedName } = getNameDiffNodes(activePrimaryWrestlerName, wrestlerCandidate.name);
 
 													return (
 														<div

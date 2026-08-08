@@ -3096,7 +3096,19 @@ Instructions for response:
 		}
 
 		try {
-			const saveResponse = await client.post(`${ serverPath }/data/duplicate`).send({ duplicate: savePayload });
+			const saveRecord = {
+				primary: {
+					...savePayload.primary,
+					team: savePayload.primary.lastTeam
+				},
+				duplicates: savePayload.duplicates.map(duplicate => ({
+					...duplicate,
+					team: duplicate.lastTeam
+				})),
+				status: "pending"
+			};
+
+			const saveResponse = await client.post(`${ serverPath }/data/duplicate`).send({ duplicate: saveRecord });
 			outputResults.status = saveResponse.status || 200;
 			outputResults.data = saveResponse.body;
 		}
@@ -3244,6 +3256,26 @@ Instructions for response:
 					potentialDuplicates: wrestler.potentialDuplicates,
 					isSubmitted: isAlreadySubmitted
 				}
+			};
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+		}
+
+		return output;
+	},
+
+	duplicatesLoad: async (serverPath) => {
+		const output = {};
+
+		try {
+			const duplicatesResponse = await client.get(`${ serverPath }/data/duplicate?status=pending`);
+			const existingDuplicates = duplicatesResponse.body?.duplicates || [];
+
+			output.status = 200;
+			output.data = {
+				existingDuplicates: existingDuplicates,
 			};
 		}
 		catch (error) {
