@@ -55,6 +55,15 @@ const OpponentReport = () => {
 
 	const [loadedWrestlers, setLoadedWrestlers] = useState([]);
 	const [loadedWrestlerEvents, setLoadedWrestlerEvents] = useState([]);
+	const [expandedWrestlers, setExpandedWrestlers] = useState({});
+
+	const toggleExpandWrestler = (wrestlerKey, event) => {
+		if (event) event.stopPropagation();
+		setExpandedWrestlers(prev => ({
+			...prev,
+			[wrestlerKey]: !prev[wrestlerKey]
+		}));
+	};
 
 	const fetchOpponentData = (targetSchoolId, targetSeason) => {
 		setIsSelectLoading(true);
@@ -68,6 +77,7 @@ const OpponentReport = () => {
 			.then(responseData => {
 				setLoadedWrestlers(responseData.wrestlers || []);
 				setLoadedWrestlerEvents(responseData.wrestlerEvents || []);
+				setActiveTab("overview");
 				setIsSelectLoading(false);
 				setIsLoading(false);
 				setPageActive(true);
@@ -235,7 +245,8 @@ const OpponentReport = () => {
 					name: wrestlerItem.name,
 					rating: wrestlerItem.rating || 0,
 					wins: 0,
-					losses: 0
+					losses: 0,
+					eventsMap: {}
 				};
 			}
 
@@ -245,18 +256,33 @@ const OpponentReport = () => {
 			} else {
 				wrestlerStats.losses += 1;
 			}
+
+			if (eventItem.name) {
+				const eventName = eventItem.name.trim();
+				if (eventName && !wrestlerStats.eventsMap[eventName]) {
+					wrestlerStats.eventsMap[eventName] = parseDateValue(eventItem.date);
+				}
+			}
 		});
 	});
 
 	const weightClassCardsList = standardWeightClasses.map(weightClassLabel => {
 		const classData = weightClassDataMap[weightClassLabel];
-		const wrestlersInClass = Object.values(classData.wrestlerMap);
+		const wrestlersInClass = Object.values(classData.wrestlerMap).map(wrestlerStats => {
+			const sortedEvents = Object.entries(wrestlerStats.eventsMap || {})
+				.sort((eventA, eventB) => (eventA[1] && eventB[1] ? eventB[1] - eventA[1] : 0))
+				.map(entry => entry[0]);
+			return {
+				...wrestlerStats,
+				events: sortedEvents
+			};
+		});
 		const wrestlerCount = wrestlersInClass.length;
 
 		let statusLabel = "Stable";
-		if (wrestlerCount >= 6) {
+		if (wrestlerCount >= 4) {
 			statusLabel = "Volatile";
-		} else if (wrestlerCount >= 3) {
+		} else if (wrestlerCount >= 2) {
 			statusLabel = "Variable";
 		} else {
 			statusLabel = "Stable";
@@ -627,25 +653,59 @@ const OpponentReport = () => {
 														{cardItem.wrestlers.length === 0 ? (
 															<span className="wc-no-wrestlers">No wrestlers recorded</span>
 														) : (
-															cardItem.wrestlers.map((wrestlerItem, wrestlerIndex) => (
-																<div
-																	key={`wc-wrestler-${wrestlerIndex}`}
-																	onClick={() => window.open(`/portal/wrestlerreport.html?id=${wrestlerItem.id}`, "_blank")}
-																	className="wc-wrestler-row"
-																>
-																	<div className="wc-wrestler-info">
-																		<span className="wc-wrestler-name">
-																			{wrestlerItem.name}
-																		</span>
-																		<span className="wc-wrestler-record">
-																			Record: {wrestlerItem.wins}-{wrestlerItem.losses}
+															cardItem.wrestlers.map((wrestlerItem, wrestlerIndex) => {
+																const wrestlerKey = `${cardItem.weightClass}-${wrestlerItem.id}`;
+																const isExpanded = !!expandedWrestlers[wrestlerKey];
+																const allEvents = wrestlerItem.events || [];
+																const visibleEvents = isExpanded ? allEvents : allEvents.slice(0, 3);
+																const hiddenCount = allEvents.length - 3;
+
+																return (
+																	<div
+																		key={`wc-wrestler-${wrestlerIndex}`}
+																		onClick={() => window.open(`/portal/wrestlerreport.html?id=${wrestlerItem.id}`, "_blank")}
+																		className="wc-wrestler-row"
+																	>
+																		<div className="wc-wrestler-info">
+																			<span className="wc-wrestler-name">
+																				{wrestlerItem.name}
+																			</span>
+																			<span className="wc-wrestler-record">
+																				Record: {wrestlerItem.wins}-{wrestlerItem.losses}
+																			</span>
+																			{allEvents.length > 0 && (
+																				<div className="wc-wrestler-events-container">
+																					<span className="wc-events-label">Events:</span>
+																					{visibleEvents.map((eventName, eventIdx) => (
+																						<span key={`ev-${eventIdx}`} className="wc-event-chip" title={eventName}>
+																							{eventName}
+																						</span>
+																					))}
+																					{!isExpanded && hiddenCount > 0 && (
+																						<span
+																							className="wc-event-chip more-badge"
+																							onClick={(e) => toggleExpandWrestler(wrestlerKey, e)}
+																						>
+																							+{hiddenCount} more
+																						</span>
+																					)}
+																					{isExpanded && hiddenCount > 0 && (
+																						<span
+																							className="wc-event-chip more-badge"
+																							onClick={(e) => toggleExpandWrestler(wrestlerKey, e)}
+																						>
+																							show less
+																						</span>
+																					)}
+																				</div>
+																			)}
+																		</div>
+																		<span className="wc-wrestler-rating">
+																			{wrestlerItem.rating ? Math.round(wrestlerItem.rating) : "N/A"}
 																		</span>
 																	</div>
-																	<span className="wc-wrestler-rating">
-																		{wrestlerItem.rating ? Math.round(wrestlerItem.rating) : "N/A"}
-																	</span>
-																</div>
-															))
+																);
+															})
 														)}
 													</div>
 												</div>
