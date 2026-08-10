@@ -1715,6 +1715,152 @@ export default {
 		return output;		
 	},
 
+	opponentReportLoad: async (serverPath) => {
+		const output = {
+			data: {}
+		};
+
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/school`);
+			output.data.schools = (clientResponse.body.schools || [])
+				.filter(school => !/^fort mill$/gi.test(school.name))
+				.map(school => ({
+					id: school.id,
+					name: school.name,
+					classification: school.classification,
+					region: school.region
+				}));
+			output.status = 200;
+		}
+		catch (error) {
+			output.status = 564;
+			output.error = error.message;
+		}
+
+		return output;
+	},
+
+	opponentReportSelect: async (opponentId, season, serverPath) => {
+		const output = { data: {} };
+
+		if (!opponentId) {
+			output.status = 561;
+			output.error = "Opponent ID is required";
+			return output;
+		}
+
+		let opponentName = "";
+		let opponentSchool = null;
+		try {
+			const schoolResponse = await client.get(`${ serverPath }/data/school?id=${ opponentId }`);
+			opponentSchool = (schoolResponse.body.schools || [])[0];
+			if (!opponentSchool) {
+				output.status = 562;
+				output.error = "School not found";
+				return output;
+			}
+			opponentName = opponentSchool.name;
+		}
+		catch (error) {
+			output.status = 563;
+			output.error = error.message;
+			return output;
+		}
+
+		let wrestlers = [];
+		try {
+			const wrestlerResponse = await client.get(`${ serverPath }/data/wrestler?teamname=${ encodeURIComponent(opponentName) }&state=SC`);
+			wrestlers = wrestlerResponse.body.wrestlers || [];
+		}
+		catch (error) {
+			output.status = 563;
+			output.error = error.message;
+			return output;
+		}
+		
+		let startYear;
+		if (season && /^\d{2}-\d{2}$/.test(season)) {
+			const startYearShort = parseInt(season.split("-")[0], 10);
+			startYear = 2000 + startYearShort;
+		} else {
+			const todayDate = new Date();
+			const currentCalendarYear = todayDate.getFullYear();
+			startYear = todayDate.getMonth() >= 8 ? currentCalendarYear : currentCalendarYear - 1;
+		}
+		const endYear = startYear + 1;
+		
+		const startDate = `${startYear}-09-01`;
+		const endDate = `${endYear}-08-31`;
+
+		let wrestlerEvents = [];
+		try {
+			const wrestlerEventsResponse = await client.get(`${ serverPath }/data/wrestlerevent?startdate=${startDate}&enddate=${endDate}&wrestlerids=${ encodeURIComponent(JSON.stringify(wrestlers.map(wrestler => wrestler.id))) }`);
+			wrestlerEvents = wrestlerEventsResponse.body.wrestlerEvents || [];
+		}
+		catch (error) {
+			output.status = 564;
+			output.error = error.message;
+			return output;
+		}
+
+		let fortMillWrestlerEvents = [];
+		try {
+			const fortMillEventsResponse = await client.get(`${ serverPath }/data/wrestlerevent?startdate=${startDate}&enddate=${endDate}&team=fort%20mill`);
+			fortMillWrestlerEvents = fortMillEventsResponse.body.wrestlerEvents || [];
+		}
+		catch (error) {
+			fortMillWrestlerEvents = [];
+		}
+
+		const fortMillEventKeys = new Set(
+			fortMillWrestlerEvents.map(event => `${ new Date(event.date).toISOString().slice(0, 10) }|${ (event.name || "").toLowerCase().trim() }`)
+		);
+
+		output.data.school = opponentSchool;
+		output.data.wrestlers = wrestlers.map(wrestler => ({
+			id: wrestler.id,
+			sqlId: wrestler.sqlId,
+			name: wrestler.name,
+			rating: wrestler.rating,
+			deviation: wrestler.deviation,
+			searchTeams: wrestler.searchTeams,
+			states: wrestler.states,
+			schoolDivision: wrestler.schoolDivision,
+			lastEvent: wrestler.lastEvent,
+			lastWeightClass: wrestler.lastWeightClass
+		}));
+
+		output.data.wrestlerEvents = wrestlerEvents.map(event => {
+			const eventDateKey = `${ new Date(event.date).toISOString().slice(0, 10) }|${ (event.name || "").toLowerCase().trim() }`;
+			const isFortMillPresent = fortMillEventKeys.has(eventDateKey) || (event.matches || []).some(match => match.vsTeam && /fort mill/i.test(match.vsTeam));
+
+			return {
+				id: event.id || event._id,
+				wrestlerId: event.wrestlerId,
+				name: event.name,
+				date: event.date,
+				division: event.division,
+				divisionConvert: event.divisionConvert,
+				weightClass: event.weightClass,
+				isFortMillPresent: isFortMillPresent,
+				matches: (event.matches || []).map(match => ({
+					division: match.division,
+					divisionConvert: match.divisionConvert,
+					weightClass: match.weightClass,
+					vs: match.vs,
+					vsTeam: match.vsTeam,
+					vsRating: match.vsRating,
+					isWinner: match.isWinner,
+					winType: match.winType,
+					isVsFortMill: Boolean(match.vsTeam && /fort mill/i.test(match.vsTeam))
+				}))
+			};
+		});
+
+		output.status = 200;
+		return output;
+	},
+
 	dualLoad: async (targetId, serverPath) => {
 		const output = { data: { dual: null, fortMillWrestlers: [], opponentWrestlers: [] } };
 

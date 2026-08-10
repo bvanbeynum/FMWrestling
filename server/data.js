@@ -2235,6 +2235,9 @@ const dataFunctionsObject = {
 		if (userFilter.sqlId) {
 			filter.sqlId = userFilter.sqlId;
 		}
+		if (userFilter.wrestlerIds) {
+			filter.wrestlerId = { $in: userFilter.wrestlerIds };
+		}
 		if (userFilter.team) {
 			filter.searchTeam = userFilter.team.toLowerCase();
 		}
@@ -2246,6 +2249,11 @@ const dataFunctionsObject = {
 				$gte: startDate,
 				$lte: endDate
 			};
+		}
+
+		if (Object.keys(filter).length == 0) {
+			output.status = 562;
+			output.error = "No filter provided";
 		}
 
 		try {

@@ -15,7 +15,7 @@ const Nav = props => {
 		else if (/(users|roles|request)/i.test(window.location)) {
 			setSubExpanded("user");
 		}
-		else if (/(opponentevent|opponentlive|opponent)/i.test(window.location)) {
+		else if (/(opponentevent|opponentlive|opponentreport|opponent)/i.test(window.location)) {
 			setSubExpanded("opponent");
 		}
 		else if (/(team|dualreport)/i.test(window.location)) {
@@ -125,6 +125,10 @@ const Nav = props => {
 				{/* Shield icon */}
 				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-80q-139-35-229.5-159.5T160-516v-244l320-120 320 120v244q0 152-90.5 276.5T480-80Zm0-84q104-33 172-132t68-220v-189l-240-90-240 90v189q0 121 68 220t172 132Z"/></svg>
 				<span>Opponent</span>
+			</li>
+
+			<li role="button" onClick={ () => window.location = "/portal/opponentreport.html" } className={`button sub ${ subExpanded === "opponent" ? "active" : "" }`} aria-label="Overview">
+				<span>Overview</span>
 			</li>
 
 			<li role="button" onClick={ () => window.location = "/portal/opponent.html" } className={`button sub ${ subExpanded === "opponent" ? "active" : "" }`} aria-label="Match Plan">
