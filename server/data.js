@@ -277,111 +277,11 @@ const dataFunctionsObject = {
 			sort = { rating: -1 };
 			limit = 20;
 		}
-		if (userFilter.initialSearch && userFilter.teams) {
-			const escapeRegExp = (str) => {
-				// $& means the whole matched string
-				return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-			};
-			
-			const searchParts = userFilter.initialSearch.toLowerCase().split(" ");
-			if (searchParts.length >= 2) {
-				const firstName = searchParts[0];
-				const lastName = searchParts.slice(1).join(" ");
-				filter.searchName = {
-					$regex: new RegExp(`(^${escapeRegExp(firstName[0])}[\\w ]* ${escapeRegExp(lastName)}$)|(^${escapeRegExp(firstName)} ${escapeRegExp(lastName[0])}[\\w ]*$)`, "i")
-				};
-			}
-			else {
-				filter.searchName = { $regex: new RegExp(`^${escapeRegExp(userFilter.initialSearch)}`, "i") };
-			}
-
-			filter["events.searchTeam"] = { $in: userFilter.teams.map(team => team.toLowerCase()) };
-		}
 
 		try {
 			const records = await data.wrestler.find(filter).select(select).sort(sort).limit(limit).lean().exec();
 			output.status = 200;
 			output.data = { wrestlers: records.map(({ _id, __v, ...data }) => ({ id: _id, ...data })) };
-		}
-		catch (error) {
-			output.status = 560;
-			output.error = error.message;
-		}
-
-		return output;
-	},
-
-	wrestlerRankingGet: async (rankingFilter = {}) => {
-		const output = {};
-
-		try {
-			const seasonStart = new Date() > new Date(new Date().getFullYear(), 11, 1) ?
-				new Date(new Date().getFullYear(), 8, 1)
-				: new Date(new Date().getFullYear() - 1, 8, 1);
-		
-			const elemMatchFilter = {
-				"matches.division": { $in: [/high school/i, /hs/i] },
-				date: { $gte: seasonStart }
-			};
-
-			if (rankingFilter.state) {
-				elemMatchFilter.locationState = rankingFilter.state.toUpperCase();
-			}
-			if (rankingFilter.weightClass) {
-				elemMatchFilter["matches.weightClass"] = { $regex: new RegExp("^" + rankingFilter.weightClass) };
-			}
-
-			const pipeline = [
-				{
-					$match: {
-						events: {
-							$elemMatch: elemMatchFilter
-						}
-					}
-				},
-				{
-					$sort: {
-						rating: -1
-					}
-				},
-				{
-					$limit: 20
-				},
-				{
-					$project: {
-						_id: 1,
-						name: 1,
-						rating: 1,
-						deviation: 1,
-						events: {
-							$map: {
-								input: "$events",
-								as: "event",
-								in: {
-									date: "$$event.date",
-									team: "$$event.team",
-									locationState: "$$event.locationState",
-									matches: {
-										$let: {
-											vars: {
-												firstMatch: { $arrayElemAt: ["$$event.matches", 0] }
-											},
-											in: [{
-												division: "$$firstMatch.division",
-												weightClass: "$$firstMatch.weightClass"
-											}]
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-			];
-
-			const records = await data.wrestler.aggregate(pipeline).exec();
-			output.status = 200;
-			output.data = { wrestlers: records.map(({ _id, ...data }) => ({ id: _id, ...data })) };
 		}
 		catch (error) {
 			output.status = 560;
@@ -427,13 +327,6 @@ const dataFunctionsObject = {
 			saveObject.searchLastName = lastName;
 			saveObject.searchFirstInitial = firstInitial;
 			saveObject.searchLastInitial = lastInitial;
-		}
-
-		if (saveObject.events) {
-			saveObject.events = saveObject.events.map(event => ({
-				...event,
-				searchTeam: event.team ? event.team.toLowerCase() : null
-			}));
 		}
 
 		if (saveObject.id) {

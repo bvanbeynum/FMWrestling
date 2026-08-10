@@ -134,27 +134,6 @@ export default {
 		schoolDivision: String,
 		schoolWeightClass: String,
 		states: [String],
-		events: [{
-			sqlId: Number,
-			date: Date,
-			name: String,
-			team: String,
-			searchTeam: String,
-			locationState: String,
-			matches: [{
-				division: String,
-				weightClass: String,
-				round: String,
-				vs: String,
-				vsTeam: String,
-				vsSqlId: Number,
-				vsRating: Number,
-				vsDeviation: Number,
-				isWinner: Boolean,
-				winType: String,
-				sort: Number
-			}]
-		}],
 		ratingHistory: [{
 			periodEndDate: Date,
 			rating: Number,
