@@ -802,6 +802,18 @@ router.post("/data/wrestlerevent/bulk", authInternal, async (request, response) 
 	}
 });
 
+router.post("/data/wrestlerevent/cleanup", authInternal, async (request, response) => {
+	try {
+		const results = await data.wrestlerEventCleanup();
+
+		response.status(results.status).json(results.error ? { error: results.error, errorList: results.errorList, data: results.data } : results.data);
+		response.end();
+	}
+	catch (error) {
+		response.status(570).json({ error: error.message });
+	}
+});
+
 router.post("/data/wrestlerduplicates", authInternal, async (request, response) => {
 	try {
 		const results = await data.wrestlerDuplicates(request.body.wrestlerids);

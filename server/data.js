@@ -2487,6 +2487,72 @@ const dataFunctionsObject = {
 		return output;
 	},
 
+	wrestlerEventCleanup: async () => {
+		const output = {};
+
+		const batchSize = 5000;
+		let deletedTotal = 0,
+			iteration = 0;
+
+		while (true) {
+			const batch = db.wrestlerevents.aggregate([{
+				$addFields: {
+					wrestlerObjectId: {
+						$cond: {
+							if: {
+								$and: [
+									{ $ne: ["$wrestlerId", null] },
+									{ $eq: [{ $strLenCP: { $toString: "$wrestlerId" } }, 24] }
+								]
+							},
+							then: { $toObjectId: "$wrestlerId" },
+							else: null
+						}
+					}
+				}
+				},
+				{
+					$lookup: {
+						from: "wrestlers",
+						localField: "wrestlerObjectId",
+						foreignField: "_id",
+						as: "matchedWrestler"
+					}
+				},
+				{
+					$match: { matchedWrestler: { $size: 0 } }
+				},
+				{ $limit: batchSize },
+				{ $project: { _id: 1 } }
+			]).toArray().map(doc => doc._id); // <--- Added .toArray() here
+
+			if (batch.length === 0) break;
+
+			try {
+				const res = db.wrestlerevents.deleteMany({ _id: { $in: batch } });
+				deletedTotal += res.deletedCount;
+			}
+			catch (error) {
+				output.status = 560;
+				output.error = error.message;
+				output.errorList = (output.errorList || []).concat(error.message);
+				continue;
+			}
+
+			iteration++;
+			if (iteration > 20) {
+				break;
+			}
+		}
+
+		output.status = 200;
+		output.data = {
+			status: "ok",
+			deleted: deletedTotal
+		};
+		return output;
+	},
+
 	duplicateGet: async (filterParameters = {}) => {
 		const outputResults = {};
 		const queryFilter = {};
