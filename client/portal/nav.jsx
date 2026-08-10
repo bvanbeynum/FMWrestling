@@ -15,7 +15,10 @@ const Nav = props => {
 		else if (/(users|roles|request)/i.test(window.location)) {
 			setSubExpanded("user");
 		}
-		else if (/(team|opponent|opponentevent|dualreport)/i.test(window.location)) {
+		else if (/(opponentevent|opponentlive|opponent)/i.test(window.location)) {
+			setSubExpanded("opponent");
+		}
+		else if (/(team|dualreport)/i.test(window.location)) {
 			setSubExpanded("team");
 		}
 		else if (/(parentemail|aiemail)/i.test(window.location)) {
@@ -101,39 +104,40 @@ const Nav = props => {
 				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M0-240v-63q0-43 44-70t116-27q13 0 25 .5t23 2.5q-14 21-21 44t-7 48v65H0Zm240 0v-65q0-32 17.5-58.5T307-410q32-20 76.5-30t96.5-10q53 0 97.5 10t76.5 30q32 20 49 46.5t17 58.5v65H240Zm540 0v-65q0-26-6.5-49T754-397q11-2 22.5-2.5t23.5-.5q72 0 116 26.5t44 70.5v63H780Zm-455-80h311q-10-20-55.5-35T480-370q-55 0-100.5 15T325-320ZM160-440q-33 0-56.5-23.5T80-520q0-34 23.5-57t56.5-23q34 0 57 23t23 57q0 33-23 56.5T160-440Zm640 0q-33 0-56.5-23.5T720-520q0-34 23.5-57t56.5-23q34 0 57 23t23 57q0 33-23 56.5T800-440Zm-320-40q-50 0-85-35t-35-85q0-51 35-85.5t85-34.5q51 0 85.5 34.5T600-600q0 50-34.5 85T480-480Zm0-80q17 0 28.5-11.5T520-600q0-17-11.5-28.5T480-640q-17 0-28.5 11.5T440-600q0 17 11.5 28.5T480-560Zm1 240Zm-1-280Z"/></svg>
 				<span>Team</span>
 			</li>
+
+			<li role="button" onClick={ () => window.location = "/portal/teamschedule.html" } className={`button sub ${ subExpanded === "team" ? "active" : "" }`} aria-label="Team Schedule">
+				<span>Schedule</span>
+			</li>
 			
-			{
-			privileges.includes("teamManage") || privileges.includes("myteam") ?
 			<li role="button" onClick={ () => window.location = "/portal/dualreport.html" } className={`button sub ${ subExpanded === "team" ? "active" : "" }`} aria-label="Duals Overview">
-			<span>Duals</span>
+				<span>Duals</span>
 			</li>
-			: ""
-			}
-			
-			{
-			privileges.includes("teamManage") ?
-			<li role="button" onClick={ () => window.location = "/portal/opponent.html" } className={`button sub ${ subExpanded === "team" ? "active" : "" }`} aria-label="Opponent Matchup">
-			<span>Opponent Match</span>
-			</li>
+
+			</>
 			: ""
 			}
 
 			{
 			privileges.includes("teamManage") ?
-			<li role="button" onClick={ () => window.location = "/portal/opponentevent.html" } className={`button sub ${ subExpanded === "team" ? "active" : "" }`} aria-label="Opponent Events">
-			<span>Opponent Events</span>
-			</li>
-			: ""
-			}
+			<>
 
-			{
-			privileges.includes("teamManage") ?
-			<li role="button" onClick={ () => window.location = "/portal/opponentlive.html" } className={`button sub ${ subExpanded === "team" ? "active" : "" }`} aria-label="Live View">
-			<span>Live View</span>
+			<li role="button" className="button" onClick={ () => setSubExpanded(subExpanded => subExpanded === "opponent" ? null : "opponent") } aria-label="Opponent">
+				{/* Shield icon */}
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M480-80q-139-35-229.5-159.5T160-516v-244l320-120 320 120v244q0 152-90.5 276.5T480-80Zm0-84q104-33 172-132t68-220v-189l-240-90-240 90v189q0 121 68 220t172 132Z"/></svg>
+				<span>Opponent</span>
 			</li>
-			: ""
-			}
 
+			<li role="button" onClick={ () => window.location = "/portal/opponent.html" } className={`button sub ${ subExpanded === "opponent" ? "active" : "" }`} aria-label="Match Plan">
+				<span>Match Plan</span>
+			</li>
+
+			<li role="button" onClick={ () => window.location = "/portal/opponentlive.html" } className={`button sub ${ subExpanded === "opponent" ? "active" : "" }`} aria-label="Match Live">
+				<span>Match Live</span>
+			</li>
+
+			<li role="button" onClick={ () => window.location = "/portal/opponentevent.html" } className={`button sub ${ subExpanded === "opponent" ? "active" : "" }`} aria-label="Events">
+				<span>Events</span>
+			</li>
 
 			</>
 			: ""
