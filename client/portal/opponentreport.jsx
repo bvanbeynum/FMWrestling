@@ -308,8 +308,8 @@ const OpponentReport = () => {
 							<header>
 								<h1>
 									Opponent Overview
-									{selectedOpponent && <h1 className="subTitle">{selectedOpponent.name}</h1>}
 								</h1>
+								{selectedOpponent && <h1 className="subTitle">{selectedOpponent.name}</h1>}
 							</header>
 
 							{/* Filters Row */}
