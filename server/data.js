@@ -2695,7 +2695,7 @@ const dataFunctionsObject = {
 		}
 
 		try {
-			const missingWrestlerIds = [...new Set(wrestlerRatings.filter(wrestlerRating => !wrestlerRating.wrestlerId).map(wrestlerRating => wrestlerRating.wrestlerSqlId))];
+			const missingWrestlerIds = [...new Set(wrestlerRatings.filter(wrestlerRating => !wrestlerRating.wrestlerId && wrestlerRating.wrestlerSqlId).map(wrestlerRating => wrestlerRating.wrestlerSqlId))];
 			if (missingWrestlerIds.length > 0) {
 				const wrestlers = await data.wrestler.find({ sqlId: { $in: missingWrestlerIds } }).select({ _id: 1, sqlId: 1 }).exec();
 
@@ -2714,73 +2714,57 @@ const dataFunctionsObject = {
 			return output;
 		}
 
-		const operations = [];
+		const wrestlerIds = [...new Set(wrestlerRatings.map(rating => rating.wrestlerId).filter(id => id !== undefined && id !== null && id !== ""))];
+		const wrestlerSqlIds = [...new Set(wrestlerRatings.map(rating => rating.wrestlerSqlId).filter(sqlId => sqlId !== undefined && sqlId !== null && sqlId !== ""))];
 
-		for (const wrestlerRating of wrestlerRatings) {
-			if (!wrestlerRating || typeof wrestlerRating !== "object") continue;
-
-			const { id, _id, created, modified, ...updateFields } = wrestlerRating;
-
-			let filter = null;
-			if (id && mongoose.Types.ObjectId.isValid(id)) {
-				filter = { _id: id };
-			}
-			else if (_id && mongoose.Types.ObjectId.isValid(_id)) {
-				filter = { _id: _id };
-			}
-			else if (updateFields.wrestlerSqlId !== undefined && updateFields.wrestlerSqlId !== null && updateFields.sqlId !== undefined && updateFields.sqlId !== null) {
-				filter = { wrestlerSqlId: updateFields.wrestlerSqlId, sqlId: updateFields.sqlId };
-			}
-			else if (updateFields.wrestlerId && updateFields.sqlId !== undefined && updateFields.sqlId !== null) {
-				filter = { wrestlerId: updateFields.wrestlerId, sqlId: updateFields.sqlId };
-			}
-
-			if (filter) {
-				operations.push({
-					updateOne: {
-						filter: filter,
-						update: {
-							$set: {
-								...updateFields,
-								modified: new Date()
-							},
-							$setOnInsert: {
-								created: new Date()
-							}
-						},
-						upsert: true
-					}
-				});
-			}
-			else {
-				operations.push({
-					insertOne: {
-						document: {
-							...updateFields,
-							created: new Date(),
-							modified: new Date()
-						}
-					}
-				});
-			}
+		const deleteFilters = [];
+		if (wrestlerIds.length > 0) {
+			deleteFilters.push({ wrestlerId: { $in: wrestlerIds } });
+		}
+		if (wrestlerSqlIds.length > 0) {
+			deleteFilters.push({ wrestlerSqlId: { $in: wrestlerSqlIds } });
 		}
 
-		if (operations.length === 0) {
+		if (deleteFilters.length === 0) {
 			output.status = 550;
-			output.error = "No valid wrestler event operations to execute";
+			output.error = "No valid wrestlerId or wrestlerSqlId found for bulk save";
+			return output;
+		}
+
+		const deleteQuery = deleteFilters.length === 1 ? deleteFilters[0] : { $or: deleteFilters };
+
+		const insertOperations = [];
+		for (const wrestlerRating of wrestlerRatings) {
+			if (!wrestlerRating || typeof wrestlerRating !== "object") continue;
+			if (!wrestlerRating.wrestlerId && !wrestlerRating.wrestlerSqlId) continue;
+
+			const { id, _id, created, modified, ...ratingFields } = wrestlerRating;
+			insertOperations.push({
+				insertOne: {
+					document: {
+						...ratingFields,
+						created: created ? new Date(created) : new Date(),
+						modified: new Date()
+					}
+				}
+			});
+		}
+
+		if (insertOperations.length === 0) {
+			output.status = 550;
+			output.error = "No valid wrestler rating operations to execute";
 			return output;
 		}
 
 		try {
-			const result = await data.wrestlerRating.bulkWrite(operations, { ordered: false });
+			const deleteResult = await data.wrestlerRating.deleteMany(deleteQuery);
+			const insertResult = await data.wrestlerRating.bulkWrite(insertOperations, { ordered: false });
 
 			output.status = 200;
 			output.data = {
 				status: "ok",
-				matchedCount: result.matchedCount,
-				modifiedCount: result.modifiedCount,
-				upsertedCount: result.upsertedCount,
-				insertedCount: result.insertedCount
+				deletedCount: deleteResult.deletedCount,
+				insertedCount: insertResult.insertedCount
 			};
 		}
 		catch (error) {
