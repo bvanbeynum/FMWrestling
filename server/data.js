@@ -2561,6 +2561,302 @@ const dataFunctionsObject = {
 		return output;
 	},
 
+	wrestlerRatingGet: async (userFilter = {}) => {
+		let filter = {},
+			output = {};
+
+		if (userFilter.id) {
+			filter["_id"] = mongoose.Types.ObjectId.isValid(userFilter.id) ? userFilter.id : null;
+		}
+		if (userFilter.ids) {
+			filter["_id"] = { $in: userFilter.ids.map(id => mongoose.Types.ObjectId.isValid(id) ? id : null) };
+		}
+		if (userFilter.wrestlerId) {
+			filter.wrestlerId = mongoose.Types.ObjectId.isValid(userFilter.wrestlerId) ? userFilter.wrestlerId : null;
+		}
+		if (userFilter.wrestlerSqlId) {
+			filter.wrestlerSqlId = userFilter.wrestlerSqlId;
+		}
+		if (userFilter.wrestlerIds) {
+			filter.wrestlerId = { $in: userFilter.wrestlerIds };
+		}
+
+		if (Object.keys(filter).length == 0) {
+			output.status = 562;
+			output.error = "No filter provided";
+		}
+
+		try {
+			const records = await data.wrestlerRating.find(filter).lean().exec();
+			output.status = 200;
+			output.data = { wrestlerRatings: records.map(({ _id, __v, ...remainingFields }) => ({ id: _id, ...remainingFields })) };
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+		}
+
+		return output;
+	},
+
+	wrestlerRatingSave: async (saveObject) => {
+		const output = {};
+
+		if (!saveObject) {
+			output.status = 550;
+			output.error = "Missing object to save";
+			return output;
+		}
+
+		if (saveObject.id) {
+			let record = null;
+			try {
+				record = await data.wrestlerRating.findById(saveObject.id).exec();
+			}
+			catch (error) {
+				output.status = 560;
+				output.error = error.message;
+				return output;
+			}
+
+			if (!record) {
+				output.status = 561;
+				output.error = "Record not found";
+				return output;
+			}
+
+			try {
+				Object.keys(saveObject).forEach(field => {
+					if (field !== "id" && field !== "_id") {
+						record[field] = saveObject[field];
+					}
+				});
+				record.modified = new Date();
+				record = await record.save();
+			}
+			catch (error) {
+				output.status = 562;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			output.data = { id: record._id };
+		}
+		else {
+			let record = null;
+			try {
+				const toSave = { ...saveObject, created: new Date(), modified: new Date() };
+				record = await (new data.wrestlerRating(toSave)).save();
+			}
+			catch (error) {
+				output.status = 563;
+				output.error = error.message;
+				return output;
+			}
+
+			output.status = 200;
+			output.data = { id: record._id };
+		}
+
+		return output;
+	},
+
+	wrestlerRatingDelete: async (recordId) => {
+		const output = {};
+
+		if (!recordId || !mongoose.Types.ObjectId.isValid(recordId)) {
+			output.status = 550;
+			output.error = "Missing ID to delete";
+			return output;
+		}
+
+		try {
+			await data.wrestlerRating.deleteOne({ _id: recordId });
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+			return output;
+		}
+
+		output.status = 200;
+		output.data = { status: "ok" };
+		return output;
+	},
+
+	wrestlerRatingBulkSave: async (wrestlerRatings) => {
+		const output = {};
+
+		if (!wrestlerRatings || !Array.isArray(wrestlerRatings) || wrestlerRatings.length === 0) {
+			output.status = 550;
+			output.error = "Missing or empty wrestlerRatings array for bulk save";
+			return output;
+		}
+
+		try {
+			const missingWrestlerIds = [...new Set(wrestlerRatings.filter(wrestlerRating => !wrestlerRating.wrestlerId).map(wrestlerRating => wrestlerRating.wrestlerSqlId))];
+			if (missingWrestlerIds.length > 0) {
+				const wrestlers = await data.wrestler.find({ sqlId: { $in: missingWrestlerIds } }).select({ _id: 1, sqlId: 1 }).exec();
+
+				wrestlerRatings.forEach(wrestlerRating => {
+					if (!wrestlerRating.wrestlerId && wrestlerRating.wrestlerSqlId) {
+						wrestlerRating.wrestlerId = wrestlers.filter(wrestler => wrestler.sqlId === wrestlerRating.wrestlerSqlId)
+							.map(wrestler => wrestler._id)
+							.find(() => true);
+					}
+				});
+			}
+		}
+		catch (error) {
+			output.status = 562;
+			output.error = error.message;
+			return output;
+		}
+
+		const operations = [];
+
+		for (const wrestlerRating of wrestlerRatings) {
+			if (!wrestlerRating || typeof wrestlerRating !== "object") continue;
+
+			const { id, _id, created, modified, ...updateFields } = wrestlerRating;
+
+			let filter = null;
+			if (id && mongoose.Types.ObjectId.isValid(id)) {
+				filter = { _id: id };
+			}
+			else if (_id && mongoose.Types.ObjectId.isValid(_id)) {
+				filter = { _id: _id };
+			}
+			else if (updateFields.wrestlerSqlId !== undefined && updateFields.wrestlerSqlId !== null && updateFields.sqlId !== undefined && updateFields.sqlId !== null) {
+				filter = { wrestlerSqlId: updateFields.wrestlerSqlId, sqlId: updateFields.sqlId };
+			}
+			else if (updateFields.wrestlerId && updateFields.sqlId !== undefined && updateFields.sqlId !== null) {
+				filter = { wrestlerId: updateFields.wrestlerId, sqlId: updateFields.sqlId };
+			}
+
+			if (filter) {
+				operations.push({
+					updateOne: {
+						filter: filter,
+						update: {
+							$set: {
+								...updateFields,
+								modified: new Date()
+							},
+							$setOnInsert: {
+								created: new Date()
+							}
+						},
+						upsert: true
+					}
+				});
+			}
+			else {
+				operations.push({
+					insertOne: {
+						document: {
+							...updateFields,
+							created: new Date(),
+							modified: new Date()
+						}
+					}
+				});
+			}
+		}
+
+		if (operations.length === 0) {
+			output.status = 550;
+			output.error = "No valid wrestler event operations to execute";
+			return output;
+		}
+
+		try {
+			const result = await data.wrestlerRating.bulkWrite(operations, { ordered: false });
+
+			output.status = 200;
+			output.data = {
+				status: "ok",
+				matchedCount: result.matchedCount,
+				modifiedCount: result.modifiedCount,
+				upsertedCount: result.upsertedCount,
+				insertedCount: result.insertedCount
+			};
+		}
+		catch (error) {
+			output.status = 560;
+			output.error = error.message;
+		}
+
+		return output;
+	},
+
+	wrestlerRatingCleanup: async () => {
+		const output = {};
+
+		const batchSize = 5000;
+		let deletedTotal = 0,
+			iteration = 0;
+
+		while (true) {
+			const batch = db.wrestlerRatings.aggregate([{
+				$addFields: {
+					wrestlerObjectId: {
+						$cond: {
+							if: {
+								$and: [
+									{ $ne: ["$wrestlerId", null] },
+									{ $eq: [{ $strLenCP: { $toString: "$wrestlerId" } }, 24] }
+								]
+							},
+							then: { $toObjectId: "$wrestlerId" },
+							else: null
+						}
+					}
+				}
+				},
+				{
+					$lookup: {
+						from: "wrestlers",
+						localField: "wrestlerObjectId",
+						foreignField: "_id",
+						as: "matchedWrestler"
+					}
+				},
+				{
+					$match: { matchedWrestler: { $size: 0 } }
+				},
+				{ $limit: batchSize },
+				{ $project: { _id: 1 } }
+			]).toArray().map(doc => doc._id);
+
+			if (batch.length === 0) break;
+
+			try {
+				const res = db.wrestlerRatings.deleteMany({ _id: { $in: batch } });
+				deletedTotal += res.deletedCount;
+			}
+			catch (error) {
+				output.status = 560;
+				output.error = error.message;
+				output.errorList = (output.errorList || []).concat(error.message);
+				continue;
+			}
+
+			iteration++;
+			if (iteration > 20) {
+				break;
+			}
+		}
+
+		output.status = 200;
+		output.data = {
+			status: "ok",
+			deleted: deletedTotal
+		};
+		return output;
+	},
+
 	duplicateGet: async (filterParameters = {}) => {
 		const outputResults = {};
 		const queryFilter = {};

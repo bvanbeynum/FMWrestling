@@ -1261,7 +1261,18 @@ export default {
 			wrestlerEvents = clientResponse.body.wrestlerEvents;
 		}
 		catch (error) {
-			output.status = 561;
+			output.status = 562;
+			output.error = error.message;
+			return output;
+		}
+		
+		let wrestlerRatings = [];
+		try {
+			const ratingResponse = await client.get(`${ serverPath }/data/wrestlerrating?wrestlerid=${ wrestler.id }`);
+			wrestlerRatings = ratingResponse.body.wrestlerRatings || [];
+		}
+		catch (error) {
+			output.status = 563;
 			output.error = error.message;
 			return output;
 		}
@@ -1282,7 +1293,8 @@ export default {
 					division: event.divisionConvert || event.division,
 					weightClass: event.matches[0]?.weightClass || "",
 					matches: event.matches
-				}))
+				})),
+				ratingHistory: wrestlerRatings
 			};
 		
 			let winningPaths = [];
@@ -1330,7 +1342,7 @@ export default {
 			return output;
 		}
 		catch (error) {
-			output.status = 563;
+			output.status = 564;
 			output.error = error.message;
 			return output;
 		}

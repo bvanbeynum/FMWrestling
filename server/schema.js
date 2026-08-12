@@ -315,6 +315,16 @@ export default {
 		modified: Date
 	}),
 
+	wrestlerRating: mongoose.model("wrestlerrating", {
+		wrestlerId: String,
+		wrestlerSqlId: Number,
+		periodEndDate: Date,
+		rating: Number,
+		deviation: Number,
+		created: Date,
+		modified: Date
+	}),
+
 	duplicate: mongoose.model("duplicate", {
 		primary: {
 			id: String,

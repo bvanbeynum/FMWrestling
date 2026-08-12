@@ -815,6 +815,54 @@ router.post("/data/wrestlerevent/cleanup", authInternal, async (request, respons
 	}
 });
 
+router.get("/data/wrestlerrating", authInternal, async (request, response) => {
+	try {
+	const results = await data.wrestlerRatingGet({
+		wrestlerId: request.query.wrestlerid,
+		wrestlerSqlId: request.query.wrestlersqlid ? parseInt(request.query.wrestlersqlid) : null,
+		wrestlerIds: request.query.wrestlerids ? JSON.parse(request.query.wrestlerids) : null
+	});
+	response.status(results.status || 200).send(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		response.status(570).json({ error: error.message });
+	}
+});
+
+router.post("/data/wrestlerrating", authInternal, async (request, response) => {
+	try {
+		const results = await data.wrestlerRatingSave(request.body.wrestlerrating);
+		response.status(results.status || 200).send(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		response.status(570).json({ error: error.message });
+	}
+});
+
+router.delete("/data/wrestlerrating", authInternal, async (request, response) => {
+	try {
+		const results = await data.wrestlerRatingDelete(request.query.id);
+		response.status(results.status || 200).send(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		response.status(570).json({ error: error.message });
+	}
+});
+
+router.post("/data/wrestlerrating/bulk", authInternal, async (request, response) => {
+	try {
+		const results = await data.wrestlerRatingBulkSave(request.body.wrestlerratings);
+		response.status(results.status || 200).send(results.error ? { error: results.error } : results.data);
+		response.end();
+	}
+	catch (error) {
+		response.status(570).json({ error: error.message });
+	}
+});
+
 router.post("/data/wrestlerduplicates", authInternal, async (request, response) => {
 	try {
 		const results = await data.wrestlerDuplicates(request.body.wrestlerids);
