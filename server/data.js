@@ -999,6 +999,9 @@ const dataFunctionsObject = {
 		if (userFilter.id) {
 			filterInclude.push({ _id: mongoose.Types.ObjectId.isValid(userFilter.id) ? userFilter.id : null });
 		}
+		if (userFilter.ids) {
+			filterInclude.push({ _id: { $in: userFilter.ids.map(id => mongoose.Types.ObjectId.isValid(id) ? id : null) } });
+		}
 		if (userFilter.sqlId) {
 			filterInclude.push({ sqlId: userFilter.sqlId });
 		}
@@ -1782,6 +1785,9 @@ const dataFunctionsObject = {
 
 		if (userFilter.id) {
 			filter["_id"] = mongoose.Types.ObjectId.isValid(userFilter.id) ? userFilter.id : null;
+		}
+		if (userFilter.eventType) {
+			filter.eventType = userFilter.eventType;
 		}
 		if (userFilter.startDate && userFilter.endDate) {
 			const startDate = new Date(Date.parse(userFilter.startDate)),

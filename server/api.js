@@ -2455,39 +2455,52 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 	dualReportLoad: async (season, serverPath) => {
 		const output = { data: { events: [], seasonName: "", hasPreviousSeasonData: false } };
 
-		try {
-			let startYear;
-			if (season && /^\d{2}-\d{2}$/.test(season)) {
-				const startYearShort = parseInt(season.split("-")[0], 10);
-				startYear = 2000 + startYearShort;
-			} else {
-				const todayDate = new Date();
-				const currentCalendarYear = todayDate.getFullYear();
-				startYear = todayDate.getMonth() >= 8 ? currentCalendarYear : currentCalendarYear - 1;
-			}
-			const endYear = startYear + 1;
-			
-			const startDate = `${startYear}-09-01`;
-			const endDate = `${endYear}-08-31`;
-			const prevSeasonStart = `${startYear - 1}-09-01`;
-			const prevSeasonEnd = `${startYear}-08-31`;
-			
-			const shortStart = startYear.toString().slice(-2);
-			const shortEnd = endYear.toString().slice(-2);
-			output.data.seasonName = `${shortStart}-${shortEnd}`;
+		let startYear;
+		if (season && /^\d{2}-\d{2}$/.test(season)) {
+			const startYearShort = parseInt(season.split("-")[0], 10);
+			startYear = 2000 + startYearShort;
+		} else {
+			const todayDate = new Date();
+			const currentCalendarYear = todayDate.getFullYear();
+			startYear = todayDate.getMonth() >= 8 ? currentCalendarYear : currentCalendarYear - 1;
+		}
+		const endYear = startYear + 1;
+		
+		const startDate = `${startYear}-09-01`;
+		const endDate = `${endYear}-08-31`;
+		const prevSeasonStart = `${startYear - 1}-09-01`;
+		const prevSeasonEnd = `${startYear}-08-31`;
+		
+		const shortStart = startYear.toString().slice(-2);
+		const shortEnd = endYear.toString().slice(-2);
+		output.data.seasonName = `${shortStart}-${shortEnd}`;
 
-			const seasonEventsResponse = await client.get(`${ serverPath }/data/event?team=Fort Mill&startdate=${prevSeasonStart}&enddate=${endDate}`);
-			const allSeasonEvents = seasonEventsResponse.body.events || [];
+		let eventIds = [];
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/teamevent?eventtype=Dual&startdate=${prevSeasonStart}&enddate=${endDate}`);
+			const teamEvents = clientResponse.body.teamEvents;
+			eventIds = teamEvents.map(teamEvent => teamEvent.eventId);
+		}
+		catch (error) {
+			output.status = 561;
+			output.error = error.message;
+			return output;
+		}
+
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/event?ids=${ encodeURIComponent(JSON.stringify(eventIds)) }`);
+			const allSeasonEvents = clientResponse.body.events || [];
 
 			output.data.events = allSeasonEvents.filter(eventItem => new Date(eventItem.date) >= new Date(startDate) && eventItem.date <= endDate);
-			
 			output.data.hasPreviousSeasonData = allSeasonEvents.filter(eventItem => new Date(eventItem.date) <= new Date(prevSeasonEnd)).length > 0;
-			
-			output.status = 200;
-		} catch (error) {
-			output.status = 500;
-			output.error = error.message;
 		}
+		catch (error) {
+			output.status = 562;
+			outpupt.error = error.message;
+			return output;
+		}
+		
+		output.status = 200;
 		return output;
 	},
 

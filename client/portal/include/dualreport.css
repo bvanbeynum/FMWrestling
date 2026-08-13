@@ -153,7 +153,7 @@
 /* Charts Row Layout */
 .report-charts-row {
 	display: grid;
-	grid-template-columns: 1.2fr 1fr;
+	grid-template-columns: repeat(2, 1fr);
 	gap: 24px;
 	margin-bottom: 30px;
 }
@@ -173,13 +173,266 @@
 .report-chart-card {
 	background: var(--surface);
 	border: 1px solid var(--outline);
-	border-radius: var(--rounded-sm);
+	border-radius: var(--rounded-md);
 	padding: 20px;
 	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 	display: flex;
 	flex-direction: column;
 	align-items: center;
 }
+
+/* Pie Charts Styles */
+.pie-chart-wrapper {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	width: 100%;
+	padding: 8px 0;
+	box-sizing: border-box;
+}
+
+.donut-chart-container {
+	position: relative;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	width: 220px;
+	height: 220px;
+	margin: 12px 0;
+}
+
+.donut-chart-container svg {
+	width: 220px !important;
+	height: 220px !important;
+	min-width: 220px !important;
+	min-height: 220px !important;
+	display: block;
+	overflow: visible;
+}
+
+.donut-slice {
+	transition: transform 0.2s ease, fill-opacity 0.2s ease;
+	transform-origin: center;
+	cursor: pointer;
+	stroke: #ffffff;
+	stroke-width: 2px;
+}
+
+.donut-slice.hovered {
+	transform: scale(1.04);
+	fill-opacity: 0.85;
+}
+
+.donut-center-content {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+	pointer-events: none;
+	width: 124px;
+	height: 124px;
+	border-radius: 50%;
+}
+
+/* Duals Donut Center Indicator */
+.donut-center-indicator {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+}
+
+.donut-center-label {
+	font-family: var(--font-body);
+	font-size: 10px;
+	font-weight: 700;
+	color: var(--on-surface-variant);
+	letter-spacing: 0.08em;
+}
+
+.donut-center-value {
+	font-family: var(--font-headers);
+	font-size: 24px;
+	font-weight: 800;
+	color: var(--on-surface);
+	line-height: 1.1;
+	margin: 2px 0;
+}
+
+.donut-center-sublabel {
+	font-family: var(--font-body);
+	font-size: 9px;
+	font-weight: 700;
+	color: var(--on-surface-variant);
+	letter-spacing: 0.06em;
+}
+
+/* Points Donut Center Indicator */
+.donut-center-points-indicator {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+}
+
+.donut-center-title {
+	font-family: var(--font-body);
+	font-size: 9px;
+	font-weight: 700;
+	color: var(--on-surface-variant);
+	letter-spacing: 0.06em;
+	margin-bottom: 2px;
+}
+
+.donut-center-points-row {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	width: 100%;
+}
+
+.donut-point-col {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.donut-point-val {
+	font-family: var(--font-headers);
+	font-size: 16px;
+	font-weight: 800;
+	line-height: 1.1;
+}
+
+.donut-point-val.points-for {
+	color: #10b981;
+}
+
+.donut-point-val.points-against {
+	color: #ef4444;
+}
+
+.donut-point-lbl {
+	font-family: var(--font-body);
+	font-size: 8px;
+	font-weight: 700;
+	color: var(--on-surface-variant);
+	letter-spacing: 0.05em;
+	margin-top: 1px;
+}
+
+.donut-point-divider {
+	width: 1px;
+	height: 20px;
+	background-color: var(--outline);
+}
+
+.pie-chart-tooltip-wrapper {
+	position: absolute;
+	bottom: -36px;
+	left: 50%;
+	transform: translateX(-50%);
+	pointer-events: none;
+	z-index: 100;
+}
+
+.pie-chart-tooltip-text {
+	font-family: var(--font-body);
+	font-size: 12px;
+	margin: 0;
+	padding: 6px 12px;
+	background-color: var(--inverse-surface);
+	color: var(--inverse-on-surface);
+	border-radius: var(--rounded-sm);
+	white-space: nowrap;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.pie-chart-legend {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	width: 100%;
+	max-width: 280px;
+	margin-top: 20px;
+}
+
+.pie-legend-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	font-family: var(--font-body);
+	font-size: 13px;
+	color: var(--on-surface);
+	padding: 6px 12px;
+	background: var(--background);
+	border-radius: var(--rounded-sm);
+	border: 1px solid var(--outline);
+}
+
+.pie-legend-left {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.pie-legend-color {
+	width: 12px;
+	height: 12px;
+	border-radius: 3px;
+	flex-shrink: 0;
+}
+
+.pie-legend-color.wins,
+.pie-legend-color.points-for,
+.pie-slice.wins,
+.pie-slice.points-for,
+.donut-slice.wins,
+.donut-slice.points-for,
+.pie-circle.wins,
+.pie-circle.points-for {
+	fill: #10b981;
+	background-color: #10b981;
+}
+
+.pie-legend-color.losses,
+.pie-legend-color.points-against,
+.pie-slice.losses,
+.pie-slice.points-against,
+.donut-slice.losses,
+.donut-slice.points-against,
+.pie-circle.losses,
+.pie-circle.points-against {
+	fill: #ef4444;
+	background-color: #ef4444;
+}
+
+.pie-legend-color.remaining,
+.pie-slice.remaining,
+.donut-slice.remaining,
+.pie-circle.remaining {
+	fill: #3b82f6;
+	background-color: #3b82f6;
+}
+
+.pie-legend-label {
+	font-weight: 600;
+}
+
+.pie-legend-value {
+	font-family: var(--font-headers);
+	font-size: 12px;
+	color: var(--on-surface-variant);
+}
+
+
 
 .chart-card-title {
 	font-family: var(--font-headers);

@@ -409,16 +409,15 @@ router.delete("/data/externalwrestler", authInternal, async (request, response) 
 
 router.get("/data/event", authInternal, async (request, response) => {
 	try {
-		const sqlIdList = request.query.sqlids ? JSON.parse(request.query.sqlids) : null;
-		
 		const filter = { 
 			id: request.query.id, 
+			ids: request.query.ids ? JSON.parse(request.query.ids) : null,
 			sqlId: request.query.sqlid,
+			sqlIds: request.query.sqlids ? JSON.parse(request.query.sqlids) : null,
 			startDate: request.query.startdate, 
 			endDate: request.query.enddate,
 			eventSystem: request.query.eventsystem,
 			eventType: request.query.eventtype, 
-			sqlIds: sqlIdList,
 			select: request.query.select ? request.query.select.split(",") : null,
 			state: request.query.state,
 			team: request.query.team,
@@ -604,6 +603,7 @@ router.get("/data/teamevent", authInternal, async (request, response) => {
 	try {
 		const results = await data.teamEventGet({
 			id: request.query.id,
+			eventType: request.query.eventtype,
 			startDate: request.query.startdate,
 			endDate: request.query.enddate,
 			division: request.query.division,

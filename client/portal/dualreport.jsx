@@ -101,413 +101,219 @@ const extractOpponentName = (dualItem) => {
 	return "";
 };
 
-const SeasonChart = ({ dualsList }) => {
-	const completedDuals = dualsList.filter(
-		(dualItem) => dualItem.matches && dualItem.matches.length > 0
-	);
-
+const DonutChartSvg = ({ data, size = 220, innerRadius = 68, centerContent }) => {
 	const [hoveredIndex, setHoveredIndex] = useState(null);
+	const total = data.reduce((sum, d) => sum + d.value, 0);
 
-	if (completedDuals.length === 0) {
-		return <div className="no-chart-data">No completed dual meets recorded for this season.</div>;
+	if (total === 0) {
+		return <div className="no-chart-data">No data recorded for this season.</div>;
 	}
 
-	// 1. Calculate scores and matches won
-	const completedDualsData = completedDuals.map((dualItem) => {
-		const scoreResult = calculateDualScore(dualItem);
-		let fortMillMatchesWon = 0;
-		let opponentMatchesWon = 0;
+	const cx = size / 2;
+	const cy = size / 2;
+	const R = (size / 2) - 10;
+	const r = innerRadius;
 
-		(dualItem.matches || []).forEach((matchItem) => {
-			const homeWrestler = (matchItem.wrestlers || []).find(
-				(wrestler) => wrestler.team.toLowerCase() === "fort mill"
-			);
-			const visitorWrestler = (matchItem.wrestlers || []).find(
-				(wrestler) => wrestler.team.toLowerCase() !== "fort mill"
-			);
-			if (homeWrestler && homeWrestler.isWinner) {
-				fortMillMatchesWon++;
-			} else if (visitorWrestler && visitorWrestler.isWinner) {
-				opponentMatchesWon++;
-			}
-		});
+	let cumulativeAngle = -Math.PI / 2;
 
-		const opponentName = extractOpponentName(dualItem);
+	const slices = data.map((d, index) => {
+		const angle = total > 0 ? (d.value / total) * 2 * Math.PI : 0;
+		const startAngle = cumulativeAngle;
+		const endAngle = cumulativeAngle + angle;
+		cumulativeAngle = endAngle;
+
+		const percentage = total > 0 ? ((d.value / total) * 100).toFixed(1) : "0.0";
+		const isFullCircle = angle >= 2 * Math.PI - 0.0001;
+
+		let pathData = "";
+		if (isFullCircle) {
+			pathData = `M ${cx - R} ${cy} A ${R} ${R} 0 1 0 ${cx + R} ${cy} A ${R} ${R} 0 1 0 ${cx - R} ${cy} M ${cx - r} ${cy} A ${r} ${r} 0 1 1 ${cx + r} ${cy} A ${r} ${r} 0 1 1 ${cx - r} ${cy} Z`;
+		} else if (angle > 0) {
+			const xOut1 = cx + R * Math.cos(startAngle);
+			const yOut1 = cy + R * Math.sin(startAngle);
+			const xOut2 = cx + R * Math.cos(endAngle);
+			const yOut2 = cy + R * Math.sin(endAngle);
+
+			const xIn1 = cx + r * Math.cos(startAngle);
+			const yIn1 = cy + r * Math.sin(startAngle);
+			const xIn2 = cx + r * Math.cos(endAngle);
+			const yIn2 = cy + r * Math.sin(endAngle);
+
+			const largeArcFlag = angle > Math.PI ? 1 : 0;
+
+			pathData = `M ${xOut1} ${yOut1} A ${R} ${R} 0 ${largeArcFlag} 1 ${xOut2} ${yOut2} L ${xIn2} ${yIn2} A ${r} ${r} 0 ${largeArcFlag} 0 ${xIn1} ${yIn1} Z`;
+		}
 
 		return {
-			id: dualItem.id || dualItem._id,
-			opponent: opponentName,
-			teamScore: scoreResult.teamScore,
-			opponentScore: scoreResult.opponentScore,
-			fortMillMatchesWon,
-			opponentMatchesWon,
-			dateObject: parseEventDate(dualItem.date)
+			...d,
+			index,
+			percentage,
+			isFullCircle,
+			pathData
 		};
-	}).sort((first, second) => second.dateObject - first.dateObject); // Most recent to oldest
-
-	// 2. Determine max values for scaling
-	const maxMatches = 14;
-	const maxPoints = Math.max(60, ...completedDualsData.map((d) => Math.max(d.teamScore, d.opponentScore)));
-
-	// 3. Layout dimensions
-	const maxVisible = 10;
-	const N = completedDualsData.length;
-	const colWidth = 30;
-	const paddingLeft = 60;
-	const paddingRight = 60;
-	const chartHeight = 350;
-
-	const chartWidth = N > maxVisible ? paddingLeft + paddingRight + (N * colWidth) : 900;
-	const isScrollable = N > maxVisible;
-
-	const zeroY = 175;
-	const heightRange = 130; // 175 - 45 (top padding) = 130; 305 (bottom padding) - 175 = 130
-
-	// Helpers for y-coordinates
-	const getMatchesYUp = (m) => zeroY - (m / maxMatches) * heightRange;
-	const getMatchesYDown = (m) => zeroY + (m / maxMatches) * heightRange;
-	const getPointsYUp = (p) => zeroY - (p / maxPoints) * heightRange;
-	const getPointsYDown = (p) => zeroY + (p / maxPoints) * heightRange;
-
-	const getXCoordinate = (index) => {
-		const availableWidth = chartWidth - paddingLeft - paddingRight;
-		const step = availableWidth / N;
-		return paddingLeft + (index + 0.5) * step;
-	};
-
-	// 4. Generate path for rounded bars (moved to global file scope)
-
-	// 5. Generate team abbreviation helper
-	const getTeamAbbreviation = (teamName) => {
-		if (!teamName) return "";
-		const cleanName = teamName.trim();
-		const words = cleanName.split(/\s+/);
-		if (words.length >= 2) {
-			return (words[0].charAt(0) + words[1].charAt(0)).toUpperCase();
-		}
-		return cleanName.slice(0, 2).toUpperCase();
-	};
-
-	// 6. Generate lines path data
-	const teamPointsPath = completedDualsData.map((d, i) => {
-		return `${i === 0 ? "M" : "L"} ${getXCoordinate(i)} ${getPointsYUp(d.teamScore)}`;
-	}).join(" ");
-
-	const opponentPointsPath = completedDualsData.map((d, i) => {
-		return `${i === 0 ? "M" : "L"} ${getXCoordinate(i)} ${getPointsYDown(d.opponentScore)}`;
-	}).join(" ");
-
-	// 7. Gridline y-coordinates
-	const gridlinesY = [45, 110, 240, 305]; // 175 is baseline
+	});
 
 	return (
-		<div className="season-chart-wrapper">
-			{/* Legend */}
-			<div className="season-chart-legend">
-				<div className="legend-item">
-					<span className="legend-color-box fort-mill"></span>
-					<span className="legend-label">FORT MILL</span>
-				</div>
-				<div className="legend-item">
-					<span className="legend-color-box opponent"></span>
-					<span className="legend-label">OPPONENT</span>
-				</div>
-			</div>
+		<div className="donut-chart-container">
+			<svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+				{slices.map((slice) => {
+					if (slice.value === 0) return null;
+					const isHovered = hoveredIndex === slice.index;
+					const categoryClass = slice.key || slice.label.toLowerCase().replace(/\s+/g, "-");
 
-			{/* Scrollable Container */}
-			<div className="season-chart-scroll-container">
-				<svg
-					width={isScrollable ? chartWidth : "100%"}
-					height={chartHeight}
-					viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-					style={{
-						display: "block",
-						width: isScrollable ? `${chartWidth}px` : "100%",
-						height: `${chartHeight}px`,
-						minWidth: isScrollable ? `${chartWidth}px` : "100%"
-					}}
-				>
-					{/* Horizontal Gridlines */}
-					{gridlinesY.map((yVal, idx) => (
-						<line
-							key={`grid-h-${idx}`}
-							x1={paddingLeft}
-							y1={yVal}
-							x2={chartWidth - paddingRight}
-							y2={yVal}
-							stroke="var(--outline)"
-							strokeWidth={0.5}
-							strokeDasharray="3,3"
+					return (
+						<path
+							key={slice.label}
+							d={slice.pathData}
+							fill={slice.color}
+							fillRule={slice.isFullCircle ? "evenodd" : "nonzero"}
+							className={`donut-slice ${categoryClass} ${isHovered ? "hovered" : ""}`}
+							onMouseEnter={() => setHoveredIndex(slice.index)}
+							onMouseLeave={() => setHoveredIndex(null)}
 						/>
-					))}
-
-					{/* Vertical Gridlines & X-axis columns */}
-					{completedDualsData.map((dual, dualIndex) => (
-						<line
-							key={`grid-v-${dualIndex}`}
-							x1={getXCoordinate(dualIndex)}
-							y1={45}
-							x2={getXCoordinate(dualIndex)}
-							y2={305}
-							stroke="var(--outline)"
-							strokeWidth={0.5}
-							strokeDasharray="3,3"
-						/>
-					))}
-
-					{/* Vertical Axis Lines */}
-					<line
-						x1={paddingLeft}
-						y1={45}
-						x2={paddingLeft}
-						y2={305}
-						stroke="var(--outline)"
-						strokeWidth={1.5}
-					/>
-					<line
-						x1={chartWidth - paddingRight}
-						y1={45}
-						x2={chartWidth - paddingRight}
-						y2={305}
-						stroke="var(--outline)"
-						strokeWidth={1.5}
-					/>
-
-					{/* Baseline */}
-					<line
-						x1={paddingLeft}
-						y1={zeroY}
-						x2={chartWidth - paddingRight}
-						y2={zeroY}
-						stroke="var(--outline-variant)"
-						strokeWidth={1.5}
-					/>
-
-					{/* Y-axis Titles */}
-					<text
-						x={paddingLeft - 35}
-						y={35}
-						fontFamily="var(--font-body)"
-						fontSize="11px"
-						fontWeight="700"
-						fill="var(--on-surface-variant)"
-						textAnchor="middle"
-					>
-						WINS
-					</text>
-					<text
-						x={chartWidth - paddingRight + 35}
-						y={35}
-						fontFamily="var(--font-body)"
-						fontSize="11px"
-						fontWeight="700"
-						fill="var(--on-surface-variant)"
-						textAnchor="middle"
-					>
-						PTS
-					</text>
-
-					{/* Left Axis Labels (Matches Won) */}
-					<text x={paddingLeft - 10} y={45 + 4} textAnchor="end" fontFamily="var(--font-headers)" fontSize="12px" fill="var(--on-surface-variant)">14</text>
-					<text x={paddingLeft - 10} y={110 + 4} textAnchor="end" fontFamily="var(--font-headers)" fontSize="12px" fill="var(--on-surface-variant)">7</text>
-					<text x={paddingLeft - 10} y={175 + 4} textAnchor="end" fontFamily="var(--font-headers)" fontSize="12px" fill="var(--on-surface-variant)">0</text>
-					<text x={paddingLeft - 10} y={240 + 4} textAnchor="end" fontFamily="var(--font-headers)" fontSize="12px" fill="var(--on-surface-variant)">7</text>
-					<text x={paddingLeft - 10} y={305 + 4} textAnchor="end" fontFamily="var(--font-headers)" fontSize="12px" fill="var(--on-surface-variant)">14</text>
-
-					{/* Right Axis Labels (Points) */}
-					<text x={chartWidth - paddingRight + 10} y={45 + 4} textAnchor="start" fontFamily="var(--font-headers)" fontSize="12px" fill="var(--on-surface-variant)">{maxPoints}</text>
-					<text x={chartWidth - paddingRight + 10} y={110 + 4} textAnchor="start" fontFamily="var(--font-headers)" fontSize="12px" fill="var(--on-surface-variant)">{maxPoints / 2}</text>
-					<text x={chartWidth - paddingRight + 10} y={175 + 4} textAnchor="start" fontFamily="var(--font-headers)" fontSize="12px" fill="var(--on-surface-variant)">0</text>
-					<text x={chartWidth - paddingRight + 10} y={240 + 4} textAnchor="start" fontFamily="var(--font-headers)" fontSize="12px" fill="var(--on-surface-variant)">{maxPoints / 2}</text>
-					<text x={chartWidth - paddingRight + 10} y={305 + 4} textAnchor="start" fontFamily="var(--font-headers)" fontSize="12px" fill="var(--on-surface-variant)">{maxPoints}</text>
-
-					{/* Bars (Matches Won) */}
-					{completedDualsData.map((d, i) => {
-						const barW = 15;
-						const x = getXCoordinate(i) - barW / 2;
-
-						const fmHeight = ((d.fortMillMatchesWon / maxMatches) * heightRange);
-						const fmY = zeroY - fmHeight;
-						const fmPath = getBarPath(x, fmY, barW, fmHeight, true);
-
-						const oppHeight = ((d.opponentMatchesWon / maxMatches) * heightRange);
-						const oppY = zeroY;
-						const oppPath = getBarPath(x, oppY, barW, oppHeight, false);
-
-						const isHovered = hoveredIndex === i;
-
-						return (
-							<g key={`bars-${i}`}>
-								{fmHeight > 0 && (
-									<path
-										d={fmPath}
-										fill="var(--primary)"
-										fillOpacity={isHovered ? 0.8 : 1}
-										style={{ transition: "fill-opacity 0.2s" }}
-									/>
-								)}
-								{oppHeight > 0 && (
-									<path
-										d={oppPath}
-										fill="var(--secondary-accent)"
-										fillOpacity={isHovered ? 0.8 : 1}
-										style={{ transition: "fill-opacity 0.2s" }}
-									/>
-								)}
-							</g>
-						);
-					})}
-
-					{/* X-axis Labels (Team Abbreviations) */}
-					{completedDualsData.map((d, i) => {
-						const x = getXCoordinate(i);
-						const abbrev = getTeamAbbreviation(d.opponent);
-						return (
-							<g key={`x-abbrev-${i}`}>
-								<rect
-									x={x - 12}
-									y={zeroY - 10}
-									width={25}
-									height={20}
-									fill="#ffffff"
-									stroke="var(--outline)"
-									strokeWidth={1}
-									rx={2}
-								/>
-								<text
-									x={x}
-									y={zeroY + 4}
-									textAnchor="middle"
-									fontFamily="var(--font-body)"
-									fontSize="10px"
-									fontWeight="700"
-									fill="var(--on-surface-variant)"
-								>
-									{abbrev}
-								</text>
-							</g>
-						);
-					})}
-
-					{/* Lines (Points Scored) */}
-					{completedDualsData.length > 1 && (
-						<>
-							<path
-								d={teamPointsPath}
-								fill="none"
-								stroke="#1565c0"
-								strokeWidth={2.5}
-								style={{ pointerEvents: "none" }}
-							/>
-							<path
-								d={opponentPointsPath}
-								fill="none"
-								stroke="#c77000"
-								strokeWidth={2.5}
-								style={{ pointerEvents: "none" }}
-							/>
-						</>
-					)}
-
-					{/* Line markers (Circles) */}
-					{completedDualsData.map((d, i) => {
-						const x = getXCoordinate(i);
-						const teamY = getPointsYUp(d.teamScore);
-						const oppY = getPointsYDown(d.opponentScore);
-						const isHovered = hoveredIndex === i;
-
-						return (
-							<g key={`markers-${i}`} style={{ pointerEvents: "none" }}>
-								<circle
-									cx={x}
-									cy={teamY}
-									r={isHovered ? 6 : 4}
-									fill="#1565c0"
-									stroke="#ffffff"
-									strokeWidth={1.5}
-									style={{ transition: "all 0.15s ease" }}
-								/>
-								<circle
-									cx={x}
-									cy={oppY}
-									r={isHovered ? 6 : 4}
-									fill="#c77000"
-									stroke="#ffffff"
-									strokeWidth={1.5}
-									style={{ transition: "all 0.15s ease" }}
-								/>
-							</g>
-						);
-					})}
-
-					{/* Invisible hover overlay zones */}
-					{completedDualsData.map((d, i) => {
-						const stepWidth = (chartWidth - paddingLeft - paddingRight) / N;
-						const x = getXCoordinate(i) - stepWidth / 2;
-						return (
-							<rect
-								key={`hover-zone-${i}`}
-								x={x}
-								y={45}
-								width={stepWidth}
-								height={260}
-								fill="transparent"
-								style={{ cursor: "pointer" }}
-								onMouseEnter={() => setHoveredIndex(i)}
-								onMouseLeave={() => setHoveredIndex(null)}
-								onClick={() => {
-									if (d.id) {
-										window.location.href = `/portal/dual.html?id=${d.id}`;
-									}
-								}}
-							/>
-						);
-					})}
-				</svg>
-			</div>
-
-			{/* Tooltip */}
-			{hoveredIndex !== null && (() => {
-				const dual = completedDualsData[hoveredIndex];
-				const rawDate = dual.dateObject;
-				const formattedDate = `${String(rawDate.getMonth() + 1).padStart(2, "0")}/${String(rawDate.getDate()).padStart(2, "0")}/${rawDate.getFullYear()}`;
-				const fmWinner = dual.teamScore > dual.opponentScore;
-				const oppWinner = dual.opponentScore > dual.teamScore;
-				
-				return (
-					<div className="season-chart-tooltip">
-						<div className="season-chart-tooltip-title">
-							{dual.opponent} ({formattedDate})
-						</div>
-						<div className="season-chart-tooltip-content">
-							<div className="season-chart-tooltip-col">
-								<span className={`season-chart-tooltip-team-name ${fmWinner ? "winner-fm" : ""}`}>
-									FORT MILL
-								</span>
-								<br />
-								Matches: {dual.fortMillMatchesWon}
-								<br />
-								Points: {dual.teamScore}
-							</div>
-							<div className="season-chart-tooltip-col opponent-col">
-								<span className={`season-chart-tooltip-team-name ${oppWinner ? "winner-opp" : ""}`}>
-									OPPONENT
-								</span>
-								<br />
-								Matches: {dual.opponentMatchesWon}
-								<br />
-								Points: {dual.opponentScore}
-							</div>
-						</div>
+					);
+				})}
+			</svg>
+			{centerContent && (
+				<div className="donut-center-content">
+					{centerContent}
+				</div>
+			)}
+			{hoveredIndex !== null && slices[hoveredIndex] && (
+				<div className="pie-chart-tooltip-wrapper">
+					<div className="pie-chart-tooltip-text">
+						{slices[hoveredIndex].label}: <strong>{slices[hoveredIndex].value}</strong> ({slices[hoveredIndex].percentage}%)
 					</div>
-				);
-			})()}
+				</div>
+			)}
 		</div>
 	);
 };
 
+const DualsPieChart = ({ dualsList }) => {
+	const completedDuals = dualsList.filter(
+		(dualItem) => dualItem.matches && dualItem.matches.length > 0
+	);
+
+	let winsCount = 0;
+	let lossesCount = 0;
+
+	completedDuals.forEach((dualItem) => {
+		const scoreResult = calculateDualScore(dualItem);
+		if (scoreResult.teamScore > scoreResult.opponentScore) {
+			winsCount += 1;
+		} else if (scoreResult.teamScore < scoreResult.opponentScore) {
+			lossesCount += 1;
+		}
+	});
+
+	const remainingCount = Math.max(0, dualsList.length - completedDuals.length);
+	const totalDuals = winsCount + lossesCount + remainingCount;
+
+	const chartData = [
+		{ key: "wins", label: "Wins", value: winsCount, color: "#10b981" },
+		{ key: "losses", label: "Losses", value: lossesCount, color: "#ef4444" },
+		{ key: "remaining", label: "Remaining", value: remainingCount, color: "#3b82f6" }
+	];
+
+	const completedMeets = winsCount + lossesCount;
+	const winPercentageStr = completedMeets > 0 ? ((winsCount / completedMeets) * 100).toFixed(1) + "%" : "0.0%";
+
+	const centerIndicator = (
+		<div className="donut-center-indicator">
+			<span className="donut-center-label">WIN RATE</span>
+			<span className="donut-center-value">{winPercentageStr}</span>
+			<span className="donut-center-sublabel">WIN %</span>
+		</div>
+	);
+
+	return (
+		<div className="pie-chart-wrapper">
+			<DonutChartSvg data={chartData} size={220} centerContent={centerIndicator} />
+			<div className="pie-chart-legend">
+				{chartData.map((item) => {
+					const pct = totalDuals > 0 ? ((item.value / totalDuals) * 100).toFixed(1) : "0.0";
+					return (
+						<div key={item.label} className="pie-legend-item">
+							<div className="pie-legend-left">
+								<span className={`pie-legend-color ${item.key}`} />
+								<span className="pie-legend-label">{item.label}</span>
+							</div>
+							<span className="pie-legend-value">{item.value} ({pct}%)</span>
+						</div>
+					);
+				})}
+			</div>
+		</div>
+	);
+};
+
+const PointsPieChart = ({ dualsList }) => {
+	const completedDuals = dualsList.filter(
+		(dualItem) => dualItem.matches && dualItem.matches.length > 0
+	);
+
+	let pointsForSum = 0;
+	let pointsAgainstSum = 0;
+
+	completedDuals.forEach((dualItem) => {
+		const scoreResult = calculateDualScore(dualItem);
+		pointsForSum += scoreResult.teamScore;
+		pointsAgainstSum += scoreResult.opponentScore;
+	});
+
+	const totalPoints = pointsForSum + pointsAgainstSum;
+	const completedDualsCount = completedDuals.length;
+
+	const pointsForPerDual = completedDualsCount > 0 ? (pointsForSum / completedDualsCount).toFixed(1) : "0.0";
+	const pointsAgainstPerDual = completedDualsCount > 0 ? (pointsAgainstSum / completedDualsCount).toFixed(1) : "0.0";
+
+	const chartData = [
+		{ key: "points-for", label: "Points For", value: pointsForSum, color: "#10b981" },
+		{ key: "points-against", label: "Points Against", value: pointsAgainstSum, color: "#ef4444" }
+	];
+
+	const centerIndicator = (
+		<div className="donut-center-points-indicator">
+			<span className="donut-center-title">PER MATCH</span>
+			<div className="donut-center-points-row">
+				<div className="donut-point-col">
+					<span className="donut-point-val points-for">{pointsForPerDual}</span>
+					<span className="donut-point-lbl">FOR</span>
+				</div>
+				<div className="donut-point-divider" />
+				<div className="donut-point-col">
+					<span className="donut-point-val points-against">{pointsAgainstPerDual}</span>
+					<span className="donut-point-lbl">AGAINST</span>
+				</div>
+			</div>
+		</div>
+	);
+
+	return (
+		<div className="pie-chart-wrapper">
+			<DonutChartSvg data={chartData} size={220} centerContent={centerIndicator} />
+			<div className="pie-chart-legend">
+				{chartData.map((item) => {
+					const pct = totalPoints > 0 ? ((item.value / totalPoints) * 100).toFixed(1) : "0.0";
+					return (
+						<div key={item.label} className="pie-legend-item">
+							<div className="pie-legend-left">
+								<span className={`pie-legend-color ${item.key}`} />
+								<span className="pie-legend-label">{item.label}</span>
+							</div>
+							<span className="pie-legend-value">{item.value} ({pct}%)</span>
+						</div>
+					);
+				})}
+			</div>
+		</div>
+	);
+};
+
+
 const MatchDetailMatrix = ({ dualsList }) => {
-	const sortedDuals = [...dualsList].sort((firstDual, secondDual) => new Date(secondDual.dualDate) - new Date(firstDual.dualDate));
+	const sortedDuals = [...dualsList].sort((firstDual, secondDual) => new Date(secondDual.date) - new Date(firstDual.date));
 	const completedDuals = sortedDuals.filter(dualItem => dualItem.matches && dualItem.matches.length > 0);
 	const mostRecentCompletedId = completedDuals.length > 0 ? (completedDuals[0].id || completedDuals[0]._id) : null;
 
@@ -1647,8 +1453,8 @@ const DualReport = () => {
 	const todayDate = new Date();
 	const upcomingDualsList = duals.filter(dualItem => {
 		const isCompleted = dualItem.matches && dualItem.matches.length > 0;
-		return !isCompleted && new Date(dualItem.dualDate) >= todayDate;
-	}).sort((firstDual, secondDual) => new Date(firstDual.dualDate) - new Date(secondDual.dualDate));
+		return !isCompleted && new Date(dualItem.date) >= todayDate;
+	}).sort((firstDual, secondDual) => new Date(firstDual.date) - new Date(secondDual.date));
 	
 	const nextUpcomingDual = upcomingDualsList.length > 0 ? upcomingDualsList[0] : null;
 
@@ -1696,7 +1502,7 @@ const DualReport = () => {
 									className="season-dropdown-select"
 								>
 									{seasonOptions.map(option => (
-										<option key={option.name} value={option.name}>Season {option.name}</option>
+										<option key={option.name} value={option.name}>{option.name}</option>
 									))}
 								</select>
 							</div>
@@ -1730,10 +1536,14 @@ const DualReport = () => {
 								</div>
 
 								{/* Charts Row */}
-								<div className="report-charts-row-single">
-									<div className="report-chart-card full-width">
-										<h3 className="chart-card-title">Season Performance Overview</h3>
-										<SeasonChart dualsList={duals} />
+								<div className="report-charts-row">
+									<div className="report-chart-card">
+										<h3 className="chart-card-title">Dual Meets Overview</h3>
+										<DualsPieChart dualsList={duals} />
+									</div>
+									<div className="report-chart-card">
+										<h3 className="chart-card-title">Points Overview</h3>
+										<PointsPieChart dualsList={duals} />
 									</div>
 								</div>
 
