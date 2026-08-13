@@ -297,7 +297,7 @@ export default {
 		const output = { data: {} };
 		const teamEventUrl = `${ serverPath }/data/teamevent?${ startDate && endDate ? `startdate=${startDate}&enddate=${endDate}` : "" }`;
 		const eventSelect = "sqlId,eventSystem,systemId,eventType,name,date,endDate,location,state,hasMatches";
-		const eventUrl = `${ serverPath }/data/event?select=${ eventSelect }`;
+		const eventUrl = `${ serverPath }/data/event?${ startDate && endDate ? `startdate=${startDate}&enddate=${endDate}&` : "" }select=${ eventSelect }`;
 
 		try {
 			const teamEventResponse = await client.get(teamEventUrl);
