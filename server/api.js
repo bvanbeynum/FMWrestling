@@ -1221,6 +1221,7 @@ export default {
 			output.data.wrestlers = wrestlers.map(wrestler => ({
 				id: wrestler.id,
 				name: wrestler.name,
+				grade: wrestler.grade,
 				rating: wrestler.rating,
 				deviation: wrestler.deviation,
 				team: wrestler.lastTeam,
@@ -1281,11 +1282,8 @@ export default {
 			
 			wrestler = {
 				...wrestler,
-				name: wrestler.name ? wrestler.name : wrestler.firstName + " " + wrestler.lastName,
 				isFortMill: /fort mill/i.test(wrestler.schoolName),
-				schoolName: wrestler.schoolName,
 				division: wrestler.schoolDivision,
-				weightClass: wrestler.weightClass,
 				rating: wrestler.rating,
 				deviation: wrestler.deviation,
 				events: wrestlerEvents.map(event => ({
@@ -1833,6 +1831,9 @@ export default {
 			id: wrestler.id,
 			sqlId: wrestler.sqlId,
 			name: wrestler.name,
+			grade: /(redshirt|college)/i.test(wrestler.grade) ? "College"
+				: /(7th|8th)/i.test(wrestler.grade) ? "Middle School"
+				: wrestler.grade,
 			rating: wrestler.rating,
 			deviation: wrestler.deviation,
 			searchTeams: wrestler.searchTeams,

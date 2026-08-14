@@ -659,6 +659,13 @@ const WrestlerReportComponent = () => {
 					<option value="in_season">In Season</option>
 					<option value="all_events">All Events</option>
 				</select>
+				<div>
+					{ wrestler.grade && String(wrestler.grade).trim() ? (
+						<span className="wrestler-grade-badge">
+							{ wrestler.grade }
+						</span>
+					) : null }
+				</div>
 			</div>
 
 			{ activeView === "events" ? (

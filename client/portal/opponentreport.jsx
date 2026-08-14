@@ -244,6 +244,7 @@ const OpponentReport = () => {
 					id: wrestlerItem.id,
 					name: wrestlerItem.name,
 					rating: wrestlerItem.rating || 0,
+					grade: wrestlerItem.grade,
 					wins: 0,
 					losses: 0,
 					eventsMap: {}
@@ -330,7 +331,7 @@ const OpponentReport = () => {
 					</div>
 				) : (
 					<div>
-						<div className={`dualreport container ${pageActive ? "active" : ""}`}>
+						<div className={`opponentreport container ${pageActive ? "active" : ""}`}>
 							<header>
 								<h1>
 									Opponent Overview
@@ -448,10 +449,10 @@ const OpponentReport = () => {
 												<thead>
 													<tr>
 														<th>#</th>
-														<th>Wrestler Name</th>
+														<th className="tableHeaderLeftAlign">Wrestler Name</th>
 														<th>Rating</th>
 														<th>Wrestled Fort Mill</th>
-														<th>Last Event</th>
+														<th className="tableHeaderLeftAlign">Last Event</th>
 													</tr>
 												</thead>
 												<tbody>
@@ -472,6 +473,11 @@ const OpponentReport = () => {
 																	>
 																		{wrestlerItem.name}
 																	</a>
+																	{ wrestlerItem.grade && String(wrestlerItem.grade).trim() ? (
+																		<span className="wrestler-grade-badge">
+																			{ wrestlerItem.grade }
+																		</span>
+																	) : null }
 																</td>
 																<td className="metric-cell">{wrestlerItem.rating ? Math.round(wrestlerItem.rating) : "N/A"}</td>
 																<td>
@@ -481,7 +487,7 @@ const OpponentReport = () => {
 																		<span className="fort-mill-badge none">No</span>
 																	)}
 																</td>
-																<td>
+																<td className="tableHeaderLeftAlign">
 																	{wrestlerItem.lastEvent ? (
 																		<span>
 																			{wrestlerItem.lastEvent.name || "Event"}{" "}
@@ -667,6 +673,9 @@ const OpponentReport = () => {
 																		className="wc-wrestler-row"
 																	>
 																		<div className="wc-wrestler-info">
+																			<span className="wc-wrestler-record">
+																				{ wrestlerItem.grade }
+																			</span>
 																			<span className="wc-wrestler-name">
 																				{wrestlerItem.name}
 																			</span>

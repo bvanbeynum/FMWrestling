@@ -207,7 +207,14 @@ const WrestlerSearchComponent = () => {
 					: ""
 					}
 
-					<h3>{ wrestler.name }</h3>
+					<h3>
+						{ wrestler.name }
+						{ wrestler.grade && (
+						<span className="wrestler-grade-badge">
+							{ wrestler.grade }
+						</span>
+						)}
+					</h3>
 
 					<div>{ wrestler.teams.join(", ") }</div>
 					{

@@ -48,7 +48,7 @@ svg {
 	width: 100%;
 	max-width: 1200px;
 	margin: 0 auto;
-	padding: 24px 24px 80px 24px;
+	padding: 0px 24px 80px 24px;
 	box-sizing: border-box;
 	background-color: var(--background);
 	min-height: 100vh;
@@ -70,17 +70,6 @@ svg {
 	flex-wrap: wrap;
 	gap: 12px;
 	width: 100%;
-}
-
-.wrestler-report-name {
-	font-family: var(--font-headers);
-	font-size: 32px;
-	font-weight: 700;
-	color: var(--on-surface);
-	text-transform: uppercase;
-	text-align: center;
-	margin: 0;
-	letter-spacing: -0.02em;
 }
 
 /* KPI Cards Grid */
