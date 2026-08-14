@@ -1094,8 +1094,9 @@ const dataFunctionsObject = {
 					/^hs/i.test(match.division) ? "Varsity" :
 					/high/i.test(match.division) ? "Varsity" :
 					/state tournament/i.test(match.division) ? "Varsity" :
-					/varsity/i.test(match.division) ? "Varsity"
-					: "Other"
+					/varsity/i.test(match.division) ? "Varsity" :
+					/hs/i.test(match.division) ? "Varsity" :
+					"Other"
 			}));
 		}
 
@@ -2309,8 +2310,9 @@ const dataFunctionsObject = {
 					/^hs/i.test(match.division) ? "Varsity" :
 					/high/i.test(match.division) ? "Varsity" :
 					/state tournament/i.test(match.division) ? "Varsity" :
-					/varsity/i.test(match.division) ? "Varsity"
-					: "Other"
+					/varsity/i.test(match.division) ? "Varsity" :
+					/hs/i.test(match.division) ? "Varsity" :
+					"Other"
 			}));
 		}
 

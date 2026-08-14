@@ -324,6 +324,16 @@ router.get("/api/dualreportload", authAPI, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
 });
 
+router.get("/api/teamweightclassload", authAPI, async (request, response) => {
+	const results = await api.teamWeightClassLoad(request.query.season, request.serverPath);
+	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
+});
+
+router.get("/api/teamleaderboardload", authAPI, async (request, response) => {
+	const results = await api.teamLeaderboardLoad(request.query.season, request.serverPath);
+	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
+});
+
 router.get("/api/dualload", authAPI, async (request, response) => {
 	const results = await api.dualLoad(request.query.id, request.serverPath);
 

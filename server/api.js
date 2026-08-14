@@ -2452,12 +2452,12 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 		return output;
 	},
 
-	dualReportLoad: async (season, serverPath) => {
+	dualReportLoad: async (seasonName, serverPath) => {
 		const output = { data: { events: [], seasonName: "", hasPreviousSeasonData: false } };
 
 		let startYear;
-		if (season && /^\d{2}-\d{2}$/.test(season)) {
-			const startYearShort = parseInt(season.split("-")[0], 10);
+		if (seasonName && /^\d{2}-\d{2}$/.test(seasonName)) {
+			const startYearShort = parseInt(seasonName.split("-")[0], 10);
 			startYear = 2000 + startYearShort;
 		} else {
 			const todayDate = new Date();
@@ -2496,7 +2496,99 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 		}
 		catch (error) {
 			output.status = 562;
-			outpupt.error = error.message;
+			output.error = error.message;
+			return output;
+		}
+		
+		output.status = 200;
+		return output;
+	},
+
+	teamWeightClassLoad: async (seasonName, serverPath) => {
+		const output = { data: { events: [], seasonName: "", hasPreviousSeasonData: false } };
+
+		let startYear;
+		if (seasonName && /^\d{2}-\d{2}$/.test(seasonName)) {
+			const startYearShort = parseInt(seasonName.split("-")[0], 10);
+			startYear = 2000 + startYearShort;
+		} else {
+			const todayDate = new Date();
+			const currentCalendarYear = todayDate.getFullYear();
+			startYear = todayDate.getMonth() >= 8 ? currentCalendarYear : currentCalendarYear - 1;
+		}
+		const endYear = startYear + 1;
+		
+		const startDate = `${startYear}-11-01`;
+		const endDate = `${endYear}-03-01`;
+		const prevSeasonStart = `${startYear - 1}-11-01`;
+		const prevSeasonEnd = `${startYear}-03-01`;
+		
+		const shortStart = startYear.toString().slice(-2);
+		const shortEnd = endYear.toString().slice(-2);
+		output.data.seasonName = `${shortStart}-${shortEnd}`;
+
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/event?teamname=${ encodeURIComponent("Fort Mill") }&startdate=${prevSeasonStart}&enddate=${endDate}`);
+			const allSeasonEvents = clientResponse.body.events || [];
+
+			output.data.events = allSeasonEvents.filter(eventItem => {
+				const eventDate = new Date(eventItem.date);
+				return eventDate >= new Date(`${startDate}T00:00:00`) && eventDate <= new Date(`${endDate}T23:59:59`);
+			});
+			output.data.hasPreviousSeasonData = allSeasonEvents.filter(eventItem => {
+				const eventDate = new Date(eventItem.date);
+				return eventDate <= new Date(`${prevSeasonEnd}T23:59:59`);
+			}).length > 0;
+		}
+		catch (error) {
+			output.status = 562;
+			output.error = error.message;
+			return output;
+		}
+		
+		output.status = 200;
+		return output;
+	},
+
+	teamLeaderboardLoad: async (seasonName, serverPath) => {
+		const output = { data: { events: [], seasonName: "", hasPreviousSeasonData: false } };
+
+		let startYear;
+		if (seasonName && /^\d{2}-\d{2}$/.test(seasonName)) {
+			const startYearShort = parseInt(seasonName.split("-")[0], 10);
+			startYear = 2000 + startYearShort;
+		} else {
+			const todayDate = new Date();
+			const currentCalendarYear = todayDate.getFullYear();
+			startYear = todayDate.getMonth() >= 8 ? currentCalendarYear : currentCalendarYear - 1;
+		}
+		const endYear = startYear + 1;
+		
+		const startDate = `${startYear}-11-01`;
+		const endDate = `${endYear}-03-01`;
+		const prevSeasonStart = `${startYear - 1}-11-01`;
+		const prevSeasonEnd = `${startYear}-03-01`;
+		
+		const shortStart = startYear.toString().slice(-2);
+		const shortEnd = endYear.toString().slice(-2);
+		output.data.seasonName = `${shortStart}-${shortEnd}`;
+
+		try {
+			const clientResponse = await client.get(`${ serverPath }/data/event?teamname=${ encodeURIComponent("Fort Mill") }&startdate=${prevSeasonStart}&enddate=${endDate}`);
+			const allSeasonEvents = clientResponse.body.events || [];
+
+			output.data.events = allSeasonEvents.filter(eventItem => {
+				const eventDate = new Date(eventItem.date);
+				return eventDate >= new Date(`${startDate}T00:00:00`) && eventDate <= new Date(`${endDate}T23:59:59`);
+			});
+			output.data.hasPreviousSeasonData = allSeasonEvents.filter(eventItem => {
+				const eventDate = new Date(eventItem.date);
+				return eventDate <= new Date(`${prevSeasonEnd}T23:59:59`);
+			}).length > 0;
+		}
+		catch (error) {
+			output.status = 562;
+			output.error = error.message;
 			return output;
 		}
 		

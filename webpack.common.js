@@ -18,6 +18,8 @@ export default {
 		noaccess: "./client/portal/noaccess.jsx",
 		tournamentsummary: "./client/portal/tournamentsummary.jsx",
 		dualreport: "./client/portal/dualreport.jsx",
+		teamweightclass: "./client/portal/teamweightclass.jsx",
+		teamleaderboard: "./client/portal/teamleaderboard.jsx",
 		parentemail: "./client/portal/parentemail.jsx",
 		aiemail: "./client/portal/aiemail.jsx",
 		wrestlerreport: "./client/portal/wrestlerreport.jsx",
@@ -98,12 +100,32 @@ export default {
 		}),
 		new HtmlWebpackPlugin({ 
 			filename: "./portal/dualreport.html",
-			title: "Fort Mill Wrestling - Team Season Overview",
+			title: "Fort Mill Wrestling - Duals Overview",
 			favicon: "./client/media/favicon.ico",
 			meta: {
 				viewport: "width=device-width, initial-scale=1"
 			},
 			chunks: [ "dualreport" ],
+			templateContent: "<html><body><div id='root'></div></body></html>"
+		}),
+		new HtmlWebpackPlugin({ 
+			filename: "./portal/teamweightclass.html",
+			title: "Fort Mill Wrestling - Weight Classes",
+			favicon: "./client/media/favicon.ico",
+			meta: {
+				viewport: "width=device-width, initial-scale=1"
+			},
+			chunks: [ "teamweightclass" ],
+			templateContent: "<html><body><div id='root'></div></body></html>"
+		}),
+		new HtmlWebpackPlugin({ 
+			filename: "./portal/teamleaderboard.html",
+			title: "Fort Mill Wrestling - Leaderboard",
+			favicon: "./client/media/favicon.ico",
+			meta: {
+				viewport: "width=device-width, initial-scale=1"
+			},
+			chunks: [ "teamleaderboard" ],
 			templateContent: "<html><body><div id='root'></div></body></html>"
 		}),
 		new HtmlWebpackPlugin({ 

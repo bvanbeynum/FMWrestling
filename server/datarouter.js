@@ -420,7 +420,7 @@ router.get("/data/event", authInternal, async (request, response) => {
 			eventType: request.query.eventtype, 
 			select: request.query.select ? request.query.select.split(",") : null,
 			state: request.query.state,
-			team: request.query.team,
+			team: request.query.team || request.query.teamname,
 			modifiedSince: request.query.modifiedsince
 		};
 		

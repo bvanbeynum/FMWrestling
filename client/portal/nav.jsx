@@ -18,7 +18,7 @@ const Nav = props => {
 		else if (/(opponentevent|opponentlive|opponentreport|opponent)/i.test(window.location)) {
 			setSubExpanded("opponent");
 		}
-		else if (/(team|dualreport)/i.test(window.location)) {
+		else if (/(team|dualreport|teamweightclass|teamleaderboard)/i.test(window.location)) {
 			setSubExpanded("team");
 		}
 		else if (/(parentemail|aiemail)/i.test(window.location)) {
@@ -111,6 +111,14 @@ const Nav = props => {
 			
 			<li role="button" onClick={ () => window.location = "/portal/dualreport.html" } className={`button sub ${ subExpanded === "team" ? "active" : "" }`} aria-label="Duals Overview">
 				<span>Duals</span>
+			</li>
+
+			<li role="button" onClick={ () => window.location = "/portal/teamweightclass.html" } className={`button sub ${ subExpanded === "team" ? "active" : "" }`} aria-label="Weight Classes">
+				<span>Weight Classes</span>
+			</li>
+
+			<li role="button" onClick={ () => window.location = "/portal/teamleaderboard.html" } className={`button sub ${ subExpanded === "team" ? "active" : "" }`} aria-label="Leaderboard">
+				<span>Leaderboard</span>
 			</li>
 
 			</>
