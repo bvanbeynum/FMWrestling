@@ -55,9 +55,7 @@ const parseWeightClassNumeric = (rawWeightClass) => {
 	return numericDigits;
 };
 
-const processWeightClassData = (seasonEvents, selectedDivisionSetting = "Varsity") => {
-	const completedEvents = seasonEvents.filter(eventItem => eventItem.matches && eventItem.matches.length > 0);
-
+const processWeightClassData = (seasonWrestlers, selectedDivisionSetting = "Varsity") => {
 	const statsByWeightClass = {};
 	WEIGHT_CLASSES.forEach(weightClass => {
 		statsByWeightClass[weightClass] = {
@@ -66,83 +64,91 @@ const processWeightClassData = (seasonEvents, selectedDivisionSetting = "Varsity
 		};
 	});
 
-	completedEvents.forEach(eventItem => {
-		(eventItem.matches || []).forEach(matchItem => {
-			const parsedWeightClass = parseWeightClassNumeric(matchItem.weightClass);
-			if (!parsedWeightClass || !statsByWeightClass[parsedWeightClass]) {
-				return;
-			}
+	(seasonWrestlers || []).forEach(wrestlerItem => {
+		const wrestlerName = (wrestlerItem.name || "").trim() || "Unknown Wrestler";
+		const wrestlerId = wrestlerItem.id || wrestlerItem.sqlId;
 
-			const matchDivisionValue = matchItem.divisionConvert || eventItem.divisionConvert || matchItem.division || "Varsity";
+		const wrestledDivisions = new Set();
+		const matchesByWeightClass = {};
 
-			const winType = (matchItem.winType || "").toUpperCase();
-			let matchPoints = 3;
-			if (winType === "DEC") matchPoints = 3;
-			else if (winType === "MD") matchPoints = 4;
-			else if (winType === "TF") matchPoints = 5;
-			else if (["F", "FF", "FOR", "DQ", "DEF"].includes(winType)) matchPoints = 6;
+		(wrestlerItem.events || []).forEach(eventItem => {
+			(eventItem.matches || []).forEach(matchItem => {
+				const matchDivisionValue = matchItem.divisionConvert || eventItem.divisionConvert || matchItem.division || "Varsity";
+				wrestledDivisions.add(matchDivisionValue);
 
-			const fortMillWrestler = (matchItem.wrestlers || []).find(wrestlerItem => wrestlerItem.team && wrestlerItem.team.toLowerCase() === "fort mill");
-
-			if (fortMillWrestler) {
-				const wrestlerName = fortMillWrestler.name || "Unknown Wrestler";
-				const wrestlerId = fortMillWrestler.wrestlerId || fortMillWrestler.id || fortMillWrestler.sqlId || fortMillWrestler._id;
-
-				if (!statsByWeightClass[parsedWeightClass].wrestlerRecords[wrestlerName]) {
-					statsByWeightClass[parsedWeightClass].wrestlerRecords[wrestlerName] = {
-						id: wrestlerId,
-						name: wrestlerName,
-						wins: 0,
-						losses: 0,
-						points: 0,
-						wrestledDivisions: new Set()
-					};
-				} else if (!statsByWeightClass[parsedWeightClass].wrestlerRecords[wrestlerName].id && wrestlerId) {
-					statsByWeightClass[parsedWeightClass].wrestlerRecords[wrestlerName].id = wrestlerId;
+				const parsedWeightClass = parseWeightClassNumeric(matchItem.weightClass || eventItem.weightClass);
+				if (!parsedWeightClass || !statsByWeightClass[parsedWeightClass]) {
+					return;
 				}
 
-				const wrestlerEntry = statsByWeightClass[parsedWeightClass].wrestlerRecords[wrestlerName];
-				wrestlerEntry.wrestledDivisions.add(matchDivisionValue);
+				if (!matchesByWeightClass[parsedWeightClass]) {
+					matchesByWeightClass[parsedWeightClass] = [];
+				}
+				matchesByWeightClass[parsedWeightClass].push(matchItem);
+			});
+		});
 
-				if (fortMillWrestler.isWinner) {
-					wrestlerEntry.wins += 1;
-					wrestlerEntry.points += matchPoints;
+		const isQualifiedForDivision = selectedDivisionSetting === "All Divisions" || wrestledDivisions.has(selectedDivisionSetting);
+		if (!isQualifiedForDivision) {
+			return;
+		}
+
+		Object.keys(matchesByWeightClass).forEach(weightClassKey => {
+			const matchList = matchesByWeightClass[weightClassKey];
+
+			if (!statsByWeightClass[weightClassKey].wrestlerRecords[wrestlerName]) {
+				statsByWeightClass[weightClassKey].wrestlerRecords[wrestlerName] = {
+					id: wrestlerId,
+					name: wrestlerName,
+					wins: 0,
+					losses: 0,
+					points: 0
+				};
+			} else if (!statsByWeightClass[weightClassKey].wrestlerRecords[wrestlerName].id && wrestlerId) {
+				statsByWeightClass[weightClassKey].wrestlerRecords[wrestlerName].id = wrestlerId;
+			}
+
+			const recordEntry = statsByWeightClass[weightClassKey].wrestlerRecords[wrestlerName];
+
+			matchList.forEach(matchItem => {
+				const winType = (matchItem.winType || "").toUpperCase();
+				let matchPoints = 3;
+				if (winType === "DEC") matchPoints = 3;
+				else if (winType === "MD") matchPoints = 4;
+				else if (winType === "TF") matchPoints = 5;
+				else if (["F", "FF", "FOR", "DQ", "DEF"].includes(winType)) matchPoints = 6;
+
+				if (matchItem.isWinner) {
+					recordEntry.wins += 1;
+					recordEntry.points += matchPoints;
 				} else {
-					wrestlerEntry.losses += 1;
+					recordEntry.losses += 1;
 				}
-			}
+			});
 		});
 	});
 
 	return WEIGHT_CLASSES.map(weightClass => {
 		const weightClassData = statsByWeightClass[weightClass];
-
-		const qualifiedWrestlers = Object.values(weightClassData.wrestlerRecords).filter(wrestlerItem => {
-			if (selectedDivisionSetting === "All Divisions") return true;
-			return wrestlerItem.wrestledDivisions.has(selectedDivisionSetting);
-		});
+		const wrestlerItems = Object.values(weightClassData.wrestlerRecords).map(wrestlerItem => {
+			const totalMatches = wrestlerItem.wins + wrestlerItem.losses;
+			return {
+				...wrestlerItem,
+				winPercentage: totalMatches > 0 ? (wrestlerItem.wins / totalMatches) * 100 : 0
+			};
+		}).sort((firstWrestler, secondWrestler) => secondWrestler.points - firstWrestler.points);
 
 		let weightClassWins = 0;
 		let weightClassLosses = 0;
 		let weightClassPoints = 0;
 		let weightClassTotalMatches = 0;
 
-		const wrestlerItems = qualifiedWrestlers.map(wrestlerItem => {
-			const totalMatches = wrestlerItem.wins + wrestlerItem.losses;
+		wrestlerItems.forEach(wrestlerItem => {
 			weightClassWins += wrestlerItem.wins;
 			weightClassLosses += wrestlerItem.losses;
 			weightClassPoints += wrestlerItem.points;
-			weightClassTotalMatches += totalMatches;
-
-			return {
-				id: wrestlerItem.id,
-				name: wrestlerItem.name,
-				wins: wrestlerItem.wins,
-				losses: wrestlerItem.losses,
-				points: wrestlerItem.points,
-				winPercentage: totalMatches > 0 ? (wrestlerItem.wins / totalMatches) * 100 : 0
-			};
-		}).sort((firstWrestler, secondWrestler) => secondWrestler.points - firstWrestler.points);
+			weightClassTotalMatches += (wrestlerItem.wins + wrestlerItem.losses);
+		});
 
 		const winPercentage = weightClassTotalMatches > 0 ? (weightClassWins / weightClassTotalMatches) * 100 : 0;
 		const averagePoints = weightClassTotalMatches > 0 ? weightClassPoints / weightClassTotalMatches : 0;
@@ -539,8 +545,8 @@ const WeightClassListCards = ({ chartMetrics }) => {
 	);
 };
 
-const WeightClassOverview = ({ seasonEvents, selectedDivisionSetting }) => {
-	const aggregatedData = processWeightClassData(seasonEvents, selectedDivisionSetting);
+const WeightClassOverview = ({ seasonWrestlers, selectedDivisionSetting }) => {
+	const aggregatedData = processWeightClassData(seasonWrestlers, selectedDivisionSetting);
 
 	const powerhouseClasses = aggregatedData.filter((item) => item.status === "Powerhouse");
 	const wipClasses = aggregatedData.filter((item) => item.status === "Work in Progress");
@@ -610,7 +616,7 @@ const TeamWeightClass = () => {
 	const [pageActive, setPageActive] = useState(false);
 	const [isLoading, setIsLoading] = useState(true);
 	const [loggedInUser, setLoggedInUser] = useState(null);
-	const [events, setEvents] = useState([]);
+	const [wrestlers, setWrestlers] = useState([]);
 	const [selectedSeason, setSelectedSeason] = useState(seasonOptions[1].name);
 	const [selectedDivisionSetting, setSelectedDivisionSetting] = useState("Varsity");
 
@@ -628,9 +634,9 @@ const TeamWeightClass = () => {
 				}
 			})
 			.then(payload => {
-				const fetchedEvents = payload.events || [];
+				const fetchedWrestlers = payload.wrestlers || [];
 				setLoggedInUser(payload.loggedInUser);
-				setEvents(fetchedEvents);
+				setWrestlers(fetchedWrestlers);
 				setPageActive(true);
 				setIsLoading(false);
 			})
@@ -691,7 +697,7 @@ const TeamWeightClass = () => {
 							</div>
 						</div>
 
-						<WeightClassOverview seasonEvents={events} selectedDivisionSetting={selectedDivisionSetting} />
+						<WeightClassOverview seasonWrestlers={wrestlers} selectedDivisionSetting={selectedDivisionSetting} />
 					</div>
 				)}
 			</div>

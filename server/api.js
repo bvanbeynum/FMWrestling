@@ -2491,8 +2491,8 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 			const clientResponse = await client.get(`${ serverPath }/data/event?ids=${ encodeURIComponent(JSON.stringify(eventIds)) }`);
 			const allSeasonEvents = clientResponse.body.events || [];
 
-			output.data.events = allSeasonEvents.filter(eventItem => new Date(eventItem.date) >= new Date(startDate) && eventItem.date <= endDate);
-			output.data.hasPreviousSeasonData = allSeasonEvents.filter(eventItem => new Date(eventItem.date) <= new Date(prevSeasonEnd)).length > 0;
+			output.data.events = allSeasonEvents.filter(event => new Date(event.date) >= new Date(startDate) && event.date <= endDate);
+			output.data.hasPreviousSeasonData = allSeasonEvents.filter(event => new Date(event.date) <= new Date(prevSeasonEnd)).length > 0;
 		}
 		catch (error) {
 			output.status = 562;
@@ -2505,7 +2505,7 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 	},
 
 	teamWeightClassLoad: async (seasonName, serverPath) => {
-		const output = { data: { events: [], seasonName: "", hasPreviousSeasonData: false } };
+		const output = { data: { wrestlers: [], seasonName: "", hasPreviousSeasonData: false } };
 
 		let startYear;
 		if (seasonName && /^\d{2}-\d{2}$/.test(seasonName)) {
@@ -2528,17 +2528,51 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 		output.data.seasonName = `${shortStart}-${shortEnd}`;
 
 		try {
-			const clientResponse = await client.get(`${ serverPath }/data/event?teamname=${ encodeURIComponent("Fort Mill") }&startdate=${prevSeasonStart}&enddate=${endDate}`);
-			const allSeasonEvents = clientResponse.body.events || [];
+			const wrestlerResponse = await client.get(`${ serverPath }/data/wrestler?teamname=${ encodeURIComponent("Fort Mill") }&state=SC`);
+			const fetchedWrestlers = wrestlerResponse.body.wrestlers || [];
 
-			output.data.events = allSeasonEvents.filter(eventItem => {
-				const eventDate = new Date(eventItem.date);
-				return eventDate >= new Date(`${startDate}T00:00:00`) && eventDate <= new Date(`${endDate}T23:59:59`);
+			const seasonStartWindow = new Date(`${startDate}T00:00:00`);
+			const seasonEndWindow = new Date(`${endDate}T23:59:59`);
+
+			const eligibleWrestlers = fetchedWrestlers.filter(wrestlerItem => 
+				wrestlerItem.lastEvent && wrestlerItem.lastEvent.date && new Date(wrestlerItem.lastEvent.date) >= seasonStartWindow
+				);
+
+			const wrestlerIdentifiers = eligibleWrestlers.map(wrestlerItem => wrestlerItem.id);
+			if (wrestlerIdentifiers.length === 0) {
+				output.status = 200;
+				return output;
+			}
+
+			const wrestlerEventsResponse = await client.get(`${ serverPath }/data/wrestlerevent?startdate=${prevSeasonStart}&enddate=${endDate}&wrestlerids=${ encodeURIComponent(JSON.stringify(wrestlerIdentifiers)) }`);
+			const rawWrestlerEvents = wrestlerEventsResponse.body.wrestlerEvents || [];
+
+			const eventsByWrestlerId = {};
+			rawWrestlerEvents.forEach(event => {
+				const targetWrestlerId = event.wrestlerId;
+				if (!eventsByWrestlerId[targetWrestlerId]) {
+					eventsByWrestlerId[targetWrestlerId] = [];
+				}
+				eventsByWrestlerId[targetWrestlerId].push(event);
 			});
-			output.data.hasPreviousSeasonData = allSeasonEvents.filter(eventItem => {
-				const eventDate = new Date(eventItem.date);
+
+			output.data.wrestlers = eligibleWrestlers.map(wrestlerItem => ({
+				id: wrestlerItem.id,
+				sqlId: wrestlerItem.sqlId,
+				name: wrestlerItem.name,
+				rating: wrestlerItem.rating,
+				deviation: wrestlerItem.deviation,
+				states: wrestlerItem.states,
+				searchTeams: wrestlerItem.searchTeams,
+				lastEvent: wrestlerItem.lastEvent,
+				lastWeightClass: wrestlerItem.lastWeightClass,
+				events: (eventsByWrestlerId[wrestlerItem.id] || []).filter(event => new Date(event.date) >= seasonStartWindow && new Date(event.date) <= seasonEndWindow)
+			}));
+
+			output.data.hasPreviousSeasonData = rawWrestlerEvents.some(event => {
+				const eventDate = new Date(event.date);
 				return eventDate <= new Date(`${prevSeasonEnd}T23:59:59`);
-			}).length > 0;
+			});
 		}
 		catch (error) {
 			output.status = 562;
@@ -2551,7 +2585,7 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 	},
 
 	teamLeaderboardLoad: async (seasonName, serverPath) => {
-		const output = { data: { events: [], seasonName: "", hasPreviousSeasonData: false } };
+		const output = { data: { wrestlers: [], seasonName: "", hasPreviousSeasonData: false } };
 
 		let startYear;
 		if (seasonName && /^\d{2}-\d{2}$/.test(seasonName)) {
@@ -2574,17 +2608,51 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 		output.data.seasonName = `${shortStart}-${shortEnd}`;
 
 		try {
-			const clientResponse = await client.get(`${ serverPath }/data/event?teamname=${ encodeURIComponent("Fort Mill") }&startdate=${prevSeasonStart}&enddate=${endDate}`);
-			const allSeasonEvents = clientResponse.body.events || [];
+			const wrestlerResponse = await client.get(`${ serverPath }/data/wrestler?teamname=${ encodeURIComponent("Fort Mill") }&state=SC`);
+			const fetchedWrestlers = wrestlerResponse.body.wrestlers || [];
 
-			output.data.events = allSeasonEvents.filter(eventItem => {
-				const eventDate = new Date(eventItem.date);
-				return eventDate >= new Date(`${startDate}T00:00:00`) && eventDate <= new Date(`${endDate}T23:59:59`);
+			const seasonStartWindow = new Date(`${startDate}T00:00:00`);
+			const seasonEndWindow = new Date(`${endDate}T23:59:59`);
+
+			const eligibleWrestlers = fetchedWrestlers.filter(wrestlerItem => 
+				wrestlerItem.lastEvent && wrestlerItem.lastEvent.date && new Date(wrestlerItem.lastEvent.date) >= seasonStartWindow
+				);
+
+			const wrestlerIdentifiers = eligibleWrestlers.map(wrestlerItem => wrestlerItem.id);
+			if (wrestlerIdentifiers.length === 0) {
+				output.status = 200;
+				return output;
+			}
+
+			const wrestlerEventsResponse = await client.get(`${ serverPath }/data/wrestlerevent?startdate=${prevSeasonStart}&enddate=${endDate}&wrestlerids=${ encodeURIComponent(JSON.stringify(wrestlerIdentifiers)) }`);
+			const rawWrestlerEvents = wrestlerEventsResponse.body.wrestlerEvents || [];
+
+			const eventsByWrestlerId = {};
+			rawWrestlerEvents.forEach(event => {
+				const targetWrestlerId = event.wrestlerId;
+				if (!eventsByWrestlerId[targetWrestlerId]) {
+					eventsByWrestlerId[targetWrestlerId] = [];
+				}
+				eventsByWrestlerId[targetWrestlerId].push(event);
 			});
-			output.data.hasPreviousSeasonData = allSeasonEvents.filter(eventItem => {
-				const eventDate = new Date(eventItem.date);
+
+			output.data.wrestlers = eligibleWrestlers.map(wrestlerItem => ({
+				id: wrestlerItem.id,
+				sqlId: wrestlerItem.sqlId,
+				name: wrestlerItem.name,
+				rating: wrestlerItem.rating,
+				deviation: wrestlerItem.deviation,
+				states: wrestlerItem.states,
+				searchTeams: wrestlerItem.searchTeams,
+				lastEvent: wrestlerItem.lastEvent,
+				lastWeightClass: wrestlerItem.lastWeightClass,
+				events: (eventsByWrestlerId[wrestlerItem.id] || []).filter(event => new Date(event.date) >= seasonStartWindow && new Date(event.date) <= seasonEndWindow)
+			}));
+
+			output.data.hasPreviousSeasonData = rawWrestlerEvents.some(event => {
+				const eventDate = new Date(event.date);
 				return eventDate <= new Date(`${prevSeasonEnd}T23:59:59`);
-			}).length > 0;
+			});
 		}
 		catch (error) {
 			output.status = 562;

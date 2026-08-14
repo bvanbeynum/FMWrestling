@@ -63,106 +63,99 @@ const getSeasonStartYear = (seasonNameValue) => {
 	return currentTodayDate.getMonth() >= 8 ? currentTodayDate.getFullYear() : currentTodayDate.getFullYear() - 1;
 };
 
-const processLeaderboardData = (seasonEvents, selectedDivisionSetting, seasonNameValue) => {
-	const wrestlerRecordsByName = {};
+const processLeaderboardData = (seasonWrestlers, selectedDivisionSetting, seasonNameValue) => {
 	const startYearNumber = getSeasonStartYear(seasonNameValue);
 	const inSeasonStartDate = new Date(startYearNumber, 10, 1, 0, 0, 0);
 	const inSeasonEndDate = new Date(startYearNumber + 1, 2, 1, 23, 59, 59);
 
-	(seasonEvents || []).forEach((eventItem) => {
-		const rawEventDate = parseEventDate(eventItem.date);
-		if (!rawEventDate) return;
+	const processedLeaderboardRecords = [];
 
-		if (rawEventDate < inSeasonStartDate || rawEventDate > inSeasonEndDate) {
-			return;
-		}
+	(seasonWrestlers || []).forEach((wrestlerItem) => {
+		const wrestlerNameKey = (wrestlerItem.name || "").trim();
+		if (!wrestlerNameKey) return;
 
-		(eventItem.matches || []).forEach((matchItem) => {
-			const fortMillWrestler = (matchItem.wrestlers || []).find((wrestlerItem) => {
-				return wrestlerItem.team && wrestlerItem.team.toLowerCase() === "fort mill";
-			});
+		const wrestlerRecord = {
+			id: wrestlerItem.id || wrestlerItem.sqlId,
+			name: wrestlerNameKey,
+			totalMatches: 0,
+			wins: 0,
+			points: 0,
+			pins: 0,
+			techfalls: 0,
+			majorDecisions: 0,
+			decisions: 0,
+			forfeits: 0,
+			takedowns: 0,
+			nearfalls: 0,
+			reversals: 0,
+			escapes: 0,
+			wrestledDivisions: new Set()
+		};
 
-			if (!fortMillWrestler || !fortMillWrestler.name) {
+		(wrestlerItem.events || []).forEach((eventItem) => {
+			const rawEventDate = parseEventDate(eventItem.date);
+			if (!rawEventDate) return;
+
+			if (rawEventDate < inSeasonStartDate || rawEventDate > inSeasonEndDate) {
 				return;
 			}
 
-			const matchDivisionValue = matchItem.divisionConvert || eventItem.divisionConvert || matchItem.division || "Varsity";
-			const wrestlerNameKey = fortMillWrestler.name.trim();
-			const wrestlerIdentifier = fortMillWrestler.wrestlerId || fortMillWrestler.id || fortMillWrestler.sqlId || fortMillWrestler._id;
+			(eventItem.matches || []).forEach((matchItem) => {
+				const matchDivisionValue = matchItem.divisionConvert || eventItem.divisionConvert || matchItem.division || "Varsity";
+				wrestlerRecord.wrestledDivisions.add(matchDivisionValue);
+				wrestlerRecord.totalMatches += 1;
 
-			if (!wrestlerRecordsByName[wrestlerNameKey]) {
-				wrestlerRecordsByName[wrestlerNameKey] = {
-					id: wrestlerIdentifier,
-					name: wrestlerNameKey,
-					totalMatches: 0,
-					wins: 0,
-					points: 0,
-					pins: 0,
-					techfalls: 0,
-					majorDecisions: 0,
-					decisions: 0,
-					forfeits: 0,
-					takedowns: 0,
-					nearfalls: 0,
-					reversals: 0,
-					escapes: 0,
-					wrestledDivisions: new Set()
-				};
-			} else if (!wrestlerRecordsByName[wrestlerNameKey].id && wrestlerIdentifier) {
-				wrestlerRecordsByName[wrestlerNameKey].id = wrestlerIdentifier;
-			}
+				if (matchItem.isWinner) {
+					wrestlerRecord.wins += 1;
 
-			const currentRecord = wrestlerRecordsByName[wrestlerNameKey];
-			currentRecord.wrestledDivisions.add(matchDivisionValue);
-			currentRecord.totalMatches += 1;
+					const winTypeNormalized = (matchItem.winType || "").toUpperCase();
+					let matchPointsValue = 3;
 
-			if (fortMillWrestler.isWinner) {
-				currentRecord.wins += 1;
+					if (winTypeNormalized === "DEC") {
+						matchPointsValue = 3;
+						wrestlerRecord.decisions += 1;
+					} else if (winTypeNormalized === "MD") {
+						matchPointsValue = 4;
+						wrestlerRecord.majorDecisions += 1;
+					} else if (winTypeNormalized === "TF") {
+						matchPointsValue = 5;
+						wrestlerRecord.techfalls += 1;
+					} else if (["F", "FALL", "PIN"].includes(winTypeNormalized)) {
+						matchPointsValue = 6;
+						wrestlerRecord.pins += 1;
+					} else if (["FF", "FOR", "FORFEIT", "DQ", "DEF", "DEFAULT"].includes(winTypeNormalized)) {
+						matchPointsValue = 6;
+						wrestlerRecord.forfeits += 1;
+					} else {
+						matchPointsValue = 3;
+						wrestlerRecord.decisions += 1;
+					}
 
-				const winTypeNormalized = (matchItem.winType || "").toUpperCase();
-				let matchPointsValue = 3;
-
-				if (winTypeNormalized === "DEC") {
-					matchPointsValue = 3;
-					currentRecord.decisions += 1;
-				} else if (winTypeNormalized === "MD") {
-					matchPointsValue = 4;
-					currentRecord.majorDecisions += 1;
-				} else if (winTypeNormalized === "TF") {
-					matchPointsValue = 5;
-					currentRecord.techfalls += 1;
-				} else if (["F", "FALL", "PIN"].includes(winTypeNormalized)) {
-					matchPointsValue = 6;
-					currentRecord.pins += 1;
-				} else if (["FF", "FOR", "FORFEIT", "DQ", "DEF", "DEFAULT"].includes(winTypeNormalized)) {
-					matchPointsValue = 6;
-					currentRecord.forfeits += 1;
-				} else {
-					matchPointsValue = 3;
-					currentRecord.decisions += 1;
+					wrestlerRecord.points += matchPointsValue;
 				}
 
-				currentRecord.points += matchPointsValue;
-			}
+				const takedownCount = Number(matchItem.takedowns || matchItem.takedown || matchItem.scores?.takedowns || 0);
+				const nearfallCount = Number(matchItem.nearfalls || matchItem.nearfall || matchItem.scores?.nearfalls || 0);
+				const reversalCount = Number(matchItem.reversals || matchItem.reversal || matchItem.reverses || matchItem.reverse || matchItem.scores?.reversals || 0);
+				const escapeCount = Number(matchItem.escapes || matchItem.escape || matchItem.scores?.escapes || 0);
 
-			const takedownCount = Number(fortMillWrestler.takedowns || fortMillWrestler.takedown || fortMillWrestler.scores?.takedowns || 0);
-			const nearfallCount = Number(fortMillWrestler.nearfalls || fortMillWrestler.nearfall || fortMillWrestler.scores?.nearfalls || 0);
-			const reversalCount = Number(fortMillWrestler.reversals || fortMillWrestler.reversal || fortMillWrestler.scores?.reversals || 0);
-			const escapeCount = Number(fortMillWrestler.escapes || fortMillWrestler.escape || fortMillWrestler.scores?.escapes || 0);
-
-			currentRecord.takedowns += takedownCount;
-			currentRecord.nearfalls += nearfallCount;
-			currentRecord.reversals += reversalCount;
-			currentRecord.escapes += escapeCount;
+				wrestlerRecord.takedowns += takedownCount;
+				wrestlerRecord.nearfalls += nearfallCount;
+				wrestlerRecord.reversals += reversalCount;
+				wrestlerRecord.escapes += escapeCount;
+			});
 		});
+
+		if (wrestlerRecord.totalMatches > 0) {
+			processedLeaderboardRecords.push(wrestlerRecord);
+		}
 	});
 
-	const allWrestlerRecords = Object.values(wrestlerRecordsByName);
 	if (selectedDivisionSetting === "All Divisions") {
-		return allWrestlerRecords;
+		return processedLeaderboardRecords;
 	}
 
-	return allWrestlerRecords.filter(recordItem => recordItem.wrestledDivisions.has(selectedDivisionSetting));
+	return processedLeaderboardRecords.filter(recordItem => recordItem.wrestledDivisions.has(selectedDivisionSetting));
 };
 
 const formatLeaderboardMetric = (wrestlerRecord, metricKey, viewModeSetting) => {
@@ -214,13 +207,13 @@ const getTopLeaderboardRecords = (wrestlerRecords, metricKey, viewModeSetting, c
 // PRESENTATION JSX COMPONENTS
 // ============================================================================
 
-const WrestlerLeaderboard = ({ seasonEvents, seasonName }) => {
+const WrestlerLeaderboard = ({ seasonWrestlers, seasonName }) => {
 	const [selectedDivisionSetting, setSelectedDivisionSetting] = useState("Varsity");
 	const [viewModeSetting, setViewModeSetting] = useState("overall");
 	const [sortMetricKey, setSortMetricKey] = useState("points");
 	const [sortDirectionDescending, setSortDirectionDescending] = useState(true);
 
-	const wrestlerRecords = processLeaderboardData(seasonEvents, selectedDivisionSetting, seasonName);
+	const wrestlerRecords = processLeaderboardData(seasonWrestlers, selectedDivisionSetting, seasonName);
 
 	const sortedWrestlerRecords = [...wrestlerRecords].sort((firstRecord, secondRecord) => {
 		const firstValue = viewModeSetting === "per_match" 
@@ -528,7 +521,7 @@ const TeamLeaderboard = () => {
 	const [pageActive, setPageActive] = useState(false);
 	const [isLoading, setIsLoading] = useState(true);
 	const [loggedInUser, setLoggedInUser] = useState(null);
-	const [events, setEvents] = useState([]);
+	const [wrestlers, setWrestlers] = useState([]);
 	const [seasonName, setSeasonName] = useState("");
 	const [selectedSeason, setSelectedSeason] = useState(seasonOptions[1].name);
 
@@ -546,9 +539,9 @@ const TeamLeaderboard = () => {
 				}
 			})
 			.then(payload => {
-				const fetchedEvents = payload.events || [];
+				const fetchedWrestlers = payload.wrestlers || [];
 				setLoggedInUser(payload.loggedInUser);
-				setEvents(fetchedEvents);
+				setWrestlers(fetchedWrestlers);
 				setSeasonName(payload.seasonName || selectedSeason);
 				setPageActive(true);
 				setIsLoading(false);
@@ -594,7 +587,7 @@ const TeamLeaderboard = () => {
 							</div>
 						</div>
 
-						<WrestlerLeaderboard seasonEvents={events} seasonName={seasonName} />
+						<WrestlerLeaderboard seasonWrestlers={wrestlers} seasonName={seasonName} />
 					</div>
 				)}
 			</div>
