@@ -739,6 +739,17 @@ const WrestlerReportComponent = () => {
 														{ eventItem.weightClass ? (
 															<span className="event-tag">{ eventItem.weightClass } lbs</span>
 														) : "" }
+														{ (eventItem.systemId) && (
+															<a
+																href={ `https://www.flowrestling.org/nextgen/events/${ eventItem.systemId }/information` }
+																target="_blank"
+																rel="noreferrer"
+																className="eventLink"
+															>
+																VIEW ON FLO &rarr;
+															</a>
+														)
+													}
 													</div>
 												</div>
 
@@ -791,6 +802,21 @@ const WrestlerReportComponent = () => {
 																		{ matchItem.winType ? (
 																			<span className="match-win-type">{ matchItem.winType }</span>
 																		) : "" }
+																		{ matchItem.videoUrl ? (
+																			<a
+																				href={ matchItem.videoUrl }
+																				target="_blank"
+																				rel="noopener noreferrer"
+																				className="match-video-link"
+																				title="Watch Video"
+																				onClick={ (clickEvent) => clickEvent.stopPropagation() }
+																			>
+																				<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+																					<polygon points="23 7 16 12 23 17 23 7" />
+																					<rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+																				</svg>
+																			</a>
+																		) : null }
 																	</div>
 																</div>
 															)) }

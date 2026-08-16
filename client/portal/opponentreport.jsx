@@ -28,6 +28,48 @@ const matchesDivision = (rawDivision, targetDivision) => {
 	return cleanDiv.toLowerCase() === targetDivision.toLowerCase();
 };
 
+const StatusBadgeWithTooltip = ({ statusLabel, winPercentage }) => {
+	const [showTooltip, setShowTooltip] = useState(false);
+
+	const statusClass = statusLabel.toLowerCase();
+
+	const handleToggle = (event) => {
+		event.stopPropagation();
+		setShowTooltip(previous => !previous);
+	};
+
+	return (
+		<div
+			className="status-badge-container"
+			onMouseEnter={() => setShowTooltip(true)}
+			onMouseLeave={() => setShowTooltip(false)}
+			onClick={handleToggle}
+		>
+			<span className={`status-badge ${statusClass}`}>
+				{statusLabel}
+			</span>
+
+			{showTooltip && (
+				<div className="status-definition-tooltip" onClick={(e) => e.stopPropagation()}>
+					<div className="tooltip-header-title">Weight Class Status Definitions</div>
+					<div className="tooltip-def-row">
+						<span className="status-badge powerhouse">Powerhouse</span>
+						<span className="tooltip-def-text">&gt; 75% Win Rate</span>
+					</div>
+					<div className="tooltip-def-row">
+						<span className="status-badge stable">Stable</span>
+						<span className="tooltip-def-text">50% – 75% Win Rate</span>
+					</div>
+					<div className="tooltip-def-row">
+						<span className="status-badge wip">WIP</span>
+						<span className="tooltip-def-text">Work in Progress (&lt; 50% Win Rate)</span>
+					</div>
+				</div>
+			)}
+		</div>
+	);
+};
+
 const OpponentReport = () => {
 	const todayDate = new Date();
 	const currentYear = todayDate.getFullYear();
@@ -158,13 +200,6 @@ const OpponentReport = () => {
 	// Events grouped for the opponent team in the season for selected division
 	const eventsMap = {};
 	inSeasonWrestlerEvents.forEach(eventItem => {
-		const isMatchingDivision = (eventItem.matches || []).some(matchItem => {
-			const matchDivision = matchItem.divisionConvert || eventItem.divisionConvert || matchItem.division;
-			return matchesDivision(matchDivision, selectedDivision);
-		}) || matchesDivision(eventItem.divisionConvert || eventItem.division, selectedDivision);
-
-		if (!isMatchingDivision) return;
-
 		const eventKey = `${new Date(eventItem.date).toLocaleDateString()}|${eventItem.name}`;
 		if (!eventsMap[eventKey]) {
 			eventsMap[eventKey] = {
@@ -172,9 +207,15 @@ const OpponentReport = () => {
 				name: eventItem.name,
 				date: parseDateValue(eventItem.date),
 				eventId: eventItem.id,
+				sqlId: eventItem.sqlId,
+				systemId: eventItem.systemId,
 				wrestlerIds: new Set(),
 				isFortMillPresent: eventItem.isFortMillPresent || false
 			};
+		}
+
+		if (eventItem.systemId && !eventsMap[eventKey].systemId) {
+			eventsMap[eventKey].systemId = eventItem.systemId;
 		}
 
 		if (eventItem.wrestlerId) {
@@ -223,6 +264,8 @@ const OpponentReport = () => {
 	standardWeightClasses.forEach(weightClassLabel => {
 		weightClassDataMap[weightClassLabel] = {
 			weightClass: weightClassLabel,
+			wins: 0,
+			losses: 0,
 			wrestlerMap: {}
 		};
 	});
@@ -232,9 +275,6 @@ const OpponentReport = () => {
 		if (!wrestlerItem) return;
 
 		(eventItem.matches || []).forEach(matchItem => {
-			const matchDivision = matchItem.divisionConvert || eventItem.divisionConvert || matchItem.division;
-			if (!matchesDivision(matchDivision, selectedDivision)) return;
-
 			const rawWeight = (matchItem.weightClass || eventItem.weightClass || wrestlerItem.lastWeightClass || "").toString().replace("lbs", "").trim();
 			if (!standardWeightClasses.includes(rawWeight)) return;
 
@@ -254,8 +294,10 @@ const OpponentReport = () => {
 			const wrestlerStats = weightClassEntry.wrestlerMap[wrestlerItem.id];
 			if (matchItem.isWinner) {
 				wrestlerStats.wins += 1;
+				weightClassEntry.wins += 1;
 			} else {
 				wrestlerStats.losses += 1;
+				weightClassEntry.losses += 1;
 			}
 
 			if (eventItem.name) {
@@ -279,41 +321,35 @@ const OpponentReport = () => {
 			};
 		});
 		const wrestlerCount = wrestlersInClass.length;
+		const totalMatches = classData.wins + classData.losses;
+		const winPercentage = totalMatches > 0 ? (classData.wins / totalMatches) * 100 : 0;
 
-		let statusLabel = "Stable";
-		if (wrestlerCount >= 4) {
-			statusLabel = "Volatile";
-		} else if (wrestlerCount >= 2) {
-			statusLabel = "Variable";
-		} else {
-			statusLabel = "Stable";
+		let statusLabel = null;
+		if (wrestlerCount > 0) {
+			if (winPercentage > 75) {
+				statusLabel = "Powerhouse";
+			} else if (winPercentage >= 50) {
+				statusLabel = "Stable";
+			} else {
+				statusLabel = "WIP";
+			}
 		}
 
 		return {
 			weightClass: weightClassLabel,
 			wrestlerCount: wrestlerCount,
+			wins: classData.wins,
+			losses: classData.losses,
+			totalMatches: totalMatches,
+			winPercentage: winPercentage,
 			statusLabel: statusLabel,
 			wrestlers: wrestlersInClass.sort((firstWrestler, secondWrestler) => secondWrestler.rating - firstWrestler.rating)
 		};
 	});
 
-	// Most Volatile & Most Stable KPIs
-	let mostVolatileClass = null;
-	let maxWrestlerCount = -1;
-
-	let mostStableClass = null;
-	let minWrestlerCount = 999;
-
-	weightClassCardsList.forEach(cardItem => {
-		if (cardItem.wrestlerCount > maxWrestlerCount) {
-			maxWrestlerCount = cardItem.wrestlerCount;
-			mostVolatileClass = cardItem;
-		}
-		if (cardItem.wrestlerCount > 0 && cardItem.wrestlerCount < minWrestlerCount) {
-			minWrestlerCount = cardItem.wrestlerCount;
-			mostStableClass = cardItem;
-		}
-	});
+	const powerhouseCount = weightClassCardsList.filter(cardItem => cardItem.statusLabel === "Powerhouse").length;
+	const stableCount = weightClassCardsList.filter(cardItem => cardItem.statusLabel === "Stable").length;
+	const wipCount = weightClassCardsList.filter(cardItem => cardItem.statusLabel === "WIP").length;
 
 	return (
 		<div className="page">
@@ -561,13 +597,22 @@ const OpponentReport = () => {
 																<td>{parseDateValue(eventItem.date).toLocaleDateString()}</td>
 																<td className="wrestler-name-cell">
 																	<a
-																		href={`/portal/tournamentsummary.html?id=${eventItem.eventId}`}
-																		target="_blank"
-																		rel="noopener noreferrer"
+																		href={`/portal/tournamentsummary.html?sqlid=${eventItem.sqlId}`}
 																		className="wrestler-link"
 																	>
 																		{eventItem.name}
 																	</a>
+																	{eventItem.systemId ? (
+																		<a
+																			href={`https://www.flowrestling.org/nextgen/events/${eventItem.systemId}/information`}
+																			target="_blank"
+																			rel="noreferrer"
+																			className="eventLink"
+																			style={{ marginLeft: "10px" }}
+																		>
+																			VIEW ON FLO &rarr;
+																		</a>
+																	) : null}
 																</td>
 																<td>{eventItem.wrestlerIds.size}</td>
 																<td>
@@ -589,14 +634,24 @@ const OpponentReport = () => {
 											{seasonEventsList.map((eventItem, eventIndex) => (
 												<div key={`mobile-event-${eventIndex}`} className="opponent-mobile-card">
 													<div className="opponent-mobile-card-header">
-														<a
-															href={`/portal/tournamentsummary.html?id=${eventItem.eventId}`}
-															target="_blank"
-															rel="noopener noreferrer"
-															className="wrestler-link bold-wrestler-link"
-														>
-															{eventItem.name}
-														</a>
+														<div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+															<a
+																href={`/portal/tournamentsummary.html?sqlid=${eventItem.sqlId}`}
+																className="wrestler-link bold-wrestler-link"
+															>
+																{eventItem.name}
+															</a>
+															{eventItem.systemId ? (
+																<a
+																	href={`https://www.flowrestling.org/nextgen/events/${eventItem.systemId}/information`}
+																	target="_blank"
+																	rel="noreferrer"
+																	className="eventLink"
+																>
+																	VIEW ON FLO &rarr;
+																</a>
+															) : null}
+														</div>
 														<span className="mobile-subtext">
 															{parseDateValue(eventItem.date).toLocaleDateString()}
 														</span>
@@ -618,30 +673,35 @@ const OpponentReport = () => {
 								<>
 									{/* Weight Classes KPIs */}
 									<div className="report-kpis-grid">
-										<div className="report-kpi-card weight-class-kpi-card wip">
-											<span className="kpi-label">MOST VOLATILE</span>
-											<span className="kpi-value-text Russo">
-												{mostVolatileClass && mostVolatileClass.wrestlerCount > 0 ? `${mostVolatileClass.weightClass} lbs` : "N/A"}
-											</span>
-											<span className="kpi-sub-text volatile-color">
-												{mostVolatileClass ? `${mostVolatileClass.wrestlerCount} Wrestlers` : "No data"}
-											</span>
+										<div className="report-kpi-card weight-class-kpi-card powerhouse">
+											<span className="kpi-label">POWERHOUSE CLASSES</span>
+											<span className="kpi-value-text Russo">{powerhouseCount}</span>
+											<span className="kpi-sub-text stable-color">&gt; 75% Win Rate</span>
 										</div>
 
-										<div className="report-kpi-card weight-class-kpi-card powerhouse">
-											<span className="kpi-label">MOST STABLE</span>
-											<span className="kpi-value-text Russo">
-												{mostStableClass && mostStableClass.wrestlerCount > 0 ? `${mostStableClass.weightClass} lbs` : "N/A"}
-											</span>
-											<span className="kpi-sub-text stable-color">
-												{mostStableClass ? `${mostStableClass.wrestlerCount} Wrestlers` : "No data"}
-											</span>
+										<div className="report-kpi-card weight-class-kpi-card average">
+											<span className="kpi-label">STABLE CLASSES</span>
+											<span className="kpi-value-text Russo">{stableCount}</span>
+											<span className="kpi-sub-text" style={{ color: "#b06000" }}>50% - 75% Win Rate</span>
+										</div>
+
+										<div className="report-kpi-card weight-class-kpi-card wip">
+											<span className="kpi-label">WIP CLASSES</span>
+											<span className="kpi-value-text Russo">{wipCount}</span>
+											<span className="kpi-sub-text volatile-color">&lt; 50% Win Rate</span>
 										</div>
 									</div>
 
 									{/* Weight Class Cards Grid */}
 									<div className="weight-matrix-section">
-										<h3 className="matrix-section-title">Weight Class Cards</h3>
+										<div className="matrix-section-header-row">
+											<h3 className="matrix-section-title" style={{ marginBottom: 0, borderBottom: "none" }}>Weight Class Cards</h3>
+											<div className="status-legend-bar">
+												<span className="legend-chip powerhouse" title="> 75% Win Rate">Powerhouse (&gt;75%)</span>
+												<span className="legend-chip stable" title="50% - 75% Win Rate">Stable (50-75%)</span>
+												<span className="legend-chip wip" title="< 50% Win Rate">WIP (&lt;50%)</span>
+											</div>
+										</div>
 										
 										<div className="weight-class-cards-grid">
 											{weightClassCardsList.map(cardItem => (
@@ -650,10 +710,20 @@ const OpponentReport = () => {
 														<span className="wc-title">
 															{cardItem.weightClass} lbs
 														</span>
-														<span className={`status-badge ${cardItem.statusLabel.toLowerCase()}`}>
-															{cardItem.statusLabel} ({cardItem.wrestlerCount})
-														</span>
+														{cardItem.wrestlers.length > 0 && cardItem.statusLabel ? (
+															<StatusBadgeWithTooltip
+																statusLabel={cardItem.statusLabel}
+																winPercentage={cardItem.winPercentage}
+															/>
+														) : null}
 													</div>
+
+													{cardItem.wrestlers.length > 0 ? (
+														<div className="wc-card-subsummary">
+															<span>Record: <strong>{cardItem.wins}-{cardItem.losses}</strong></span>
+															<span>Win Rate: <strong>{cardItem.winPercentage.toFixed(1)}%</strong></span>
+														</div>
+													) : null}
 
 													<div className="wc-wrestlers-list">
 														{cardItem.wrestlers.length === 0 ? (

@@ -259,6 +259,13 @@ svg {
 	flex-wrap: wrap;
 }
 
+.eventLink {
+	font-family: var(--font-body);
+	font-size: 12px;
+	font-weight: 500;
+	padding: 2px 8px;
+}
+
 .event-tag {
 	font-family: var(--font-body);
 	font-size: 12px;
@@ -454,6 +461,23 @@ svg {
 	font-size: 12px;
 	color: var(--on-surface-variant);
 	font-weight: 500;
+}
+
+.match-video-link {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--primary);
+	text-decoration: none;
+	padding: 3px 5px;
+	border-radius: 4px;
+	transition: color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+}
+
+.match-video-link:hover {
+	color: var(--primary-variant);
+	background-color: var(--surface-container);
+	transform: scale(1.1);
 }
 
 /* Ratings, Opponents, and Style Views */

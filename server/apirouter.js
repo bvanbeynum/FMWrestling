@@ -65,10 +65,10 @@ router.get("/api/allscheduleload", authAPI, async (request, response) => {
 });
 
 router.get("/api/eventdetailsload", authAPI, async (request, response) => {
-	if (!request.query.id) {
+	if (!request.query.id && !request.query.sqlid) {
 		return response.status(400).json({ error: "Missing event ID" });
 	}
-	const results = await api.eventDetailsLoad(request.serverPath, request.query.id);
+	const results = await api.eventDetailsLoad(request.query.id, request.query.sqlid, request.serverPath);
 	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
 });
 

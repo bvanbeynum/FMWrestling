@@ -85,13 +85,15 @@ const TournamentSummary = () => {
 		}
 	}, [selectedDivision, event]);
 
-	// Read event ID from query parameters
+	// Read event ID / SQL ID from query parameters
 	const queryParams = new URLSearchParams(window.location.search);
 	const eventId = queryParams.get("id");
+	const eventSqlId = queryParams.get("sqlid");
+	const fetchParameters = (eventId && eventId !== "null") ? `id=${eventId}` : ((eventSqlId && eventSqlId !== "null") ? `sqlid=${eventSqlId}` : "");
 
 	useEffect(() => {
-		if (eventId) {
-			fetch(`/api/eventdetailsload?id=${eventId}`)
+		if (fetchParameters) {
+			fetch(`/api/eventdetailsload?${fetchParameters}`)
 				.then(response => {
 					if (response.ok) {
 						return response.json();
@@ -102,12 +104,12 @@ const TournamentSummary = () => {
 				.then(data => {
 					const eventUpdated = {
 						...data.event,
-						matches: data.event.matches.map(match => ({
+						matches: (data.event?.matches || []).map(match => ({
 							...match,
-							winner: match.wrestlers.find(wrestler => wrestler.isWinner === true),
-							loser: match.wrestlers.find(wrestler => wrestler.isWinner === false)
+							winner: (match.wrestlers || []).find(wrestler => wrestler.isWinner === true),
+							loser: (match.wrestlers || []).find(wrestler => wrestler.isWinner === false)
 						}))
-					}
+					};
 
 					setEvent(eventUpdated);
 					setLoggedInUser(data.loggedInUser);
@@ -126,7 +128,7 @@ const TournamentSummary = () => {
 		} else {
 			setIsLoading(false);
 		}
-	}, [eventId]);
+	}, [fetchParameters]);
 
 	if (isLoading) {
 		return (

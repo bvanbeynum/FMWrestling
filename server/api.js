@@ -1850,6 +1850,9 @@ export default {
 			return {
 				id: event.id || event._id,
 				wrestlerId: event.wrestlerId,
+				sqlId: event.sqlId,
+				eventSystem: event.eventSystem,
+				systemId: event.systemId,
 				name: event.name,
 				date: event.date,
 				division: event.division,
@@ -2316,10 +2319,17 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 		return output;
 	},
 
-	eventDetailsLoad: async (serverPath, eventId) => {
+	eventDetailsLoad: async (eventId, sqlId, serverPath) => {
 		const output = { data: {} };
 		try {
-			const eventResponse = await client.get(`${ serverPath }/data/event?id=${ eventId }`);
+			let eventResponse = null;
+			if (eventId) {
+				eventResponse = await client.get(`${ serverPath }/data/event?id=${ eventId }`);
+			}
+			else if (sqlId) {
+				eventResponse = await client.get(`${ serverPath }/data/event?sqlid=${ sqlId }`);
+			}
+			
 			if (eventResponse.body.events && eventResponse.body.events.length > 0) {
 				const event = eventResponse.body.events[0];
 				
