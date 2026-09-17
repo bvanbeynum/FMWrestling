@@ -25,7 +25,8 @@ export default {
 		wrestlerreport: "./client/portal/wrestlerreport.jsx",
 		newwrestler: "./client/portal/newwrestler.jsx",
 		duplicates: "./client/portal/duplicates.jsx",
-		wrestlerduplicate: "./client/portal/wrestlerduplicate.jsx"
+		wrestlerduplicate: "./client/portal/wrestlerduplicate.jsx",
+		teamduplicate: "./client/portal/teamduplicate.jsx"
 	},
 	plugins: [
 		new HtmlWebpackPlugin({ 
@@ -256,6 +257,16 @@ export default {
 				viewport: "width=device-width, initial-scale=1"
 			},
 			chunks: [ "wrestlerduplicate" ],
+			templateContent: "<html><body><div id='root'></div></body></html>"
+		}),
+		new HtmlWebpackPlugin({ 
+			filename: "./portal/teamduplicate.html",
+			title: "Fort Mill Wrestling - Team Search",
+			favicon: "./client/media/favicon.ico",
+			meta: {
+				viewport: "width=device-width, initial-scale=1"
+			},
+			chunks: [ "teamduplicate" ],
 			templateContent: "<html><body><div id='root'></div></body></html>"
 		}),
 		new HtmlWebpackPlugin({ 

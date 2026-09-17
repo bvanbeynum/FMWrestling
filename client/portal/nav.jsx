@@ -234,6 +234,9 @@ const Nav = props => {
 			<li role="button" onClick={ () => window.location = "/portal/newwrestler.html" } className={`button sub ${ subExpanded === "data" ? "active" : "" }`} aria-label="New Wrestler">
 				<span>New Wrestler</span>
 			</li>
+			<li role="button" onClick={ () => window.location = "/portal/teamduplicate.html" } className={`button sub ${ subExpanded === "data" ? "active" : "" }`} aria-label="Team Search">
+				<span>Team Search</span>
+			</li>
 			<li role="button" onClick={ () => window.location = "/portal/wrestlerduplicate.html" } className={`button sub ${ subExpanded === "data" ? "active" : "" }`} aria-label="Wrestler Search">
 				<span>Wrestler Search</span>
 			</li>

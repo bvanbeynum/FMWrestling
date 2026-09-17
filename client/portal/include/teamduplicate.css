@@ -1,0 +1,426 @@
+/* Variables & Design Tokens matching Athletic Clarity system */
+:root {
+	--primary: #3246e5;
+	--primary-variant: #0f28d1;
+	--on-primary: #ffffff;
+	
+	--secondary: #ff0000;
+	--secondary-accent: #fd8b00;
+	
+	--background: #f8f9fa;
+	--surface: #ffffff;
+	--on-surface: #191c1d;
+	--on-surface-variant: #444655;
+	--inverse-surface: #2e3132;
+	--inverse-on-surface: #f0f1f2;
+	
+	--outline: #e1e3e4;
+	--outline-variant: #c5c5d8;
+	
+	--font-headers: 'Russo One', sans-serif;
+	--font-body: 'Roboto', sans-serif;
+	
+	--rounded-sm: 4px;
+	--rounded-md: 8px;
+}
+
+.teamduplicate-container {
+	display: block;
+	width: 100%;
+	max-width: 1200px;
+	margin: 0 auto;
+	padding: 24px 24px 80px 24px;
+	box-sizing: border-box;
+}
+
+.page-header {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	border-bottom: 2px solid var(--outline);
+	padding-bottom: 16px;
+	margin-bottom: 24px;
+}
+
+.page-title {
+	font-family: var(--font-headers);
+	font-size: 28px;
+	color: var(--on-surface);
+	text-transform: uppercase;
+	margin: 0;
+}
+
+.error-alert-banner {
+	color: #dc2626;
+	background-color: #fee2e2;
+	border: 1px solid #fca5a5;
+	border-radius: var(--rounded-sm);
+	padding: 12px 16px;
+	margin-bottom: 20px;
+	font-family: var(--font-body);
+	font-size: 14px;
+}
+
+.search-controls-card {
+	background: var(--surface);
+	border: 1.5px solid var(--outline);
+	border-radius: var(--rounded-md);
+	padding: 20px;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+	margin: 24px 0px;
+}
+
+.search-inputs-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+	gap: 16px;
+	align-items: end;
+}
+
+.input-field-wrapper {
+	display: flex;
+	flex-direction: column;
+}
+
+.input-field-label {
+	font-family: var(--font-body);
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--on-surface-variant);
+	margin-bottom: 6px;
+	display: block;
+}
+
+.search-form-input,
+.search-form-select {
+	font-family: var(--font-body);
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--on-surface);
+	padding: 10px 14px;
+	border: 1.5px solid var(--outline);
+	border-radius: var(--rounded-sm);
+	background: var(--surface);
+	box-sizing: border-box;
+	transition: border-color 0.2s ease;
+}
+
+.search-form-input:focus,
+.search-form-select:focus {
+	outline: none;
+	border-color: var(--primary);
+}
+
+.button-execute-search {
+	font-family: var(--font-headers);
+	font-size: 14px;
+	color: var(--on-primary);
+	background: var(--primary);
+	border: none;
+	border-radius: var(--rounded-sm);
+	padding: 11px 20px;
+	cursor: pointer;
+	text-transform: uppercase;
+	transition: background-color 0.2s ease;
+	white-space: nowrap;
+}
+
+.button-execute-search:hover:not(:disabled) {
+	background: var(--primary-variant);
+}
+
+.button-execute-search:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+.section-sub-heading {
+	font-family: var(--font-headers);
+	font-size: 20px;
+	color: var(--on-surface);
+	margin-bottom: 16px;
+}
+
+.no-records-message {
+	font-family: var(--font-body);
+	font-size: 14px;
+	color: var(--on-surface-variant);
+	background: var(--surface);
+	padding: 24px;
+	border-radius: var(--rounded-md);
+	border: 1px dashed var(--outline-variant);
+	text-align: center;
+}
+
+.back-button-wrapper {
+	margin-bottom: 16px;
+}
+
+.button-back-results {
+	font-family: var(--font-body);
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--primary);
+	background: transparent;
+	border: 1px solid var(--primary);
+	border-radius: var(--rounded-sm);
+	padding: 8px 14px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.button-back-results:hover {
+	background: var(--primary);
+	color: var(--on-primary);
+}
+
+.wrestler-duplicate-group-card {
+	background: var(--surface);
+	border: 1.5px solid var(--outline);
+	border-radius: var(--rounded-md);
+	padding: 20px;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+	margin-bottom: 24px;
+}
+
+.wrestler-duplicate-group-card.submitted-card {
+	border-color: #10b981;
+	background-color: #f0fdf4;
+}
+
+.group-card-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 16px;
+	border-bottom: 1px solid var(--outline);
+	padding-bottom: 12px;
+}
+
+.wrestler-title-info {
+	display: flex;
+	flex-direction: column;
+}
+
+.wrestler-main-name {
+	font-family: var(--font-headers);
+	font-size: 18px;
+	color: var(--on-surface);
+}
+
+.wrestler-sub-team {
+	font-family: var(--font-body);
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--on-surface-variant);
+}
+
+.wrestler-sql-id {
+	font-family: var(--font-body);
+	font-size: 12px;
+	color: #6b7280;
+	margin-top: 2px;
+}
+
+.submitted-status-badge {
+	font-family: var(--font-body);
+	font-size: 12px;
+	font-weight: 700;
+	color: #065f46;
+	background: #d1fae5;
+	padding: 4px 10px;
+	border-radius: 12px;
+	text-transform: uppercase;
+}
+
+.candidate-matrix-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-family: var(--font-body);
+	font-size: 14px;
+}
+
+.candidate-matrix-table th {
+	background: #f1f5f9;
+	color: var(--on-surface-variant);
+	font-weight: 700;
+	text-align: left;
+	padding: 10px 12px;
+	border-bottom: 2px solid var(--outline);
+}
+
+.candidate-matrix-table td {
+	padding: 10px 12px;
+	border-bottom: 1px solid var(--outline);
+	color: var(--on-surface);
+}
+
+.candidate-matrix-table tr.selected-row {
+	background-color: #eff6ff;
+}
+
+.wrestler-link {
+	color: var(--primary);
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.wrestler-link:hover {
+	text-decoration: underline;
+}
+
+.chip-zero-candidates {
+	font-family: var(--font-body);
+	font-size: 12px;
+	font-weight: 600;
+	color: #6b7280;
+	background: #f3f4f6;
+	padding: 4px 10px;
+	border-radius: 12px;
+}
+
+.button-lookup-candidate {
+	font-family: var(--font-body);
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--primary);
+	background: #eef2ff;
+	border: 1px solid var(--primary);
+	border-radius: var(--rounded-sm);
+	padding: 4px 10px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.button-lookup-candidate:hover:not(:disabled) {
+	background: var(--primary);
+	color: var(--on-primary);
+}
+
+.button-lookup-candidate:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+.primary-badge-blue {
+	font-family: var(--font-body);
+	font-size: 11px;
+	font-weight: 700;
+	color: #1e40af;
+	background: #dbeafe;
+	padding: 2px 8px;
+	border-radius: 10px;
+	text-transform: uppercase;
+}
+
+.duplicate-chip {
+	font-family: var(--font-body);
+	font-size: 11px;
+	font-weight: 600;
+	color: #4b5563;
+	background: #f3f4f6;
+	padding: 2px 8px;
+	border-radius: 10px;
+}
+
+.submit-actions-row {
+	display: flex;
+	justify-content: flex-end;
+	margin-top: 16px;
+	padding-top: 12px;
+	border-top: 1px solid var(--outline);
+}
+
+.button-submit-duplicate {
+	font-family: var(--font-headers);
+	font-size: 14px;
+	color: var(--on-primary);
+	background: #10b981;
+	border: none;
+	border-radius: var(--rounded-sm);
+	padding: 10px 24px;
+	cursor: pointer;
+	text-transform: uppercase;
+	transition: background-color 0.2s ease;
+}
+
+.button-submit-duplicate:hover:not(:disabled) {
+	background: #059669;
+}
+
+.button-submit-duplicate:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+/* Mobile responsive styles */
+.desktop-only {
+	display: table;
+}
+
+.mobile-only {
+	display: none;
+}
+
+@media (max-width: 768px) {
+	.desktop-only {
+		display: none;
+	}
+
+	.mobile-only {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+	}
+
+	.candidate-mobile-card {
+		background: #f8fafc;
+		border: 1px solid var(--outline);
+		border-radius: var(--rounded-sm);
+		padding: 12px;
+	}
+
+	.candidate-mobile-card.selected-card {
+		background: #eff6ff;
+		border-color: var(--primary);
+	}
+
+	.mobile-card-top {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-start;
+		margin-bottom: 8px;
+	}
+
+	.mobile-card-info {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.mobile-card-meta {
+		font-family: var(--font-body);
+		font-size: 12px;
+		color: #6b7280;
+		margin-top: 4px;
+	}
+
+	.mobile-selection-controls {
+		display: flex;
+		gap: 16px;
+		border-top: 1px solid var(--outline);
+		padding-top: 8px;
+		margin-top: 8px;
+	}
+
+	.mobile-control-label {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		font-family: var(--font-body);
+		font-size: 13px;
+		font-weight: 600;
+		color: var(--on-surface);
+		cursor: pointer;
+	}
+}
