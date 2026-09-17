@@ -30,10 +30,17 @@ const WrestlerComponent = () => {
 		if (!isLoading && !wrestler) {
 			setIsLoading(true);
 
-			const url = new window.URLSearchParams(window.location.search);
-			const wrestlerId = url.get("id");
+			const urlQueryParameters = new window.URLSearchParams(window.location.search);
+			const wrestlerId = urlQueryParameters.get("id");
+			const wrestlerSqlId = urlQueryParameters.get("sqlid");
 
-			fetch(`/api/wrestlerdetails?id=${ wrestlerId }`)
+			const requestUrl = wrestlerId
+				? `/api/wrestlerdetails?id=${ wrestlerId }`
+				: wrestlerSqlId
+					? `/api/wrestlerdetails?sqlid=${ wrestlerSqlId }`
+					: "/api/wrestlerdetails";
+
+			fetch(requestUrl)
 				.then(response => {
 					if (response.ok) {
 						return response.json();

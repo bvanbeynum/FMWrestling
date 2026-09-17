@@ -1246,9 +1246,31 @@ export default {
 
 		let wrestler = null;
 		try {
-			let parameters = wrestlerId ? `id=${ wrestlerId }` : `sqlid=${ wrestlerSqlId }`;
+			const hasValidId = wrestlerId && wrestlerId !== "undefined" && wrestlerId !== "null";
+			const hasValidSqlId = wrestlerSqlId && wrestlerSqlId !== "undefined" && wrestlerSqlId !== "null";
+
+			let parameters = "";
+			if (hasValidId) {
+				parameters = `id=${ wrestlerId }`;
+			}
+			else if (hasValidSqlId) {
+				parameters = `sqlid=${ wrestlerSqlId }`;
+			}
+			else {
+				output.status = 560;
+				output.error = "Missing wrestler id or sqlid parameter";
+				return output;
+			}
+
 			const clientResponse = await client.get(`${ serverPath }/data/wrestler?${ parameters }`);
-			wrestler = clientResponse.body.wrestlers[0];
+			const wrestlers = clientResponse.body?.wrestlers || [];
+			wrestler = wrestlers[0];
+
+			if (!wrestler) {
+				output.status = 561;
+				output.error = "Wrestler record not found";
+				return output;
+			}
 		}
 		catch (error) {
 			output.status = 561;
