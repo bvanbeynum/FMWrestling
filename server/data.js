@@ -322,11 +322,10 @@ const dataFunctionsObject = {
 			const firstInitial = firstName.length > 0 ? firstName.charAt(0) : "";
 			const lastInitial = lastName.length > 0 ? lastName.charAt(0) : "";
 
-			saveObject.searchName = trimmedName;
-			saveObject.searchFirstName = firstName;
-			saveObject.searchLastName = lastName;
-			saveObject.searchFirstInitial = firstInitial;
-			saveObject.searchLastInitial = lastInitial;
+			saveObject.firstName = firstName;
+			saveObject.lastName = lastName;
+			saveObject.firstInitial = firstInitial;
+			saveObject.lastInitial = lastInitial;
 		}
 
 		if (saveObject.id) {
@@ -423,7 +422,30 @@ const dataFunctionsObject = {
 			const { id, _id, created, modified, ...updateFields } = wrestler;
 
 			if (updateFields.name) {
-				updateFields.searchName = updateFields.name.toLowerCase();
+				const trimmedName = updateFields.name.toLowerCase().trim();
+				const spaceIndex = trimmedName.indexOf(' ');
+
+				let firstName = "";
+				let lastName = "";
+
+				if (spaceIndex === -1) {
+					// Handle single-word names
+					firstName = trimmedName;
+					lastName = "";
+				} else {
+					// Everything before the first space
+					firstName = trimmedName.substring(0, spaceIndex);
+					// Everything after the first space
+					lastName = trimmedName.substring(spaceIndex + 1);
+				}
+
+				const firstInitial = firstName.length > 0 ? firstName.charAt(0) : "";
+				const lastInitial = lastName.length > 0 ? lastName.charAt(0) : "";
+
+				updateFields.firstName = firstName;
+				updateFields.lastName = lastName;
+				updateFields.firstInitial = firstInitial;
+				updateFields.lastInitial = lastInitial;
 			}
 
 			let filter = null;
