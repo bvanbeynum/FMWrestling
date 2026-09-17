@@ -242,7 +242,7 @@ const dataFunctionsObject = {
 		}
 		if (userFilter.name) {
 			const searchName = userFilter.name.toLowerCase();
-			filter.searchName = { $regex: new RegExp(searchName) };
+			filter.searchNames = { $regex: new RegExp(searchName) };
 		}
 		if (userFilter.teamPartial) {
 			const searchTeam = userFilter.teamPartial.toLowerCase();

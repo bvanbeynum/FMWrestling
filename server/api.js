@@ -3543,7 +3543,7 @@ Instructions for response:
 				queryParameterString = `name=${ encodeURIComponent(searchNameInput) }`;
 			}
 			else if (teamNameInput) {
-				queryParameterString = `teamname=${ encodeURIComponent(teamNameInput) }&state=SC`;
+				queryParameterString = `teamname=${ encodeURIComponent(teamNameInput) }`;
 			}
 
 			const wrestlerResponse = await client.get(`${ serverPath }/data/wrestler?${ queryParameterString }`);

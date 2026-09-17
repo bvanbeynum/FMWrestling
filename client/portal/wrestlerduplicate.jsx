@@ -320,7 +320,7 @@ const WrestlerSearchManagement = () => {
 															</td>
 															<td>
 																<a
-																	href={`/portal/wrestler.html?sqlid=${ wrestlerCandidate.sqlId }`}
+																	href={`/portal/wrestlerreport.html?sqlid=${ wrestlerCandidate.sqlId }`}
 																	target="_blank"
 																	rel="noreferrer"
 																	className="wrestler-link"
@@ -353,7 +353,7 @@ const WrestlerSearchManagement = () => {
 														<div className="mobile-card-top">
 															<div className="mobile-card-info">
 																<a
-																	href={`/portal/wrestler.html?sqlid=${ wrestlerCandidate.sqlId }`}
+																	href={`/portal/wrestlerreport.html?sqlid=${ wrestlerCandidate.sqlId }`}
 																	target="_blank"
 																	rel="noreferrer"
 																	className="wrestler-link"

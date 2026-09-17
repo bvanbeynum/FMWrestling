@@ -120,7 +120,7 @@ const DuplicatesManagement = () => {
 												<div className="existing-duplicate-details">
 													<div className="primary-wrestler-info">
 														<a
-															href={`/portal/wrestler.html?sqlid=${ primaryWrestler.sqlId }`}
+															href={`/portal/wrestlerreport.html?sqlid=${ primaryWrestler.sqlId }`}
 															target="_blank"
 															rel="noreferrer"
 															className="wrestler-link"
@@ -136,7 +136,7 @@ const DuplicatesManagement = () => {
 														{ linkedDuplicates.map((duplicateItem) => (
 															<span key={ duplicateItem.sqlId } className="duplicate-chip">
 																<a
-																	href={`/portal/wrestler.html?sqlid=${ duplicateItem.sqlId }`}
+																	href={`/portal/wrestlerreport.html?sqlid=${ duplicateItem.sqlId }`}
 																	target="_blank"
 																	rel="noreferrer"
 																	className="wrestler-link"

@@ -345,7 +345,7 @@ const TeamDuplicateManagement = () => {
 													<tr key={ wrestlerIdentifier }>
 														<td>
 															<a
-																href={`/portal/wrestler.html?sqlid=${ wrestlerItem.sqlId }`}
+																href={`/portal/wrestlerreport.html?sqlid=${ wrestlerItem.sqlId }`}
 																target="_blank"
 																rel="noreferrer"
 																className="wrestler-link"
@@ -484,7 +484,7 @@ const TeamDuplicateManagement = () => {
 																</td>
 																<td>
 																	<a
-																		href={`/portal/wrestler.html?sqlid=${ wrestlerCandidate.sqlId }`}
+																		href={`/portal/wrestlerreport.html?sqlid=${ wrestlerCandidate.sqlId }`}
 																		target="_blank"
 																		rel="noreferrer"
 																		className="wrestler-link"
@@ -521,7 +521,7 @@ const TeamDuplicateManagement = () => {
 															<div className="mobile-card-top">
 																<div className="mobile-card-info">
 																	<a
-																		href={`/portal/wrestler.html?sqlid=${ wrestlerCandidate.sqlId }`}
+																		href={`/portal/wrestlerreport.html?sqlid=${ wrestlerCandidate.sqlId }`}
 																		target="_blank"
 																		rel="noreferrer"
 																		className="wrestler-link"
