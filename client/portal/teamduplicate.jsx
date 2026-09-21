@@ -424,8 +424,7 @@ const TeamDuplicateManagement = () => {
 										}))
 									];
 
-									const activePrimaryCandidate = selectedPrimary || mainWrestlerCandidate;
-									const activePrimaryWrestlerName = activePrimaryCandidate?.name || "";
+									const activePrimaryWrestlerName = selectedPrimary?.name || "";
 
 									return (
 										<div className={`wrestler-duplicate-group-card ${ isGroupSubmitted ? "submitted-card" : "" }`}>
