@@ -2362,7 +2362,7 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 				let familiarTeams = [];
 				if (teamNames.length > 0) {
 					try {
-						const schoolResponse = await client.get(`${ serverPath }/data/school?names=${JSON.stringify(teamNames)}`);
+						const schoolResponse = await client.post(`${ serverPath }/data/event`).send({ names: teamNames });
 						const schools = schoolResponse.body.schools || [];
 
 						const schoolNamesSet = new Set();

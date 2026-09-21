@@ -168,7 +168,17 @@ router.get("/data/school", authInternal, async (request, response) => {
 });
 
 router.post("/data/school", authInternal, async (request, response) => {
-	const results = await data.schoolSave(request.body.school);
+	let results = null;
+	if (request.body.names) {
+		const filter = {
+			names: JSON.parse(request.body.names)
+		}
+		
+		results = await data.schoolGet(filter);
+	}
+	else {
+		results = await data.schoolSave(request.body.school);
+	}
 
 	if (results.error) {
 		// client.post(request.logUrl).send({ log: { logTime: new Date(), logTypeId: "641f00ec97f3b068a5626651", message: `${ results.status }: ${results.error}` }}).then();
