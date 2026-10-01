@@ -180,3 +180,75 @@ export const isGeminiOverloadedError = (error) => {
 	}
 	return false;
 };
+
+export const extractEmailBody = (payload) => {
+	if (!payload) return "";
+
+	const findPart = (part, mimeType) => {
+		if (part.mimeType === mimeType && part.body && part.body.data) {
+			return part.body.data;
+		}
+		if (part.parts && part.parts.length > 0) {
+			for (const subPart of part.parts) {
+				const result = findPart(subPart, mimeType);
+				if (result) return result;
+			}
+		}
+		return null;
+	};
+
+	// 1. Try text/plain recursively
+	let bodyData = findPart(payload, "text/plain");
+
+	// 2. Try text/html recursively if text/plain is missing
+	if (!bodyData) {
+		bodyData = findPart(payload, "text/html");
+	}
+
+	// 3. Fallback to direct payload body data if singlepart
+	if (!bodyData && payload.body && payload.body.data) {
+		bodyData = payload.body.data;
+	}
+
+	if (bodyData) {
+		try {
+			return Buffer.from(bodyData, "base64url").toString("utf-8");
+		} catch {
+			return Buffer.from(bodyData, "base64").toString("utf-8");
+		}
+	}
+
+	return "";
+};
+
+export const extractEmailAttachments = (payload) => {
+	if (!payload) return [];
+	const attachments = [];
+
+	const traverse = (part) => {
+		if (!part) return;
+		const filename = part.filename;
+		const attachmentId = part.body ? part.body.attachmentId : null;
+
+		if (filename && filename.trim().length > 0 && (attachmentId || (part.body && part.body.data))) {
+			attachments.push({
+				attachmentId: attachmentId || null,
+				partId: part.partId || null,
+				filename: filename.trim(),
+				mimeType: part.mimeType || "application/octet-stream",
+				size: part.body ? part.body.size || 0 : 0
+			});
+		}
+
+		if (part.parts && part.parts.length > 0) {
+			for (const subPart of part.parts) {
+				traverse(subPart);
+			}
+		}
+	};
+
+	traverse(payload);
+	return attachments;
+};
+
+

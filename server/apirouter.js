@@ -566,8 +566,8 @@ router.post("/api/aiemailsend", authAPI, async (request, response) => {
 		return response.status(401).json({ error: "Unauthorized access" });
 	}
 
-	const { messageId, recipients, subject, body } = request.body;
-	const resultsObject = await api.aiEmailSendAndArchive(request.serverPath, messageId, recipients, subject, body);
+	const { messageId, recipients, subject, body, attachments } = request.body;
+	const resultsObject = await api.aiEmailSendAndArchive(request.serverPath, messageId, recipients, subject, body, attachments);
 	response.status(resultsObject.status || 200).json(resultsObject.error ? { error: resultsObject.error } : resultsObject);
 });
 

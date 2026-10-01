@@ -32,7 +32,16 @@ const AIEmailPage = () => {
 	const [ replySubject, setReplySubject ] = useState("");
 	const [ isSendingEmail, setIsSendingEmail ] = useState(false);
 	const [ statusMessage, setStatusMessage ] = useState("");
+	const [ selectedAttachmentIds, setSelectedAttachmentIds ] = useState([]);
 	const editorRef = useRef(null);
+
+	const formatFileSize = (bytes) => {
+		if (!bytes || bytes === 0) return '0 B';
+		const k = 1024;
+		const sizes = ['B', 'KB', 'MB', 'GB'];
+		const i = Math.floor(Math.log(bytes) / Math.log(k));
+		return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+	};
 
 	useEffect(() => {
 		if (editorRef.current && generatedResponseText !== editorRef.current.innerHTML) {
@@ -177,9 +186,10 @@ const AIEmailPage = () => {
 
 	const handleOpenAiComposer = (targetEmail) => {
 		setSelectedEmail(targetEmail);
-		setReplySubject(targetEmail.subject.toLowerCase().startsWith("re:") ? targetEmail.subject : `Re: ${targetEmail.subject}`);
+		setReplySubject(targetEmail.subject);
 		setGeneratedResponseText("");
 		setSelectedRecipientEmails([]);
+		setSelectedAttachmentIds((targetEmail.attachments || []).map(att => att.attachmentId || att.filename));
 		setIsComposerOpen(true);
 		setIsModalEmailExpanded(false);
 		setIsGeneratingAi(false);
@@ -305,6 +315,10 @@ const AIEmailPage = () => {
 			return;
 		}
 
+		const chosenAttachments = (selectedEmail.attachments || []).filter(att => 
+			selectedAttachmentIds.includes(att.attachmentId || att.filename)
+		);
+
 		setIsSendingEmail(true);
 		fetch("/api/aiemailsend", {
 			method: "POST",
@@ -313,7 +327,8 @@ const AIEmailPage = () => {
 				messageId: selectedEmail.id,
 				recipients: selectedRecipientEmails,
 				subject: replySubject,
-				body: generatedResponseText
+				body: generatedResponseText,
+				attachments: chosenAttachments
 			})
 		})
 			.then(response => response.json())
@@ -413,6 +428,11 @@ const AIEmailPage = () => {
 												<div className="email-main-info">
 													<div className="email-sender">{emailItem.from}</div>
 													<div className="email-subject">{emailItem.subject}</div>
+													{emailItem.attachments && emailItem.attachments.length > 0 && (
+														<div style={{ fontSize: "12px", color: "#3246e5", marginBottom: "6px", fontWeight: "600" }}>
+															📎 {emailItem.attachments.length} attachment{emailItem.attachments.length > 1 ? "s" : ""}
+														</div>
+													)}
 													{isExpanded ? (
 														<div className="email-body">
 															{emailItem.body || emailItem.snippet}
@@ -486,6 +506,50 @@ const AIEmailPage = () => {
 										{isModalEmailExpanded ? "less" : "more"}
 									</button>
 								</div>
+
+								{selectedEmail.attachments && selectedEmail.attachments.length > 0 && (
+									<div style={{ marginTop: "12px", paddingTop: "12px", borderTop: "1px solid #dcdde0" }}>
+										<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+											<strong>Original Email Attachments ({selectedEmail.attachments.length}):</strong>
+											<button
+												type="button"
+												className="btn-clear-link"
+												onClick={() => {
+													if (selectedAttachmentIds.length === selectedEmail.attachments.length) {
+														setSelectedAttachmentIds([]);
+													} else {
+														setSelectedAttachmentIds(selectedEmail.attachments.map(att => att.attachmentId || att.filename));
+													}
+												}}
+											>
+												{selectedAttachmentIds.length === selectedEmail.attachments.length ? "Deselect All" : "Select All"}
+											</button>
+										</div>
+										<div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+											{selectedEmail.attachments.map((att, idx) => {
+												const attId = att.attachmentId || att.filename;
+												const isChecked = selectedAttachmentIds.includes(attId);
+												return (
+													<label key={idx} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", cursor: "pointer", backgroundColor: isChecked ? "#ffffff" : "#f8f9fa", padding: "6px 10px", borderRadius: "4px", border: "1px solid #c5c5d8" }}>
+														<input
+															type="checkbox"
+															checked={isChecked}
+															onChange={() => {
+																setSelectedAttachmentIds(prev =>
+																	prev.includes(attId) ? prev.filter(id => id !== attId) : [...prev, attId]
+																);
+															}}
+														/>
+														<span style={{ fontWeight: 600, color: "#3c5c93" }}>📎 {att.filename}</span>
+														<span style={{ fontSize: "11px", color: "#757687", marginLeft: "auto" }}>
+															{formatFileSize(att.size)}
+														</span>
+													</label>
+												);
+											})}
+										</div>
+									</div>
+								)}
 							</div>
 
 							{/* AI Response Rich Text Editor */}

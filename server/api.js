@@ -5,7 +5,7 @@ import config from "./config.js";
 import { google } from "googleapis";
 import fs, { stat } from "fs";
 import path from "path";
-import { getDualWrestlers, isGeminiQuotaError, isGeminiOverloadedError, extractOpponentTeam, extractEventDivision } from "./middleware.js";
+import { getDualWrestlers, isGeminiQuotaError, isGeminiOverloadedError, extractOpponentTeam, extractEventDivision, extractEmailBody, extractEmailAttachments } from "./middleware.js";
 import * as marked from './marked.cjs';
 const markedParse = marked.marked;
 
@@ -3124,16 +3124,7 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 				const fromHeader = headers.find(header => header.name.toLowerCase() === 'from');
 				const dateHeader = headers.find(header => header.name.toLowerCase() === 'date');
 
-				let body = '';
-				if (emailResponse.data.payload.parts) {
-					const part = emailResponse.data.payload.parts.find(part => part.mimeType === 'text/plain');
-					if (part && part.body && part.body.data) {
-						body = Buffer.from(part.body.data, 'base64').toString('utf-8');
-					}
-				} else if (emailResponse.data.payload.body && emailResponse.data.payload.body.data) {
-					body = Buffer.from(emailResponse.data.payload.body.data, 'base64').toString('utf-8');
-				}
-
+				let body = extractEmailBody(emailResponse.data.payload);
 				if (!body) {
 					body = emailResponse.data.snippet || '';
 				}
@@ -3145,7 +3136,8 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 					from: fromHeader ? fromHeader.value : 'Unknown Sender',
 					date: dateHeader ? dateHeader.value : '',
 					snippet: emailResponse.data.snippet || '',
-					body: body
+					body: body,
+					attachments: extractEmailAttachments(emailResponse.data.payload)
 				});
 			}
 
@@ -3191,7 +3183,7 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 		cleanedEmailBody = nonQuotedBodyLines.join('\n').trim() || (emailBody || "").trim();
 
 		const prompt = `
-You are a helpful team parent coordinator for the Fort Mill High School Wrestling Team. 
+You are a helpful team parent coordinator for the Fort Mill High School Wrestling Team, the Yellow Jackets. 
 Your task is to review the following email received in our team inbox and draft a friendly, professional, clear, and informative response to be sent out to team parents or back to the sender.
 
 Original Email Details:
@@ -3206,10 +3198,15 @@ ${cleanedEmailBody || "(No body text)"}
 Instructions for response:
 - Tone: Friendly, supportive, athletic, clear, and encouraging.
 - Format: Plain text with clean formatting ready for email body. Start with a warm greeting like "Hi Team Parents,".
-- Use clear bullet points if dates, times, gear, or locations are involved.
-- Add relevant emojis to make it approachable.
-- Do NOT include any un-filled placeholders like [Your Name] or [Insert Date].
+- Clearly state the main points (e.g., practice time changes, game location, required gear). Use bullet points for lists if it makes it easier to read.
+- Make it fun by adding emoji
+- Ensure all key details like dates, times, and locations are present and easy to find.
+- Do not include any place holders. The email should be ready to send without review.
 - Keep the response clear, accurate, and directly aligned with the original message content.
+- Conclude with support for Yellow Jackets and don't sign your name.
+- AVOID call to action. Only provide information in an informative way.
+- Don't repeat the subject in the body.
+- IMPORTANT: Do not add any information that was not in the original email body or the attached document. Just reformat and rephrase what is there.
 `;
 
 		const requestBody = { "contents": [{ "parts": [{ "text": prompt }] }] };
@@ -3232,7 +3229,7 @@ Instructions for response:
 		}
 	},
 
-	aiEmailSendAndArchive: async (serverPath, messageId, recipientEmails, subject, bodyHtml) => {
+	aiEmailSendAndArchive: async (serverPath, messageId, recipientEmails, subject, bodyHtml, attachments = []) => {
 		try {
 			if (!messageId || !recipientEmails || recipientEmails.length === 0) {
 				return { error: "Missing message ID or recipient emails", status: 400 };
@@ -3264,8 +3261,36 @@ Instructions for response:
 			oAuth2Client.setCredentials({ refresh_token: decryptedRefreshToken });
 
 			const Gmail = google.gmail({ version: 'v1', auth: oAuth2Client });
-
 			const boundary = `----=_Part_${Math.random().toString().slice(2)}`;
+
+			const attachmentLines = [];
+			if (Array.isArray(attachments) && attachments.length > 0) {
+				for (const att of attachments) {
+					if (att && att.attachmentId) {
+						try {
+							const attRes = await Gmail.users.messages.attachments.get({
+								userId: 'me',
+								messageId: messageId,
+								id: att.attachmentId
+							});
+							if (attRes.data && attRes.data.data) {
+								const standardBase64 = Buffer.from(attRes.data.data, 'base64url').toString('base64');
+								const safeFilename = (att.filename || 'attachment').replace(/["\r\n]/g, '');
+								attachmentLines.push(`--${boundary}`);
+								attachmentLines.push(`Content-Type: ${att.mimeType || 'application/octet-stream'}; name="${safeFilename}"`);
+								attachmentLines.push(`Content-Disposition: attachment; filename="${safeFilename}"`);
+								attachmentLines.push('Content-Transfer-Encoding: base64');
+								attachmentLines.push('');
+								attachmentLines.push(standardBase64);
+								attachmentLines.push('');
+							}
+						} catch (attError) {
+							console.warn(`Error fetching attachment ${att.filename} (${att.attachmentId}):`, attError.message);
+						}
+					}
+				}
+			}
+
 			const emailLines = [
 				`Subject: ${subject || "Fort Mill Wrestling Update"}`,
 				`Bcc: ${recipientEmails.join(',')}`,
@@ -3277,9 +3302,14 @@ Instructions for response:
 				'Content-Transfer-Encoding: 7bit',
 				'',
 				bodyHtml,
-				'',
-				`--${boundary}--`
+				''
 			];
+
+			if (attachmentLines.length > 0) {
+				emailLines.push(...attachmentLines);
+			}
+
+			emailLines.push(`--${boundary}--`);
 
 			const rawEmail = emailLines.join('\r\n');
 			const base64EncodedEmail = Buffer.from(rawEmail).toString('base64url');
