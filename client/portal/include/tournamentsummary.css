@@ -444,3 +444,445 @@ body {
 .navItem svg {
 	margin-bottom: 3px;
 }
+
+/* Bracket View Styles */
+.backButton {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	background: var(--surface);
+	color: var(--primary);
+	border: 1.5px solid var(--outline);
+	border-radius: var(--rounded-sm);
+	padding: 6px 12px;
+	font-family: var(--font-body);
+	font-size: 12px;
+	font-weight: 600;
+	cursor: pointer;
+	margin-bottom: 14px;
+	transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.backButton:hover {
+	background-color: #f7fafc;
+	border-color: var(--primary);
+}
+
+.bracketCardsList {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.bracketOverviewCard {
+	background: var(--surface);
+	border: 1.5px solid var(--outline);
+	border-radius: var(--rounded-md);
+	padding: 12px 14px;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+	cursor: pointer;
+	transition: border-color 0.2s ease, transform 0.15s ease;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.bracketOverviewCard:hover {
+	border-color: var(--primary);
+}
+
+.bracketCardHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.bracketWeightClassName {
+	font-family: var(--font-body);
+	font-size: 15px;
+	font-weight: 700;
+	color: #1a202c;
+}
+
+.bracketChevron {
+	color: #a0aec0;
+	display: flex;
+	align-items: center;
+}
+
+.bracketMetricsGrid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 8px;
+	background: #f8fafc;
+	border-radius: var(--rounded-sm);
+	padding: 8px 10px;
+	border: 1px solid #edf2f7;
+}
+
+.bracketMetricBlock {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.bracketMetricLabel {
+	font-size: 9.5px;
+	font-weight: 700;
+	color: #718096;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.bracketMetricValue {
+	font-size: 12px;
+	font-weight: 600;
+	color: #2d3748;
+}
+
+.bracketComparisonBadge {
+	display: inline-flex;
+	align-items: center;
+	align-self: flex-start;
+	font-size: 10px;
+	font-weight: 700;
+	padding: 2px 6px;
+	border-radius: 4px;
+	letter-spacing: 0.02em;
+}
+
+.bracketComparisonBadge.ratingAdvantage {
+	background-color: #ebf8ff;
+	color: #2b6cb0;
+	border: 1px solid #bee3f8;
+}
+
+.bracketComparisonBadge.seedAdvantage {
+	background-color: #fefcbf;
+	color: #975a16;
+	border: 1px solid #faf089;
+}
+
+.bracketComparisonBadge.neutral {
+	background-color: #edf2f7;
+	color: #4a5568;
+	border: 1px solid #e2e8f0;
+}
+
+/* Slopegraph Styles */
+.slopegraphContainer {
+	background: var(--surface);
+	border: 1.5px solid var(--outline);
+	border-radius: var(--rounded-md);
+	padding: 12px 8px;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+	margin-bottom: 20px;
+}
+
+.slopegraphHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 0 6px 10px 6px;
+}
+
+.slopegraphTitle {
+	font-family: var(--font-body);
+	font-size: 16px;
+	font-weight: 700;
+	color: #2b6cb0;
+	margin: 0;
+}
+
+.slopegraphBanner {
+	background: #edf2f7;
+	border-radius: var(--rounded-sm);
+	padding: 6px 10px;
+	font-size: 11px;
+	color: #2d3748;
+	margin-bottom: 8px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.slopegraphSvg {
+	width: 100%;
+	height: auto;
+	display: block;
+}
+
+.slopegraphPolyline {
+	fill: none;
+	cursor: pointer;
+	transition: stroke 0.2s ease, stroke-width 0.2s ease, opacity 0.2s ease;
+}
+
+/* Wrestler List Cards under Slopegraph */
+.wrestlerCardItem {
+	background: var(--surface);
+	border: 1.5px solid var(--outline);
+	border-radius: var(--rounded-sm);
+	padding: 10px 12px;
+	box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+	cursor: pointer;
+	transition: border-color 0.2s ease;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin-bottom: 8px;
+}
+
+.wrestlerCardItem:hover {
+	border-color: var(--primary);
+}
+
+.wrestlerCardItem.highlighted {
+	border-color: var(--primary);
+	background-color: #f7fafc;
+}
+
+.wrestlerCardTopRow {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.wrestlerCardPlaceBadge {
+	font-size: 10.5px;
+	font-weight: 700;
+	padding: 2px 7px;
+	border-radius: 4px;
+	white-space: nowrap;
+}
+
+.wrestlerCardPlaceBadge.gold {
+	background-color: #fefcbf;
+	color: #975a16;
+	border: 1px solid #f6e05e;
+}
+
+.wrestlerCardPlaceBadge.silver {
+	background-color: #edf2f7;
+	color: #4a5568;
+	border: 1px solid #cbd5e0;
+}
+
+.wrestlerCardPlaceBadge.bronze {
+	background-color: #feebc8;
+	color: #c05621;
+	border: 1px solid #fbd38d;
+}
+
+.wrestlerCardPlaceBadge.placer {
+	background-color: #e6fffa;
+	color: #234e52;
+	border: 1px solid #b2f5ea;
+}
+
+.wrestlerCardPlaceBadge.unplaced {
+	background-color: #f7fafc;
+	color: #a0aec0;
+	border: 1px solid #e2e8f0;
+}
+
+.wrestlerCardBottomRow {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	font-size: 11px;
+	color: #718096;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+
+/* Difficulty Badges */
+.difficultyBadge {
+	display: inline-flex;
+	align-items: center;
+	font-size: 10px;
+	font-weight: 700;
+	padding: 2px 7px;
+	border-radius: 3px;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.difficultyBadge.easy {
+	background-color: #c6f6d5;
+	color: #22543d;
+	border: 1px solid #9ae6b4;
+}
+
+.difficultyBadge.favorable {
+	background-color: #ebf8ff;
+	color: #2b6cb0;
+	border: 1px solid #bee3f8;
+}
+
+.difficultyBadge.tough {
+	background-color: #feebc8;
+	color: #c05621;
+	border: 1px solid #fbd38d;
+}
+
+.difficultyBadge.elite {
+	background-color: #fed7d7;
+	color: #9b2c2c;
+	border: 1px solid #feb2b2;
+}
+
+/* Wrestler Details Summary Card */
+.summaryHeaderCard {
+	background: var(--surface);
+	border: 1.5px solid var(--outline);
+	border-radius: var(--rounded-md);
+	padding: 16px;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+	margin-bottom: 20px;
+	border-left: 4.5px solid var(--primary-variant);
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.summaryHeaderTop {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+}
+
+.summaryWrestlerName {
+	font-family: var(--font-headers);
+	font-size: 20px;
+	color: var(--primary);
+	line-height: 1.1;
+}
+
+.summaryWrestlerTeam {
+	font-size: 12px;
+	color: #718096;
+	margin-top: 2px;
+}
+
+.summaryStatsGrid {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 10px;
+	background: #f8fafc;
+	border-radius: var(--rounded-sm);
+	padding: 10px 12px;
+	border: 1px solid #edf2f7;
+}
+
+.summaryStatItem {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.summaryStatLabel {
+	font-size: 9px;
+	font-weight: 700;
+	color: #718096;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+
+.summaryStatValue {
+	font-size: 13px;
+	font-weight: 600;
+	color: #2d3748;
+}
+
+/* Match Detail Cards */
+.matchDetailCard {
+	background: var(--surface);
+	border: 1.5px solid var(--outline);
+	border-radius: var(--rounded-sm);
+	padding: 12px 14px;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-bottom: 10px;
+	border-left: 4px solid #cbd5e0;
+}
+
+.matchDetailCard.win {
+	border-left-color: #38a169;
+}
+
+.matchDetailCard.loss {
+	border-left-color: #e53e3e;
+}
+
+.matchDetailHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	border-bottom: 1px solid #edf2f7;
+	padding-bottom: 6px;
+}
+
+.matchRoundName {
+	font-family: var(--font-headers);
+	font-size: 11px;
+	color: var(--primary);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+
+.matchOutcomeBadge {
+	font-size: 10px;
+	font-weight: 800;
+	padding: 2px 6px;
+	border-radius: 3px;
+	letter-spacing: 0.04em;
+}
+
+.matchOutcomeBadge.win {
+	background-color: #c6f6d5;
+	color: #22543d;
+}
+
+.matchOutcomeBadge.loss {
+	background-color: #fed7d7;
+	color: #9b2c2c;
+}
+
+.matchOpponentRow {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.matchOpponentName {
+	font-size: 13.5px;
+	font-weight: 600;
+	color: #1a202c;
+}
+
+.matchOpponentMeta {
+	font-size: 11px;
+	color: #718096;
+}
+
+.matchFooterRow {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	background: #f8fafc;
+	border-radius: var(--rounded-sm);
+	padding: 6px 8px;
+	border: 1px solid #edf2f7;
+	margin-top: 2px;
+}
+
+.matchWinProbability {
+	font-size: 11px;
+	color: #4a5568;
+	font-weight: 600;
+}
+

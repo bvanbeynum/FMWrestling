@@ -31,6 +31,82 @@ const getLoser = (matchItem) => {
 	return (matchItem.wrestlers || []).find(wrestlerItem => !wrestlerItem.isWinner) || null;
 };
 
+const getWrestlerPlacementRank = (wrestlerSqlId, tournamentMatches) => {
+	if (!tournamentMatches || !wrestlerSqlId) return 999;
+	for (let reverseIndex = tournamentMatches.length - 1; reverseIndex >= 0; reverseIndex--) {
+		const currentMatch = tournamentMatches[reverseIndex];
+		if (!currentMatch.roundName) continue;
+		const roundNameNormalized = currentMatch.roundName.toLowerCase().trim();
+
+		// 1st / 2nd Place
+		if (roundNameNormalized === "finals" || 
+			roundNameNormalized === "championship" || 
+			roundNameNormalized === "final" || 
+			roundNameNormalized.includes("1st place") || 
+			roundNameNormalized.includes("1st-place")) {
+			if (currentMatch.winner?.wrestlerSqlId === wrestlerSqlId) return 1;
+			if (currentMatch.loser?.wrestlerSqlId === wrestlerSqlId) return 2;
+		}
+
+		// 3rd / 4th Place
+		if (roundNameNormalized.includes("3rd place") || 
+			roundNameNormalized.includes("3rd-place") || 
+			roundNameNormalized === "consi-final" || 
+			roundNameNormalized === "consolation final" || 
+			roundNameNormalized.includes("consi-final")) {
+			if (currentMatch.winner?.wrestlerSqlId === wrestlerSqlId) return 3;
+			if (currentMatch.loser?.wrestlerSqlId === wrestlerSqlId) return 4;
+		}
+
+		// 5th / 6th Place
+		if (roundNameNormalized.includes("5th place") || 
+			roundNameNormalized.includes("5th-place")) {
+			if (currentMatch.winner?.wrestlerSqlId === wrestlerSqlId) return 5;
+			if (currentMatch.loser?.wrestlerSqlId === wrestlerSqlId) return 6;
+		}
+
+		// 7th / 8th Place
+		if (roundNameNormalized.includes("7th place") || 
+			roundNameNormalized.includes("7th-place")) {
+			if (currentMatch.winner?.wrestlerSqlId === wrestlerSqlId) return 7;
+			if (currentMatch.loser?.wrestlerSqlId === wrestlerSqlId) return 8;
+		}
+	}
+	return 999;
+};
+
+const calculateWinProbability = (firstWrestler, secondWrestler) => {
+	if (!firstWrestler || !secondWrestler) return 0.5;
+	const firstRating = firstWrestler.rating || 1500.0;
+	const secondRating = secondWrestler.rating || 1500.0;
+	const firstDeviation = firstWrestler.deviation || 300.0;
+	const secondDeviation = secondWrestler.deviation || 300.0;
+
+	const scalingFactorConstant = Math.log(10) / 400.0;
+	const combinedDeviation = Math.sqrt(
+		Math.pow(firstDeviation, 2) + Math.pow(secondDeviation, 2)
+	);
+	const deviationImpactFactor = 1.0 / Math.sqrt(
+		1.0 + (3.0 * Math.pow(scalingFactorConstant, 2) * Math.pow(combinedDeviation, 2)) / Math.pow(Math.PI, 2)
+	);
+	const ratingDifference = firstRating - secondRating;
+	const winProbability = 1.0 / (1.0 + Math.pow(10, (-deviationImpactFactor * ratingDifference) / 400.0));
+	return winProbability;
+};
+
+const getDifficultyClassification = (winProbability) => {
+	if (winProbability >= 0.75) {
+		return { label: "Easy", colorClass: "easy" };
+	}
+	if (winProbability >= 0.55) {
+		return { label: "Favorable", colorClass: "favorable" };
+	}
+	if (winProbability >= 0.35) {
+		return { label: "Tough", colorClass: "tough" };
+	}
+	return { label: "Elite", colorClass: "elite" };
+};
+
 const TournamentSummary = () => {
 	const [pageActive, setPageActive] = useState(false);
 	const [isLoading, setIsLoading] = useState(true);
@@ -40,6 +116,9 @@ const TournamentSummary = () => {
 	const [activeView, setActiveView] = useState("overview");
 	const [selectedTeam, setSelectedTeam] = useState("");
 	const [selectedWeightClass, setSelectedWeightClass] = useState("");
+	const [selectedBracketWeightClass, setSelectedBracketWeightClass] = useState("");
+	const [selectedBracketWrestlerSqlId, setSelectedBracketWrestlerSqlId] = useState(null);
+	const [highlightedWrestlerSqlId, setHighlightedWrestlerSqlId] = useState(null);
 
 	// Auto-select a default team and weight class when division or event changes (declared before early returns)
 	useEffect(() => {
@@ -102,14 +181,74 @@ const TournamentSummary = () => {
 					}
 				})
 				.then(data => {
+					
 					const eventUpdated = {
 						...data.event,
-						matches: (data.event?.matches || []).map(match => ({
-							...match,
-							winner: (match.wrestlers || []).find(wrestler => wrestler.isWinner === true),
-							loser: (match.wrestlers || []).find(wrestler => wrestler.isWinner === false)
-						}))
+						matches: (data.event?.matches || []).map(currentMatch => {
+							const winnerWrestler = getWinner(currentMatch);
+							const loserWrestler = getLoser(currentMatch);
+							const winnerSeed = (winnerWrestler?.seed !== undefined && winnerWrestler?.seed !== null && String(winnerWrestler.seed).trim() !== "" && !isNaN(Number(winnerWrestler.seed))) ? Number(winnerWrestler.seed) : null;
+							const loserSeed = (loserWrestler?.seed !== undefined && loserWrestler?.seed !== null && String(loserWrestler.seed).trim() !== "" && !isNaN(Number(loserWrestler.seed))) ? Number(loserWrestler.seed) : null;
+
+							let isSeedAccurate = null;
+							if (winnerSeed !== null && loserSeed !== null) {
+								isSeedAccurate = winnerSeed < loserSeed;
+							} else if (winnerSeed !== null && loserSeed === null) {
+								isSeedAccurate = true;
+							} else if (winnerSeed === null && loserSeed !== null) {
+								isSeedAccurate = false;
+							}
+
+							const winnerRating = winnerWrestler?.rating || 1500.0;
+							const loserRating = loserWrestler?.rating || 1500.0;
+							const winnerDeviation = winnerWrestler?.deviation || 300.0;
+							const loserDeviation = loserWrestler?.deviation || 300.0;
+							const isRatingAccurate = winnerRating > loserRating;
+							const isRatingExpected = (winnerRating + winnerDeviation) > (loserRating - loserDeviation);
+
+							return {
+								...currentMatch,
+								winner: winnerWrestler,
+								loser: loserWrestler,
+								wrestlers: currentMatch.wrestlers || [winnerWrestler, loserWrestler].filter(Boolean),
+								isSeedAccurate: isSeedAccurate,
+								isRatingAccurate: isRatingAccurate,
+								isRatingExpected: isRatingExpected
+							};
+						})
 					};
+
+					const divisions = [...new Set((eventUpdated.matches || []).map(currentMatch => currentMatch.division || "Varsity"))]
+						.map(divisionName => {
+							const divisionMatches = (eventUpdated.matches || []).filter(currentMatch => (currentMatch.division || "Varsity") === divisionName);
+							const uniqueWeightClassNames = [...new Set(divisionMatches.map(currentMatch => currentMatch.weightClass))].filter(Boolean);
+
+							return {
+								name: divisionName,
+								matches: divisionMatches,
+								weightClasses: uniqueWeightClassNames.map(weightClassName => {
+									const weightClassMatches = divisionMatches.filter(currentMatch => currentMatch.weightClass === weightClassName);
+									const uniqueWrestlerIds = [...new Set(weightClassMatches.flatMap(currentMatch => (currentMatch.wrestlers || []).map(currentWrestler => currentWrestler.wrestlerSqlId)))].filter(Boolean);
+									const weightClassWrestlers = uniqueWrestlerIds.map(wrestlerSqlId => {
+										return weightClassMatches.flatMap(currentMatch => currentMatch.wrestlers || []).find(currentWrestler => currentWrestler.wrestlerSqlId === wrestlerSqlId);
+									}).filter(Boolean);
+
+									return {
+										name: weightClassName,
+										matches: weightClassMatches,
+										wrestlers: weightClassWrestlers,
+										seedRanking: [...weightClassWrestlers].sort((firstWrestler, secondWrestler) => (firstWrestler.seed || 999) - (secondWrestler.seed || 999)),
+										ratingRanking: [...weightClassWrestlers].sort((firstWrestler, secondWrestler) => (secondWrestler.rating || 0) - (firstWrestler.rating || 0)),
+										place: weightClassWrestlers.map(currentWrestler => ({
+											...currentWrestler,
+											place: getWrestlerPlacementRank(currentWrestler.wrestlerSqlId, weightClassMatches)
+										})).filter(currentWrestler => currentWrestler.place !== 999).sort((firstWrestler, secondWrestler) => firstWrestler.place - secondWrestler.place)
+									};
+								})
+							};
+						});
+
+					eventUpdated.divisions = divisions;
 
 					setEvent(eventUpdated);
 					setLoggedInUser(data.loggedInUser);
@@ -118,8 +257,8 @@ const TournamentSummary = () => {
 
 					// Determine available divisions and set default selected
 					const matches = eventUpdated?.matches || [];
-					const uniqueDivs = Array.from(new Set(matches.map(m => m.division || "Varsity"))).filter(Boolean);
-					setSelectedDivision(uniqueDivs.includes("Varsity") ? "Varsity" : (uniqueDivs[0] || "Varsity"));
+					const uniqueDivisions = Array.from(new Set(matches.map(currentMatch => currentMatch.division || "Varsity"))).filter(Boolean);
+					setSelectedDivision(uniqueDivisions.includes("Varsity") ? "Varsity" : (uniqueDivisions[0] || "Varsity"));
 				})
 				.catch(error => {
 					console.warn(error);
@@ -613,50 +752,6 @@ const TournamentSummary = () => {
 		}
 	});
 
-	// Helper to resolve numerical placement rank of a wrestler in the weight class matches
-	const getWrestlerPlacementRank = (wrestlerSqlId, matchesList) => {
-		for (let index = matchesList.length - 1; index >= 0; index--) {
-			const match = matchesList[index];
-			if (!match.roundName) continue;
-			const roundNameLower = match.roundName.toLowerCase().trim();
-
-			// 1st / 2nd Place
-			if (roundNameLower === "finals" || 
-				roundNameLower === "championship" || 
-				roundNameLower === "final" || 
-				roundNameLower.includes("1st place") || 
-				roundNameLower.includes("1st-place")) {
-				if (match.winner?.wrestlerSqlId === wrestlerSqlId) return 1;
-				if (match.loser?.wrestlerSqlId === wrestlerSqlId) return 2;
-			}
-
-			// 3rd / 4th Place
-			if (roundNameLower.includes("3rd place") || 
-				roundNameLower.includes("3rd-place") || 
-				roundNameLower === "consi-final" || 
-				roundNameLower === "consolation final" || 
-				roundNameLower.includes("consi-final")) {
-				if (match.winner?.wrestlerSqlId === wrestlerSqlId) return 3;
-				if (match.loser?.wrestlerSqlId === wrestlerSqlId) return 4;
-			}
-
-			// 5th / 6th Place
-			if (roundNameLower.includes("5th place") || 
-				roundNameLower.includes("5th-place")) {
-				if (match.winner?.wrestlerSqlId === wrestlerSqlId) return 5;
-				if (match.loser?.wrestlerSqlId === wrestlerSqlId) return 6;
-			}
-
-			// 7th / 8th Place
-			if (roundNameLower.includes("7th place") || 
-				roundNameLower.includes("7th-place")) {
-				if (match.winner?.wrestlerSqlId === wrestlerSqlId) return 7;
-				if (match.loser?.wrestlerSqlId === wrestlerSqlId) return 8;
-			}
-		}
-		return 999; // Unplaced / N/A
-	};
-
 	const weightClassWrestlersList = Object.values(weightClassWrestlerStatsMap);
 
 	// Sort wrestlers by place (rank) ascending, then by wins descending, then by rating descending
@@ -704,6 +799,160 @@ const TournamentSummary = () => {
 		matchesByRound[roundIndexMap[roundName]].matches.push(match);
 	});
 
+	// Detect whether tournament has any seeded wrestlers
+	const hasValidSeed = (seedValue) => seedValue !== undefined && seedValue !== null && String(seedValue).trim() !== "" && !isNaN(Number(seedValue)) && Number(seedValue) > 0;
+	const tournamentHasSeeding = matches.some(matchItem => {
+		const winnerSeed = matchItem.winner?.seed;
+		const loserSeed = matchItem.loser?.seed;
+		return hasValidSeed(winnerSeed) || hasValidSeed(loserSeed);
+	});
+
+	// Build weight class data for the Bracket view (filtered to weight classes with seeding)
+	const bracketWeightClasses = uniqueWeightClasses.map(weightClassName => {
+		const weightClassMatches = filteredMatches.filter(matchItem => matchItem.weightClass === weightClassName);
+
+		// Extract all unique wrestlers in this weight class
+		const wrestlersById = {};
+		weightClassMatches.forEach(matchItem => {
+			const winnerWrestler = matchItem.winner;
+			const loserWrestler = matchItem.loser;
+
+			if (winnerWrestler?.wrestlerSqlId) {
+				const winnerId = winnerWrestler.wrestlerSqlId;
+				const seedNumber = hasValidSeed(winnerWrestler.seed) ? Number(winnerWrestler.seed) : null;
+				if (!wrestlersById[winnerId]) {
+					wrestlersById[winnerId] = {
+						wrestlerSqlId: winnerId,
+						name: winnerWrestler.name,
+						team: winnerWrestler.team,
+						rating: winnerWrestler.rating || 1500.0,
+						deviation: winnerWrestler.deviation || 300.0,
+						seed: seedNumber
+					};
+				} else if (wrestlersById[winnerId].seed === null && seedNumber !== null) {
+					wrestlersById[winnerId].seed = seedNumber;
+				}
+			}
+
+			if (loserWrestler?.wrestlerSqlId) {
+				const loserId = loserWrestler.wrestlerSqlId;
+				const seedNumber = hasValidSeed(loserWrestler.seed) ? Number(loserWrestler.seed) : null;
+				if (!wrestlersById[loserId]) {
+					wrestlersById[loserId] = {
+						wrestlerSqlId: loserId,
+						name: loserWrestler.name,
+						team: loserWrestler.team,
+						rating: loserWrestler.rating || 1500.0,
+						deviation: loserWrestler.deviation || 300.0,
+						seed: seedNumber
+					};
+				} else if (wrestlersById[loserId].seed === null && seedNumber !== null) {
+					wrestlersById[loserId].seed = seedNumber;
+				}
+			}
+		});
+
+		const weightClassWrestlers = Object.values(wrestlersById);
+
+		// Check if weight class has at least one seeded wrestler
+		const hasWeightClassSeeding = weightClassWrestlers.some(wrestlerItem => wrestlerItem.seed !== null);
+
+		// Resolve placement rank for each wrestler
+		weightClassWrestlers.forEach(wrestlerItem => {
+			wrestlerItem.placementRank = getWrestlerPlacementRank(wrestlerItem.wrestlerSqlId, weightClassMatches);
+		});
+
+		// Sort by rating descending to assign rating rank
+		const ratingSortedWrestlers = [...weightClassWrestlers].sort((firstWrestler, secondWrestler) => (secondWrestler.rating || 0) - (firstWrestler.rating || 0));
+		ratingSortedWrestlers.forEach((wrestlerItem, sortedIndex) => {
+			wrestlerItem.ratingRank = sortedIndex + 1;
+		});
+
+		// Match Accuracy in this weight class
+		const matchesWithSeedPrediction = weightClassMatches.filter(matchItem => matchItem.isSeedAccurate !== null);
+		const accurateSeedMatches = matchesWithSeedPrediction.filter(matchItem => matchItem.isSeedAccurate === true);
+		const seedAccuracyPercentage = matchesWithSeedPrediction.length > 0 ? (accurateSeedMatches.length / matchesWithSeedPrediction.length) * 100 : null;
+
+		const accurateRatingMatches = weightClassMatches.filter(matchItem => matchItem.isRatingAccurate === true);
+		const ratingAccuracyPercentage = weightClassMatches.length > 0 ? (accurateRatingMatches.length / weightClassMatches.length) * 100 : null;
+
+		// Placement Accuracy in this weight class
+		const placedWrestlers = weightClassWrestlers.filter(wrestlerItem => wrestlerItem.placementRank !== 999);
+		const placementSpotsCount = placedWrestlers.length;
+
+		// Top K seeds (where K = placementSpotsCount)
+		const seededWrestlers = weightClassWrestlers.filter(wrestlerItem => wrestlerItem.seed !== null).sort((firstWrestler, secondWrestler) => firstWrestler.seed - secondWrestler.seed);
+		const topSeeds = seededWrestlers.slice(0, placementSpotsCount);
+		const topSeedsPlacedCount = topSeeds.filter(wrestlerItem => wrestlerItem.placementRank !== 999).length;
+
+		// Top K ratings
+		const topRatings = ratingSortedWrestlers.slice(0, placementSpotsCount);
+		const topRatingsPlacedCount = topRatings.filter(wrestlerItem => wrestlerItem.placementRank !== 999).length;
+
+		const topSeedPlacementPercentage = topSeeds.length > 0 ? (topSeedsPlacedCount / topSeeds.length) * 100 : null;
+		const topRatingPlacementPercentage = topRatings.length > 0 ? (topRatingsPlacedCount / topRatings.length) * 100 : null;
+
+		return {
+			weightClass: weightClassName,
+			division: selectedDivision,
+			matches: weightClassMatches,
+			wrestlers: weightClassWrestlers,
+			hasWeightClassSeeding: hasWeightClassSeeding,
+			// Match stats
+			totalMatchesCount: weightClassMatches.length,
+			matchesWithSeedPredictionCount: matchesWithSeedPrediction.length,
+			accurateSeedMatchesCount: accurateSeedMatches.length,
+			seedAccuracyPercentage: seedAccuracyPercentage,
+			accurateRatingMatchesCount: accurateRatingMatches.length,
+			ratingAccuracyPercentage: ratingAccuracyPercentage,
+			// Placement stats
+			placementSpotsCount: placementSpotsCount,
+			topSeedsCount: topSeeds.length,
+			topSeedsPlacedCount: topSeedsPlacedCount,
+			topSeedPlacementPercentage: topSeedPlacementPercentage,
+			topRatingsCount: topRatings.length,
+			topRatingsPlacedCount: topRatingsPlacedCount,
+			topRatingPlacementPercentage: topRatingPlacementPercentage
+		};
+	}).filter(weightClassItem => weightClassItem.hasWeightClassSeeding);
+
+	// Aggregate KPIs across all seeded weight classes in this division
+	let totalSeedPredictableMatches = 0;
+	let totalAccurateSeedMatches = 0;
+	let totalDivisionMatches = 0;
+	let totalAccurateRatingMatches = 0;
+
+	let totalDivisionPlacementSpots = 0;
+	let totalDivisionTopSeeds = 0;
+	let totalDivisionTopSeedsPlaced = 0;
+	let totalDivisionTopRatings = 0;
+	let totalDivisionTopRatingsPlaced = 0;
+
+	bracketWeightClasses.forEach(weightClassItem => {
+		totalSeedPredictableMatches += weightClassItem.matchesWithSeedPredictionCount;
+		totalAccurateSeedMatches += weightClassItem.accurateSeedMatchesCount;
+		totalDivisionMatches += weightClassItem.totalMatchesCount;
+		totalAccurateRatingMatches += weightClassItem.accurateRatingMatchesCount;
+
+		totalDivisionPlacementSpots += weightClassItem.placementSpotsCount;
+		totalDivisionTopSeeds += weightClassItem.topSeedsCount;
+		totalDivisionTopSeedsPlaced += weightClassItem.topSeedsPlacedCount;
+		totalDivisionTopRatings += weightClassItem.topRatingsCount;
+		totalDivisionTopRatingsPlaced += weightClassItem.topRatingsPlacedCount;
+	});
+
+	const overallSeedAccuracyPercentage = totalSeedPredictableMatches > 0 ? (totalAccurateSeedMatches / totalSeedPredictableMatches) * 100 : null;
+	const overallRatingAccuracyPercentage = totalDivisionMatches > 0 ? (totalAccurateRatingMatches / totalDivisionMatches) * 100 : null;
+
+	const overallTopSeedPlacementPercentage = totalDivisionTopSeeds > 0 ? (totalDivisionTopSeedsPlaced / totalDivisionTopSeeds) * 100 : null;
+	const overallTopRatingPlacementPercentage = totalDivisionTopRatings > 0 ? (totalDivisionTopRatingsPlaced / totalDivisionTopRatings) * 100 : null;
+
+	// Active weight class for Bracket details view
+	const activeBracketWeightClass = bracketWeightClasses.find(item => item.weightClass === selectedBracketWeightClass);
+
+	// Active wrestler for Wrestler details view
+	const activeBracketWrestler = activeBracketWeightClass?.wrestlers.find(wrestlerItem => wrestlerItem.wrestlerSqlId === selectedBracketWrestlerSqlId);
+
 	return (
 		<div className="page">
 			<Nav loggedInUser={loggedInUser} />
@@ -717,7 +966,12 @@ const TournamentSummary = () => {
 							<select
 								className="divisionDropdown"
 								value={selectedDivision}
-								onChange={(changeEvent) => setSelectedDivision(changeEvent.target.value)}
+								onChange={(changeEvent) => {
+									setSelectedDivision(changeEvent.target.value);
+									setSelectedBracketWeightClass("");
+									setSelectedBracketWrestlerSqlId(null);
+									setHighlightedWrestlerSqlId(null);
+								}}
 							>
 								{uniqueDivisions.map((division, index) => (
 									<option key={index} value={division}>{division}</option>
@@ -1288,6 +1542,659 @@ const TournamentSummary = () => {
 						</section>
 					</>
 				)}
+
+				{/* Bracket View */}
+				{activeView === "bracket" && (
+					<>
+						{/* View 3: Wrestler Details */}
+						{activeBracketWrestler ? (
+							(() => {
+								const wrestlerMatches = activeBracketWeightClass.matches.filter(matchItem => matchItem.winner?.wrestlerSqlId === activeBracketWrestler.wrestlerSqlId || matchItem.loser?.wrestlerSqlId === activeBracketWrestler.wrestlerSqlId);
+								const sortedWrestlerMatches = [...wrestlerMatches].sort((firstMatch, secondMatch) => (firstMatch.sort || 0) - (secondMatch.sort || 0));
+
+								const opponentRatings = sortedWrestlerMatches.map(matchItem => {
+									const isWinner = matchItem.winner?.wrestlerSqlId === activeBracketWrestler.wrestlerSqlId;
+									const opponent = isWinner ? matchItem.loser : matchItem.winner;
+									return opponent?.rating || 1500.0;
+								});
+								const averageOpponentRating = opponentRatings.length > 0 ? (opponentRatings.reduce((sum, ratingValue) => sum + ratingValue, 0) / opponentRatings.length) : 1500.0;
+
+								const matchWinProbabilities = sortedWrestlerMatches.map(matchItem => {
+									const isWinner = matchItem.winner?.wrestlerSqlId === activeBracketWrestler.wrestlerSqlId;
+									const opponent = isWinner ? matchItem.loser : matchItem.winner;
+									return calculateWinProbability(activeBracketWrestler, opponent);
+								});
+								const averageWinProbability = matchWinProbabilities.length > 0 ? (matchWinProbabilities.reduce((sum, probabilityValue) => sum + probabilityValue, 0) / matchWinProbabilities.length) : 0.5;
+								const pathDifficulty = getDifficultyClassification(averageWinProbability);
+
+								const placementOrdinals = ["", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"];
+								const finishDisplay = activeBracketWrestler.placementRank === 999 ? "Unplaced / DNP" : `${placementOrdinals[activeBracketWrestler.placementRank] || `${activeBracketWrestler.placementRank}th`} Place`;
+
+								return (
+									<section>
+										<button
+											type="button"
+											className="backButton"
+											onClick={() => setSelectedBracketWrestlerSqlId(null)}
+										>
+											<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+												<polyline points="15 18 9 12 15 6" />
+											</svg>
+											<span>Back to {selectedDivision} {selectedBracketWeightClass}</span>
+										</button>
+
+										{/* Wrestler Summary Card */}
+										<div className="summaryHeaderCard">
+											<div className="summaryHeaderTop">
+												<div>
+													<div className="summaryWrestlerName">{activeBracketWrestler.name}</div>
+													<div className="summaryWrestlerTeam">{activeBracketWrestler.team} • {selectedDivision} {selectedBracketWeightClass} lbs</div>
+												</div>
+												<span className="wrestlerCardPlaceBadge placer" style={{ fontSize: "11px" }}>
+													{finishDisplay}
+												</span>
+											</div>
+
+											<div className="summaryStatsGrid">
+												<div className="summaryStatItem">
+													<span className="summaryStatLabel">Bracket Seed</span>
+													<span className="summaryStatValue">
+														{activeBracketWrestler.seed !== null ? `#${activeBracketWrestler.seed}` : "Unseeded"}
+													</span>
+												</div>
+												<div className="summaryStatItem">
+													<span className="summaryStatLabel">Rating Rank</span>
+													<span className="summaryStatValue">
+														#{activeBracketWrestler.ratingRank} ({Math.round(activeBracketWrestler.rating)} ± {Math.round(activeBracketWrestler.deviation)})
+													</span>
+												</div>
+												<div className="summaryStatItem">
+													<span className="summaryStatLabel">Avg Opponent Rating</span>
+													<span className="summaryStatValue">
+														{Math.round(averageOpponentRating)}
+													</span>
+												</div>
+												<div className="summaryStatItem">
+													<span className="summaryStatLabel">Path Difficulty</span>
+													<div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "2px" }}>
+														<span className={`difficultyBadge ${pathDifficulty.colorClass}`}>
+															{pathDifficulty.label}
+														</span>
+														<span style={{ fontSize: "11px", color: "#718096" }}>
+															({Math.round(averageWinProbability * 100)}% Win Prob)
+														</span>
+													</div>
+												</div>
+											</div>
+										</div>
+
+										{/* Match Cards */}
+										<h2 className="sectionTitle">Match Path ({sortedWrestlerMatches.length} Matches)</h2>
+										{sortedWrestlerMatches.length === 0 ? (
+											<div className="emptyState">No tournament matches recorded for this wrestler.</div>
+										) : (
+											<div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+												{sortedWrestlerMatches.map((matchItem, matchIndex) => {
+													const isWinner = matchItem.winner?.wrestlerSqlId === activeBracketWrestler.wrestlerSqlId;
+													const opponent = isWinner ? matchItem.loser : matchItem.winner;
+													const opponentSeedDisplay = opponent?.seed ? `Seed #${opponent.seed}` : "Unseeded";
+													const opponentData = activeBracketWeightClass.wrestlers.find(wrestlerItem => wrestlerItem.wrestlerSqlId === opponent?.wrestlerSqlId);
+													const opponentRatingRankDisplay = opponentData ? `#${opponentData.ratingRank} Rating in Weight Class` : "Opponent";
+													const matchWinProbability = calculateWinProbability(activeBracketWrestler, opponent);
+													const matchDifficulty = getDifficultyClassification(matchWinProbability);
+
+													return (
+														<div key={matchIndex} className={`matchDetailCard ${isWinner ? "win" : "loss"}`}>
+															<div className="matchDetailHeader">
+																<span className="matchRoundName">{matchItem.roundName || "Match"}</span>
+																<span className={`matchOutcomeBadge ${isWinner ? "win" : "loss"}`}>
+																	{isWinner ? "WIN" : "LOSS"}{matchItem.winType ? ` • ${matchItem.winType}` : ""}
+																</span>
+															</div>
+
+															<div className="matchOpponentRow">
+																<div className="matchOpponentName">
+																	vs {opponent?.name || "Unknown"}
+																</div>
+																<div className="matchOpponentMeta">
+																	{opponent?.team || "Unknown"} • {opponentSeedDisplay} • {opponentRatingRankDisplay} ({Math.round(opponent?.rating || 1500)} ± {Math.round(opponent?.deviation || 300)})
+																</div>
+															</div>
+
+															<div className="matchFooterRow">
+																<span className="matchWinProbability">
+																	Win Prob: {Math.round(matchWinProbability * 100)}%
+																</span>
+																<span className={`difficultyBadge ${matchDifficulty.colorClass}`}>
+																	{matchDifficulty.label}
+																</span>
+															</div>
+														</div>
+													);
+												})}
+											</div>
+										)}
+									</section>
+								);
+							})()
+						) : activeBracketWeightClass ? (
+							/* View 2: Division / Weight Class Details */
+							(() => {
+								const placementOrdinals = ["", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"];
+								const totalWrestlersCount = activeBracketWeightClass.wrestlers.length;
+
+								// Slopegraph Layout dimensions: uniform vertical spacing across all 3 axes
+								const seededWrestlersInWeightClass = activeBracketWeightClass.wrestlers.filter(wrestlerItem => wrestlerItem.seed !== null);
+								const maxSeedValue = seededWrestlersInWeightClass.length > 0 ? Math.max(...seededWrestlersInWeightClass.map(wrestlerItem => wrestlerItem.seed)) : 0;
+								const placedWrestlersInWeightClass = activeBracketWeightClass.wrestlers.filter(wrestlerItem => wrestlerItem.placementRank !== 999);
+								const maxPlacementRankLevel = placedWrestlersInWeightClass.length > 0 ? Math.max(...placedWrestlersInWeightClass.map(wrestlerItem => wrestlerItem.placementRank)) : 8;
+								const maxRankNumber = Math.max(maxPlacementRankLevel, maxSeedValue, totalWrestlersCount);
+
+								const hasUnseededWrestlers = activeBracketWeightClass.wrestlers.some(wrestlerItem => wrestlerItem.seed === null);
+								const totalLevelSpots = hasUnseededWrestlers ? maxRankNumber + 1 : maxRankNumber;
+
+								const levelSpacing = 26;
+								const marginTop = 50;
+								const marginBottom = 25;
+								const svgHeight = marginTop + (totalLevelSpots * levelSpacing) + marginBottom;
+								const svgWidth = 360;
+
+								const seedAxisPosition = 65;
+								const placementAxisPosition = 180;
+								const ratingAxisPosition = 295;
+
+								const getVerticalCoordinateForRank = (rankNumber) => marginTop + ((rankNumber - 1) * levelSpacing);
+								const unseededVerticalCoordinate = marginTop + (maxRankNumber * levelSpacing);
+
+								const getSlopegraphLineColor = (wrestlerItem) => {
+									if (wrestlerItem.placementRank === 999) {
+										return "#cbd5e0";
+									}
+									const seedVerticalPosition = wrestlerItem.seed !== null ? getVerticalCoordinateForRank(wrestlerItem.seed) : unseededVerticalCoordinate;
+									const placementVerticalPosition = getVerticalCoordinateForRank(wrestlerItem.placementRank);
+
+									if (placementVerticalPosition > seedVerticalPosition) {
+										return "#e53e3e"; // Slopes downward to placement: red
+									}
+									if (placementVerticalPosition < seedVerticalPosition) {
+										return "#38a169"; // Slopes upward to placement: green
+									}
+									return "#38a169"; // Horizontal (aligned with seed): green
+								};
+
+								const highlightedWrestler = activeBracketWeightClass.wrestlers.find(wrestlerItem => wrestlerItem.wrestlerSqlId === highlightedWrestlerSqlId);
+
+								// Sort wrestlers for standings list: placed first by place ascending, then unplaced by rating rank ascending
+								const sortedStandingsWrestlers = [...activeBracketWeightClass.wrestlers].sort((firstWrestler, secondWrestler) => {
+									if (firstWrestler.placementRank !== secondWrestler.placementRank) {
+										return firstWrestler.placementRank - secondWrestler.placementRank;
+									}
+									return firstWrestler.ratingRank - secondWrestler.ratingRank;
+								});
+
+								return (
+									<section>
+										<button
+											type="button"
+											className="backButton"
+											onClick={() => {
+												setSelectedBracketWeightClass("");
+												setSelectedBracketWrestlerSqlId(null);
+												setHighlightedWrestlerSqlId(null);
+											}}
+										>
+											<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+												<polyline points="15 18 9 12 15 6" />
+											</svg>
+											<span>Back to Overview</span>
+										</button>
+
+										<h2 className="sectionTitle">{selectedDivision} {selectedBracketWeightClass} lbs Bracket Analysis</h2>
+
+										{/* Weight Class KPIs */}
+										<div className="kpis">
+											<div className="kpiCard">
+												<div className="kpiIcon">
+													<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+														<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+													</svg>
+												</div>
+												<div className="kpiBody">
+													<span className="kpiVal">
+														{activeBracketWeightClass.ratingAccuracyPercentage !== null ? `${Math.round(activeBracketWeightClass.ratingAccuracyPercentage)}%` : "N/A"}
+													</span>
+													<span className="kpiLbl">RATING MATCH ACCURACY</span>
+													<span style={{ fontSize: "10px", color: "#718096", marginTop: "2px" }}>
+														Seed: {activeBracketWeightClass.seedAccuracyPercentage !== null ? `${Math.round(activeBracketWeightClass.seedAccuracyPercentage)}%` : "N/A"}
+													</span>
+												</div>
+											</div>
+											<div className="kpiCard">
+												<div className="kpiIcon">
+													<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+														<circle cx="12" cy="8" r="7" />
+														<polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" />
+													</svg>
+												</div>
+												<div className="kpiBody">
+													<span className="kpiVal">
+														{activeBracketWeightClass.topRatingPlacementPercentage !== null ? `${Math.round(activeBracketWeightClass.topRatingPlacementPercentage)}%` : "N/A"}
+													</span>
+													<span className="kpiLbl">TOP RATING PLACEMENT</span>
+													<span style={{ fontSize: "10px", color: "#718096", marginTop: "2px" }}>
+														Top Seed: {activeBracketWeightClass.topSeedPlacementPercentage !== null ? `${Math.round(activeBracketWeightClass.topSeedPlacementPercentage)}%` : "N/A"}
+													</span>
+												</div>
+											</div>
+										</div>
+
+										{/* Slopegraph */}
+										<div className="slopegraphContainer">
+											<div className="slopegraphHeader">
+												<h3 className="slopegraphTitle">Predictor Alignment (Slopegraph)</h3>
+											</div>
+
+											{/* Interactive Slopegraph Banner */}
+											<div className="slopegraphBanner">
+												{highlightedWrestler ? (
+													<>
+														<span>
+															<strong>{highlightedWrestler.name}</strong> ({highlightedWrestler.team}) • Seed: #{highlightedWrestler.seed || "US"} → Place: {highlightedWrestler.placementRank === 999 ? "DNP" : placementOrdinals[highlightedWrestler.placementRank] || highlightedWrestler.placementRank} → Rating: #{highlightedWrestler.ratingRank}
+														</span>
+														<button
+															type="button"
+															style={{
+																border: "none",
+																background: "var(--primary)",
+																color: "#ffffff",
+																borderRadius: "3px",
+																padding: "2px 8px",
+																fontSize: "10px",
+																fontWeight: "bold",
+																cursor: "pointer",
+																marginLeft: "6px"
+															}}
+															onClick={() => setSelectedBracketWrestlerSqlId(highlightedWrestler.wrestlerSqlId)}
+														>
+															View Path
+														</button>
+													</>
+												) : (
+													<span>Tap or hover a line to trace Seed → Placement → Rating</span>
+												)}
+											</div>
+
+											<svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="slopegraphSvg">
+												{/* Axis Lines */}
+												<line x1={seedAxisPosition} y1={marginTop - 10} x2={seedAxisPosition} y2={marginTop + ((totalLevelSpots - 1) * levelSpacing) + 10} stroke="#e2e8f0" strokeWidth="2" />
+												<line x1={placementAxisPosition} y1={marginTop - 10} x2={placementAxisPosition} y2={marginTop + ((maxPlacementRankLevel - 1) * levelSpacing) + 10} stroke="#cbd5e0" strokeWidth="2" strokeDasharray="3 3" />
+												<line x1={ratingAxisPosition} y1={marginTop - 10} x2={ratingAxisPosition} y2={marginTop + ((totalWrestlersCount - 1) * levelSpacing) + 10} stroke="#e2e8f0" strokeWidth="2" />
+
+												{/* Axis Headers */}
+												<text x={seedAxisPosition} y={marginTop - 22} textAnchor="middle" fontSize="11" fontWeight="700" fill="var(--primary)">SEED RANK</text>
+												<text x={placementAxisPosition} y={marginTop - 22} textAnchor="middle" fontSize="11" fontWeight="700" fill="#2d3748">PLACEMENT</text>
+												<text x={ratingAxisPosition} y={marginTop - 22} textAnchor="middle" fontSize="11" fontWeight="700" fill="var(--secondary-variant)">RATING RANK</text>
+
+												{/* Left Axis Tick Marks and Labels for each number spot */}
+												{Array.from({ length: maxRankNumber }, (_, indexNumber) => indexNumber + 1).map(spotNumber => {
+													const verticalCoordinate = getVerticalCoordinateForRank(spotNumber);
+													return (
+														<g key={`left-tick-${spotNumber}`}>
+															<line
+																x1={seedAxisPosition - 5}
+																y1={verticalCoordinate}
+																x2={seedAxisPosition}
+																y2={verticalCoordinate}
+																stroke="#cbd5e0"
+																strokeWidth="1.5"
+															/>
+															<text
+																x={seedAxisPosition - 8}
+																y={verticalCoordinate + 3.5}
+																textAnchor="end"
+																fontSize="9.5"
+																fontWeight="600"
+																fill="#718096"
+															>
+																{spotNumber}
+															</text>
+														</g>
+													);
+												})}
+												{hasUnseededWrestlers && (
+													<g key="left-tick-unseeded">
+														<line
+															x1={seedAxisPosition - 5}
+															y1={unseededVerticalCoordinate}
+															x2={seedAxisPosition}
+															y2={unseededVerticalCoordinate}
+															stroke="#cbd5e0"
+															strokeWidth="1.5"
+														/>
+														<text
+															x={seedAxisPosition - 8}
+															y={unseededVerticalCoordinate + 3.5}
+															textAnchor="end"
+															fontSize="9"
+															fontWeight="600"
+															fill="#a0aec0"
+														>
+															US
+														</text>
+													</g>
+												)}
+
+												{/* Placement Axis Guide Dots for available placement ranks */}
+												{Array.from({ length: maxPlacementRankLevel }, (_, indexNumber) => indexNumber + 1).map(placementSpotNumber => {
+													const verticalCoordinate = getVerticalCoordinateForRank(placementSpotNumber);
+													return (
+														<circle
+															key={`placement-spot-${placementSpotNumber}`}
+															cx={placementAxisPosition}
+															cy={verticalCoordinate}
+															r="2"
+															fill="#e2e8f0"
+														/>
+													);
+												})}
+
+												{/* Right Axis Tick Marks and Labels for each rating rank */}
+												{Array.from({ length: totalWrestlersCount }, (_, indexNumber) => indexNumber + 1).map(ratingSpotNumber => {
+													const verticalCoordinate = getVerticalCoordinateForRank(ratingSpotNumber);
+													return (
+														<g key={`rating-tick-${ratingSpotNumber}`}>
+															<line
+																x1={ratingAxisPosition}
+																y1={verticalCoordinate}
+																x2={ratingAxisPosition + 5}
+																y2={verticalCoordinate}
+																stroke="#cbd5e0"
+																strokeWidth="1.5"
+															/>
+															<text
+																x={ratingAxisPosition + 8}
+																y={verticalCoordinate + 3.5}
+																textAnchor="start"
+																fontSize="9.5"
+																fontWeight="600"
+																fill="#718096"
+															>
+																{ratingSpotNumber}
+															</text>
+														</g>
+													);
+												})}
+
+												{/* Wrestler Lines: Placers vs Non-Placers */}
+												{activeBracketWeightClass.wrestlers.map(wrestlerItem => {
+													const isPlacer = wrestlerItem.placementRank !== 999;
+													const seedVerticalCoordinate = wrestlerItem.seed !== null ? getVerticalCoordinateForRank(wrestlerItem.seed) : unseededVerticalCoordinate;
+													const ratingVerticalCoordinate = getVerticalCoordinateForRank(wrestlerItem.ratingRank);
+													const isHighlighted = highlightedWrestlerSqlId === wrestlerItem.wrestlerSqlId;
+
+													if (isPlacer) {
+														const placementVerticalCoordinate = getVerticalCoordinateForRank(wrestlerItem.placementRank);
+														const pointsAttribute = `${seedAxisPosition},${seedVerticalCoordinate} ${placementAxisPosition},${placementVerticalCoordinate} ${ratingAxisPosition},${ratingVerticalCoordinate}`;
+														const lineColor = getSlopegraphLineColor(wrestlerItem);
+														const strokeWidth = isHighlighted ? 3.5 : 2.2;
+														const strokeOpacity = highlightedWrestlerSqlId !== null ? (isHighlighted ? 1 : 0.12) : 0.85;
+
+														return (
+															<g
+																key={wrestlerItem.wrestlerSqlId}
+																style={{ cursor: "pointer" }}
+																onClick={() => setHighlightedWrestlerSqlId(isHighlighted ? null : wrestlerItem.wrestlerSqlId)}
+																onMouseEnter={() => setHighlightedWrestlerSqlId(wrestlerItem.wrestlerSqlId)}
+															>
+																{/* Transparent thicker path for touch / click */}
+																<polyline
+																	points={pointsAttribute}
+																	fill="none"
+																	stroke="transparent"
+																	strokeWidth="14"
+																/>
+																{/* Solid polyline connecting seed -> placement -> rating */}
+																<polyline
+																	points={pointsAttribute}
+																	fill="none"
+																	stroke={lineColor}
+																	strokeWidth={strokeWidth}
+																	strokeOpacity={strokeOpacity}
+																	className="slopegraphPolyline"
+																/>
+																{/* Dots on Seed, Placement, and Rating */}
+																<circle cx={seedAxisPosition} cy={seedVerticalCoordinate} r={isHighlighted ? 4.5 : 2.5} fill={lineColor} opacity={strokeOpacity} />
+																<circle cx={placementAxisPosition} cy={placementVerticalCoordinate} r={isHighlighted ? 6 : 4} fill={lineColor} opacity={strokeOpacity} />
+																<circle cx={ratingAxisPosition} cy={ratingVerticalCoordinate} r={isHighlighted ? 4.5 : 2.5} fill={lineColor} opacity={strokeOpacity} />
+															</g>
+														);
+													}
+
+													// Non-placers: subtle gray line directly from Seed to Rating Rank (no dot on Placement axis)
+													const lineColor = isHighlighted ? "#718096" : "#cbd5e0";
+													const strokeWidth = isHighlighted ? 2.5 : 1.2;
+													const strokeOpacity = highlightedWrestlerSqlId !== null ? (isHighlighted ? 0.95 : 0.08) : 0.35;
+													const strokeDasharray = isHighlighted ? "none" : "3 2";
+
+													return (
+														<g
+															key={wrestlerItem.wrestlerSqlId}
+															style={{ cursor: "pointer" }}
+															onClick={() => setHighlightedWrestlerSqlId(isHighlighted ? null : wrestlerItem.wrestlerSqlId)}
+															onMouseEnter={() => setHighlightedWrestlerSqlId(wrestlerItem.wrestlerSqlId)}
+														>
+															{/* Transparent thicker line for touch / click */}
+															<line
+																x1={seedAxisPosition}
+																y1={seedVerticalCoordinate}
+																x2={ratingAxisPosition}
+																y2={ratingVerticalCoordinate}
+																stroke="transparent"
+																strokeWidth="14"
+															/>
+															{/* Subtle line directly connecting seed to rating rank */}
+															<line
+																x1={seedAxisPosition}
+																y1={seedVerticalCoordinate}
+																x2={ratingAxisPosition}
+																y2={ratingVerticalCoordinate}
+																stroke={lineColor}
+																strokeWidth={strokeWidth}
+																strokeOpacity={strokeOpacity}
+																strokeDasharray={strokeDasharray}
+																className="slopegraphPolyline"
+															/>
+															{/* Dots on Seed and Rating only (NO dot on placement axis) */}
+															<circle cx={seedAxisPosition} cy={seedVerticalCoordinate} r={isHighlighted ? 4 : 2} fill={lineColor} opacity={strokeOpacity} />
+															<circle cx={ratingAxisPosition} cy={ratingVerticalCoordinate} r={isHighlighted ? 4 : 2} fill={lineColor} opacity={strokeOpacity} />
+														</g>
+													);
+												})}
+											</svg>
+										</div>
+
+										{/* Wrestlers Standings List under Slopegraph */}
+										<h2 className="sectionTitle">Wrestlers Standings ({sortedStandingsWrestlers.length})</h2>
+										<div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+											{sortedStandingsWrestlers.map(wrestlerItem => {
+												const isHighlighted = highlightedWrestlerSqlId === wrestlerItem.wrestlerSqlId;
+												const placementBadgeClass = wrestlerItem.placementRank === 1 ? "gold"
+													: wrestlerItem.placementRank === 2 ? "silver"
+													: wrestlerItem.placementRank === 3 ? "bronze"
+													: wrestlerItem.placementRank <= 8 ? "placer"
+													: "unplaced";
+												const isPlacedWrestler = wrestlerItem.placementRank !== 999;
+												const placementText = isPlacedWrestler ? `${placementOrdinals[wrestlerItem.placementRank] || `${wrestlerItem.placementRank}th`} Place` : "DNP";
+
+												// Alignment calculation (only applicable to placed wrestlers)
+												const seedDelta = (isPlacedWrestler && wrestlerItem.seed !== null) ? Math.abs(wrestlerItem.seed - wrestlerItem.placementRank) : 999;
+												const ratingDelta = isPlacedWrestler ? Math.abs(wrestlerItem.ratingRank - wrestlerItem.placementRank) : 999;
+												const alignmentLabel = ratingDelta < seedDelta ? "Rating closer" : seedDelta < ratingDelta ? "Seed closer" : "Aligned";
+												const alignmentClass = ratingDelta < seedDelta ? "ratingAdvantage" : seedDelta < ratingDelta ? "seedAdvantage" : "neutral";
+
+												return (
+													<div
+														key={wrestlerItem.wrestlerSqlId}
+														className={`wrestlerCardItem ${isHighlighted ? "highlighted" : ""}`}
+														onClick={() => setSelectedBracketWrestlerSqlId(wrestlerItem.wrestlerSqlId)}
+														onMouseEnter={() => setHighlightedWrestlerSqlId(wrestlerItem.wrestlerSqlId)}
+													>
+														<div className="wrestlerCardTopRow">
+															<div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+																<span className={`wrestlerCardPlaceBadge ${placementBadgeClass}`}>
+																	{placementText}
+																</span>
+																<span style={{ fontWeight: 700, color: "#1a202c", fontSize: "13.5px" }}>
+																	{wrestlerItem.name}
+																</span>
+																<span style={{ color: "#718096", fontSize: "11px" }}>
+																	({wrestlerItem.team})
+																</span>
+															</div>
+															<span className="bracketChevron">
+																<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+																	<polyline points="9 18 15 12 9 6" />
+																</svg>
+															</span>
+														</div>
+
+														<div className="wrestlerCardBottomRow">
+															<span>
+																Seed: <strong>{wrestlerItem.seed !== null ? `#${wrestlerItem.seed}` : "US"}</strong> • Rating: <strong>#{wrestlerItem.ratingRank}</strong> ({Math.round(wrestlerItem.rating)} ± {Math.round(wrestlerItem.deviation)})
+															</span>
+															{isPlacedWrestler && (
+																<span className={`bracketComparisonBadge ${alignmentClass}`}>
+																	{alignmentLabel}
+																</span>
+															)}
+														</div>
+													</div>
+												);
+											})}
+										</div>
+									</section>
+								);
+							})()
+						) : (
+							/* View 1: Bracket Overview */
+							<section>
+								{/* KPI Cards */}
+								<div className="kpis">
+									<div className="kpiCard">
+										<div className="kpiIcon">
+											<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+												<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+											</svg>
+										</div>
+										<div className="kpiBody">
+											<span className="kpiVal">
+												{overallRatingAccuracyPercentage !== null ? `${Math.round(overallRatingAccuracyPercentage)}%` : "N/A"}
+											</span>
+											<span className="kpiLbl">RATING MATCH ACCURACY</span>
+											<span style={{ fontSize: "10.5px", color: "#718096", marginTop: "2px" }}>
+												Seed Accuracy: {overallSeedAccuracyPercentage !== null ? `${Math.round(overallSeedAccuracyPercentage)}%` : "N/A"}
+											</span>
+											{overallRatingAccuracyPercentage !== null && overallSeedAccuracyPercentage !== null && (
+												<span className={`bracketComparisonBadge ${overallRatingAccuracyPercentage > overallSeedAccuracyPercentage ? "ratingAdvantage" : overallSeedAccuracyPercentage > overallRatingAccuracyPercentage ? "seedAdvantage" : "neutral"}`} style={{ marginTop: "4px" }}>
+													{overallRatingAccuracyPercentage > overallSeedAccuracyPercentage ? `Rating +${Math.round(overallRatingAccuracyPercentage - overallSeedAccuracyPercentage)}%` : overallSeedAccuracyPercentage > overallRatingAccuracyPercentage ? `Seed +${Math.round(overallSeedAccuracyPercentage - overallRatingAccuracyPercentage)}%` : "Tied"}
+												</span>
+											)}
+										</div>
+									</div>
+
+									<div className="kpiCard">
+										<div className="kpiIcon">
+											<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+												<circle cx="12" cy="8" r="7" />
+												<polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" />
+											</svg>
+										</div>
+										<div className="kpiBody">
+											<span className="kpiVal">
+												{overallTopRatingPlacementPercentage !== null ? `${Math.round(overallTopRatingPlacementPercentage)}%` : "N/A"}
+											</span>
+											<span className="kpiLbl">TOP RATING PLACEMENT</span>
+											<span style={{ fontSize: "10.5px", color: "#718096", marginTop: "2px" }}>
+												Top Seed: {overallTopSeedPlacementPercentage !== null ? `${Math.round(overallTopSeedPlacementPercentage)}%` : "N/A"}
+											</span>
+											{overallTopRatingPlacementPercentage !== null && overallTopSeedPlacementPercentage !== null && (
+												<span className={`bracketComparisonBadge ${overallTopRatingPlacementPercentage > overallTopSeedPlacementPercentage ? "ratingAdvantage" : overallTopSeedPlacementPercentage > overallTopRatingPlacementPercentage ? "seedAdvantage" : "neutral"}`} style={{ marginTop: "4px" }}>
+													{overallTopRatingPlacementPercentage > overallTopSeedPlacementPercentage ? `Rating +${Math.round(overallTopRatingPlacementPercentage - overallTopSeedPlacementPercentage)}%` : overallTopSeedPlacementPercentage > overallTopRatingPlacementPercentage ? `Seed +${Math.round(overallTopSeedPlacementPercentage - overallTopRatingPlacementPercentage)}%` : "Tied"}
+												</span>
+											)}
+										</div>
+									</div>
+								</div>
+
+								{/* Division & Weight Class List (Mobile-Optimized Cards) */}
+								<h2 className="sectionTitle">Division Weight Classes ({bracketWeightClasses.length})</h2>
+								{bracketWeightClasses.length === 0 ? (
+									<div className="emptyState">No seeded weight classes found in this division.</div>
+								) : (
+									<div className="bracketCardsList">
+										{bracketWeightClasses.map(weightClassItem => {
+											const ratingBetterMatch = weightClassItem.ratingAccuracyPercentage !== null && weightClassItem.seedAccuracyPercentage !== null && weightClassItem.ratingAccuracyPercentage > weightClassItem.seedAccuracyPercentage;
+											const seedBetterMatch = weightClassItem.seedAccuracyPercentage !== null && weightClassItem.ratingAccuracyPercentage !== null && weightClassItem.seedAccuracyPercentage > weightClassItem.ratingAccuracyPercentage;
+
+											return (
+												<div
+													key={weightClassItem.weightClass}
+													className="bracketOverviewCard"
+													onClick={() => {
+														setSelectedBracketWeightClass(weightClassItem.weightClass);
+														setSelectedBracketWrestlerSqlId(null);
+														setHighlightedWrestlerSqlId(null);
+													}}
+												>
+													<div className="bracketCardHeader">
+														<div className="bracketWeightClassName">
+															{weightClassItem.division} • {isNaN(weightClassItem.weightClass) ? weightClassItem.weightClass : `${weightClassItem.weightClass} lbs`}
+														</div>
+														<span className="bracketChevron">
+															<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+																<polyline points="9 18 15 12 9 6" />
+															</svg>
+														</span>
+													</div>
+
+													<div className="bracketMetricsGrid">
+														<div className="bracketMetricBlock">
+															<span className="bracketMetricLabel">Match Accuracy</span>
+															<span className="bracketMetricValue">
+																Seed: {weightClassItem.seedAccuracyPercentage !== null ? `${Math.round(weightClassItem.seedAccuracyPercentage)}%` : "N/A"} ({weightClassItem.accurateSeedMatchesCount}/{weightClassItem.matchesWithSeedPredictionCount})
+															</span>
+															<span className="bracketMetricValue" style={{ color: "var(--primary)" }}>
+																Rating: {weightClassItem.ratingAccuracyPercentage !== null ? `${Math.round(weightClassItem.ratingAccuracyPercentage)}%` : "N/A"} ({weightClassItem.accurateRatingMatchesCount}/{weightClassItem.totalMatchesCount})
+															</span>
+														</div>
+
+														<div className="bracketMetricBlock">
+															<span className="bracketMetricLabel">Placement Accuracy</span>
+															<span className="bracketMetricValue">
+																Top Seeds: {weightClassItem.topSeedsPlacedCount}/{weightClassItem.topSeedsCount} ({weightClassItem.topSeedPlacementPercentage !== null ? `${Math.round(weightClassItem.topSeedPlacementPercentage)}%` : "N/A"})
+															</span>
+															<span className="bracketMetricValue" style={{ color: "var(--primary)" }}>
+																Top Ratings: {weightClassItem.topRatingsPlacedCount}/{weightClassItem.topRatingsCount} ({weightClassItem.topRatingPlacementPercentage !== null ? `${Math.round(weightClassItem.topRatingPlacementPercentage)}%` : "N/A"})
+															</span>
+														</div>
+													</div>
+
+													<div>
+														<span className={`bracketComparisonBadge ${ratingBetterMatch ? "ratingAdvantage" : seedBetterMatch ? "seedAdvantage" : "neutral"}`}>
+															{ratingBetterMatch ? `Rating +${Math.round(weightClassItem.ratingAccuracyPercentage - weightClassItem.seedAccuracyPercentage)}% Match Accuracy`
+																: seedBetterMatch ? `Seed +${Math.round(weightClassItem.seedAccuracyPercentage - weightClassItem.ratingAccuracyPercentage)}% Match Accuracy`
+																: "Predictors Aligned"}
+														</span>
+													</div>
+												</div>
+											);
+										})}
+									</div>
+								)}
+							</section>
+						)}
+					</>
+				)}
 			</div>
 
 			{/* Sticky Bottom Navigation Bar */}
@@ -1317,6 +2224,19 @@ const TournamentSummary = () => {
 					</svg>
 					<span>Weight Classes</span>
 				</div>
+				{tournamentHasSeeding && (
+					<div className={`navItem ${activeView === "bracket" ? "active" : ""}`} onClick={() => setActiveView("bracket")}>
+						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+							<path d="M3 5h5v4h6v3" />
+							<path d="M3 19h5v-4h6v-3" />
+							<path d="M14 12h7" />
+							<circle cx="3" cy="5" r="1" />
+							<circle cx="3" cy="19" r="1" />
+							<circle cx="21" cy="12" r="1" />
+						</svg>
+						<span>Bracket</span>
+					</div>
+				)}
 			</div>
 		</div>
 	);
