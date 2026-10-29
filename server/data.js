@@ -1118,6 +1118,7 @@ const dataFunctionsObject = {
 					/state tournament/i.test(match.division) ? "Varsity" :
 					/varsity/i.test(match.division) ? "Varsity" :
 					/hs/i.test(match.division) ? "Varsity" :
+         			/\da/i.test(div) ? "Varsity" :
 					"Other"
 			}));
 		}
@@ -2334,6 +2335,7 @@ const dataFunctionsObject = {
 					/state tournament/i.test(match.division) ? "Varsity" :
 					/varsity/i.test(match.division) ? "Varsity" :
 					/hs/i.test(match.division) ? "Varsity" :
+         			/\da/i.test(div) ? "Varsity" :
 					"Other"
 			}));
 		}
@@ -2477,6 +2479,7 @@ const dataFunctionsObject = {
 					/state tournament/i.test(match.division) ? "Varsity" :
 					/varsity/i.test(match.division) ? "Varsity" :
 					/hs/i.test(match.division) ? "Varsity" :
+         			/\da/i.test(div) ? "Varsity" :
 					"Other"
 			}));
 
