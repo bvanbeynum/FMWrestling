@@ -2657,7 +2657,7 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 				return output;
 			}
 
-			const wrestlerEventsResponse = await client.get(`${ serverPath }/data/wrestlerevent?startdate=${prevSeasonStart}&enddate=${endDate}&wrestlerids=${ encodeURIComponent(JSON.stringify(wrestlerIdentifiers)) }`);
+			const wrestlerEventsResponse = await client.get(`${ serverPath }/data/wrestlerevent?wrestlerids=${ encodeURIComponent(JSON.stringify(wrestlerIdentifiers)) }`);
 			const rawWrestlerEvents = wrestlerEventsResponse.body.wrestlerEvents || [];
 
 			const eventsByWrestlerId = {};
@@ -2679,12 +2679,12 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 				searchTeams: wrestlerItem.searchTeams,
 				lastEvent: wrestlerItem.lastEvent,
 				lastWeightClass: wrestlerItem.lastWeightClass,
-				events: (eventsByWrestlerId[wrestlerItem.id] || []).filter(event => new Date(event.date) >= seasonStartWindow && new Date(event.date) <= seasonEndWindow)
+				events: eventsByWrestlerId[wrestlerItem.id] || []
 			}));
 
 			output.data.hasPreviousSeasonData = rawWrestlerEvents.some(event => {
 				const eventDate = new Date(event.date);
-				return eventDate <= new Date(`${prevSeasonEnd}T23:59:59`);
+				return eventDate >= new Date(`${prevSeasonStart}T00:00:00`) && eventDate <= new Date(`${prevSeasonEnd}T23:59:59`);
 			});
 		}
 		catch (error) {
