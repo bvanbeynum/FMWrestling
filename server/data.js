@@ -2455,6 +2455,31 @@ const dataFunctionsObject = {
 				updateFields.searchTeam = updateFields.team.toLowerCase();
 			}
 
+			updateFields.matches = updateFields.matches.map(match => ({
+				...match,
+				divisionConvert:
+					/^jv/i.test(match.division) ? "JV" :
+					/girl/i.test(match.division) ? "Girls" :
+					/women/i.test(match.division) ? "Girls" :
+					/woman/i.test(match.division) ? "Girls" :
+					/ms/i.test(match.division) ? "Middle School" :
+					/middle/i.test(match.division) ? "Middle School" :
+					/10U/i.test(match.division) ? "Middle School" :
+					/8U/i.test(match.division) ? "Middle School" :
+					/12U/i.test(match.division) ? "Middle School" :
+					/14U/i.test(match.division) ? "Middle School" :
+					/7[ &]*8/i.test(match.division) ? "Middle School" :
+					/9[ &]*10/i.test(match.division) ? "JV" :
+					/11[ &]*12/i.test(match.division) ? "Middle School" :
+					/jv/i.test(saveObject.name) ? "JV" :
+					/^hs/i.test(match.division) ? "Varsity" :
+					/high/i.test(match.division) ? "Varsity" :
+					/state tournament/i.test(match.division) ? "Varsity" :
+					/varsity/i.test(match.division) ? "Varsity" :
+					/hs/i.test(match.division) ? "Varsity" :
+					"Other"
+			}));
+
 			let filter = null;
 			if (id && mongoose.Types.ObjectId.isValid(id)) {
 				filter = { _id: id };
