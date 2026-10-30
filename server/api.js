@@ -2234,6 +2234,7 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 		const output = {};
 
 		try {
+			// Look up wrestlers referenced in the dual matches to enrich their SQL ID, rating, and deviation
 			if (eventRecord && Array.isArray(eventRecord.matches)) {
 				const wrestlerIds = eventRecord.matches
 					.filter(match => match.wrestlers && match.wrestlers.length > 0)
@@ -2244,25 +2245,33 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 					const wrestlerResponse = await client.get(`${ serverPath }/data/wrestler?ids=${ JSON.stringify(uniqueWrestlerIds) }`);
 					const dbWrestlers = (wrestlerResponse.body && wrestlerResponse.body.wrestlers) || [];
 
-					const sqlIdMap = new Map();
+					// Index fetched wrestler records by their MongoDB ID for quick lookup
+					const wrestlerMap = new Map();
 					for (const dbWrestler of dbWrestlers) {
-						const fetchedSqlId = dbWrestler.sqlId !== undefined ? dbWrestler.sqlId : dbWrestler.wrestlerSqlId;
-						if (dbWrestler.id && fetchedSqlId !== undefined) {
-							sqlIdMap.set(String(dbWrestler.id), fetchedSqlId);
+						if (dbWrestler.id) {
+							wrestlerMap.set(String(dbWrestler.id), dbWrestler);
 						}
-						if (dbWrestler._id && fetchedSqlId !== undefined) {
-							sqlIdMap.set(String(dbWrestler._id), fetchedSqlId);
+						if (dbWrestler._id) {
+							wrestlerMap.set(String(dbWrestler._id), dbWrestler);
 						}
 					}
 
+					// Populate wrestlerSqlId, rating, and deviation on each match's wrestler entry
 					for (const match of eventRecord.matches) {
 						if (Array.isArray(match.wrestlers)) {
 							for (const wrestler of match.wrestlers) {
 								const wrestlerId = wrestler.wrestlerId || wrestler.id;
-								if (wrestlerId && sqlIdMap.has(String(wrestlerId))) {
-									const sqlId = sqlIdMap.get(String(wrestlerId));
+								if (wrestlerId && wrestlerMap.has(String(wrestlerId))) {
+									const dbWrestler = wrestlerMap.get(String(wrestlerId));
+									const sqlId = dbWrestler.sqlId !== undefined ? dbWrestler.sqlId : dbWrestler.wrestlerSqlId;
 									if (sqlId !== undefined && sqlId !== null) {
 										wrestler.wrestlerSqlId = sqlId;
+									}
+									if (wrestler.rating === undefined && dbWrestler.rating !== undefined) {
+										wrestler.rating = dbWrestler.rating;
+									}
+									if (wrestler.deviation === undefined && dbWrestler.deviation !== undefined) {
+										wrestler.deviation = dbWrestler.deviation;
 									}
 								}
 							}
@@ -2271,7 +2280,147 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 				}
 			}
 
+			// Save the dual event record and resolve its event ID
 			const clientResponse = await client.post(`${ serverPath }/data/event`).send({ event: eventRecord }).then();
+			const dualId = (clientResponse.body && clientResponse.body.id) ? String(clientResponse.body.id) : (eventRecord && eventRecord.id ? String(eventRecord.id) : null);
+
+			// Synchronize corresponding records in the wrestlerevents collection
+			if (dualId) {
+				// Fetch existing wrestlerevent records linked to this dual via systemId
+				const existingEventsResponse = await client.get(`${ serverPath }/data/wrestlerevent?systemid=${ dualId }`);
+				const existingWrestlerEvents = (existingEventsResponse && existingEventsResponse.body && existingEventsResponse.body.wrestlerEvents)
+					? [...existingEventsResponse.body.wrestlerEvents]
+					: [];
+
+				// Also merge any existing wrestlerevent records linked via sqlId if present
+				if (eventRecord && eventRecord.sqlId) {
+					const existingBySqlResponse = await client.get(`${ serverPath }/data/wrestlerevent?sqlid=${ eventRecord.sqlId }`);
+					const sqlWrestlerEvents = (existingBySqlResponse && existingBySqlResponse.body && existingBySqlResponse.body.wrestlerEvents) || [];
+					const seenIds = new Set(existingWrestlerEvents.map(record => String(record.id || record._id)));
+					for (const sqlRecord of sqlWrestlerEvents) {
+						const recordId = String(sqlRecord.id || sqlRecord._id);
+						if (!seenIds.has(recordId)) {
+							existingWrestlerEvents.push(sqlRecord);
+							seenIds.add(recordId);
+						}
+					}
+				}
+
+				// Resolve event-level metadata, falling back to existing wrestlerevent values when not in the payload
+				const fallbackExisting = existingWrestlerEvents.length > 0 ? existingWrestlerEvents[0] : null;
+				const eventSqlId = (eventRecord && eventRecord.sqlId !== undefined && eventRecord.sqlId !== null)
+					? eventRecord.sqlId
+					: (fallbackExisting && fallbackExisting.sqlId !== undefined ? fallbackExisting.sqlId : null);
+				const eventState = (eventRecord && eventRecord.state) || (fallbackExisting && fallbackExisting.locationState) || "SC";
+				const eventSystem = (eventRecord && eventRecord.eventSystem) || (fallbackExisting && fallbackExisting.eventSystem) || "WrestlingPortal";
+				const eventDate = (eventRecord && eventRecord.date) || (fallbackExisting && fallbackExisting.date) || null;
+				const eventName = (eventRecord && eventRecord.name) || (fallbackExisting && fallbackExisting.name) || null;
+
+				// Build the target wrestlerevent payloads keyed by wrestlerId
+				const desiredByWrestlerId = new Map();
+				const matches = (eventRecord && Array.isArray(eventRecord.matches)) ? eventRecord.matches : [];
+
+				for (let matchIndex = 0; matchIndex < matches.length; matchIndex++) {
+					const match = matches[matchIndex];
+					if (!Array.isArray(match.wrestlers)) {
+						continue;
+					}
+
+					const matchDivision = match.division || (eventRecord && eventRecord.division) || "Varsity";
+
+					for (const wrestler of match.wrestlers) {
+						// Skip forfeits or unlinked wrestlers without a wrestlerId
+						const rawWrestlerId = wrestler.wrestlerId || wrestler.id;
+						if (!rawWrestlerId) {
+							continue;
+						}
+
+						const wrestlerIdStr = String(rawWrestlerId);
+						const opponent = match.wrestlers.find(item => item !== wrestler) || null;
+
+						// Map match details and individual scoring stats for this wrestler
+						const wrestlerMatch = {
+							sqlId: match.matchSqlId !== undefined ? match.matchSqlId : (match.sqlId !== undefined ? match.sqlId : null),
+							division: matchDivision,
+							weightClass: match.weightClass || null,
+							round: match.roundName !== undefined ? match.roundName : (match.round !== undefined ? match.round : null),
+							videoUrl: match.videoUrl || null,
+							vs: opponent ? (opponent.name || null) : null,
+							vsTeam: opponent ? (opponent.team || null) : null,
+							vsSqlId: opponent && opponent.wrestlerSqlId !== undefined ? opponent.wrestlerSqlId : null,
+							vsRating: opponent && opponent.rating !== undefined ? opponent.rating : null,
+							vsDeviation: opponent && opponent.deviation !== undefined ? opponent.deviation : null,
+							isWinner: Boolean(wrestler.isWinner),
+							winType: match.winType || null,
+							sort: match.sort !== undefined ? match.sort : matchIndex,
+							takedowns: Number(wrestler.takedowns) || 0,
+							escapes: Number(wrestler.escapes) || 0,
+							nearfalls: Number(wrestler.nearfalls) || 0,
+							reversals: Number(wrestler.reversals) || 0
+						};
+
+						// Create or append to the wrestler's wrestlerevent entry for this dual
+						if (!desiredByWrestlerId.has(wrestlerIdStr)) {
+							desiredByWrestlerId.set(wrestlerIdStr, {
+								wrestlerId: wrestlerIdStr,
+								wrestlerSqlId: wrestler.wrestlerSqlId !== undefined ? wrestler.wrestlerSqlId : null,
+								eventSystem: eventSystem,
+								systemId: dualId,
+								sqlId: eventSqlId,
+								date: eventDate,
+								name: eventName,
+								team: wrestler.team || null,
+								locationState: eventState,
+								seed: wrestler.seed !== undefined ? wrestler.seed : null,
+								division: matchDivision,
+								weightClass: match.weightClass || null,
+								matches: [wrestlerMatch]
+							});
+						}
+						else {
+							desiredByWrestlerId.get(wrestlerIdStr).matches.push(wrestlerMatch);
+						}
+					}
+				}
+
+				// Partition existing wrestlerevents into records to update vs records to delete (removed wrestlers or duplicates)
+				const existingByWrestlerId = new Map();
+				const recordsToDelete = [];
+
+				for (const existingRecord of existingWrestlerEvents) {
+					const existingWrestlerId = existingRecord.wrestlerId ? String(existingRecord.wrestlerId) : null;
+					if (existingWrestlerId && desiredByWrestlerId.has(existingWrestlerId) && !existingByWrestlerId.has(existingWrestlerId)) {
+						existingByWrestlerId.set(existingWrestlerId, existingRecord);
+					}
+					else {
+						recordsToDelete.push(existingRecord);
+					}
+				}
+
+				// Save new wrestlerevent records and update existing ones with latest scores and match fields
+				for (const [wrestlerIdStr, wrestlerEventPayload] of desiredByWrestlerId.entries()) {
+					if (existingByWrestlerId.has(wrestlerIdStr)) {
+						const existingRecord = existingByWrestlerId.get(wrestlerIdStr);
+						wrestlerEventPayload.id = existingRecord.id || existingRecord._id;
+						if (wrestlerEventPayload.sqlId === null && existingRecord.sqlId !== undefined && existingRecord.sqlId !== null) {
+							wrestlerEventPayload.sqlId = existingRecord.sqlId;
+						}
+						if (wrestlerEventPayload.wrestlerSqlId === null && existingRecord.wrestlerSqlId !== undefined && existingRecord.wrestlerSqlId !== null) {
+							wrestlerEventPayload.wrestlerSqlId = existingRecord.wrestlerSqlId;
+						}
+					}
+
+					await client.post(`${ serverPath }/data/wrestlerevent`).send({ wrestlerEvent: wrestlerEventPayload }).then();
+				}
+
+				// Delete wrestlerevent records for wrestlers no longer in the dual event
+				for (const recordToDelete of recordsToDelete) {
+					const deleteId = recordToDelete.id || recordToDelete._id;
+					if (deleteId) {
+						await client.delete(`${ serverPath }/data/wrestlerevent?id=${ deleteId }`).then();
+					}
+				}
+			}
 			
 			output.status = 200;
 			output.data = { dualId: clientResponse.body.id };

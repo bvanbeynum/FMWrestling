@@ -2265,6 +2265,10 @@ const dataFunctionsObject = {
 		if (userFilter.sqlId) {
 			filter.sqlId = userFilter.sqlId;
 		}
+		// Filter by the source event's system ID (e.g. MongoDB event ID for WrestlingPortal duals)
+		if (userFilter.systemId) {
+			filter.systemId = String(userFilter.systemId);
+		}
 		if (userFilter.wrestlerIds) {
 			filter.wrestlerId = { $in: userFilter.wrestlerIds };
 		}

@@ -763,6 +763,8 @@ router.get("/data/wrestlerevent", authInternal, async (request, response) => {
 			wrestlerId: request.query.wrestlerid,
 			wrestlerSqlId: request.query.wrestlersqlid ? parseInt(request.query.wrestlersqlid) : null,
 			sqlId: request.query.sqlid ? parseInt(request.query.sqlid) : null,
+			// Pass external/portal event system ID for filtering wrestler events by event
+			systemId: request.query.systemid,
 			wrestlerIds: request.query.wrestlerids ? JSON.parse(request.query.wrestlerids) : null,
 			team: request.query.team,
 			startDate: request.query.startdate,
