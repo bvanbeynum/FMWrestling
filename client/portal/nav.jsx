@@ -21,7 +21,7 @@ const Nav = props => {
 		else if (/(team|dualreport|teamweightclass|teamleaderboard)/i.test(window.location)) {
 			setSubExpanded("team");
 		}
-		else if (/(parentemail|aiemail)/i.test(window.location)) {
+		else if (/(parentemail|aiemail|weeklyemail)/i.test(window.location)) {
 			setSubExpanded("parent");
 		}
 		else if (/(newwrestler|duplicate)/i.test(window.location)) {
@@ -174,6 +174,10 @@ const Nav = props => {
 
 			<li role="button" onClick={ () => window.location = "/portal/aiemail.html" } className={`button sub ${ subExpanded === "parent" ? "active" : "" }`} aria-label="AI Email">
 				<span>AI Email</span>
+			</li>
+
+			<li role="button" onClick={ () => window.location = "/portal/weeklyemail.html" } className={`button sub ${ subExpanded === "parent" ? "active" : "" }`} aria-label="Weekly Email">
+				<span>Weekly Email</span>
 			</li>
 
 			</>

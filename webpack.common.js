@@ -22,6 +22,7 @@ export default {
 		teamleaderboard: "./client/portal/teamleaderboard.jsx",
 		parentemail: "./client/portal/parentemail.jsx",
 		aiemail: "./client/portal/aiemail.jsx",
+		weeklyemail: "./client/portal/weeklyemail.jsx",
 		wrestlerreport: "./client/portal/wrestlerreport.jsx",
 		newwrestler: "./client/portal/newwrestler.jsx",
 		duplicates: "./client/portal/duplicates.jsx",
@@ -37,6 +38,16 @@ export default {
 				viewport: "width=device-width, initial-scale=1"
 			},
 			chunks: [ "aiemail" ],
+			templateContent: "<html><body><div id='root'></div></body></html>"
+		}),
+		new HtmlWebpackPlugin({ 
+			filename: "./portal/weeklyemail.html",
+			title: "Fort Mill Wrestling - Weekly Email",
+			favicon: "./client/media/favicon.ico",
+			meta: {
+				viewport: "width=device-width, initial-scale=1"
+			},
+			chunks: [ "weeklyemail" ],
 			templateContent: "<html><body><div id='root'></div></body></html>"
 		}),
 		new HtmlWebpackPlugin({ 

@@ -5,7 +5,7 @@ import config from "./config.js";
 import { google } from "googleapis";
 import fs, { stat } from "fs";
 import path from "path";
-import { getDualWrestlers, isGeminiQuotaError, isGeminiOverloadedError, extractOpponentTeam, extractEventDivision, extractEmailBody, extractEmailAttachments } from "./middleware.js";
+import { getDualWrestlers, isGeminiQuotaError, isGeminiOverloadedError, extractOpponentTeam, extractEventDivision, extractEmailBody, extractEmailAttachments, getGoogleOAuthClient, calculatePercentile, buildHtmlTable, computeFortMillWeeklyHighlights } from "./middleware.js";
 import * as marked from './marked.cjs';
 const markedParse = marked.marked;
 
@@ -3827,6 +3827,1486 @@ Instructions for response:
 		}
 
 		return output;
+	},
+
+	weeklyEmailLoad: async (serverPath, requestedWeekEndDate) => {
+		const output = {
+			data: {
+				parentEmails: [],
+				googleConnected: false,
+				googleEmail: "",
+				selectedWeekEndDate: "",
+				loadDateFormatted: "",
+				loadDateLongFormatted: "",
+				coachStats: {
+					rivalry: [],
+					toughTournaments: [],
+					showdowns: [],
+					upsets: [],
+					heatMap: [],
+					breakout: [],
+					bonus: [],
+					forgedFire: [],
+					grinder: [],
+					ironman: []
+				},
+				parentStats: {
+					upcomingEvents: {
+						varsity: [],
+						jv: [],
+						ms: [],
+						girls: []
+					},
+					dualResults: [],
+					placers: [],
+					ironman: [],
+					forgedFire: [],
+					grinder: [],
+					breakout: [],
+					bonus: []
+				}
+			}
+		};
+
+		try {
+			const currentSystemDate = new Date();
+			const oneYearAgoLimit = new Date(
+				currentSystemDate.getFullYear() - 1,
+				currentSystemDate.getMonth(),
+				currentSystemDate.getDate(),
+				0, 0, 0
+			);
+
+			let referenceDate = currentSystemDate;
+			if (requestedWeekEndDate && /^\d{4}-\d{2}-\d{2}$/.test(String(requestedWeekEndDate).trim())) {
+				const dateSegments = String(requestedWeekEndDate).trim().split("-");
+				const parsedYear = parseInt(dateSegments[0], 10);
+				const parsedMonth = parseInt(dateSegments[1], 10) - 1;
+				const parsedDay = parseInt(dateSegments[2], 10);
+				const candidateDate = new Date(parsedYear, parsedMonth, parsedDay, 12, 0, 0);
+				if (!isNaN(candidateDate.getTime())) {
+					if (candidateDate < oneYearAgoLimit) {
+						referenceDate = oneYearAgoLimit;
+					} else if (candidateDate > currentSystemDate) {
+						referenceDate = currentSystemDate;
+					} else {
+						referenceDate = candidateDate;
+					}
+				}
+			}
+
+			const monthText = String(referenceDate.getMonth() + 1).padStart(2, "0");
+			const dayText = String(referenceDate.getDate()).padStart(2, "0");
+			const yearText = String(referenceDate.getFullYear());
+			output.data.selectedWeekEndDate = `${yearText}-${monthText}-${dayText}`;
+			output.data.loadDateFormatted = `${monthText}/${dayText}/${yearText}`;
+			output.data.loadDateLongFormatted = referenceDate.toLocaleDateString("en-US", {
+				weekday: "long",
+				year: "numeric",
+				month: "long",
+				day: "numeric"
+			});
+
+			// 1. Load Parent Email Contacts
+			try {
+				const parentEmailsResponse = await client.get(`${serverPath}/data/parentemail`);
+				output.data.parentEmails = parentEmailsResponse.body?.parentEmails || [];
+			} catch (contactError) {
+				console.warn("Error loading parent emails in weeklyEmailLoad:", contactError.message);
+			}
+
+			// 2. Check Google OAuth Status
+			try {
+				const configResponse = await client.get(`${serverPath}/data/serverconfig?key=googleAuth`);
+				const serverConfigs = configResponse.body && configResponse.body.serverConfigs;
+				if (serverConfigs && serverConfigs.length > 0 && serverConfigs[0].value && serverConfigs[0].value.refreshToken) {
+					output.data.googleConnected = true;
+					output.data.googleEmail = serverConfigs[0].value.googleEmail || "";
+				}
+			} catch (googleStatusError) {
+				console.warn("Error checking Google status in weeklyEmailLoad:", googleStatusError.message);
+			}
+
+			// 3. Date Ranges for Selected Week & Upcoming Week
+			const todayStart = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate(), 0, 0, 0);
+			const todayEnd = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate(), 23, 59, 59);
+			const sixDaysBeforeStart = new Date(todayStart.getTime() - 6 * 24 * 60 * 60 * 1000);
+			const sevenDaysBeforeStart = new Date(todayStart.getTime() - 7 * 24 * 60 * 60 * 1000);
+			const sevenDaysAheadEnd = new Date(todayEnd.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+			const formatIsoDateOnly = (targetDate) => {
+				const yearVal = targetDate.getFullYear();
+				const monthVal = String(targetDate.getMonth() + 1).padStart(2, "0");
+				const dayVal = String(targetDate.getDate()).padStart(2, "0");
+				return `${yearVal}-${monthVal}-${dayVal}`;
+			};
+
+			const formatSlashDate = (targetDate) => {
+				const parsedDate = new Date(targetDate);
+				const monthVal = String(parsedDate.getUTCMonth() + 1).padStart(2, "0");
+				const dayVal = String(parsedDate.getUTCDate()).padStart(2, "0");
+				const yearVal = parsedDate.getUTCFullYear();
+				return `${monthVal}/${dayVal}/${yearVal}`;
+			};
+
+			// 4. Load Team Schedule Events (Upcoming Events + Past 7 Days Duals)
+			let scheduleEvents = [];
+			try {
+				const scheduleResponse = await client.get(
+					`${serverPath}/data/teamevent?startdate=${formatIsoDateOnly(sevenDaysBeforeStart)}&enddate=${formatIsoDateOnly(sevenDaysAheadEnd)}`
+				);
+				scheduleEvents = scheduleResponse.body?.teamEvents || [];
+			} catch (scheduleError) {
+				console.warn("Error loading team schedule events in weeklyEmailLoad:", scheduleError.message);
+			}
+
+			const sortedUpcomingSchedule = [...scheduleEvents]
+				.filter(scheduleItem => {
+					if (!scheduleItem.date) return false;
+					const itemDate = new Date(scheduleItem.date);
+					return itemDate >= todayStart && itemDate <= sevenDaysAheadEnd;
+				})
+				.sort((firstEvent, secondEvent) => new Date(firstEvent.date) - new Date(secondEvent.date));
+
+			for (const upcomingItem of sortedUpcomingSchedule) {
+				const divisionRaw = (upcomingItem.division || "Varsity").trim();
+				const formattedEntry = {
+					date: formatSlashDate(upcomingItem.date),
+					time: upcomingItem.startTime || "",
+					event: upcomingItem.name || "",
+					location: upcomingItem.location || ""
+				};
+
+				if (/^jv/i.test(divisionRaw) || /junior/i.test(divisionRaw)) {
+					output.data.parentStats.upcomingEvents.jv.push(formattedEntry);
+				} else if (/middle|^ms/i.test(divisionRaw)) {
+					output.data.parentStats.upcomingEvents.ms.push(formattedEntry);
+				} else if (/girl/i.test(divisionRaw)) {
+					output.data.parentStats.upcomingEvents.girls.push(formattedEntry);
+				} else {
+					output.data.parentStats.upcomingEvents.varsity.push(formattedEntry);
+				}
+			}
+
+			// 5. Load Schools & Past Week Events
+			const [schoolsResponse, weekEventsResponse] = await Promise.all([
+				client.get(`${serverPath}/data/school`),
+				client.get(`${serverPath}/data/event?startdate=${formatIsoDateOnly(sevenDaysBeforeStart)}&enddate=${formatIsoDateOnly(todayEnd)}`)
+			]);
+
+			const allSchools = schoolsResponse.body?.schools || [];
+			const rawPastEvents = weekEventsResponse.body?.events || [];
+
+			// 6. Compute Dual Results from Past 7 Days
+			const dualScheduleEvents = scheduleEvents.filter(scheduleItem => {
+				if (scheduleItem.eventType !== "Dual" || !scheduleItem.date) return false;
+				const itemDate = new Date(scheduleItem.date);
+				return itemDate >= sevenDaysBeforeStart && itemDate <= todayEnd;
+			});
+
+			const dualEventIdsFromSchedule = dualScheduleEvents
+				.map(scheduleItem => scheduleItem.eventId ? String(scheduleItem.eventId) : null)
+				.filter(Boolean);
+
+			const existingEventById = {};
+			for (const eventRecord of rawPastEvents) {
+				const recordId = String(eventRecord.id || eventRecord._id || "");
+				if (recordId) {
+					existingEventById[recordId] = eventRecord;
+				}
+			}
+
+			const missingDualEventIds = dualEventIdsFromSchedule.filter(eventId => !existingEventById[eventId]);
+			if (missingDualEventIds.length > 0) {
+				try {
+					const extraDualEventsResponse = await client.get(
+						`${serverPath}/data/event?ids=${encodeURIComponent(JSON.stringify(missingDualEventIds))}`
+					);
+					const extraDualEvents = extraDualEventsResponse.body?.events || [];
+					for (const extraEvent of extraDualEvents) {
+						const extraId = String(extraEvent.id || extraEvent._id || "");
+						if (extraId) {
+							existingEventById[extraId] = extraEvent;
+						}
+					}
+				} catch (dualFetchError) {
+					console.warn("Error fetching linked dual events in weeklyEmailLoad:", dualFetchError.message);
+				}
+			}
+
+			const processedDualEventIds = new Set();
+			const candidateDualRecords = [];
+
+			for (const scheduleDual of dualScheduleEvents) {
+				const linkedEvent = scheduleDual.eventId ? existingEventById[String(scheduleDual.eventId)] : null;
+				if (linkedEvent && Array.isArray(linkedEvent.matches) && linkedEvent.matches.length > 0) {
+					const linkedId = String(linkedEvent.id || linkedEvent._id);
+					if (!processedDualEventIds.has(linkedId)) {
+						processedDualEventIds.add(linkedId);
+						candidateDualRecords.push({
+							eventRecord: linkedEvent,
+							divisionLabel: scheduleDual.division || extractEventDivision(linkedEvent)
+						});
+					}
+				}
+			}
+
+			for (const eventRecord of rawPastEvents) {
+				const recordId = String(eventRecord.id || eventRecord._id || "");
+				if (eventRecord.eventType === "Dual" && Array.isArray(eventRecord.matches) && eventRecord.matches.length > 0 && !processedDualEventIds.has(recordId)) {
+					processedDualEventIds.add(recordId);
+					candidateDualRecords.push({
+						eventRecord: eventRecord,
+						divisionLabel: extractEventDivision(eventRecord)
+					});
+				}
+			}
+
+			for (const dualEntry of candidateDualRecords) {
+				const dualEvent = dualEntry.eventRecord;
+				let fortMillScore = 0;
+				let opponentScore = 0;
+
+				for (const matchItem of dualEvent.matches || []) {
+					const winTypeUpper = (matchItem.winType || "").toUpperCase().trim();
+					let matchPoints = 3;
+					if (winTypeUpper === "DEC") matchPoints = 3;
+					else if (winTypeUpper === "MD") matchPoints = 4;
+					else if (winTypeUpper === "TF") matchPoints = 5;
+					else if (["F", "FALL", "PIN", "FF", "FOR", "FORFEIT", "DQ", "DEF", "DEFAULT"].includes(winTypeUpper)) matchPoints = 6;
+
+					const fortMillWrestler = (matchItem.wrestlers || []).find(wrestlerItem => /fort mill/i.test(wrestlerItem.team || ""));
+					const opponentWrestler = (matchItem.wrestlers || []).find(wrestlerItem => !/fort mill/i.test(wrestlerItem.team || ""));
+
+					if (fortMillWrestler && fortMillWrestler.isWinner) {
+						fortMillScore += matchPoints;
+					} else if (opponentWrestler && opponentWrestler.isWinner) {
+						opponentScore += matchPoints;
+					}
+				}
+
+				const opponentName = extractOpponentTeam(dualEvent);
+				if (opponentName && (fortMillScore > 0 || opponentScore > 0)) {
+					output.data.parentStats.dualResults.push({
+						team: dualEntry.divisionLabel || "Varsity",
+						eventDate: formatSlashDate(dualEvent.date),
+						opponentName: opponentName,
+						fmScore: fortMillScore,
+						oppScore: opponentScore
+					});
+				}
+			}
+
+			// 7. Build 5A School Lookup and Filter Past 6-Day Events for Weekly Stats
+			const fiveASchoolByLookupName = {};
+			let fortMillSchoolId = 71;
+
+			for (const schoolRecord of allSchools) {
+				if (/^fort mill$/i.test((schoolRecord.name || "").trim())) {
+					fortMillSchoolId = schoolRecord.sqlId || schoolRecord.id || 71;
+				}
+				if (schoolRecord.classification && /^5a/i.test(schoolRecord.classification.trim())) {
+					const schoolInfo = {
+						schoolId: schoolRecord.sqlId || schoolRecord.id,
+						schoolName: schoolRecord.name,
+						region: schoolRecord.region,
+						classification: schoolRecord.classification
+					};
+					if (schoolRecord.name) {
+						fiveASchoolByLookupName[schoolRecord.name.toLowerCase().trim()] = schoolInfo;
+					}
+					for (const aliasName of schoolRecord.lookupNames || []) {
+						if (aliasName) {
+							fiveASchoolByLookupName[aliasName.toLowerCase().trim()] = schoolInfo;
+						}
+					}
+				}
+			}
+
+			const weekEvents = rawPastEvents.filter(eventRecord => {
+				if (!eventRecord.date) return false;
+				const eventTime = new Date(eventRecord.date);
+				return eventTime >= sixDaysBeforeStart && eventTime <= todayEnd;
+			});
+
+			// 8. Fetch Fort Mill Wrestler Ratings History for Breakout Calculation
+			const ratingHistoryByWrestler = {};
+			try {
+				const fortMillWrestlersResponse = await client.get(`${serverPath}/data/wrestler?teamname=${encodeURIComponent("Fort Mill")}`);
+				const fortMillWrestlers = fortMillWrestlersResponse.body?.wrestlers || [];
+				const fortMillWrestlerIds = fortMillWrestlers.map(wrestlerRecord => wrestlerRecord.id).filter(Boolean);
+
+				for (const wrestlerRecord of fortMillWrestlers) {
+					if (Array.isArray(wrestlerRecord.ratingHistory) && wrestlerRecord.ratingHistory.length > 0) {
+						const sortedHistory = [...wrestlerRecord.ratingHistory].sort(
+							(firstItem, secondItem) => new Date(secondItem.periodEndDate) - new Date(firstItem.periodEndDate)
+						);
+						if (wrestlerRecord.sqlId) {
+							ratingHistoryByWrestler[String(wrestlerRecord.sqlId)] = sortedHistory;
+						}
+						if (wrestlerRecord.id) {
+							ratingHistoryByWrestler[String(wrestlerRecord.id)] = sortedHistory;
+						}
+					}
+				}
+
+				if (fortMillWrestlerIds.length > 0) {
+					const ratingsResponse = await client.get(
+						`${serverPath}/data/wrestlerrating?wrestlerids=${encodeURIComponent(JSON.stringify(fortMillWrestlerIds))}`
+					);
+					const fetchedRatings = ratingsResponse.body?.wrestlerRatings || [];
+					const groupedRatings = {};
+					for (const ratingItem of fetchedRatings) {
+						const sqlKey = ratingItem.wrestlerSqlId ? String(ratingItem.wrestlerSqlId) : null;
+						const mongoKey = ratingItem.wrestlerId ? String(ratingItem.wrestlerId) : null;
+						if (sqlKey) {
+							if (!groupedRatings[sqlKey]) groupedRatings[sqlKey] = [];
+							groupedRatings[sqlKey].push(ratingItem);
+						}
+						if (mongoKey) {
+							if (!groupedRatings[mongoKey]) groupedRatings[mongoKey] = [];
+							groupedRatings[mongoKey].push(ratingItem);
+						}
+					}
+					for (const [wrestlerKey, ratingsGroup] of Object.entries(groupedRatings)) {
+						ratingsGroup.sort((firstItem, secondItem) => new Date(secondItem.periodEndDate) - new Date(firstItem.periodEndDate));
+						ratingHistoryByWrestler[wrestlerKey] = ratingsGroup;
+					}
+				}
+			} catch (ratingHistoryError) {
+				console.warn("Error loading Fort Mill rating history in weeklyEmailLoad:", ratingHistoryError.message);
+			}
+
+			// 9. Build EventRatings Records (using match.divisionConvert directly)
+			const allEventRatingEntries = [];
+			const weekEventSchools = [];
+
+			for (const eventRecord of weekEvents) {
+				const eventIdentifier = eventRecord.sqlId || String(eventRecord.id || eventRecord._id);
+				const eventMatches = eventRecord.matches || [];
+
+				const participatingFiveASchools = new Map();
+				for (const matchItem of eventMatches) {
+					for (const wrestlerItem of matchItem.wrestlers || []) {
+						const teamLower = (wrestlerItem.team || "").toLowerCase().trim();
+						if (teamLower && fiveASchoolByLookupName[teamLower]) {
+							const matchedSchool = fiveASchoolByLookupName[teamLower];
+							const schoolTeamKey = `${matchedSchool.schoolId}|${teamLower}`;
+							if (!participatingFiveASchools.has(schoolTeamKey)) {
+								participatingFiveASchools.set(schoolTeamKey, {
+									eventId: eventIdentifier,
+									eventDate: eventRecord.date,
+									eventName: eventRecord.name,
+									schoolId: matchedSchool.schoolId,
+									schoolName: matchedSchool.schoolName,
+									region: matchedSchool.region,
+									eventSchoolName: wrestlerItem.team.trim()
+								});
+							}
+						}
+					}
+				}
+
+				if (participatingFiveASchools.size === 0) {
+					continue;
+				}
+
+				for (const schoolParticipation of participatingFiveASchools.values()) {
+					weekEventSchools.push(schoolParticipation);
+				}
+
+				for (let matchIndex = 0; matchIndex < eventMatches.length; matchIndex++) {
+					const matchItem = eventMatches[matchIndex];
+					const matchKey = matchItem.matchSqlId ? String(matchItem.matchSqlId) : `${eventIdentifier}_${matchIndex}`;
+					const divisionConverted = matchItem.divisionConvert || matchItem.division || "Varsity";
+					const matchWrestlers = matchItem.wrestlers || [];
+
+					for (const wrestlerItem of matchWrestlers) {
+						const teamLower = (wrestlerItem.team || "").toLowerCase().trim();
+						const matchedSchool = fiveASchoolByLookupName[teamLower];
+						if (!matchedSchool) continue;
+
+						const opponentWrestler = matchWrestlers.find(candidate => candidate !== wrestlerItem) || null;
+						const wrestlerKey = String(wrestlerItem.wrestlerSqlId || wrestlerItem.wrestlerId || wrestlerItem.name || "");
+
+						let resolvedRating = wrestlerItem.rating !== undefined && wrestlerItem.rating !== null ? Number(wrestlerItem.rating) : null;
+						let resolvedPeriodEndDate = eventRecord.date;
+
+						const wrestlerHistory = ratingHistoryByWrestler[wrestlerKey];
+						if (wrestlerHistory && wrestlerHistory.length > 0) {
+							const eventTimestamp = new Date(eventRecord.date).getTime();
+							const matchingPeriodEntry = wrestlerHistory.find(historyEntry => {
+								const periodEndTimestamp = new Date(historyEntry.periodEndDate).getTime();
+								const periodStartTimestamp = periodEndTimestamp - 6 * 24 * 60 * 60 * 1000;
+								return eventTimestamp >= periodStartTimestamp && eventTimestamp <= periodEndTimestamp;
+							});
+							if (matchingPeriodEntry) {
+								resolvedRating = Number(matchingPeriodEntry.rating);
+								resolvedPeriodEndDate = matchingPeriodEntry.periodEndDate;
+							}
+						}
+
+						allEventRatingEntries.push({
+							eventId: eventIdentifier,
+							eventDate: eventRecord.date,
+							eventName: eventRecord.name || "",
+							schoolId: matchedSchool.schoolId,
+							schoolName: matchedSchool.schoolName,
+							region: matchedSchool.region,
+							isFortMill: matchedSchool.schoolId === fortMillSchoolId || /^fort mill$/i.test(matchedSchool.schoolName),
+							matchKey: matchKey,
+							division: divisionConverted,
+							weightClass: (matchItem.weightClass || "").replace(/lbs/i, "").trim(),
+							roundName: matchItem.roundName || "",
+							winType: matchItem.winType || "",
+							wrestlerName: wrestlerItem.name || "",
+							wrestlerId: wrestlerItem.wrestlerId || null,
+							wrestlerSqlId: wrestlerItem.wrestlerSqlId || null,
+							wrestlerKey: wrestlerKey,
+							teamName: wrestlerItem.team || "",
+							isWinner: Boolean(wrestlerItem.isWinner),
+							rating: resolvedRating,
+							periodEndDate: resolvedPeriodEndDate,
+							opponentName: opponentWrestler ? (opponentWrestler.name || "") : "",
+							opponentTeam: opponentWrestler ? (opponentWrestler.team || "") : "",
+							opponentRating: opponentWrestler && opponentWrestler.rating !== undefined && opponentWrestler.rating !== null
+								? Number(opponentWrestler.rating)
+								: null,
+							opponentKey: opponentWrestler
+								? String(opponentWrestler.wrestlerSqlId || opponentWrestler.wrestlerId || opponentWrestler.name || "")
+								: ""
+						});
+					}
+				}
+			}
+
+			// Coach Weekly filters EventRatings to Varsity ('HS') and 'JV'
+			const coachEventRatingEntries = allEventRatingEntries.filter(
+				entryItem => entryItem.division === "Varsity" || entryItem.division === "HS" || entryItem.division === "JV"
+			);
+
+			// 10. Coach Stat: Rivalry Watch (5A Region < 5)
+			const rivalrySchoolEvents = {};
+			for (const entryItem of coachEventRatingEntries) {
+				const regionNumber = parseInt(entryItem.region, 10);
+				if (isNaN(regionNumber) || regionNumber >= 5) continue;
+
+				const schoolKey = String(entryItem.schoolId);
+				if (!rivalrySchoolEvents[schoolKey]) {
+					rivalrySchoolEvents[schoolKey] = {
+						region: regionNumber,
+						schoolId: entryItem.schoolId,
+						schoolName: entryItem.schoolName,
+						eventsByName: {},
+						wrestlersByKey: {}
+					};
+				}
+				if (!rivalrySchoolEvents[schoolKey].eventsByName[entryItem.eventName]) {
+					rivalrySchoolEvents[schoolKey].eventsByName[entryItem.eventName] = new Set();
+				}
+				rivalrySchoolEvents[schoolKey].eventsByName[entryItem.eventName].add(entryItem.wrestlerKey);
+
+				if (entryItem.rating !== null && entryItem.rating !== undefined) {
+					const existingWrestler = rivalrySchoolEvents[schoolKey].wrestlersByKey[entryItem.wrestlerKey];
+					if (!existingWrestler || entryItem.rating > existingWrestler.rating) {
+						rivalrySchoolEvents[schoolKey].wrestlersByKey[entryItem.wrestlerKey] = {
+							wrestlerName: entryItem.wrestlerName,
+							weightClass: entryItem.weightClass,
+							rating: entryItem.rating
+						};
+					}
+				}
+			}
+
+			output.data.coachStats.rivalry = Object.values(rivalrySchoolEvents)
+				.sort((firstSchool, secondSchool) => {
+					if (firstSchool.region !== secondSchool.region) return firstSchool.region - secondSchool.region;
+					return firstSchool.schoolName.localeCompare(secondSchool.schoolName);
+				})
+				.map(schoolEntry => {
+					const formattedEvents = Object.entries(schoolEntry.eventsByName)
+						.map(([eventName, wrestlersInEvent]) => ({
+							eventName: eventName,
+							wrestlerCount: wrestlersInEvent.size
+						}))
+						.sort((firstEvent, secondEvent) => secondEvent.wrestlerCount - firstEvent.wrestlerCount)
+						.map(eventItem => `${eventItem.eventName} (${eventItem.wrestlerCount} wrestlers)`)
+						.join(", ");
+
+					const topWrestlersSummary = Object.values(schoolEntry.wrestlersByKey)
+						.sort((firstWrestler, secondWrestler) => secondWrestler.rating - firstWrestler.rating)
+						.slice(0, 5)
+						.map(wrestlerItem => `${wrestlerItem.wrestlerName} (${wrestlerItem.weightClass})`)
+						.join(", ");
+
+					return {
+						region: schoolEntry.region,
+						school: schoolEntry.schoolName,
+						details: `* Events: ${formattedEvents}\n\n* Top Wrestlers: ${topWrestlersSummary}`
+					};
+				});
+
+			// 11. Coach Stat: Toughest Tournaments (Top 5 by 90th Percentile Rating)
+			const entriesByEventId = {};
+			for (const entryItem of coachEventRatingEntries) {
+				const eventKey = String(entryItem.eventId);
+				if (!entriesByEventId[eventKey]) {
+					entriesByEventId[eventKey] = {
+						eventId: entryItem.eventId,
+						eventName: entryItem.eventName,
+						ratings: [],
+						distinctWrestlers: new Set(),
+						wrestlersByKey: {}
+					};
+				}
+				entriesByEventId[eventKey].distinctWrestlers.add(entryItem.wrestlerKey);
+				if (entryItem.rating !== null && entryItem.rating !== undefined) {
+					entriesByEventId[eventKey].ratings.push(entryItem.rating);
+					const existingWrestler = entriesByEventId[eventKey].wrestlersByKey[entryItem.wrestlerKey];
+					if (!existingWrestler || entryItem.rating > existingWrestler.rating) {
+						entriesByEventId[eventKey].wrestlersByKey[entryItem.wrestlerKey] = {
+							wrestlerName: entryItem.wrestlerName,
+							rating: entryItem.rating
+						};
+					}
+				}
+			}
+
+			output.data.coachStats.toughTournaments = Object.values(entriesByEventId)
+				.filter(eventGroup => eventGroup.ratings.length > 0)
+				.map(eventGroup => {
+					const percentile90 = calculatePercentile(eventGroup.ratings, 0.9);
+					const topThreeWrestlers = Object.values(eventGroup.wrestlersByKey)
+						.sort((firstWrestler, secondWrestler) => secondWrestler.rating - firstWrestler.rating)
+						.slice(0, 3)
+						.map(wrestlerItem => `- ${wrestlerItem.wrestlerName}`)
+						.join("\n");
+
+					return {
+						event: eventGroup.eventName,
+						wrestlers: eventGroup.distinctWrestlers.size,
+						topWrestlers: topThreeWrestlers,
+						percentile90: percentile90
+					};
+				})
+				.sort((firstTournament, secondTournament) => secondTournament.percentile90 - firstTournament.percentile90)
+				.slice(0, 5)
+				.map(({ percentile90, ...tournamentRow }) => tournamentRow);
+
+			// 12. Coach Stats: Showdown Matches & Upset Matches
+			const uniqueCoachMatchesByKey = {};
+			for (const entryItem of coachEventRatingEntries) {
+				if (!entryItem.isWinner) continue;
+				if (entryItem.rating === null || entryItem.rating === undefined) continue;
+				if (entryItem.opponentRating === null || entryItem.opponentRating === undefined) continue;
+				if (!entryItem.opponentName) continue;
+
+				if (!uniqueCoachMatchesByKey[entryItem.matchKey]) {
+					uniqueCoachMatchesByKey[entryItem.matchKey] = {
+						matchKey: entryItem.matchKey,
+						eventId: entryItem.eventId,
+						eventName: entryItem.eventName,
+						roundName: entryItem.roundName,
+						weightClass: entryItem.weightClass,
+						winType: entryItem.winType,
+						winnerName: entryItem.wrestlerName,
+						winnerTeam: entryItem.teamName,
+						winnerRating: entryItem.rating,
+						winnerKey: entryItem.wrestlerKey,
+						loserName: entryItem.opponentName,
+						loserTeam: entryItem.opponentTeam,
+						loserRating: entryItem.opponentRating,
+						loserKey: entryItem.opponentKey,
+						ratingSort: entryItem.rating + entryItem.opponentRating,
+						ratingDiffAbs: Math.abs(entryItem.rating - entryItem.opponentRating),
+						upsetDiff: entryItem.opponentRating - entryItem.rating
+					};
+				}
+			}
+
+			const allCoachMatchDetails = Object.values(uniqueCoachMatchesByKey);
+
+			// Showdowns: ToughestMatchRank = 1 per wrestler (ordered by RatingDiff asc)
+			const matchesByParticipant = {};
+			for (const matchDetail of allCoachMatchDetails) {
+				if (matchDetail.winnerKey) {
+					if (!matchesByParticipant[matchDetail.winnerKey]) matchesByParticipant[matchDetail.winnerKey] = [];
+					matchesByParticipant[matchDetail.winnerKey].push(matchDetail);
+				}
+				if (matchDetail.loserKey) {
+					if (!matchesByParticipant[matchDetail.loserKey]) matchesByParticipant[matchDetail.loserKey] = [];
+					matchesByParticipant[matchDetail.loserKey].push(matchDetail);
+				}
+			}
+
+			const toughestMatchKeys = new Set();
+			for (const participantMatches of Object.values(matchesByParticipant)) {
+				participantMatches.sort((firstMatch, secondMatch) => firstMatch.ratingDiffAbs - secondMatch.ratingDiffAbs);
+				if (participantMatches.length > 0) {
+					toughestMatchKeys.add(participantMatches[0].matchKey);
+				}
+			}
+
+			output.data.coachStats.showdowns = allCoachMatchDetails
+				.filter(matchDetail => toughestMatchKeys.has(matchDetail.matchKey))
+				.sort((firstMatch, secondMatch) => {
+					if (secondMatch.ratingSort !== firstMatch.ratingSort) return secondMatch.ratingSort - firstMatch.ratingSort;
+					return firstMatch.ratingDiffAbs - secondMatch.ratingDiffAbs;
+				})
+				.slice(0, 10)
+				.map((matchDetail, indexPosition) => ({
+					rank: indexPosition + 1,
+					weightClass: matchDetail.weightClass,
+					round: matchDetail.roundName,
+					winner: `${matchDetail.winnerName} (${matchDetail.winnerTeam})`,
+					loser: `${matchDetail.loserName} (${matchDetail.loserTeam})`,
+					winType: matchDetail.winType,
+					event: matchDetail.eventName
+				}));
+
+			// Upsets: UpsetMatches where LoserRating - WinnerRating > 0, BiggestUpsetRank = 1 per loser
+			const upsetMatchesByLoser = {};
+			for (const matchDetail of allCoachMatchDetails) {
+				if (matchDetail.upsetDiff <= 0 || !matchDetail.loserKey) continue;
+				if (!upsetMatchesByLoser[matchDetail.loserKey]) {
+					upsetMatchesByLoser[matchDetail.loserKey] = [];
+				}
+				upsetMatchesByLoser[matchDetail.loserKey].push(matchDetail);
+			}
+
+			const biggestUpsetsPerLoser = [];
+			for (const loserMatches of Object.values(upsetMatchesByLoser)) {
+				loserMatches.sort((firstMatch, secondMatch) => secondMatch.upsetDiff - firstMatch.upsetDiff);
+				if (loserMatches.length > 0) {
+					biggestUpsetsPerLoser.push(loserMatches[0]);
+				}
+			}
+
+			output.data.coachStats.upsets = biggestUpsetsPerLoser
+				.sort((firstMatch, secondMatch) => secondMatch.loserRating - firstMatch.loserRating)
+				.slice(0, 10)
+				.map((matchDetail, indexPosition) => ({
+					rank: indexPosition + 1,
+					weightClass: matchDetail.weightClass,
+					round: matchDetail.roundName,
+					winner: `${matchDetail.winnerName} (${matchDetail.winnerTeam})`,
+					loser: `${matchDetail.loserName} (${matchDetail.loserTeam})`,
+					winType: matchDetail.winType,
+					event: matchDetail.eventName
+				}));
+
+			// 13. Coach Stat: Weight Class Heat Map
+			const standardWeightClasses = new Set(["106", "113", "120", "126", "132", "138", "144", "150", "157", "165", "175", "190", "215", "285"]);
+			const entriesByWeightClass = {};
+
+			for (const entryItem of coachEventRatingEntries) {
+				if (!standardWeightClasses.has(entryItem.weightClass)) continue;
+				if (!entriesByWeightClass[entryItem.weightClass]) {
+					entriesByWeightClass[entryItem.weightClass] = {
+						weightClass: entryItem.weightClass,
+						distinctWrestlers: new Set(),
+						ratings: []
+					};
+				}
+				entriesByWeightClass[entryItem.weightClass].distinctWrestlers.add(entryItem.wrestlerKey);
+				if (entryItem.rating !== null && entryItem.rating !== undefined) {
+					entriesByWeightClass[entryItem.weightClass].ratings.push(entryItem.rating);
+				}
+			}
+
+			const sortedHeatMapGroups = Object.values(entriesByWeightClass)
+				.filter(weightGroup => weightGroup.ratings.length > 0)
+				.map(weightGroup => {
+					const percentile80 = calculatePercentile(weightGroup.ratings, 0.8);
+					return {
+						weightClass: weightGroup.weightClass,
+						wrestlers: weightGroup.distinctWrestlers.size,
+						topRating: Math.round(percentile80),
+						rawPercentile: percentile80
+					};
+				})
+				.sort((firstWeight, secondWeight) => secondWeight.rawPercentile - firstWeight.rawPercentile);
+
+			let currentHeatMapRank = 1;
+			output.data.coachStats.heatMap = sortedHeatMapGroups.map((weightGroup, groupIndex) => {
+				if (groupIndex > 0 && weightGroup.rawPercentile < sortedHeatMapGroups[groupIndex - 1].rawPercentile) {
+					currentHeatMapRank = groupIndex + 1;
+				}
+				return {
+					rank: currentHeatMapRank,
+					weightClass: weightGroup.weightClass,
+					wrestlers: weightGroup.wrestlers,
+					topRating: weightGroup.topRating
+				};
+			});
+
+			// 14. Coach & Parent Individual Fort Mill Highlights
+			const coachFortMillMatches = coachEventRatingEntries
+				.filter(entryItem => entryItem.isFortMill)
+				.map(entryItem => ({
+					...entryItem,
+					division: entryItem.division === "Varsity" ? "HS" : entryItem.division
+				}));
+
+			const coachHighlights = computeFortMillWeeklyHighlights(coachFortMillMatches, ratingHistoryByWrestler, true);
+			output.data.coachStats.ironman = coachHighlights.ironman;
+			output.data.coachStats.bonus = coachHighlights.bonus;
+			output.data.coachStats.forgedFire = coachHighlights.forgedFire;
+			output.data.coachStats.grinder = coachHighlights.grinder;
+			output.data.coachStats.breakout = coachHighlights.breakout;
+
+			const parentFortMillMatches = allEventRatingEntries.filter(entryItem => entryItem.isFortMill);
+			const parentHighlights = computeFortMillWeeklyHighlights(parentFortMillMatches, ratingHistoryByWrestler, false);
+			output.data.parentStats.ironman = parentHighlights.ironman;
+			output.data.parentStats.bonus = parentHighlights.bonus;
+			output.data.parentStats.forgedFire = parentHighlights.forgedFire;
+			output.data.parentStats.grinder = parentHighlights.grinder;
+			output.data.parentStats.breakout = parentHighlights.breakout;
+
+			// 15. Parent Stat: Placers
+			const placersRows = [];
+			const seenPlacerKeys = new Set();
+			for (const entryItem of parentFortMillMatches) {
+				const roundLower = (entryItem.roundName || "").toLowerCase().trim();
+				let placeLabel = null;
+				if (roundLower.startsWith("1st place") || roundLower === "finals") {
+					placeLabel = entryItem.isWinner ? "1st Place" : "2nd Place";
+				} else if (roundLower.startsWith("3rd place")) {
+					placeLabel = entryItem.isWinner ? "3rd Place" : "4th Place";
+				} else if (roundLower.startsWith("5th place")) {
+					placeLabel = entryItem.isWinner ? "5th Place" : "6th Place";
+				} else if (roundLower.startsWith("7th place")) {
+					placeLabel = entryItem.isWinner ? "7th Place" : "8th Place";
+				}
+
+				if (placeLabel) {
+					const dedupeKey = `${entryItem.division}|${placeLabel}|${entryItem.wrestlerName}`;
+					if (!seenPlacerKeys.has(dedupeKey)) {
+						seenPlacerKeys.add(dedupeKey);
+						placersRows.push({
+							division: entryItem.division,
+							place: placeLabel,
+							wrestler: entryItem.wrestlerName
+						});
+					}
+				}
+			}
+
+			placersRows.sort((firstPlacer, secondPlacer) => {
+				if (firstPlacer.division !== secondPlacer.division) return firstPlacer.division.localeCompare(secondPlacer.division);
+				if (firstPlacer.place !== secondPlacer.place) return firstPlacer.place.localeCompare(secondPlacer.place);
+				return firstPlacer.wrestler.localeCompare(secondPlacer.wrestler);
+			});
+			output.data.parentStats.placers = placersRows;
+
+			output.status = 200;
+		} catch (error) {
+			output.status = 560;
+			output.error = error.message;
+		}
+
+		return output;
+	},
+
+	weeklyEmailGenerate: async (audienceType, statsData, additionalInputs = []) => {
+		const geminiApiKey = config.geminiAPIKey;
+		if (!geminiApiKey) {
+			return { error: "GEMINI_API_KEY not configured", status: 500 };
+		}
+
+		const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
+		const validAdditionalSections = (additionalInputs || []).filter(
+			inputItem => (inputItem.title && inputItem.title.trim()) || (inputItem.content && inputItem.content.trim())
+		);
+
+		let formattedAdditionalPrompt = "";
+		if (validAdditionalSections.length > 0) {
+			formattedAdditionalPrompt = validAdditionalSections
+				.map(inputItem => {
+					const headerTitle = (inputItem.title || "").trim();
+					const bodyText = (inputItem.content || "").trim();
+					return headerTitle ? `${headerTitle}\n${bodyText}` : bodyText;
+				})
+				.join("\n---\n");
+		}
+
+		let promptText = "";
+		let defaultSubject = "";
+		let activeTemplateCss = "";
+
+		if (audienceType === "coach") {
+			const coachStats = (statsData && statsData.coachStats) ? statsData.coachStats : (statsData || {});
+			const loadDateFormatted = (statsData && statsData.loadDateFormatted) || new Date().toLocaleDateString("en-US");
+			defaultSubject = `Weekly Email Analysis - ${loadDateFormatted}`;
+
+			const coachTemplateCss = `body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+	line-height: 1.6;
+	color: #333;
+	margin: 0;
+	padding: 0;
+}
+.container {
+	width: 100%;
+	max-width: 800px;
+	margin: 0 auto;
+	border: 1px solid #ddd;
+	border-radius: 8px;
+	padding: 24px;
+	background-color: #ffffff;
+	box-sizing: border-box;
+}
+h2 {
+	color: #1a237e;
+	border-bottom: 2px solid #eeeeee;
+	padding-bottom: 8px;
+}
+h3 {
+	color: #0d47a1;
+	margin-top: 30px;
+}
+p {
+	margin-bottom: 15px;
+}
+.table-responsive-wrapper {
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
+}
+table {
+	width: 100%;
+	border-collapse: collapse;
+	margin-bottom: 20px;
+	border-radius: 6px;
+	overflow: hidden;
+	box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+	min-width: 500px; 
+}
+th, td {
+	border: 1px solid #ddd;
+	padding: 10px;
+	text-align: left;
+}
+th {
+	background-color: #4a5568;
+	color: #ffffff;
+	font-weight: bold;
+	white-space: nowrap;
+}
+tr:nth-child(even) {
+	background-color: #f7fafc;
+}
+tr:hover {
+	background-color: #edf2f7;
+}
+.heatmap-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+	gap: 8px;
+	margin-bottom: 20px;
+}
+.heatmap-cell {
+	border: 1px solid #ddd;
+	border-radius: 6px;
+	padding: 12px 8px;
+	text-align: center;
+	color: #2D3748;
+	box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+	font-weight: 500;
+}
+.heatmap-cell-wc {
+	font-size: 18px;
+	font-weight: bold;
+	display: block;
+}
+.heatmap-cell-val {
+	font-size: 14px;
+	display: block;
+	margin-top: 4px;
+}
+.legend {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	font-size: 13px;
+	color: #555;
+	margin-bottom: 15px;
+	padding: 8px 12px;
+	background-color: #f7fafc;
+	border-radius: 6px;
+}
+.legend-item {
+	display: flex;
+	align-items: center;
+}
+.legend-box {
+	display: inline-block;
+	width: 15px;
+	height: 15px;
+	border: 1px solid #ccc;
+	margin-right: 6px;
+	border-radius: 3px;
+}
+.region-header th {
+	background-color: #edf2f7;
+	color: #1a237e;
+	text-align: left;
+	font-weight: bold;
+	padding: 10px;
+	white-space: nowrap;
+}
+.header {
+	font-size: 24px;
+	font-weight: bold;
+	color: #1a237e;
+	margin-bottom: 10px;
+}
+.subject {
+	font-size: 18px;
+	font-weight: 600;
+	color: #555;
+	margin-bottom: 20px;
+}
+.footer {
+	margin-top: 30px;
+	font-size: 14px;
+	color: #777;
+}
+@media (max-width: 640px) {
+	body {
+		-webkit-text-size-adjust: 100%;
+	}
+	.container {
+		padding: 15px;
+		border: none;
+		border-radius: 0;
+	}
+	.heatmap-grid {
+		grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+		gap: 6px;
+	}
+	.legend {
+		flex-direction: column;
+		gap: 8px;
+		align-items: flex-start;
+	}
+	.region-header th {
+		white-space: normal;
+	}
+	table {
+		min-width: 450px;
+	}
+}`;
+			activeTemplateCss = coachTemplateCss;
+
+			const rivalryHtml = buildHtmlTable(coachStats.rivalry || [], [
+				{ key: "region", label: "Region" },
+				{ key: "school", label: "school" },
+				{ key: "details", label: "" }
+			]);
+			const toughTournamentHtml = buildHtmlTable(coachStats.toughTournaments || [], [
+				{ key: "event", label: "Event" },
+				{ key: "wrestlers", label: "Wrestlers" },
+				{ key: "topWrestlers", label: "Top Wrestlers" }
+			]);
+			const showdownsHtml = buildHtmlTable(coachStats.showdowns || [], [
+				{ key: "rank", label: "Rank" },
+				{ key: "weightClass", label: "Weight Class" },
+				{ key: "round", label: "Round" },
+				{ key: "winner", label: "Winner" },
+				{ key: "loser", label: "Loser" },
+				{ key: "winType", label: "WinType" },
+				{ key: "event", label: "Event" }
+			]);
+			const upsetsHtml = buildHtmlTable(coachStats.upsets || [], [
+				{ key: "rank", label: "Rank" },
+				{ key: "weightClass", label: "Weight Class" },
+				{ key: "round", label: "Round" },
+				{ key: "winner", label: "Winner" },
+				{ key: "loser", label: "Loser" },
+				{ key: "winType", label: "WinType" },
+				{ key: "event", label: "Event" }
+			]);
+			const heatMapHtml = buildHtmlTable(coachStats.heatMap || [], [
+				{ key: "rank", label: "Rank" },
+				{ key: "weightClass", label: "Weight Class" },
+				{ key: "wrestlers", label: "Wrestlers" },
+				{ key: "topRating", label: "Top Rating" }
+			]);
+			const breakoutHtml = buildHtmlTable(coachStats.breakout || [], [
+				{ key: "division", label: "Division" },
+				{ key: "rank", label: "Rank" },
+				{ key: "wrestler", label: "Wrestler" },
+				{ key: "keyWins", label: "Key Wins" }
+			]);
+			const bonusHtml = buildHtmlTable(coachStats.bonus || [], [
+				{ key: "division", label: "Division" },
+				{ key: "rank", label: "Rank" },
+				{ key: "wrestler", label: "Wrestler" },
+				{ key: "bonusPoints", label: "Bonus Points" }
+			]);
+			const forgedHtml = buildHtmlTable(coachStats.forgedFire || [], [
+				{ key: "division", label: "Division" },
+				{ key: "rank", label: "Rank" },
+				{ key: "wrestler", label: "Wrestler" },
+				{ key: "opponents", label: "Opponents" }
+			]);
+			const grinderHtml = buildHtmlTable(coachStats.grinder || [], [
+				{ key: "division", label: "Division" },
+				{ key: "rank", label: "Rank" },
+				{ key: "wrestler", label: "Wrestler" },
+				{ key: "consiMatches", label: "Consi Matches" }
+			]);
+			const ironmanHtml = buildHtmlTable(coachStats.ironman || [], [
+				{ key: "division", label: "Division" },
+				{ key: "rank", label: "Rank" },
+				{ key: "wrestler", label: "Wrestler" },
+				{ key: "matches", label: "Matches" }
+			]);
+
+			promptText = `
+You are an analyst for the coach of the fort mill high school wrestling team, the Fort Mill Yellow Jackets. Your task is to analyze the results from the past week and provide insights for the coach using the data provided.
+
+Here are your instructions:
+- Create a well formatted email using HTML.
+- The entire response should be a single HTML document.
+- In the HTML <head>, you must include a <style> tag and copy the contents of the **Email CSS** section into it. This is critical for correct formatting.
+- Use the classes defined in **Email CSS** (such as \`.container\`, \`.header\`, \`.table-responsive-wrapper\`, \`.heatmap-grid\`, \`.heatmap-cell\`, \`.legend\`, \`.region-header\`, and \`.footer\`) to structure and style the email.
+- The HTML should be responsive for both mobile or desktop viewing. Use divs around tables to allow horizontal scrolling.
+- Create a section for each dataset.
+- For the Rivalry Tournaments, add the class \`region-header\` to the \`<thead>\` tag of the table.
+- For the Heat Map, apply color coding to the cells based on the values (green for easy, red for tough).
+- Each section should build on each other.
+- Provide commentary for each section with highlights, callouts, and insights.
+- Make it fun by adding emoji
+- Conclude with support for the Yellow Jackets and don't sign your name.
+- Don't include a subject.
+${formattedAdditionalPrompt ? `\n---\n** Additional Information **\n${formattedAdditionalPrompt}\n` : ""}
+---
+** Email CSS **
+
+${coachTemplateCss}
+
+---
+** Team Insights **
+---
+Rivalry Watch
+${rivalryHtml}
+---	
+Toughest Tournaments
+${toughTournamentHtml}
+---
+Showdown Matches
+${showdownsHtml}
+---
+Upset Matches
+${upsetsHtml}
+---
+Weight Class Heat Map
+${heatMapHtml}
+---
+Breakout Wrestler
+${breakoutHtml}
+---
+Bonus Points
+${bonusHtml}
+---
+Forged in Fire
+${forgedHtml}
+---
+Grinder
+${grinderHtml}
+---
+Ironman
+${ironmanHtml}
+---
+`;
+		} else {
+			const parentStats = (statsData && statsData.parentStats) ? statsData.parentStats : (statsData || {});
+			const loadDateFormatted = (statsData && statsData.loadDateFormatted) || new Date().toLocaleDateString("en-US");
+			const loadDateLong = (statsData && statsData.loadDateLongFormatted) || new Date().toLocaleDateString("en-US", {
+				weekday: "long",
+				year: "numeric",
+				month: "long",
+				day: "numeric"
+			});
+			defaultSubject = `FM Wrestling Weekly Email - ${loadDateFormatted}`;
+
+			const parentTemplateCss = `/* --- Base Styles --- */
+body {
+margin: 0;
+padding: 0;
+font-family: Arial, sans-serif;
+line-height: 1.6;
+background-color: #f4f4f4;
+}
+table {
+border-collapse: collapse;
+border-spacing: 0;
+}
+/* --- Wrapper --- */
+.wrapper-table {
+width: 100%;
+border: 0;
+padding: 0;
+margin: 0;
+background-color: #f4f4f4;
+}
+.wrapper-cell {
+text-align: center;
+}
+.content-table {
+width: 100%;
+max-width: 600px;
+margin: 0 auto;
+background-color: #ffffff;
+}
+/* --- Header --- */
+.header {
+background-color: #1158AD;
+color: #FFFFFF;
+padding: 20px 30px;
+text-align: center;
+}
+.header h1 {
+margin: 0;
+font-size: 28px;
+}
+.header-subtext {
+margin: 5px 0 0;
+font-size: 18px;
+color: #F0BF1A;
+font-weight: bold;
+}
+/* --- Main Content --- */
+.main-content {
+padding: 30px 20px;
+}
+.main-content > p {
+font-size: 16px;
+margin-bottom: 25px;
+}
+h2,
+h2.section-title {
+color: #1158AD;
+border-bottom: 2px solid #F0BF1A;
+padding-bottom: 5px;
+margin-top: 30px;
+}
+h2.section-title.first {
+margin-top: 0;
+}
+p.section-intro {
+font-size: 16px;
+margin-bottom: 20px;
+}
+/* --- Tables --- */
+.table-wrapper {
+overflow-x: auto;
+margin-bottom: 20px;
+}
+.data-table,
+.table {
+width: 100%;
+border: 1px solid #ddd;
+margin-bottom: 20px;
+}
+.data-table thead,
+.table thead {
+background-color: #f9f9f9;
+}
+.data-table th,
+.data-table td,
+.table th,
+.table td {
+border: 1px solid #ddd;
+padding: 10px;
+}
+.data-table th,
+.table th {
+text-align: left;
+color: #1158AD;
+background-color: #f9f9f9;
+}
+.data-table td,
+.table td {
+vertical-align: top;
+}
+/* --- Performance --- */
+h3,
+h3.performance-title {
+color: #1158AD;
+margin-top: 25px;
+margin-bottom: 10px;
+}
+p.commentary {
+font-style: italic;
+margin-bottom: 15px;
+color: #555;
+font-size: 16px;
+}
+/* --- Footer --- */
+.footer {
+background-color: #F0BF1A;
+color: #1158AD;
+padding: 20px 30px;
+text-align: center;
+font-weight: bold;
+font-size: 20px;
+}
+.footer p {
+margin: 0;
+}
+/* --- Utilities --- */
+.text-center { text-align: center; }
+.win { font-weight: bold; color: green; }
+.loss { color: red; }
+/* --- Responsive --- */
+@media screen and (max-width: 600px) {
+.content-table {
+	width: 100% !important;
+	max-width: 100% !important;
+}
+.main-content {
+	padding: 20px 15px;
+}
+.header {
+	padding: 20px;
+}
+.header h1 {
+	font-size: 24px;
+}
+.header-subtext {
+	font-size: 16px;
+}
+}`;
+			activeTemplateCss = parentTemplateCss;
+
+			const upcomingEvents = parentStats.upcomingEvents || {};
+			const dualResults = parentStats.dualResults || [];
+			const placers = parentStats.placers || [];
+			const ironman = parentStats.ironman || [];
+			const forgedFire = parentStats.forgedFire || [];
+			const grinder = parentStats.grinder || [];
+			const hasPerformanceHighlights = placers.length > 0 || ironman.length > 0 || forgedFire.length > 0 || grinder.length > 0;
+
+			const scheduleColumns = [
+				{ key: "date", label: "date" },
+				{ key: "time", label: "time" },
+				{ key: "event", label: "event" },
+				{ key: "location", label: "location" }
+			];
+
+			promptText = `
+You are a team parent with the fort mill high school wrestling team, the Fort Mill Yellow Jackets. Your task is to create a weekly email for ${loadDateLong} using the data provided that is clear and informative.
+
+Here are your instructions:
+- Create a well formatted email using HTML.
+- The entire response should be a single HTML document.
+- In the HTML <head>, you must include a <style> tag and copy the contents of the **Email CSS** section into it. This is critical for correct formatting.
+- Use the classes defined in **Email CSS** (such as \`.wrapper-table\`, \`.content-table\`, \`.header\`, \`.header-subtext\`, \`.main-content\`, \`h2.section-title\`, \`.table-wrapper\`, \`.data-table\`, \`h3.performance-title\`, \`p.commentary\`, and \`.footer\`) to structure and style the email.
+- The HTML should be responsive for both mobile or desktop viewing. Use divs around tables to allow horizontal scrolling.
+- Create a section for each dataset.
+- Each section should build on each other.
+- For the performance highlights, create a separate table for each division, and don't call them awards (this is not from the coach)
+- Provide commentary for each section with highlights, and callouts.
+- Make it fun by adding emoji
+- Don't include a subject.
+
+Email Structure
+- Upcoming Events`;
+
+			if (dualResults.length > 0) {
+				promptText += `\n- Dual Results`;
+			}
+			if (formattedAdditionalPrompt) {
+				promptText += `\n- Additional Information\n`;
+			}
+			if (hasPerformanceHighlights) {
+				promptText += `\n- Performance Highlights\n`;
+			}
+
+			promptText += `
+---
+
+** Email CSS **
+
+${parentTemplateCss}
+
+---
+
+Upcoming Events
+
+Varsity
+${buildHtmlTable(upcomingEvents.varsity || [], scheduleColumns)}
+`;
+
+			if ((upcomingEvents.jv || []).length > 0) {
+				promptText += `\nJV\n${buildHtmlTable(upcomingEvents.jv, scheduleColumns)}\n`;
+			}
+			if ((upcomingEvents.ms || []).length > 0) {
+				promptText += `\nMiddle School\n${buildHtmlTable(upcomingEvents.ms, scheduleColumns)}\n`;
+			}
+			if ((upcomingEvents.girls || []).length > 0) {
+				promptText += `\nGirls\n${buildHtmlTable(upcomingEvents.girls, scheduleColumns)}\n`;
+			}
+
+			if (dualResults.length > 0) {
+				const dualHtml = buildHtmlTable(dualResults, [
+					{ key: "team", label: "team" },
+					{ key: "eventDate", label: "eventDate" },
+					{ key: "opponentName", label: "opponentName" },
+					{ key: "fmScore", label: "fmScore" },
+					{ key: "oppScore", label: "oppScore" }
+				]);
+				promptText += `\n---\n\nDual Results\n${dualHtml}\n`;
+			}
+
+			if (formattedAdditionalPrompt) {
+				promptText += `\n---\n\nAdditional Information \n\n${formattedAdditionalPrompt}\n`;
+			}
+
+			if (hasPerformanceHighlights) {
+				promptText += `\n---\n\n** Individual Performance Highlights **\n`;
+
+				if (placers.length > 0) {
+					const placersHtml = buildHtmlTable(placers, [
+						{ key: "division", label: "Division" },
+						{ key: "place", label: "Place" },
+						{ key: "wrestler", label: "Wrestler" }
+					]);
+					promptText += `\n---\nPlacers\n${placersHtml}\n\n---\n`;
+				}
+
+				if (ironman.length > 0) {
+					const ironmanHtml = buildHtmlTable(ironman, [
+						{ key: "division", label: "Division" },
+						{ key: "wrestler", label: "Wrestler" },
+						{ key: "matches", label: "Matches" }
+					]);
+					promptText += `\n---\nIronman\n${ironmanHtml}\n`;
+				}
+
+				if (forgedFire.length > 0) {
+					const forgedHtml = buildHtmlTable(forgedFire, [
+						{ key: "division", label: "Division" },
+						{ key: "wrestler", label: "Wrestler" },
+						{ key: "opponents", label: "Opponents" }
+					]);
+					promptText += `\n---\nForged in Fire\n${forgedHtml}\n`;
+				}
+
+				if (grinder.length > 0) {
+					const grinderHtml = buildHtmlTable(grinder, [
+						{ key: "division", label: "Division" },
+						{ key: "wrestler", label: "Wrestler" },
+						{ key: "consiMatches", label: "Consi Matches" }
+					]);
+					promptText += `\n---\nGrinder\n${grinderHtml}\n---\n`;
+				}
+			}
+		}
+
+		const requestPayload = { contents: [{ parts: [{ text: promptText }] }] };
+
+		try {
+			const geminiResponse = await client
+				.post(geminiEndpoint)
+				.send(requestPayload)
+				.set("Content-Type", "application/json");
+
+			if (geminiResponse.status === 200 && geminiResponse.body?.candidates?.[0]?.content?.parts?.[0]?.text) {
+				let generatedHtml = geminiResponse.body.candidates[0].content.parts[0].text.trim();
+				if (generatedHtml.startsWith("```html")) {
+					generatedHtml = generatedHtml.slice(7);
+				} else if (generatedHtml.startsWith("```")) {
+					generatedHtml = generatedHtml.slice(3);
+				}
+				if (generatedHtml.endsWith("```")) {
+					generatedHtml = generatedHtml.slice(0, -3);
+				}
+				return { html: generatedHtml.trim(), subject: defaultSubject, css: activeTemplateCss };
+			}
+			return { error: `Gemini API returned status ${geminiResponse.status}`, status: 580 };
+		} catch (error) {
+			if (isGeminiQuotaError(error)) {
+				return { error: "AI quota for the day has been exceeded", status: 429 };
+			}
+			if (isGeminiOverloadedError(error)) {
+				return { error: "AI service is temporarily overloaded. Please try again later.", status: 503 };
+			}
+			return { error: error.message, status: 580 };
+		}
+	},
+
+	weeklyEmailSend: async (serverPath, recipientEmails, subject, bodyHtml) => {
+		try {
+			if (!recipientEmails || recipientEmails.length === 0) {
+				return { error: "Please select at least one recipient email", status: 400 };
+			}
+			if (!bodyHtml || !bodyHtml.trim()) {
+				return { error: "Email body cannot be empty", status: 400 };
+			}
+
+			const authResult = await getGoogleOAuthClient(serverPath);
+			if (authResult.error) {
+				return { error: authResult.error, status: authResult.status || 401 };
+			}
+
+			const gmailClient = google.gmail({ version: "v1", auth: authResult.authClient });
+			const mimeBoundary = `----=_Part_${Math.random().toString().slice(2)}`;
+			const sanitizedSubject = String(subject || "Fort Mill Wrestling Weekly Email")
+				.replace(/[•–—]/g, "-")
+				.replace(/[^\x20-\x7E]/g, "")
+				.replace(/\s+/g, " ")
+				.trim();
+
+			const extractedStyleBlocks = [];
+			const bodyWithoutStyleTags = String(bodyHtml).replace(/<style[^>]*>([\s\S]*?)<\/style>/gi, (_, styleInnerContent) => {
+				if (styleInnerContent && styleInnerContent.trim()) {
+					extractedStyleBlocks.push(styleInnerContent.trim());
+				}
+				return "";
+			});
+
+			let completeHtmlDocument = bodyHtml;
+			if (!/<html[\s>]/i.test(bodyHtml)) {
+				const combinedStyleTag = extractedStyleBlocks.length > 0
+					? `<style>\n${extractedStyleBlocks.join("\n")}\n</style>`
+					: "";
+				completeHtmlDocument = `<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n${combinedStyleTag}\n</head>\n<body>\n${bodyWithoutStyleTags.trim()}\n</body>\n</html>`;
+			}
+
+			const base64HtmlBody = Buffer.from(completeHtmlDocument, "utf-8").toString("base64");
+
+			const emailLines = [
+				`Subject: ${sanitizedSubject || "Fort Mill Wrestling Weekly Email"}`,
+				`Bcc: ${recipientEmails.join(",")}`,
+				"MIME-Version: 1.0",
+				`Content-Type: multipart/mixed; boundary="${mimeBoundary}"`,
+				"",
+				`--${mimeBoundary}`,
+				'Content-Type: text/html; charset="UTF-8"',
+				"Content-Transfer-Encoding: base64",
+				"",
+				base64HtmlBody,
+				"",
+				`--${mimeBoundary}--`
+			];
+
+			const rawEmailContent = emailLines.join("\r\n");
+			const base64EncodedEmail = Buffer.from(rawEmailContent).toString("base64url");
+
+			await gmailClient.users.messages.send({
+				userId: "me",
+				requestBody: {
+					raw: base64EncodedEmail
+				}
+			});
+
+			return { success: true, message: "Weekly email sent successfully" };
+		} catch (error) {
+			return { error: error.message, status: 500 };
+		}
 	}
 
 };

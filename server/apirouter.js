@@ -627,4 +627,33 @@ router.get("/api/duplicatesload", authAPI, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
 });
 
+router.get("/api/weeklyemailload", authAPI, async (request, response) => {
+	if (!request.user || !request.user.privileges || (!request.user.privileges.includes("parentManage") && !request.user.privileges.includes("parentmanage"))) {
+		return response.status(401).json({ error: "Unauthorized access" });
+	}
+
+	const results = await api.weeklyEmailLoad(request.serverPath, request.query.weekenddate);
+	response.status(results.status || 200).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
+});
+
+router.post("/api/weeklyemailgenerate", authAPI, async (request, response) => {
+	if (!request.user || !request.user.privileges || (!request.user.privileges.includes("parentManage") && !request.user.privileges.includes("parentmanage"))) {
+		return response.status(401).json({ error: "Unauthorized access" });
+	}
+
+	const { audienceType, stats, additionalInputs } = request.body;
+	const results = await api.weeklyEmailGenerate(audienceType, stats, additionalInputs);
+	response.status(results.status || 200).json(results.error ? { error: results.error } : results);
+});
+
+router.post("/api/weeklyemailsend", authAPI, async (request, response) => {
+	if (!request.user || !request.user.privileges || (!request.user.privileges.includes("parentManage") && !request.user.privileges.includes("parentmanage"))) {
+		return response.status(401).json({ error: "Unauthorized access" });
+	}
+
+	const { recipients, subject, body } = request.body;
+	const results = await api.weeklyEmailSend(request.serverPath, recipients, subject, body);
+	response.status(results.status || 200).json(results.error ? { error: results.error } : results);
+});
+
 export default router;
