@@ -1999,7 +1999,7 @@ Return the data as a JSON object with:
 Do not return any other text or markup.
 `;
 
-			const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${config.geminiAPIKey}`;
+			const url = `https://generativelanguage.googleapis.com/v1beta/models/${ config.geminiModel }:generateContent?key=${config.geminiAPIKey}`;
 			const headers = { "Content-Type": "application/json" };
 			const data = {
 				"contents": [
@@ -2102,7 +2102,7 @@ Do not return any other text or markup.
 					Based on the following list of schools, which school is the most likely match? 
 					If there is no good match, return null. ${ schools.map(school => school.name).join(", ") }`;
 
-				const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${config.geminiAPIKey}`;
+				const url = `https://generativelanguage.googleapis.com/v1beta/models/${ config.geminiModel }:generateContent?key=${config.geminiAPIKey}`;
 				const headers = { "Content-Type": "application/json" };
 				const data = {
 					"contents": [
@@ -2173,7 +2173,7 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 
 			try {
 				updateProgress("GEMINI_MATCH_ROSTERS", "AI Step 3 of 3: Aligning wrestler names with database records...", 3);
-				const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${config.geminiAPIKey}`;
+				const url = `https://generativelanguage.googleapis.com/v1beta/models/${ config.geminiModel }:generateContent?key=${config.geminiAPIKey}`;
 				const headers = { "Content-Type": "application/json" };
 				const data = {
 					"contents": [
@@ -3302,7 +3302,7 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 			return { error: "GEMINI_API_KEY not configured", status: 500 };
 		}
 
-		const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
+		const url = `https://generativelanguage.googleapis.com/v1beta/models/${ config.geminiModel }:generateContent?key=${API_KEY}`;
 
 		let cleanedEmailBody = emailBody || "";
 
@@ -4614,7 +4614,7 @@ Instructions for response:
 			return { error: "GEMINI_API_KEY not configured", status: 500 };
 		}
 
-		const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`;
+		const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${ config.geminiModel }:generateContent?key=${geminiApiKey}`;
 		const validAdditionalSections = (additionalInputs || []).filter(
 			inputItem => (inputItem.title && inputItem.title.trim()) || (inputItem.content && inputItem.content.trim())
 		);
