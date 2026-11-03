@@ -398,22 +398,24 @@ const AllSchedule = () => {
 																>
 																	VIEW EVENT &rarr;
 																</button>
-															) : (
-																(eventItem.eventSystem === "Flo" || eventItem.eventSystem === "Track" || /flo/i.test(eventItem.eventSystem) || /track/i.test(eventItem.eventSystem)) && (
-																	<button 
-																		className="eventActionBtn tournament"
-																		onClick={ () => {
-																			if (/flo/i.test(eventItem.eventSystem)) {
-																				window.open(`https://www.flowrestling.org/nextgen/events/${ eventItem.systemId }/information`);
-																			} else if (/track/i.test(eventItem.eventSystem)) {
-																				window.open(`https://www.trackwrestling.com/tw/${ eventItem.eventType || "tournament" }/VerifyPassword.jsp?tournamentId=${ eventItem.systemId }`);
-																			}
-																		}}
-																	>
-																		VIEW ON FLO &rarr;
-																	</button>
-																)
-															)}
+															) : ""
+															}
+															{
+															(eventItem.eventSystem === "Flo" || eventItem.eventSystem === "Track" || /flo/i.test(eventItem.eventSystem) || /track/i.test(eventItem.eventSystem)) && (
+																<button 
+																	className="eventActionBtn tournament"
+																	onClick={ () => {
+																		if (/flo/i.test(eventItem.eventSystem)) {
+																			window.open(`https://www.flowrestling.org/nextgen/events/${ eventItem.systemId }/information`);
+																		} else if (/track/i.test(eventItem.eventSystem)) {
+																			window.open(`https://www.trackwrestling.com/tw/${ eventItem.eventType || "tournament" }/VerifyPassword.jsp?tournamentId=${ eventItem.systemId }`);
+																		}
+																	}}
+																>
+																	VIEW ON FLO &rarr;
+																</button>
+															)
+															}
 														</>
 													)}
 												</div>

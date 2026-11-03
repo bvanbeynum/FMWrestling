@@ -269,6 +269,14 @@ const computeRatingChartData = (ratingHistory, currentContainerWidth) => {
 	};
 };
 
+const isEventInSeason = (dateValue) => {
+	const eventDate = dateValue instanceof Date ? dateValue : new Date(dateValue);
+	const month = eventDate.getMonth();
+	const date = eventDate.getDate();
+	// Nov (10), Dec (11), Jan (0), Feb (1), or Mar 1st (month 2, date <= 1)
+	return month === 10 || month === 11 || month === 0 || month === 1 || (month === 2 && date <= 1);
+};
+
 const WrestlerReportComponent = () => {
 
 	const [ isLoading, setIsLoading ] = useState(false);
@@ -276,7 +284,6 @@ const WrestlerReportComponent = () => {
 	const [ loggedInUser, setLoggedInUser ] = useState(null);
 	const [ activeView, setActiveView ] = useState("events");
 	const [ expandedEventIds, setExpandedEventIds ] = useState([]);
-	const [ timeframeFilter, setTimeframeFilter ] = useState("this_season");
 
 	const chartContainerRef = useRef(null);
 	const [ chartContainerWidth, setChartContainerWidth ] = useState(800);
@@ -306,33 +313,10 @@ const WrestlerReportComponent = () => {
 		};
 	}, [ activeView ]);
 
-	const seasonStart = useMemo(() => {
-		const currentDate = new Date();
-		return currentDate > new Date(currentDate.getFullYear(), 11, 1)
-			? new Date(currentDate.getFullYear(), 8, 1)
-			: new Date(currentDate.getFullYear() - 1, 8, 1);
-	}, []);
-
 	const filteredEvents = useMemo(() => {
 		if (!wrestler || !wrestler.events) return [];
-
-		return wrestler.events.filter(eventItem => {
-			const eventDate = eventItem.date instanceof Date ? eventItem.date : new Date(eventItem.date);
-			const month = eventDate.getMonth();
-			const date = eventDate.getDate();
-			// Nov (10), Dec (11), Jan (0), Feb (1), or Mar 1st (month 2, date <= 1)
-			const isInSeasonWindow = month === 10 || month === 11 || month === 0 || month === 1 || (month === 2 && date <= 1);
-
-			if (timeframeFilter === "this_season") {
-				return eventDate >= seasonStart && isInSeasonWindow;
-			}
-			if (timeframeFilter === "in_season") {
-				return isInSeasonWindow;
-			}
-			// "all_events"
-			return true;
-		});
-	}, [ wrestler, timeframeFilter, seasonStart ]);
+		return wrestler.events;
+	}, [ wrestler ]);
 
 	const winTypeChartData = useMemo(() => {
 		const parsedMatchesList = filteredEvents.flatMap(eventItem => (eventItem.matches || []).map(matchItem => ({
@@ -599,22 +583,31 @@ const WrestlerReportComponent = () => {
 	const totalWins = allMatches.filter(matchItem => matchItem.isWinner).length;
 	const totalLosses = allMatches.filter(matchItem => !matchItem.isWinner).length;
 	const totalMatchesCount = totalWins + totalLosses;
-	const winPercentText = totalMatchesCount > 0 ? ((totalWins / totalMatchesCount) * 100).toFixed(1) + "%" : "0.0%";
 
-	const pinWinsCount = allMatches.filter(matchItem => matchItem.isWinner && /fall|pin|^f$/i.test(matchItem.winType)).length;
-	const techWinsCount = allMatches.filter(matchItem => matchItem.isWinner && /tf|tech/i.test(matchItem.winType)).length;
-	const majorWinsCount = allMatches.filter(matchItem => matchItem.isWinner && /md|maj/i.test(matchItem.winType)).length;
-	const bonusWinsCount = pinWinsCount + techWinsCount + majorWinsCount;
-	const bonusPercentText = totalWins > 0 ? ((bonusWinsCount / totalWins) * 100).toFixed(1) + "%" : "0.0%";
+	const inSeasonEvents = filteredEvents.filter(eventItem => isEventInSeason(eventItem.date));
+	const inSeasonMatches = inSeasonEvents.flatMap(eventItem => eventItem.matches || []).filter(matchItem => matchItem.vs);
+	const inSeasonWins = inSeasonMatches.filter(matchItem => matchItem.isWinner).length;
+	const inSeasonLosses = inSeasonMatches.filter(matchItem => !matchItem.isWinner).length;
 
 	const lastEventItem = filteredEvents[0];
 	const lastEventDisplayDate = lastEventItem ? (lastEventItem.date instanceof Date ? lastEventItem.date : new Date(lastEventItem.date)).toLocaleDateString() : "-";
 	const lastEventDisplayName = lastEventItem ? lastEventItem.name : "No Events";
 
-	const firstPlaceCount = filteredEvents.filter(eventItem => eventItem.place === "1st").length;
-	const secondPlaceCount = filteredEvents.filter(eventItem => eventItem.place === "2nd").length;
-	const thirdPlaceCount = filteredEvents.filter(eventItem => eventItem.place === "3rd").length;
-	const podiumSummaryText = `${ firstPlaceCount }x 1st • ${ secondPlaceCount }x 2nd • ${ thirdPlaceCount }x 3rd`;
+	const lastInSeasonEventItem = inSeasonEvents[0];
+	const lastInSeasonEventDisplayDate = lastInSeasonEventItem ? (lastInSeasonEventItem.date instanceof Date ? lastInSeasonEventItem.date : new Date(lastInSeasonEventItem.date)).toLocaleDateString() : "-";
+	const lastInSeasonEventDisplayName = lastInSeasonEventItem ? lastInSeasonEventItem.name : "No Events";
+
+	const firstEventItem = filteredEvents.length > 0 ? filteredEvents[filteredEvents.length - 1] : null;
+	const firstEventDate = firstEventItem ? (firstEventItem.date instanceof Date ? firstEventItem.date : new Date(firstEventItem.date)) : null;
+	const lastEventDate = lastEventItem ? (lastEventItem.date instanceof Date ? lastEventItem.date : new Date(lastEventItem.date)) : null;
+
+	const activeYearsCount = firstEventDate && lastEventDate
+		? Math.max(1, new Set(filteredEvents.map(eventItem => (eventItem.date instanceof Date ? eventItem.date : new Date(eventItem.date)).getFullYear())).size)
+		: 0;
+	const timelineYearsText = `${ activeYearsCount } ${ activeYearsCount === 1 ? "Year" : "Years" }`;
+	const timelineRangeText = firstEventDate && lastEventDate
+		? `${ firstEventDate.toLocaleDateString() } - ${ lastEventDate.toLocaleDateString() }`
+		: "-";
 
 	// Compute opponents summary for Opponents View
 	const opponentMap = {};
@@ -648,25 +641,15 @@ const WrestlerReportComponent = () => {
 				<h1 className="wrestler-report-name">{ wrestler.name }</h1>
 			</header>
 
-			<div className="reportFilters">
-				<select
-					id="timeframe-select"
-					value={ timeframeFilter }
-					onChange={ event => setTimeframeFilter(event.target.value) }
-					aria-label="Filter Timeframe"
-				>
-					<option value="this_season">This Season</option>
-					<option value="in_season">In Season</option>
-					<option value="all_events">All Events</option>
-				</select>
-				<div>
-					{ wrestler.grade && String(wrestler.grade).trim() ? (
+			{ wrestler.grade && String(wrestler.grade).trim() ? (
+				<div className="reportFilters">
+					<div>
 						<span className="wrestler-grade-badge">
 							{ wrestler.grade }
 						</span>
-					) : null }
+					</div>
 				</div>
-			</div>
+			) : null }
 
 			{ activeView === "events" ? (
 				<>
@@ -674,25 +657,25 @@ const WrestlerReportComponent = () => {
 						<div className="kpi-card win-accent">
 							<div className="kpi-label">OVERALL RECORD</div>
 							<div className="kpi-value">{ totalWins } - { totalLosses }</div>
-							<div className="kpi-subtext">Win Rate: { winPercentText }</div>
+							<div className="kpi-subtext">In-Season: { inSeasonWins } - { inSeasonLosses }</div>
 						</div>
 
 						<div className="kpi-card secondary-accent">
-							<div className="kpi-label">BONUS WINS & PINS</div>
-							<div className="kpi-value">{ pinWinsCount } Pins</div>
-							<div className="kpi-subtext">{ bonusWinsCount } Bonus Wins ({ bonusPercentText } of wins)</div>
-						</div>
-
-						<div className="kpi-card tertiary-accent">
 							<div className="kpi-label">LAST EVENT</div>
 							<div className="kpi-value" style={{ fontSize: "18px", wordBreak: "break-word" }}>{ lastEventDisplayName }</div>
 							<div className="kpi-subtext">{ lastEventDisplayDate }</div>
 						</div>
 
+						<div className="kpi-card tertiary-accent">
+							<div className="kpi-label">LAST IN-SEASON EVENT</div>
+							<div className="kpi-value" style={{ fontSize: "18px", wordBreak: "break-word" }}>{ lastInSeasonEventDisplayName }</div>
+							<div className="kpi-subtext">{ lastInSeasonEventDisplayDate }</div>
+						</div>
+
 						<div className="kpi-card">
-							<div className="kpi-label">PODIUM FINISHES</div>
-							<div className="kpi-value">{ firstPlaceCount } 1st</div>
-							<div className="kpi-subtext">{ podiumSummaryText }</div>
+							<div className="kpi-label">WRESTLING TIMELINE</div>
+							<div className="kpi-value">{ timelineYearsText }</div>
+							<div className="kpi-subtext">{ timelineRangeText }</div>
 						</div>
 					</section>
 
@@ -706,7 +689,7 @@ const WrestlerReportComponent = () => {
 
 						<div className="events-list-container">
 							{ filteredEvents.length === 0 ? (
-								<div className="empty-state">No Events Recorded for Selected Timeframe</div>
+								<div className="empty-state">No Events Recorded</div>
 							) : (
 								filteredEvents.map((eventItem, eventIndex) => {
 									const eventKey = eventItem.sqlId || eventIndex;
@@ -733,6 +716,9 @@ const WrestlerReportComponent = () => {
 														<span className="event-card-date">• { eventItem.date.toLocaleDateString() }</span>
 													</div>
 													<div className="event-card-tags">
+														{ isEventInSeason(eventItem.date) ? (
+															<span className="event-tag in-season-tag">In-Season</span>
+														) : null }
 														{ eventItem.division ? (
 															<span className="event-tag">{ eventItem.division }</span>
 														) : "" }

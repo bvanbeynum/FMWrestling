@@ -886,3 +886,15 @@ body {
 	font-weight: 600;
 }
 
+.wrestler-link {
+	color: inherit;
+	text-decoration: none;
+	cursor: pointer;
+	transition: color 0.15s ease, text-decoration 0.15s ease;
+}
+
+.wrestler-link:hover {
+	text-decoration: underline;
+	color: var(--primary);
+}
+

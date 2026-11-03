@@ -107,6 +107,35 @@ const getDifficultyClassification = (winProbability) => {
 	return { label: "Elite", colorClass: "elite" };
 };
 
+const getWrestlerReportUrl = (wrestlerOrSqlId) => {
+	if (!wrestlerOrSqlId) return null;
+	if (typeof wrestlerOrSqlId === "object") {
+		if (wrestlerOrSqlId.id) return `/portal/wrestlerreport.html?id=${wrestlerOrSqlId.id}`;
+		const sqlId = wrestlerOrSqlId.wrestlerSqlId || wrestlerOrSqlId.sqlId;
+		if (sqlId) return `/portal/wrestlerreport.html?sqlid=${sqlId}`;
+		return null;
+	}
+	return `/portal/wrestlerreport.html?sqlid=${wrestlerOrSqlId}`;
+};
+
+const renderWrestlerLink = (wrestlerObj, displayName, extraStyle = {}) => {
+	const url = getWrestlerReportUrl(wrestlerObj);
+	const name = displayName || wrestlerObj?.name || "Unknown";
+	if (!url) return name;
+	return (
+		<a
+			href={url}
+			target="_blank"
+			rel="noopener noreferrer"
+			className="wrestler-link"
+			style={extraStyle}
+			onClick={(e) => e.stopPropagation()}
+		>
+			{name}
+		</a>
+	);
+};
+
 const TournamentSummary = () => {
 	const [pageActive, setPageActive] = useState(false);
 	const [isLoading, setIsLoading] = useState(true);
@@ -620,13 +649,13 @@ const TournamentSummary = () => {
 	const wrestlersList = Object.values(wrestlerStatsMap);
 	wrestlersList.sort((firstWrestler, secondWrestler) => (secondWrestler.rating || 0) - (firstWrestler.rating || 0));
 
-	const wrestlerWinsArr = wrestlersList.map(wrestler => wrestler.wins);
-	const minWrestlerWins = wrestlerWinsArr.length > 0 ? Math.min(...wrestlerWinsArr) : 0;
-	const maxWrestlerWins = wrestlerWinsArr.length > 0 ? Math.max(...wrestlerWinsArr) : 0;
+	const wrestlerWins = wrestlersList.map(wrestler => wrestler.wins);
+	const minWrestlerWins = wrestlerWins.length > 0 ? Math.min(...wrestlerWins) : 0;
+	const maxWrestlerWins = wrestlerWins.length > 0 ? Math.max(...wrestlerWins) : 0;
 
-	const wrestlerUpsetsArr = wrestlersList.map(wrestler => wrestler.upsets);
-	const minWrestlerUpsets = wrestlerUpsetsArr.length > 0 ? Math.min(...wrestlerUpsetsArr) : 0;
-	const maxWrestlerUpsets = wrestlerUpsetsArr.length > 0 ? Math.max(...wrestlerUpsetsArr) : 0;
+	const wrestlerlosses = wrestlersList.map(wrestler => wrestler.losses);
+	const minWrestlerLosses = wrestlerlosses.length > 0 ? Math.min(...wrestlerlosses) : 0;
+	const maxWrestlerLosses = wrestlerlosses.length > 0 ? Math.max(...wrestlerlosses) : 0;
 
 	// Resolve unique weight classes for the selected division
 	const uniqueWeightClassesSet = new Set();
@@ -638,7 +667,11 @@ const TournamentSummary = () => {
 	const uniqueWeightClasses = Array.from(uniqueWeightClassesSet).sort();
 
 	// Filter matches by weight class
-	const weightClassMatches = filteredMatches.filter(match => match.weightClass === selectedWeightClass);
+	const weightClassMatches = filteredMatches
+		.filter(match => match.weightClass === selectedWeightClass)
+		.sort((matchA, matchB) => (matchA.sort || 99) - (matchB.sort || 99));
+
+	console.log(weightClassMatches);
 
 	// Calculate wrestler count for selected weight class
 	const weightClassWrestlersSet = new Set();
@@ -671,6 +704,7 @@ const TournamentSummary = () => {
 
 	// Resolve winner (1st place or most wins) for the weight class
 	let bracketWinnerName = "N/A";
+	let bracketWinnerWrestler = null;
 	const championshipMatch = weightClassMatches.find(match => {
 		if (!match.roundName) return false;
 		const roundNameLower = match.roundName.toLowerCase().trim();
@@ -683,11 +717,14 @@ const TournamentSummary = () => {
 
 	if (championshipMatch?.winner?.name) {
 		bracketWinnerName = championshipMatch.winner.name;
+		bracketWinnerWrestler = championshipMatch.winner;
 	} else {
 		const winsMap = {};
+		const wrestlerObjMap = {};
 		weightClassMatches.forEach(match => {
 			if (match.winner?.name) {
 				winsMap[match.winner.name] = (winsMap[match.winner.name] || 0) + 1;
+				wrestlerObjMap[match.winner.name] = match.winner;
 			}
 		});
 		let maxWins = 0;
@@ -700,6 +737,7 @@ const TournamentSummary = () => {
 		});
 		if (wrestlerWithMostWins) {
 			bracketWinnerName = wrestlerWithMostWins;
+			bracketWinnerWrestler = wrestlerObjMap[wrestlerWithMostWins] || null;
 		}
 	}
 
@@ -1122,12 +1160,12 @@ const TournamentSummary = () => {
 												</div>
 												<div className="insightMatchup">
 													<div className="wrestler win">
-														<span className="wrestlerName">W: {winnerWrestler?.name || "Unknown"}</span>
+														<span className="wrestlerName">W: {renderWrestlerLink(winnerWrestler, winnerWrestler?.name || "Unknown")}</span>
 														<span className="wrestlerGlicko">Glicko: {winnerWrestler?.rating?.toFixed(0)}</span>
 													</div>
 													<span className="vs">{matchItem.winType}</span>
 													<div className="wrestler">
-														<span className="wrestlerName">{loserWrestler?.name || "Unknown"}</span>
+														<span className="wrestlerName">{renderWrestlerLink(loserWrestler, loserWrestler?.name || "Unknown")}</span>
 														<span className="wrestlerGlicko">Glicko: {loserWrestler?.rating?.toFixed(0)}</span>
 													</div>
 												</div>
@@ -1147,12 +1185,12 @@ const TournamentSummary = () => {
 												</div>
 												<div className="insightMatchup">
 													<div className="wrestler win">
-														<span className="wrestlerName">W: {winnerWrestler?.name || "Unknown"}</span>
+														<span className="wrestlerName">W: {renderWrestlerLink(winnerWrestler, winnerWrestler?.name || "Unknown")}</span>
 														<span className="wrestlerGlicko">Glicko: {winnerWrestler?.rating?.toFixed(0)}</span>
 													</div>
 													<span className="vs">{matchItem.winType}</span>
 													<div className="wrestler">
-														<span className="wrestlerName">{loserWrestler?.name || "Unknown"}</span>
+														<span className="wrestlerName">{renderWrestlerLink(loserWrestler, loserWrestler?.name || "Unknown")}</span>
 														<span className="wrestlerGlicko">Glicko: {loserWrestler?.rating?.toFixed(0)}</span>
 													</div>
 												</div>
@@ -1286,7 +1324,7 @@ const TournamentSummary = () => {
 												<th>Wrestler</th>
 												<th style={{ textAlign: "center" }}>Rating / Dev</th>
 												<th style={{ textAlign: "center" }}>Wins</th>
-												<th style={{ textAlign: "center" }}>Upsets</th>
+												<th style={{ textAlign: "center" }}>Losses</th>
 											</tr>
 										</thead>
 										<tbody>
@@ -1302,7 +1340,7 @@ const TournamentSummary = () => {
 															}
 														}}
 													>
-														<div>{wrestler.name}</div>
+														<div>{renderWrestlerLink(wrestler, wrestler.name)}</div>
 														{wrestler.weightClass && (
 															<div style={{ fontSize: "10.5px", color: "#718096", fontWeight: "normal", marginTop: "2.5px" }}>
 																{isNaN(wrestler.weightClass) ? wrestler.weightClass : `${wrestler.weightClass} lbs`}
@@ -1322,7 +1360,7 @@ const TournamentSummary = () => {
 															{wrestler.wins}
 														</span>
 													</td>
-													<td className="heatmapCell" style={{ backgroundColor: getHeatMapColor(wrestler.upsets, minWrestlerUpsets, maxWrestlerUpsets) }}>
+													<td className="heatmapCell" style={{ backgroundColor: getHeatMapColor(wrestler.losses, minWrestlerLosses, maxWrestlerLosses) }}>
 														<span className="heatmapCellInner">
 															{wrestler.upsets}
 														</span>
@@ -1385,7 +1423,7 @@ const TournamentSummary = () => {
 								</div>
 								<div className="kpiBody">
 									<span className="kpiVal" style={{ fontSize: bracketWinnerName.length > 12 ? "12px" : "15px", whiteSpace: "nowrap" }}>
-										{bracketWinnerName}
+										{renderWrestlerLink(bracketWinnerWrestler, bracketWinnerName)}
 									</span>
 									<span className="kpiLbl">WINNER</span>
 								</div>
@@ -1425,7 +1463,7 @@ const TournamentSummary = () => {
 														)}
 														<td className="teamNameCell">
 															<div>
-																{wrestler.name}
+																{renderWrestlerLink(wrestler, wrestler.name)}
 																{rankDisplay !== "—" && (
 																	<span className="familiarBadge" style={{ backgroundColor: "#e6fffa", color: "#319795", borderColor: "#b2f5ea" }}>
 																		{rankDisplay} Place
@@ -1505,7 +1543,7 @@ const TournamentSummary = () => {
 																		<>
 																			<div className="wrestler win" style={{ display: "flex", flexDirection: "column" }}>
 																				<span className="wrestlerName" style={{ fontWeight: "bold", color: "var(--primary)" }}>
-																					W: {winnerWrestler?.name || "Unknown"}
+																					W: {renderWrestlerLink(winnerWrestler, winnerWrestler?.name || "Unknown")}
 																				</span>
 																				<span style={{ fontSize: "10px", color: "#718096", marginTop: "1px" }}>
 																					{winnerWrestler?.team || "Unknown"} • {winnerWrestler?.rating ? `Rating: ${Math.round(winnerWrestler.rating)}` : "No Rating"}
@@ -1521,7 +1559,7 @@ const TournamentSummary = () => {
 																			</span>
 																			<div className="wrestler" style={{ display: "flex", flexDirection: "column" }}>
 																				<span className="wrestlerName" style={{ color: "#4a5568" }}>
-																					{loserWrestler?.name || "Unknown"}
+																					{renderWrestlerLink(loserWrestler, loserWrestler?.name || "Unknown")}
 																				</span>
 																				<span style={{ fontSize: "10px", color: "#718096", marginTop: "1px" }}>
 																					{loserWrestler?.team || "Unknown"} • {loserWrestler?.rating ? `Rating: ${Math.round(loserWrestler.rating)}` : "No Rating"}
@@ -1587,7 +1625,7 @@ const TournamentSummary = () => {
 										<div className="summaryHeaderCard">
 											<div className="summaryHeaderTop">
 												<div>
-													<div className="summaryWrestlerName">{activeBracketWrestler.name}</div>
+													<div className="summaryWrestlerName">{renderWrestlerLink(activeBracketWrestler, activeBracketWrestler.name)}</div>
 													<div className="summaryWrestlerTeam">{activeBracketWrestler.team} • {selectedDivision} {selectedBracketWeightClass} lbs</div>
 												</div>
 												<span className="wrestlerCardPlaceBadge placer" style={{ fontSize: "11px" }}>
@@ -1654,7 +1692,7 @@ const TournamentSummary = () => {
 
 															<div className="matchOpponentRow">
 																<div className="matchOpponentName">
-																	vs {opponent?.name || "Unknown"}
+																	vs {renderWrestlerLink(opponent, opponent?.name || "Unknown")}
 																</div>
 																<div className="matchOpponentMeta">
 																	{opponent?.team || "Unknown"} • {opponentSeedDisplay} • {opponentRatingRankDisplay} ({Math.round(opponent?.rating || 1500)} ± {Math.round(opponent?.deviation || 300)})
@@ -1799,7 +1837,7 @@ const TournamentSummary = () => {
 												{highlightedWrestler ? (
 													<>
 														<span>
-															<strong>{highlightedWrestler.name}</strong> ({highlightedWrestler.team}) • Seed: #{highlightedWrestler.seed || "US"} → Place: {highlightedWrestler.placementRank === 999 ? "DNP" : placementOrdinals[highlightedWrestler.placementRank] || highlightedWrestler.placementRank} → Rating: #{highlightedWrestler.ratingRank}
+															<strong>{renderWrestlerLink(highlightedWrestler, highlightedWrestler.name)}</strong> ({highlightedWrestler.team}) • Seed: #{highlightedWrestler.seed || "US"} → Place: {highlightedWrestler.placementRank === 999 ? "DNP" : placementOrdinals[highlightedWrestler.placementRank] || highlightedWrestler.placementRank} → Rating: #{highlightedWrestler.ratingRank}
 														</span>
 														<button
 															type="button"
@@ -2045,7 +2083,7 @@ const TournamentSummary = () => {
 																	{placementText}
 																</span>
 																<span style={{ fontWeight: 700, color: "#1a202c", fontSize: "13.5px" }}>
-																	{wrestlerItem.name}
+																	{renderWrestlerLink(wrestlerItem, wrestlerItem.name)}
 																</span>
 																<span style={{ color: "#718096", fontSize: "11px" }}>
 																	({wrestlerItem.team})
