@@ -671,8 +671,6 @@ const TournamentSummary = () => {
 		.filter(match => match.weightClass === selectedWeightClass)
 		.sort((matchA, matchB) => (matchA.sort || 99) - (matchB.sort || 99));
 
-	console.log(weightClassMatches);
-
 	// Calculate wrestler count for selected weight class
 	const weightClassWrestlersSet = new Set();
 	weightClassMatches.forEach(match => {
