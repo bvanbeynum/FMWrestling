@@ -123,6 +123,14 @@ const AIEmailPage = () => {
 		));
 	};
 
+	const handleReplySubject = subject => {
+		const cleanedSubject = subject
+			.replace(/[•–—]/g, "-")
+			.replace(/[^\x20-\x7E]/g, "");
+
+		setReplySubject(cleanedSubject);
+	};
+
 	const handleArchiveEmail = (targetEmailId) => {
 		if (!confirm("Are you sure you want to archive this email?")) {
 			return;
@@ -186,7 +194,7 @@ const AIEmailPage = () => {
 
 	const handleOpenAiComposer = (targetEmail) => {
 		setSelectedEmail(targetEmail);
-		setReplySubject(targetEmail.subject);
+		handleReplySubject(targetEmail.subject);
 		setGeneratedResponseText("");
 		setSelectedRecipientEmails([]);
 		setSelectedAttachmentIds((targetEmail.attachments || []).map(att => att.attachmentId || att.filename));
@@ -560,7 +568,7 @@ const AIEmailPage = () => {
 									className="form-control"
 									style={{ width: "100%", padding: "8px 12px", border: "1px solid #c5c5d8", borderRadius: "4px", fontSize: "14px" }}
 									value={replySubject}
-									onChange={(event) => setReplySubject(event.target.value)}
+									onChange={(event) => handleReplySubject(event.target.value)}
 								/>
 
 								<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "12px", marginBottom: "6px" }}>
