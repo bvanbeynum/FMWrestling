@@ -116,21 +116,23 @@ const OpponentLive = () => {
 					setTeamWrestlers(wrestlersLoaded);
 					setOpponents(data.schools);
 
-					const selectGroup = [...new Set(data.schools.sort((schoolA, schoolB) => 
-						schoolA.classification != schoolB.classification ?
-							schoolA.classification > schoolB.classification ? -1 : 1
-						: schoolA.region != schoolB.region ?
-							schoolA.region > schoolB.region ? 1 : -1
-						: schoolA.name > schoolB.name ?
-							1 : -1
-						).map(school => `${school.classification || "NA"} - ${school.region || "NA"}`))]
-						.map(group => ({
-							name: group,
-							schools: data.schools
-								.filter(school => `${school.classification || "NA"} - ${school.region || "NA"}` == group)
-								.sort()
-						}));
-					setOpponentSelect(selectGroup);
+					const sortedGroups = [...new Set(data.schools.map(school => (school.classification || "N/A") + "|" + (school.region || "N/A")))].map(schoolGroup => ({
+							name: `${ schoolGroup.split("|")[0] } - ${ schoolGroup.split("|")[1] }`,
+							classification: schoolGroup.split("|")[0],
+							region: schoolGroup.split("|")[1],
+							schools: data.schools.filter(school => (school.classification || "N/A") + "|" + (school.region || "N/A") == schoolGroup)
+								.sort((schoolA, schoolB) => schoolA.name > schoolB.name ? 1 : -1)
+						}))
+						.sort((groupA, groupB) => 
+							(/\d/.test(groupB.classification?.[0]) - /\d/.test(groupA.classification?.[0])) ||
+							(/\d/.test(groupA.classification?.[0]) ? 
+								groupB.classification[0].localeCompare(groupA.classification[0])
+								: (groupA.classification).localeCompare(groupB.classification)
+							) ||
+							(groupA.region || "").localeCompare(groupB.region || "", undefined, { numeric: true })
+							);
+
+					setOpponentSelect(sortedGroups);
 
 					setLoggedInUser(data.loggedInUser);
 					setPageActive(true);
