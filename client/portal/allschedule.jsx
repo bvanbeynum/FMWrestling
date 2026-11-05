@@ -83,14 +83,16 @@ const AllSchedule = () => {
 				}
 			})
 			.then(responseData => {
-				const loadedEvents = [
-					...(responseData.events || [])
-				].map(eventItem => ({
-					...eventItem,
-					type: eventItem.eventSystem?.toLowerCase(),
-					date: parseEventDate(eventItem.date),
-					endDate: eventItem.endDate ? parseEventDate(eventItem.endDate) : null
-				}));
+				const loadedEvents = responseData.events
+					.map(event => ({
+						...event,
+						date: parseEventDate(event.date),
+						endDate: event.endDate ? parseEventDate(event.endDate) : null
+					}))
+					.filter(event => 
+						event.date > new Date() ||
+						event.hasMatches
+					);
 
 				setLoggedInUser(responseData.loggedInUser);
 				setEvents(loadedEvents);
@@ -387,7 +389,7 @@ const AllSchedule = () => {
 															className="eventActionBtn dual"
 															onClick={ () => { window.location.href = `/portal/dual.html?id=${ eventItem.systemId || eventItem.id || "" }`; } }
 														>
-															VIEW DUAL &rrarr;
+															VIEW DUAL &rarr;
 														</button>
 													) : (
 														<>

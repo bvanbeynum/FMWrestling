@@ -364,37 +364,6 @@ const TournamentSummary = () => {
 	});
 	const wrestlersCount = wrestlersSet.size;
 
-	// Calculate ratings for Intensity Curve
-	const ratings = [];
-	filteredMatches.forEach(matchItem => {
-		const winnerWrestler = getWinner(matchItem);
-		const loserWrestler = getLoser(matchItem);
-		if (winnerWrestler && typeof winnerWrestler.rating === "number" && winnerWrestler.rating > 0) ratings.push(winnerWrestler.rating);
-		if (loserWrestler && typeof loserWrestler.rating === "number" && loserWrestler.rating > 0) ratings.push(loserWrestler.rating);
-	});
-
-	const minGlicko = ratings.length > 0 ? Math.min(...ratings) : 800;
-	const maxGlicko = ratings.length > 0 ? Math.max(...ratings) : 2100;
-	const avgGlicko = ratings.length > 0 ? ratings.reduce((sum, ratingVal) => sum + ratingVal, 0) / ratings.length : 1450;
-
-	// Generate SVG normal distribution curve (separate open line and closed area paths)
-	const range = maxGlicko - minGlicko || 1;
-	const stdDev = range / 6 || 100;
-	const points = [];
-	for (let pointIndex = 0; pointIndex <= 50; pointIndex++) {
-		const xVal = pointIndex * 6; // 0 to 300
-		const rating = minGlicko + (pointIndex / 50) * range;
-		const exponent = -Math.pow(rating - avgGlicko, 2) / (2 * Math.pow(stdDev, 2));
-		const yVal = Math.exp(exponent);
-		const yPos = 110 - yVal * 80; // peak height 80, baseline 110
-		points.push(`${xVal},${yPos}`);
-	}
-	const lineD = `M ${points.join(" L ")}`;
-	const areaD = `M 0,110 L ${points.join(" L ")} L 300,110 Z`;
-	const avgPct = (avgGlicko - minGlicko) / range;
-	const peakX = avgPct * 300;
-	const peakY = 110 - 80;
-
 	// Calculate top 10% threshold of ratings for the overall event
 	const allEventRatings = [];
 	matches.forEach(matchItem => {
@@ -1096,51 +1065,6 @@ const TournamentSummary = () => {
 							</div>
 						</section>
 
-						{/* Tournament Intensity Card */}
-						<section className="intensitySection">
-							<div className="intensityCard">
-								<h3 className="intensityTitle">Tournament Intensity</h3>
-								<div className="intensityStats">
-									<span className="intensityVal">{avgGlicko.toFixed(0)}</span>
-									<span className="intensityLbl">AVG GLICKO</span>
-								</div>
-								<div className="curveContainer">
-									<svg viewBox="0 0 300 120" className="curveSvg">
-										<defs>
-											<linearGradient id="curveGradient" x1="0" y1="0" x2="0" y2="1">
-												<stop offset="0%" stopColor="#fd8b00" stopOpacity="0.4" />
-												<stop offset="100%" stopColor="#fd8b00" stopOpacity="0.0" />
-											</linearGradient>
-										</defs>
-										{/* Shaded Area under Curve (closed path) */}
-										<path d={areaD} fill="url(#curveGradient)" />
-										{/* Curve Path (open path without bottom baseline stroke) */}
-										<path d={lineD} fill="none" stroke="#fd8b00" strokeWidth="1" />
-										{/* Average Marker dashed line */}
-										<line
-											x1={peakX}
-											y1="110"
-											x2={peakX}
-											y2={peakY}
-											stroke="#3c5c93"
-											strokeWidth="1.5"
-											strokeDasharray="3 3"
-										/>
-										{/* Axis labels */}
-										<text x="5" y="118" fontSize="8" fill="#757687" textAnchor="start">
-											{minGlicko.toFixed(0)} (Min)
-										</text>
-										<text x={peakX} y="118" fontSize="8" fill="#3c5c93" textAnchor="middle">
-											{avgGlicko.toFixed(0)} (Avg)
-										</text>
-										<text x="295" y="118" fontSize="8" fill="#757687" textAnchor="end">
-											{maxGlicko.toFixed(0)} (Max)
-										</text>
-									</svg>
-								</div>
-							</div>
-						</section>
-
 						{/* Insights section */}
 						<section className="insightsSection">
 							<h2 className="sectionTitle">Insights</h2>
@@ -1204,7 +1128,7 @@ const TournamentSummary = () => {
 
 						{/* Familiar Faces section */}
 						<section className="facesSection">
-							<h2 className="sectionTitle">Familiar Faces</h2>
+							<h2 className="sectionTitle">Teams</h2>
 							{teamsList.length === 0 ? (
 								<div className="emptyState">No school teams found in this division.</div>
 							) : (

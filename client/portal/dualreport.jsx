@@ -467,7 +467,7 @@ const PointsPieChart = ({ dualEvents }) => {
 };
 
 const MatchDetailMatrix = ({ dualEvents }) => {
-	const sortedDuals = [...dualEvents].sort((firstDual, secondDual) => new Date(secondDual.date) - new Date(firstDual.date));
+	const sortedDuals = [...dualEvents].sort((dualA, dualB) => new Date(dualA.date) - new Date(dualB.date));
 	const completedDuals = sortedDuals.filter(dualItem => dualItem.matches && dualItem.matches.length > 0);
 	const mostRecentCompletedId = completedDuals.length > 0 ? (completedDuals[0].id || completedDuals[0]._id) : null;
 
