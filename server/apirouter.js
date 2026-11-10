@@ -303,6 +303,21 @@ router.get("/api/opponentreportselect", authAPI, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 });
 
+router.get("/api/opponentmatchload", authAPI, async (request, response) => {
+	const results = await api.opponentMatchLoad(request.serverPath);
+	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
+});
+
+router.get("/api/opponentmatchselect", authAPI, async (request, response) => {
+	const results = await api.opponentMatchSelect(request.query.opponent, request.query.season, request.serverPath);
+	response.status(results.status).json(results.error ? { error: results.error } : results.data);
+});
+
+router.post("/api/opponentmatchgenerate", authAPI, async (request, response) => {
+	const results = await api.opponentMatchGenerate(request.body.weightClasses);
+	response.status(results.status || 200).json(results.error ? { error: results.error } : results);
+});
+
 // ***************** Duals ********************
 
 router.get("/api/dualreportload", authAPI, async (request, response) => {

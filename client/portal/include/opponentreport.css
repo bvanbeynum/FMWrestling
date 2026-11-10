@@ -488,6 +488,26 @@
 	color: var(--on-surface-variant);
 }
 
+.match-actions {
+	display: flex;
+	gap: 12px;
+	flex-wrap: wrap;
+	justify-content: center;
+	margin: 20px 0px;
+}
+
+.match-actions button {
+	background-color: #1158AD;
+	color: #ffffff;
+	border: none;
+	border-radius: 8px;
+	padding: 12px 22px;
+	font-family: 'Roboto', sans-serif;
+	font-size: 15px;
+	cursor: pointer;
+	box-shadow: 0 2px 5px rgba(17, 88, 173, 0.25);
+}
+
 /* Desktop vs Mobile Table/Cards Visibility */
 .desktop-view-container {
 	display: block;
@@ -644,10 +664,17 @@
 	color: var(--on-surface);
 }
 
+.wc-teams {
+	display: flex;
+	justify-content: space-between;
+	gap: 1rem;
+}
+
 .wc-wrestlers-list {
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
+	flex: 1;
 }
 
 .wc-no-wrestlers {
