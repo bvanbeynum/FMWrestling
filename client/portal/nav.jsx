@@ -15,7 +15,7 @@ const Nav = props => {
 		else if (/(users|roles|request)/i.test(window.location)) {
 			setSubExpanded("user");
 		}
-		else if (/(opponentlive|opponentreport|opponent)/i.test(window.location)) {
+		else if (/(opponentlive|opponentreport|opponentmatch|opponent)/i.test(window.location)) {
 			setSubExpanded("opponent");
 		}
 		else if (/(team|dualreport|teamweightclass|teamleaderboard)/i.test(window.location)) {
@@ -145,6 +145,10 @@ const Nav = props => {
 
 			<li role="button" onClick={ () => window.location = "/portal/opponentlive.html" } className={`button sub ${ subExpanded === "opponent" ? "active" : "" }`} aria-label="Match Live">
 				<span>Match Live</span>
+			</li>
+
+			<li role="button" onClick={ () => window.location = "/portal/opponentmatch.html" } className={`button sub ${ subExpanded === "opponent" ? "active" : "" }`} aria-label="Match Insights">
+				<span>Match Insights</span>
 			</li>
 
 			</>

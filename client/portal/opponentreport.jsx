@@ -698,7 +698,7 @@ const OpponentReport = () => {
 
 									{/* Weight Class Cards Grid */}
 									<div className="weight-matrix-section">
-										<div className="matrix-section-header-row">
+										<div className="section-header-row">
 											<h3 className="matrix-section-title" style={{ marginBottom: 0, borderBottom: "none" }}>Weight Class Cards</h3>
 											<div className="status-legend-bar">
 												<span className="legend-chip powerhouse" title="> 75% Win Rate">Powerhouse (&gt;75%)</span>

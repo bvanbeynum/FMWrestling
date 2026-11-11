@@ -1823,16 +1823,16 @@ export default {
 			return output;
 		}
 
-		let opponentName = "";
+		let school = null;
 		try {
 			const schoolResponse = await client.get(`${ serverPath }/data/school?id=${ schoolId }`);
-			const opponentSchool = (schoolResponse.body.schools || [])[0];
-			if (!opponentSchool) {
+			school = (schoolResponse.body.schools || [])[0];
+
+			if (!school) {
 				output.status = 562;
 				output.error = "School not found";
 				return output;
 			}
-			opponentName = opponentSchool.name;
 		}
 		catch (error) {
 			output.status = 563;
@@ -1842,11 +1842,11 @@ export default {
 
 		let wrestlers = [];
 		try {
-			const wrestlerResponse = await client.get(`${ serverPath }/data/wrestler?teamname=${ encodeURIComponent(opponentName) }&state=SC`);
+			const wrestlerResponse = await client.get(`${ serverPath }/data/wrestler?teamname=${ encodeURIComponent(school.name) }&state=SC`);
 			wrestlers = wrestlerResponse.body.wrestlers || [];
 		}
 		catch (error) {
-			output.status = 563;
+			output.status = 564;
 			output.error = error.message;
 			return output;
 		}
@@ -1857,7 +1857,7 @@ export default {
 			wrestlersFM = wrestlerResponse.body.wrestlers || [];
 		}
 		catch (error) {
-			output.status = 563;
+			output.status = 565;
 			output.error = error.message;
 			return output;
 		}
@@ -1882,7 +1882,7 @@ export default {
 			wrestlerEvents = wrestlerEventsResponse.body.wrestlerEvents || [];
 		}
 		catch (error) {
-			output.status = 564;
+			output.status = 566;
 			output.error = error.message;
 			return output;
 		}
@@ -1893,9 +1893,16 @@ export default {
 			wrestlerFMEvents = wrestlerEventsResponse.body.wrestlerEvents || [];
 		}
 		catch (error) {
-			output.status = 564;
+			output.status = 567;
 			output.error = error.message;
 			return output;
+		}
+
+		if (school.matchInsights && school.matchInsights.length > 0) {
+			output.data.insights = school.matchInsights.filter(insight => insight.season == season).map(insight => insight.insights).find(() => true);
+		}
+		else {
+			output.data.insights = null;
 		}
 
 		output.data.opponents = wrestlers.map(wrestler => ({

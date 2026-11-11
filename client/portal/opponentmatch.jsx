@@ -230,6 +230,7 @@ const OpponentMatch = () => {
 						};
 					});
 
+					setAIInsights(responseData.insights);
 					setOpponentWrestlers(opponents);
 					setOpponentWrestlerEvents(opponentEvents);
 					setFortMillWrestlers(fortMill);
@@ -278,7 +279,6 @@ const OpponentMatch = () => {
 					setIsSelectLoading(false);
 
 					if (jobData.status === "completed") {
-						console.log(jobData.insights);
 						setAIInsights(jobData.insights);
 					} 
 					else {
@@ -389,9 +389,15 @@ const OpponentMatch = () => {
 							weightClassCards && weightClassCards.length > 0 && (
 							<div className="match-actions">
 								{
-								isSelectLoading ?
-								<div className="insighLoading">Loading { "•".repeat(loadCount) }</div>
-								: <button type="button" disabled={isSelectLoading} onClick={ () => generateInsights() }>🤖 Generate Insights</button>
+								isSelectLoading && selectedOpponentId ?
+								<div className="insightLoading">
+									<div>Loading</div>
+									<div>{ "•".repeat(loadCount) }</div>
+								</div>
+								
+								: aiInsight ? <button type="button" onClick={ () => generateInsights() }>🤖 Re-Generate Insights</button>
+								
+								: <button type="button" onClick={ () => generateInsights() }>🤖 Generate Insights</button>
 								}
 							</div>
 							)}
@@ -404,88 +410,110 @@ const OpponentMatch = () => {
 								<div className="select-loading-container">
 									<img src="/media/wrestlingloading.gif" alt="Loading Opponent Data..." />
 								</div>
-							) : (
+							) : aiInsight ? (
+								<>
 								
+								{/* KPIs */}
+								<div className="report-kpis-grid">
+									<div className="report-kpi-card weight-class-kpi-card average">
+										<span className="kpi-label">Fort Mill</span>
+										<span className="kpi-value-text Russo">{aiInsight.summary.fortMillTotalPoints} points</span>
+										<span className="kpi-sub-text">{aiInsight.summary.fortMillExpectedWins} wins</span>
+									</div>
+
+									<div className="report-kpi-card weight-class-kpi-card wip">
+										<span className="kpi-label">{ selectedOpponent.name }</span>
+										<span className="kpi-value-text Russo">{aiInsight.summary.opponentTotalPoints} points</span>
+										<span className="kpi-sub-text">{aiInsight.summary.opponentExpectedWins} wins</span>
+									</div>
+								</div>
+
 								<div className="weight-matrix-section">
+									<div className="matrix-section-header-row">
+										<h3 className="matrix-section-title">Key Adjustments</h3>
+									</div>
+									
 									<div className="weight-class-cards-grid">
 									{
-									weightClassCards.map(cardItem => (
-												<div key={`wc-card-${cardItem.weightClass}`} className="weight-class-card">
-													<div className="wc-card-header">
-														<span className="wc-title">
-															{cardItem.weightClass} lbs
-														</span>
-													</div>
+									aiInsight.keyAdjustments.map((adjustment, adjustmentIndex) => (
+										<div key={`wc-card-${adjustmentIndex}`} className="weight-class-card">
+											<div className="wc-card-header">
+												<span className="wc-title">
+													{ adjustment.weightClassesInvolved.join(" & ") }
+												</span>
+											</div>
 
-													<div className="wc-teams">
-														<div className="wc-wrestlers-list">
-															{cardItem.fortMill.length === 0 ? (
-																<span className="wc-no-wrestlers">No wrestlers recorded</span>
-															) : (
-																cardItem.fortMill.map((wrestlerItem, wrestlerIndex) => {
-																	return (
-																		<div
-																			key={`wc-wrestler-${wrestlerIndex}`}
-																			onClick={() => window.open(`/portal/wrestlerreport.html?id=${wrestlerItem.id}`, "_blank")}
-																			className="wc-wrestler-row"
-																		>
-																			<div className="wc-wrestler-info">
-																				<span className="wc-wrestler-record">
-																					{ wrestlerItem.grade }
-																				</span>
-																				<span className="wc-wrestler-name">
-																					{wrestlerItem.name}
-																				</span>
-																				<span className="wc-wrestler-record">
-																					Record: {wrestlerItem.wins}-{wrestlerItem.losses}
-																				</span>
-																			</div>
-																			<span className="wc-wrestler-rating">
-																				{wrestlerItem.rating ? Math.round(wrestlerItem.rating) : "N/A"}
-																			</span>
-																		</div>
-																	);
-																})
-															)}
-														</div>
-														
-														<div className="wc-wrestlers-list">
-															{cardItem.opponents.length === 0 ? (
-																<span className="wc-no-wrestlers">No wrestlers recorded</span>
-															) : (
-																cardItem.opponents.map((wrestlerItem, wrestlerIndex) => {
-																	return (
-																		<div
-																			key={`wc-wrestler-${wrestlerIndex}`}
-																			onClick={() => window.open(`/portal/wrestlerreport.html?id=${wrestlerItem.id}`, "_blank")}
-																			className="wc-wrestler-row"
-																		>
-																			<div className="wc-wrestler-info">
-																				<span className="wc-wrestler-record">
-																					{ wrestlerItem.grade }
-																				</span>
-																				<span className="wc-wrestler-name">
-																					{wrestlerItem.name}
-																				</span>
-																				<span className="wc-wrestler-record">
-																					Record: {wrestlerItem.wins}-{wrestlerItem.losses}
-																				</span>
-																			</div>
-																			<span className="wc-wrestler-rating">
-																				{wrestlerItem.rating ? Math.round(wrestlerItem.rating) : "N/A"}
-																			</span>
-																		</div>
-																	);
-																})
-															)}
-														</div>
+											<div className="wc-card-subsummary">
+												{ adjustment.wrestlersInvolved.join(", ") }
+											</div>
+											
+											<div className="wc-wrestler-row">
+												<span className="coachingNotes">
+													{adjustment.rationale}
+												</span>
+											</div>
+										</div>
+									))}
+									</div>
+								</div>
+
+								<div className="weight-matrix-section">
+									<div className="matrix-section-header-row">
+										<h3 className="matrix-section-title">Match Predictions</h3>
+									</div>
+
+									<div className="weight-class-cards-grid">
+									{
+									aiInsight.lineup.map(weightClass => (
+										<div key={`wc-card-${weightClass.weightClass}`} className="weight-class-card">
+											<div className="wc-card-header">
+												<span className="wc-title">
+													{weightClass.weightClass} lbs
+												</span>
+												
+												<div className="status-badge-container">
+													{
+													weightClass.isSwingMatch && (
+													<span className="status-badge wip">
+														Swing Match
+													</span>
+													)}
+												</div>
+											</div>
+
+											<div className="wc-wrestler-row matchGrid">
+												<div className="wrestlerMatchGrid">
+													<div className="wrestlerName">{weightClass.fortMillWrestler?.name}</div>
+													<div className={`matchScore ${ weightClass.netPoints > 0 ? "win" : weightClass.netPoints < 0 ? "lose" : "" }`}>
+														{weightClass.netPoints}
+													</div>
+													<div className="wrestlerName">{weightClass.projectedOpponent?.name}</div>
+													<div className="wrestlerStats">
+														{ Math.round(weightClass.fortMillWrestler?.rating) }
+													</div>
+													<div className="matchOutcome">{weightClass.projectedOutcome}</div>
+													<div className="wrestlerStats">
+														{ Math.round(weightClass.projectedOpponent?.rating) }
 													</div>
 												</div>
-											))
+											</div>
+
+											<div className="wc-wrestler-row">
+												<span className="coachingNotes">
+													<strong>Note:</strong>&nbsp;{weightClass.coachingNote}
+												</span>
+											</div>
+										</div>
+									))
 									}
 									</div>
 								</div>
-								
+								</>
+							)
+							: (
+								<div className="no-leaderboard-data select-prompt-card">
+									No insights have yet been generated.
+								</div>
 							) }
 							
 						</div>
