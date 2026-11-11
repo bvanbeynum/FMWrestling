@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom/client";
 import Nav from "./nav.jsx";
 import "./include/index.css";
@@ -6,20 +6,11 @@ import "./include/opponentreport.css";
 
 const standardWeightClasses = ["106", "113", "120", "126", "132", "138", "144", "150", "157", "165", "175", "190", "215", "285"];
 
-const testMatchDivision = (rawDivision, targetDivision) => {
+const testMatchDivision = (rawDivision) => {
 	if (!rawDivision) return false;
 	const cleanDiv = rawDivision.trim();
 	
-	if (targetDivision === "Varsity") {
-		return /(varsity|hs|high school)/i.test(cleanDiv) && !/jv|junior|ms|middle|girls/i.test(cleanDiv);
-	} else if (targetDivision === "JV") {
-		return /(jv|junior varsity)/i.test(cleanDiv);
-	} else if (targetDivision === "Girls") {
-		return /(girls|women)/i.test(cleanDiv);
-	} else if (targetDivision === "Middle School") {
-		return /(ms|middle school|junior high)/i.test(cleanDiv);
-	}
-	return cleanDiv.toLowerCase() === targetDivision.toLowerCase();
+	return /(varsity|hs|high school)/i.test(cleanDiv) && !/jv|junior|ms|middle|girls/i.test(cleanDiv);
 };
 
 const OpponentMatch = () => {
@@ -36,21 +27,20 @@ const OpponentMatch = () => {
 	const [pageActive, setPageActive] = useState(false);
 	const [isLoading, setIsLoading] = useState(true);
 	const [isSelectLoading, setIsSelectLoading] = useState(false);
-	const [isGenerating, setIsGenerating] = useState(false);
 	const [loggedInUser, setLoggedInUser] = useState(null);
 
 	const [opponentGroups, setOpponentGroups] = useState([]);
 	const [allSchools, setAllSchools] = useState([]);
 	const [selectedOpponentId, setSelectedOpponentId] = useState("");
 	const [selectedOpponent, setSelectedOpponent] = useState(null);
-
 	const [selectedSeason, setSelectedSeason] = useState(availableSeasons[0].name);
-	const [selectedDivision, setSelectedDivision] = useState("Varsity");
-
+	const [loadCount, setLoadCount] = useState(0);
+	
 	const [opponentWrestlers, setOpponentWrestlers] = useState([]);
 	const [opponentWrestlerEvents, setOpponentWrestlerEvents] = useState([]);
 	const [fortMillWrestlers, setFortMillWrestlers] = useState([]);
 	const [fortMillWrestlerEvents, setFortMillWrestlerEvents] = useState([]);
+	const [aiInsight, setAIInsights] = useState(null);
 
 	const [weightClassCards, setWeightClassCards] = useState([])
 
@@ -146,7 +136,7 @@ const OpponentMatch = () => {
 
 							return (eventItem.matches || []).some(matchItem => {
 								const matchDivision = matchItem.divisionConvert || matchItem.division;
-								return matchDivision && testMatchDivision(matchDivision, selectedDivision);
+								return matchDivision && testMatchDivision(matchDivision);
 							});
 						});
 					});
@@ -190,7 +180,7 @@ const OpponentMatch = () => {
 
 							return (eventItem.matches || []).some(matchItem => {
 								const matchDivision = matchItem.divisionConvert || matchItem.division;
-								return matchDivision && testMatchDivision(matchDivision, selectedDivision);
+								return matchDivision && testMatchDivision(matchDivision);
 							});
 						});
 					});
@@ -246,27 +236,74 @@ const OpponentMatch = () => {
 					setFortMillWrestlerEvents(fortMillEvents);
 					setWeightClassCards(weightClasses)
 					setIsSelectLoading(false);
-					setIsLoading(false);
-					setPageActive(true);
 				})
 				.catch(fetchError => {
 					console.warn("Failed to load opponent report details:", fetchError);
 					setIsSelectLoading(false);
-					setIsLoading(false);
 				});
 		}
 	};
 
+	const pollIntervalRef = useRef(null);
+
+	useEffect(() => {
+		return () => {
+			if (pollIntervalRef.current) {
+				clearInterval(pollIntervalRef.current);
+			}
+		};
+	}, []);
+
+	const pollInsightStatus = (jobId) => {
+		if (pollIntervalRef.current) {
+			clearInterval(pollIntervalRef.current);
+		}
+
+		pollIntervalRef.current = setInterval(() => {
+			fetch(`/api/opponentmatchgenerate/${jobId}`)
+				.then(apiResponse => {
+					if (apiResponse.ok) {
+						return apiResponse.json();
+					}
+					throw new Error(apiResponse.statusText);
+				})
+				.then(jobData => {
+					if (jobData.status === "processing") {
+						setLoadCount(loadCount => loadCount + 1);
+						return;
+					}
+
+					clearInterval(pollIntervalRef.current);
+					pollIntervalRef.current = null;
+					setIsSelectLoading(false);
+
+					if (jobData.status === "completed") {
+						console.log(jobData.insights);
+						setAIInsights(jobData.insights);
+					} 
+					else {
+						console.warn("Failed to generate insights:", jobData.error || "Job failed");
+					}
+				})
+				.catch(pollError => {
+					clearInterval(pollIntervalRef.current);
+					pollIntervalRef.current = null;
+					console.warn("Error polling insight status:", pollError);
+					setIsSelectLoading(false);
+				});
+		}, 2000);
+	};
+
 	const generateInsights = () => {
-		setIsGenerating(true);
+		setIsSelectLoading(true);
 
 		const uploadPacket = weightClassCards.map(weightClass => ({
 			weightClass: weightClass.weightClass,
-			fortMill: weightClass.fortMill.map(({grade, ...wrestler}) => ({...wrestler})),
-			opponents: weightClass.opponents.map(({grade, ...wrestler}) => ({...wrestler}))
+			fortMill: weightClass.fortMill.map(({grade, ...wrestler}) => ({...wrestler})).slice(0, 4),
+			opponents: weightClass.opponents.map(({grade, ...wrestler}) => ({...wrestler})).slice(0, 4)
 		}))
 
-		fetch("/api/opponentmatchgenerate", {
+		fetch(`/api/opponentmatchgenerate?schoolid=${ selectedOpponentId }&season=${ selectedSeason }`, {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ weightClasses: uploadPacket })
@@ -278,12 +315,16 @@ const OpponentMatch = () => {
 				throw new Error(apiResponse.statusText);
 			})
 			.then(responseData => {
-				console.log(responseData.insights)
-				setIsGenerating(false);
+				if (responseData.jobId) {
+					pollInsightStatus(responseData.jobId);
+				} else {
+					console.log(responseData.insights);
+					setIsSelectLoading(false);
+				}
 			})
 			.catch(fetchError => {
 				console.warn("Failed to generate insights:", fetchError);
-				setIsGenerating(false);
+				setIsSelectLoading(false);
 			});
 	};
 
@@ -305,10 +346,7 @@ const OpponentMatch = () => {
 					<div>
 						<div className={`opponentreport container ${pageActive ? "active" : ""}`}>
 							<header>
-								<h1>
-									Opponent Overview
-								</h1>
-								{selectedOpponent && <h1 className="subTitle">{selectedOpponent.name}</h1>}
+								<h1>Opponent Match</h1>
 							</header>
 
 							{/* Filters Row */}
@@ -345,27 +383,16 @@ const OpponentMatch = () => {
 										))}
 									</select>
 								</div>
-
-								<div className="filter-item-group">
-									<span className="filter-item-label">Division:</span>
-									<select
-										value={selectedDivision}
-										onChange={changeEvent => setSelectedDivision(changeEvent.target.value)}
-										className="season-dropdown-select"
-										aria-label="Filter Division"
-									>
-										<option value="Varsity">Varsity</option>
-										<option value="JV">JV</option>
-										<option value="Girls">Girls</option>
-										<option value="Middle School">Middle School</option>
-									</select>
-								</div>
 							</div>
 							
 							{
 							weightClassCards && weightClassCards.length > 0 && (
 							<div className="match-actions">
-								<button type="button" disabled={isGenerating} onClick={ () => generateInsights() }>🤖 AI Insight</button>
+								{
+								isSelectLoading ?
+								<div className="insighLoading">Loading { "•".repeat(loadCount) }</div>
+								: <button type="button" disabled={isSelectLoading} onClick={ () => generateInsights() }>🤖 Generate Insights</button>
+								}
 							</div>
 							)}
 

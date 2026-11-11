@@ -150,6 +150,10 @@ export default {
 		classification: String,
 		region: String,
 		lookupNames: [String],
+		matchInsights: [{
+			season: String,
+			insights: Object
+		}],
 		created: Date,
 		modified: Date
 	}),

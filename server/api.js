@@ -1956,7 +1956,7 @@ export default {
 		return output;
 	},
 
-	opponentMatchGenerate: async (weightClasses) => {
+	opponentMatchGenerate: async (schoolId, season, weightClasses, serverPath) => {
 		const API_KEY = config.geminiAPIKey;
 		if (!API_KEY) {
 			return { error: "GEMINI_API_KEY not configured", status: 500 };
@@ -2009,14 +2009,12 @@ Respond ONLY with raw, valid JSON (no markdown code fences, no conversational te
 			"fortMillWrestler": {
 				"id": string,
 				"name": string,
-				"rating": number,
-				"matchesAtWeight": number
+				"rating": number
 			} | null,
 			"projectedOpponent": {
 				"id": string,
 				"name": string,
-				"rating": number,
-				"matchesAtWeight": number
+				"rating": number
 			} | null,
 			"ratingDiff": number | null,
 			"expectedFortMillPoints": number,
@@ -2044,21 +2042,43 @@ ${ JSON.stringify(weightClasses) }
 
 		const requestBody = { "contents": [{ "parts": [{ "text": prompt }] }] };
 
+		let insights = null;
 		try {
-			const response = await client.post(url)
-				.send(requestBody)
-				.set('Content-Type', 'application/json');
+			const response = await client.post(url).set('Content-Type', 'application/json').send(requestBody);
 
 			if (response.status === 200 && response.body.candidates && response.body.candidates[0].content.parts[0].text) {
-				const responseText = response.body.candidates[0].content.parts[0].text;
-				return { insights: responseText };
-			} else {
+				
+				let responseText = response.body.candidates[0].content.parts[0].text;
+				responseText = responseText.replace("```json", "").replace("```", "");
+				insights = JSON.parse(responseText);
 
+			} else {
 				return { error: `Gemini API returned status ${response.status}`, status: 580 };
 			}
-		} catch (error) {
+		} 
+		catch (error) {
 			return { error: error.message, status: 580 };
 		}
+		
+		try {
+			const response = await client.get(`${ serverPath }/data/school?id=${ schoolId }`);
+			const school = response.body.schools[0];
+
+			const matchInsight = (school.matchInsights || []).find(insight => insight.season == season)
+			if (matchInsight) {
+				matchInsight.insights = insights;
+			}
+			else {
+				school.matchInsights = [...(school.matchInsights || []), { season: season, insights: insights }];
+			}
+
+			await client.post(`${ serverPath }/data/school`).send({ school: school });
+		}
+		catch (error) {
+			return { error: error.message, status: 581 };
+		}
+		
+		return { insights: insights };
 	},
 
 	dualLoad: async (targetId, serverPath) => {
