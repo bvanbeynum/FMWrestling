@@ -347,6 +347,63 @@ router.get("/api/opponentmatchgenerate/:jobId", authAPI, (request, response) => 
 	response.status(200).json(job);
 });
 
+router.get("/api/opponentplanload", authAPI, async (request, response) => {
+	const results = await api.opponentPlanLoad(request.serverPath);
+	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
+});
+
+router.get("/api/opponentplanselect", authAPI, async (request, response) => {
+	const results = await api.opponentPlanSelect(request.query.opponent, request.user, request.serverPath);
+	response.status(results.status).json(results.error ? { error: results.error } : results.data);
+});
+
+router.post("/api/opponentplanoptimize", authAPI, async (request, response) => {
+	const jobId = crypto.randomUUID();
+	jobs[jobId] = { status: "processing" };
+
+	api.opponentPlanOptimize(request.body.schoolId, request.body.mode, request.body.weightClasses, request.serverPath)
+		.then(results => {
+			if (results.error) {
+				jobs[jobId] = { status: "error", statusCode: results.status || 580, error: results.error };
+			} else {
+				jobs[jobId] = { status: "completed", optimization: results.optimization };
+			}
+		})
+		.catch(optimizeError => {
+			jobs[jobId] = { status: "error", statusCode: 580, error: optimizeError.message };
+		});
+
+	response.status(202).json({ jobId });
+});
+
+router.get("/api/opponentplanoptimize", authAPI, (request, response) => {
+	const jobId = request.query.jobid;
+	const job = jobs[jobId];
+
+	if (!job) {
+		return response.status(404).json({ status: "not_found" });
+	}
+
+	if (job.status === "completed" || job.status === "error") {
+		delete jobs[jobId];
+	}
+
+	response.status(200).json(job);
+});
+
+router.post("/api/opponentplansave", authAPI, async (request, response) => {
+	const results = await api.opponentPlanSave(
+		request.user,
+		request.body.schoolId,
+		request.body.saveId,
+		request.body.saveName,
+		request.body.isDelete,
+		request.body.slots,
+		request.serverPath
+	);
+	response.status(results.status).json(results.error ? { error: results.error } : results.data);
+});
+
 // ***************** Duals ********************
 
 router.get("/api/dualreportload", authAPI, async (request, response) => {

@@ -2088,6 +2088,526 @@ ${ JSON.stringify(weightClasses) }
 		return { insights: insights };
 	},
 
+	opponentPlanLoad: async (serverPath) => {
+		const output = {
+			data: {}
+		};
+
+		try {
+			const schoolResponse = await client.get(`${ serverPath }/data/school`);
+			output.data.schools = (schoolResponse.body.schools || [])
+				.filter(school => !/^fort mill$/gi.test(school.name))
+				.map(school => ({
+					id: school.id,
+					name: school.name,
+					classification: school.classification,
+					region: school.region
+				}));
+			output.status = 200;
+		}
+		catch (fetchError) {
+			output.status = 564;
+			output.error = fetchError.message;
+		}
+
+		return output;
+	},
+
+	opponentPlanSelect: async (schoolId, user, serverPath) => {
+		const output = { data: {} };
+
+		if (!schoolId) {
+			output.status = 561;
+			output.error = "Opponent ID is required";
+			return output;
+		}
+
+		let opponentSchool = null;
+		try {
+			const schoolResponse = await client.get(`${ serverPath }/data/school?id=${ schoolId }`);
+			opponentSchool = (schoolResponse.body.schools || [])[0];
+
+			if (!opponentSchool) {
+				output.status = 562;
+				output.error = "School not found";
+				return output;
+			}
+		}
+		catch (fetchError) {
+			output.status = 563;
+			output.error = fetchError.message;
+			return output;
+		}
+
+		let rawOpponentWrestlers = [];
+		try {
+			const wrestlerResponse = await client.get(`${ serverPath }/data/wrestler?teamname=${ encodeURIComponent(opponentSchool.name) }&state=SC`);
+			rawOpponentWrestlers = wrestlerResponse.body.wrestlers || [];
+		}
+		catch (fetchError) {
+			output.status = 564;
+			output.error = fetchError.message;
+			return output;
+		}
+
+		let rawHomeWrestlers = [];
+		try {
+			const wrestlerResponse = await client.get(`${ serverPath }/data/wrestler?teamname=Fort%20Mill&state=SC`);
+			rawHomeWrestlers = wrestlerResponse.body.wrestlers || [];
+		}
+		catch (fetchError) {
+			output.status = 565;
+			output.error = fetchError.message;
+			return output;
+		}
+
+		const activeOpponentWrestlers = rawOpponentWrestlers.filter(wrestler => !/(redshirt|college)/i.test(wrestler.grade || ""));
+		const activeHomeWrestlers = rawHomeWrestlers.filter(wrestler => !/(redshirt|college)/i.test(wrestler.grade || ""));
+
+		const todayDate = new Date();
+		const currentCalendarYear = todayDate.getFullYear();
+		const seasonStartYear = todayDate.getMonth() >= 8 ? currentCalendarYear : currentCalendarYear - 1;
+
+		const previousSeasonStartDate = `${seasonStartYear - 1}-09-01`;
+		const currentSeasonStartDate = `${seasonStartYear}-09-01`;
+		const currentSeasonEndDate = `${seasonStartYear + 1}-08-31`;
+
+		let rawOpponentEvents = [];
+		if (activeOpponentWrestlers.length > 0) {
+			try {
+				const opponentWrestlerIds = activeOpponentWrestlers.map(wrestler => wrestler.id);
+				const wrestlerEventsResponse = await client.get(`${ serverPath }/data/wrestlerevent?startdate=${previousSeasonStartDate}&enddate=${currentSeasonEndDate}&wrestlerids=${ encodeURIComponent(JSON.stringify(opponentWrestlerIds)) }`);
+				rawOpponentEvents = wrestlerEventsResponse.body.wrestlerEvents || [];
+			}
+			catch (fetchError) {
+				output.status = 566;
+				output.error = fetchError.message;
+				return output;
+			}
+		}
+
+		let rawHomeEvents = [];
+		if (activeHomeWrestlers.length > 0) {
+			try {
+				const homeWrestlerIds = activeHomeWrestlers.map(wrestler => wrestler.id);
+				const wrestlerEventsResponse = await client.get(`${ serverPath }/data/wrestlerevent?startdate=${previousSeasonStartDate}&enddate=${currentSeasonEndDate}&wrestlerids=${ encodeURIComponent(JSON.stringify(homeWrestlerIds)) }`);
+				rawHomeEvents = wrestlerEventsResponse.body.wrestlerEvents || [];
+			}
+			catch (fetchError) {
+				output.status = 567;
+				output.error = fetchError.message;
+				return output;
+			}
+		}
+
+		let savedLineups = [];
+		if (user && user.id) {
+			try {
+				const userResponse = await client.get(`${ serverPath }/data/user?id=${ user.id }`);
+				const currentUser = (userResponse.body.users || [])[0];
+				if (currentUser && currentUser.session && currentUser.session.planSave) {
+					savedLineups = currentUser.session.planSave
+						.filter(savedPlan => String(savedPlan.opponentId) === String(schoolId))
+						.map(savedPlan => ({
+							id: savedPlan["_id"] || savedPlan.id,
+							name: savedPlan.name,
+							opponentId: savedPlan.opponentId,
+							updatedAt: savedPlan.updatedAt,
+							slots: savedPlan.slots || []
+						}));
+				}
+			}
+			catch (userError) {
+				savedLineups = [];
+			}
+		}
+
+		output.data.opponentSchool = {
+			id: opponentSchool.id,
+			name: opponentSchool.name,
+			classification: opponentSchool.classification,
+			region: opponentSchool.region
+		};
+		output.data.currentSeasonStartDate = `${currentSeasonStartDate}T00:00:00.000Z`;
+
+		output.data.opponentWrestlers = activeOpponentWrestlers.map(wrestler => ({
+			id: wrestler.id,
+			sqlId: wrestler.sqlId,
+			name: wrestler.name,
+			grade: /(7th|8th)/i.test(wrestler.grade || "") ? "Middle School" : wrestler.grade,
+			rating: wrestler.rating || 0,
+			deviation: wrestler.deviation || 0,
+			lastWeightClass: wrestler.lastWeightClass
+		}));
+
+		output.data.opponentEvents = rawOpponentEvents.map(eventRecord => ({
+			id: eventRecord.id || eventRecord._id,
+			wrestlerId: eventRecord.wrestlerId,
+			name: eventRecord.name,
+			date: eventRecord.date,
+			division: eventRecord.division,
+			divisionConvert: eventRecord.divisionConvert,
+			weightClass: eventRecord.weightClass,
+			matches: (eventRecord.matches || []).map(matchRecord => ({
+				division: matchRecord.division,
+				divisionConvert: matchRecord.divisionConvert,
+				weightClass: matchRecord.weightClass,
+				isWinner: matchRecord.isWinner
+			}))
+		}));
+
+		output.data.homeWrestlers = activeHomeWrestlers.map(wrestler => ({
+			id: wrestler.id,
+			sqlId: wrestler.sqlId,
+			name: wrestler.name,
+			grade: /(7th|8th)/i.test(wrestler.grade || "") ? "Middle School" : wrestler.grade,
+			rating: wrestler.rating || 0,
+			deviation: wrestler.deviation || 0,
+			lastWeightClass: wrestler.lastWeightClass
+		}));
+
+		output.data.homeEvents = rawHomeEvents.map(eventRecord => ({
+			id: eventRecord.id || eventRecord._id,
+			wrestlerId: eventRecord.wrestlerId,
+			name: eventRecord.name,
+			date: eventRecord.date,
+			division: eventRecord.division,
+			divisionConvert: eventRecord.divisionConvert,
+			weightClass: eventRecord.weightClass,
+			matches: (eventRecord.matches || []).map(matchRecord => ({
+				division: matchRecord.division,
+				divisionConvert: matchRecord.divisionConvert,
+				weightClass: matchRecord.weightClass,
+				isWinner: matchRecord.isWinner
+			}))
+		}));
+
+		output.data.savedLineups = savedLineups;
+		output.status = 200;
+		return output;
+	},
+
+	opponentPlanOptimize: async (schoolId, mode, weightClasses, serverPath) => {
+		const geminiApiKey = config.geminiAPIKey;
+		if (!geminiApiKey) {
+			return { error: "GEMINI_API_KEY not configured", status: 500 };
+		}
+
+		if (!weightClasses || weightClasses.length === 0) {
+			return { error: "Missing weightClasses payload", status: 400 };
+		}
+
+		const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${ config.geminiModel }:generateContent?key=${geminiApiKey}`;
+
+		const prompt = `
+You are a High School Wrestling Dual Meet Lineup Optimization Engine. Given a 14-weight-class JSON array containing locked slots, \`homeCandidates\` (Fort Mill), and \`opponentCandidates\`, compute the optimal 14-weight-class lineup that maximizes Expected Team Point Differential (Home Points minus Opponent Points).
+
+### 1. Mandatory Lock & Uniqueness Rules
+- **Respect All Locked Slots:**
+  - If \`isOpponentLocked\` is \`true\` for a weight class, you MUST set \`opponentWrestlerId\` to \`lockedOpponentWrestlerId\` (including \`null\` if locked as an open forfeit).
+  - If \`isHomeLocked\` is \`true\` for a weight class, you MUST set \`homeWrestlerId\` to \`lockedHomeWrestlerId\` (including \`null\` if locked as an open forfeit).
+- **Unique Assignment:** Each wrestler has a unique \`id\`. A wrestler CANNOT be assigned to more than one weight class across the entire 14-weight-class lineup (applies to both Home and Opponent). Any wrestler locked into a slot CANNOT be used in any other weight class.
+- **Eligibility:** For unlocked slots, a wrestler may ONLY be assigned to a weight class if they appear in that weight class's \`homeCandidates\` or \`opponentCandidates\`, or \`null\` for an open forfeit.
+
+### 2. Two-Stage Lineup Construction
+1. **Opponent Lineup (for weight classes where \`isOpponentLocked === false\`):**
+   - Predict the opponent's strongest starting lineup by prioritizing wrestlers at their \`baseWeightClass\` with the highest match volume (\`matchesAtWeight\` and \`totalSeasonMatches\`) and highest \`effectiveRating\`, while avoiding open forfeits when a bump-eligible wrestler can cover an empty weight class.
+2. **Home Counter-Lineup (for weight classes where \`isHomeLocked === false\`):**
+   - Globally assign available \`homeCandidates\` across all unlocked weight classes to maximize total team point differential (Home Points minus Opponent Points).
+   - Each candidate's \`effectiveRating\` already incorporates the proportional weight-jump bump penalty when \`isBump\` is \`true\`.
+
+### 3. Standard High School Dual Meet Scoring Rubric (3 / 4 / 5 / 6 Points)
+Using \`effectiveRatingDiff = homeCandidate.effectiveRating - opponentCandidate.effectiveRating\`:
+- Both \`homeWrestlerId\` and \`opponentWrestlerId\` are \`null\`: \`projectedPoints = 0\`, \`projectedOutcome = "OPEN 0"\`
+- \`homeWrestlerId\` assigned and \`opponentWrestlerId\` is \`null\`: \`projectedPoints = 6\`, \`projectedOutcome = "FORFEIT +6"\`
+- \`homeWrestlerId\` is \`null\` and \`opponentWrestlerId\` assigned: \`projectedPoints = -6\`, \`projectedOutcome = "FORFEIT -6"\`
+- \`effectiveRatingDiff > 250\`: \`projectedPoints = 6\`, \`projectedOutcome = "PIN +6"\`
+- \`175 < effectiveRatingDiff <= 250\`: \`projectedPoints = 5\`, \`projectedOutcome = "TF +5"\`
+- \`100 < effectiveRatingDiff <= 175\`: \`projectedPoints = 4\`, \`projectedOutcome = "MAJ +4"\`
+- \`0 <= effectiveRatingDiff <= 100\`: \`projectedPoints = 3\`, \`projectedOutcome = "DEC +3"\`
+- \`-100 <= effectiveRatingDiff < 0\`: \`projectedPoints = -3\`, \`projectedOutcome = "DEC -3"\`
+- \`-175 <= effectiveRatingDiff < -100\`: \`projectedPoints = -4\`, \`projectedOutcome = "MAJ -4"\`
+- \`-250 <= effectiveRatingDiff < -175\`: \`projectedPoints = -5\`, \`projectedOutcome = "TF -5"\`
+- \`effectiveRatingDiff < -250\`: \`projectedPoints = -6\`, \`projectedOutcome = "PIN -6"\`
+
+### 4. Strict JSON Output Schema
+Respond ONLY with raw, valid JSON (no markdown fences, no commentary) matching this exact schema:
+{
+  "summary": {
+    "homeTotalPoints": number,
+    "opponentTotalPoints": number
+  },
+  "lineup": [
+    {
+      "weightClass": string,
+      "homeWrestlerId": string | null,
+      "opponentWrestlerId": string | null,
+      "isHomeBump": boolean,
+      "isOpponentBump": boolean,
+      "projectedPoints": number,
+      "projectedOutcome": string,
+      "coachingNote": string
+    }
+  ]
+}
+
+### Input Data
+${ JSON.stringify({ mode: mode || "ai", weightClasses: weightClasses }) }
+`;
+
+		const requestBody = { contents: [{ parts: [{ text: prompt }] }] };
+
+		let parsedOptimization = null;
+		try {
+			const geminiResponse = await client.post(geminiUrl).set("Content-Type", "application/json").send(requestBody);
+
+			if (geminiResponse.status === 200 && geminiResponse.body.candidates && geminiResponse.body.candidates[0].content.parts[0].text) {
+				let responseText = geminiResponse.body.candidates[0].content.parts[0].text;
+				responseText = responseText.replace(/```json/gi, "").replace(/```/g, "").trim();
+				parsedOptimization = JSON.parse(responseText);
+			} else {
+				return { error: `Gemini API returned status ${geminiResponse.status}`, status: 580 };
+			}
+		}
+		catch (geminiError) {
+			return { error: geminiError.message, status: 580 };
+		}
+
+		const assignedHomeIds = [];
+		const assignedOpponentIds = [];
+
+		weightClasses.forEach(weightClassInput => {
+			if (weightClassInput.isHomeLocked && weightClassInput.lockedHomeWrestlerId) {
+				assignedHomeIds.push(String(weightClassInput.lockedHomeWrestlerId));
+			}
+			if (weightClassInput.isOpponentLocked && weightClassInput.lockedOpponentWrestlerId) {
+				assignedOpponentIds.push(String(weightClassInput.lockedOpponentWrestlerId));
+			}
+		});
+
+		let homeTotalPoints = 0;
+		let opponentTotalPoints = 0;
+
+		const verifiedLineup = weightClasses.map(weightClassInput => {
+			const rawLineupEntry = ((parsedOptimization && parsedOptimization.lineup) || []).find(
+				lineupItem => String(lineupItem.weightClass) === String(weightClassInput.weightClass)
+			) || {};
+
+			let resolvedHomeId = null;
+			if (weightClassInput.isHomeLocked) {
+				resolvedHomeId = weightClassInput.lockedHomeWrestlerId || null;
+			} else if (rawLineupEntry.homeWrestlerId) {
+				const candidateHomeId = String(rawLineupEntry.homeWrestlerId);
+				const isEligibleHome = (weightClassInput.homeCandidates || []).some(
+					candidate => String(candidate.id) === candidateHomeId
+				);
+				if (isEligibleHome && !assignedHomeIds.includes(candidateHomeId)) {
+					resolvedHomeId = rawLineupEntry.homeWrestlerId;
+					assignedHomeIds.push(candidateHomeId);
+				}
+			}
+
+			let resolvedOpponentId = null;
+			if (weightClassInput.isOpponentLocked) {
+				resolvedOpponentId = weightClassInput.lockedOpponentWrestlerId || null;
+			} else if (rawLineupEntry.opponentWrestlerId) {
+				const candidateOpponentId = String(rawLineupEntry.opponentWrestlerId);
+				const isEligibleOpponent = (weightClassInput.opponentCandidates || []).some(
+					candidate => String(candidate.id) === candidateOpponentId
+				);
+				if (isEligibleOpponent && !assignedOpponentIds.includes(candidateOpponentId)) {
+					resolvedOpponentId = rawLineupEntry.opponentWrestlerId;
+					assignedOpponentIds.push(candidateOpponentId);
+				}
+			}
+
+			const homeCandidate = resolvedHomeId
+				? (weightClassInput.homeCandidates || []).find(candidate => String(candidate.id) === String(resolvedHomeId)) || null
+				: null;
+			const opponentCandidate = resolvedOpponentId
+				? (weightClassInput.opponentCandidates || []).find(candidate => String(candidate.id) === String(resolvedOpponentId)) || null
+				: null;
+
+			let projectedPoints = 0;
+			let projectedOutcome = "OPEN 0";
+
+			if (homeCandidate && !opponentCandidate) {
+				projectedPoints = 6;
+				projectedOutcome = "FORFEIT +6";
+			} else if (!homeCandidate && opponentCandidate) {
+				projectedPoints = -6;
+				projectedOutcome = "FORFEIT -6";
+			} else if (homeCandidate && opponentCandidate) {
+				const effectiveHomeRating = homeCandidate.effectiveRating !== undefined ? homeCandidate.effectiveRating : homeCandidate.rating || 0;
+				const effectiveOpponentRating = opponentCandidate.effectiveRating !== undefined ? opponentCandidate.effectiveRating : opponentCandidate.rating || 0;
+				const effectiveRatingDiff = effectiveHomeRating - effectiveOpponentRating;
+
+				if (effectiveRatingDiff > 250) {
+					projectedPoints = 6;
+					projectedOutcome = "PIN +6";
+				} else if (effectiveRatingDiff > 175) {
+					projectedPoints = 5;
+					projectedOutcome = "TF +5";
+				} else if (effectiveRatingDiff > 100) {
+					projectedPoints = 4;
+					projectedOutcome = "MAJ +4";
+				} else if (effectiveRatingDiff >= 0) {
+					projectedPoints = 3;
+					projectedOutcome = "DEC +3";
+				} else if (effectiveRatingDiff >= -100) {
+					projectedPoints = -3;
+					projectedOutcome = "DEC -3";
+				} else if (effectiveRatingDiff >= -175) {
+					projectedPoints = -4;
+					projectedOutcome = "MAJ -4";
+				} else if (effectiveRatingDiff >= -250) {
+					projectedPoints = -5;
+					projectedOutcome = "TF -5";
+				} else {
+					projectedPoints = -6;
+					projectedOutcome = "PIN -6";
+				}
+			}
+
+			if (projectedPoints > 0) {
+				homeTotalPoints += projectedPoints;
+			} else if (projectedPoints < 0) {
+				opponentTotalPoints += Math.abs(projectedPoints);
+			}
+
+			return {
+				weightClass: weightClassInput.weightClass,
+				homeWrestlerId: homeCandidate ? homeCandidate.id : null,
+				opponentWrestlerId: opponentCandidate ? opponentCandidate.id : null,
+				isHomeBump: Boolean(homeCandidate && homeCandidate.isBump),
+				isOpponentBump: Boolean(opponentCandidate && opponentCandidate.isBump),
+				projectedPoints: projectedPoints,
+				projectedOutcome: projectedOutcome,
+				coachingNote: rawLineupEntry.coachingNote || ""
+			};
+		});
+
+		return {
+			optimization: {
+				summary: {
+					homeTotalPoints: homeTotalPoints,
+					opponentTotalPoints: opponentTotalPoints
+				},
+				lineup: verifiedLineup
+			}
+		};
+	},
+
+	opponentPlanSave: async (user, schoolId, saveId, saveName, isDelete, slots, serverPath) => {
+		const output = { data: {} };
+
+		if (!user || !user.id) {
+			output.status = 401;
+			output.error = "Unauthorized";
+			return output;
+		}
+
+		let saveUser = null;
+		try {
+			const userResponse = await client.get(`${ serverPath }/data/user?id=${ user.id }`);
+			saveUser = (userResponse.body.users || [])[0];
+		}
+		catch (fetchError) {
+			output.status = 561;
+			output.error = fetchError.message;
+			return output;
+		}
+
+		if (!saveUser) {
+			output.status = 561;
+			output.error = "User not found";
+			return output;
+		}
+
+		try {
+			if (!saveUser.session) {
+				saveUser.session = {};
+			}
+			if (!saveUser.session.planSave) {
+				saveUser.session.planSave = [];
+			}
+
+			const normalizedSlots = (slots || []).map(slotItem => ({
+				weightClass: slotItem.weightClass,
+				homeWrestlerId: slotItem.homeWrestlerId || null,
+				isHomeLocked: Boolean(slotItem.isHomeLocked),
+				homeScore: Number(slotItem.homeScore) || 0,
+				opponentWrestlerId: slotItem.opponentWrestlerId || null,
+				isOpponentLocked: Boolean(slotItem.isOpponentLocked),
+				opponentScore: Number(slotItem.opponentScore) || 0,
+				coachingNote: slotItem.coachingNote || ""
+			}));
+
+			if (isDelete && saveId && saveUser.session.planSave.some(savedPlan => String(savedPlan["_id"] || savedPlan.id) === String(saveId))) {
+				saveUser.session.planSave = saveUser.session.planSave.filter(
+					savedPlan => String(savedPlan["_id"] || savedPlan.id) !== String(saveId)
+				);
+			} else if (saveId && saveUser.session.planSave.some(savedPlan => String(savedPlan["_id"] || savedPlan.id) === String(saveId))) {
+				saveUser.session.planSave = saveUser.session.planSave.map(savedPlan => {
+					if (String(savedPlan["_id"] || savedPlan.id) === String(saveId)) {
+						return {
+							_id: saveId,
+							name: saveName,
+							opponentId: schoolId,
+							updatedAt: new Date(),
+							slots: normalizedSlots
+						};
+					}
+					return savedPlan;
+				});
+			} else {
+				saveUser.session.planSave.push({
+					name: saveName,
+					opponentId: schoolId,
+					updatedAt: new Date(),
+					slots: normalizedSlots
+				});
+			}
+		}
+		catch (updateError) {
+			output.status = 562;
+			output.error = updateError.message;
+			return output;
+		}
+
+		try {
+			await client.post(`${ serverPath }/data/user`).send({ user: saveUser });
+		}
+		catch (saveError) {
+			output.status = 563;
+			output.error = saveError.message;
+			return output;
+		}
+
+		try {
+			const verifyResponse = await client.get(`${ serverPath }/data/user?id=${ user.id }`);
+			const returnUser = (verifyResponse.body.users || [])[0];
+			const allSavedPlans = (returnUser && returnUser.session && returnUser.session.planSave) || [];
+
+			output.status = 200;
+			output.data.savedLineups = allSavedPlans
+				.filter(savedPlan => String(savedPlan.opponentId) === String(schoolId))
+				.map(savedPlan => ({
+					id: savedPlan["_id"] || savedPlan.id,
+					name: savedPlan.name,
+					opponentId: savedPlan.opponentId,
+					updatedAt: savedPlan.updatedAt,
+					slots: savedPlan.slots || []
+				}));
+			return output;
+		}
+		catch (verifyError) {
+			output.status = 564;
+			output.error = verifyError.message;
+			return output;
+		}
+	},
+
 	dualLoad: async (targetId, serverPath) => {
 		const output = { data: { dual: null, fortMillWrestlers: [], opponentWrestlers: [] } };
 

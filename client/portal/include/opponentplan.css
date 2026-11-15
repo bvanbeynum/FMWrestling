@@ -1,0 +1,549 @@
+/* Variables & Design Tokens matching opponentmatch.jsx / opponentreport.css & DESIGN.md */
+:root {
+	--primary: #3246e5;
+	--primary-variant: #0f28d1;
+	--on-primary: #ffffff;
+
+	--secondary: #ff0000;
+	--secondary-accent: #fd8b00;
+
+	--background: #f8f9fa;
+	--surface: #ffffff;
+	--on-surface: #191c1d;
+	--on-surface-variant: #444655;
+	--inverse-surface: #2e3132;
+	--inverse-on-surface: #f0f1f2;
+
+	--outline: #e1e3e4;
+	--outline-variant: #c5c5d8;
+
+	--font-headers: 'Russo One', sans-serif;
+	--font-body: 'Roboto', sans-serif;
+
+	--rounded-sm: 4px;
+	--rounded-md: 8px;
+}
+
+.report-content-wrapper {
+	min-width: 0;
+}
+
+.opponentreport.container {
+	display: block;
+	width: 100%;
+	max-width: 1200px;
+	margin: 0 auto;
+	padding: 24px 24px 80px 24px;
+	box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+	.opponentreport.container {
+		padding: 16px 16px 80px 16px;
+	}
+}
+
+/* Header Filters Grid (matching opponentmatch.jsx) */
+.filters-header-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 16px;
+	justify-content: center;
+	align-items: center;
+	margin: 20px 0 24px 0;
+}
+
+.filter-item-group {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.filter-item-label {
+	font-family: var(--font-body);
+	font-size: 13px;
+	font-weight: 700;
+	color: var(--on-surface-variant);
+}
+
+.season-dropdown-select {
+	font-family: var(--font-body);
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--primary);
+	background-color: var(--surface);
+	border: 1.5px solid var(--outline);
+	border-radius: var(--rounded-sm);
+	padding: 8px 16px;
+	cursor: pointer;
+	outline: none;
+	transition: border-color 0.15s ease;
+}
+
+.season-dropdown-select:focus {
+	border-color: var(--primary);
+}
+
+.season-dropdown-select:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+/* Match Actions & Loading Indicator (matching opponentmatch.jsx) */
+.match-actions {
+	display: flex;
+	gap: 12px;
+	flex-wrap: wrap;
+	justify-content: center;
+	margin: 20px 0px;
+	text-align: center;
+}
+
+.insightLoading > :nth-child(1) {
+	font-size: 2em;
+	font-weight: 900;
+	font-family: var(--font-headers);
+	color: var(--primary-variant);
+}
+
+.insightLoading > :nth-child(2) {
+	color: var(--outline-variant);
+}
+
+.match-actions button {
+	background-color: #1158AD;
+	color: #ffffff;
+	border: none;
+	border-radius: 8px;
+	padding: 12px 22px;
+	font-family: 'Roboto', sans-serif;
+	font-size: 15px;
+	font-weight: 600;
+	cursor: pointer;
+	box-shadow: 0 2px 5px rgba(17, 88, 173, 0.25);
+}
+
+.match-actions button.secondary-action {
+	background-color: var(--surface);
+	color: #1158AD;
+	border: 1.5px solid #1158AD;
+	box-shadow: none;
+}
+
+.match-actions button.danger-action {
+	background-color: var(--surface);
+	color: #c5221f;
+	border: 1.5px solid #c5221f;
+	box-shadow: none;
+}
+
+.select-prompt-card {
+	text-align: center;
+	padding: 60px 20px;
+	font-size: 16px;
+	background: var(--surface);
+	border: 1px solid var(--outline);
+	border-radius: var(--rounded-md);
+	color: var(--on-surface-variant);
+	font-style: italic;
+}
+
+.select-loading-container {
+	min-height: 200px;
+	display: flex;
+	background: var(--surface);
+	border: 1px solid var(--outline);
+	border-radius: var(--rounded-md);
+	align-items: center;
+	justify-content: center;
+}
+
+/* Sticky Scoreboard Header & KPI Cards (matching opponentmatch.jsx, constrained width on desktop) */
+.opponentplan-sticky-wrapper {
+	position: sticky;
+	top: 0;
+	z-index: 40;
+	background: rgba(248, 249, 250, 0.95);
+	backdrop-filter: blur(6px);
+	-webkit-backdrop-filter: blur(6px);
+	padding: 10px 0;
+	margin-bottom: 20px;
+	border-bottom: 1px solid var(--outline);
+}
+
+.opponentplan-sticky-inner {
+	max-width: 760px;
+	margin: 0 auto;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.report-kpis-grid.opponentplan-kpis-grid {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 16px;
+	margin-bottom: 0;
+}
+
+@media (max-width: 560px) {
+	.report-kpis-grid.opponentplan-kpis-grid {
+		grid-template-columns: 1fr 1fr;
+		gap: 10px;
+	}
+}
+
+.report-kpi-card {
+	background: var(--surface);
+	border: 1px solid var(--outline);
+	border-left: 6px solid var(--primary);
+	border-radius: var(--rounded-md);
+	padding: 12px 16px;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	justify-content: center;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+	position: relative;
+}
+
+.kpi-label {
+	font-family: var(--font-body);
+	font-size: 12px;
+	font-weight: 700;
+	color: #64748b;
+	letter-spacing: 0.05em;
+	margin-bottom: 6px;
+	text-transform: uppercase;
+}
+
+.opponentplan-kpi-scores-row {
+	display: flex;
+	align-items: baseline;
+	gap: 20px;
+	flex-wrap: wrap;
+	width: 100%;
+}
+
+.opponentplan-kpi-metric {
+	display: flex;
+	flex-direction: column;
+}
+
+.kpi-value-text {
+	font-size: 22px;
+	color: #1b365d;
+	font-weight: 800;
+	line-height: 1.1;
+	margin-bottom: 4px;
+	font-family: var(--font-headers);
+}
+
+.kpi-value-text.user-score {
+	color: #0f28d1;
+}
+
+.kpi-sub-text {
+	font-family: var(--font-body);
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--primary);
+}
+
+.Russo {
+	font-family: var(--font-headers);
+}
+
+.weight-class-kpi-card.powerhouse {
+	border-left-color: #10b981;
+}
+
+.weight-class-kpi-card.wip {
+	border-left-color: #ef4444;
+}
+
+.weight-class-kpi-card.average {
+	border-left-color: var(--primary);
+}
+
+.opponentplan-sticky-actions {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+
+.opponentplan-sticky-actions button {
+	background-color: #1158AD;
+	color: #ffffff;
+	border: none;
+	border-radius: 8px;
+	padding: 8px 18px;
+	font-family: var(--font-body);
+	font-size: 14px;
+	font-weight: 600;
+	cursor: pointer;
+	box-shadow: 0 2px 5px rgba(17, 88, 173, 0.2);
+}
+
+.opponentplan-sticky-actions button.secondary-action {
+	background-color: var(--surface);
+	color: #1158AD;
+	border: 1.5px solid #1158AD;
+	box-shadow: none;
+}
+
+.opponentplan-save-bar {
+	background: var(--surface);
+	border: 1px solid var(--outline);
+	border-radius: var(--rounded-md);
+	padding: 12px 16px;
+	display: flex;
+	gap: 10px;
+	align-items: center;
+	flex-wrap: wrap;
+}
+
+.opponentplan-save-input {
+	font-family: var(--font-body);
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--on-surface);
+	background-color: var(--surface);
+	border: 1.5px solid var(--outline);
+	border-radius: var(--rounded-sm);
+	padding: 8px 12px;
+	flex: 1;
+	min-width: 180px;
+	outline: none;
+}
+
+.opponentplan-save-input:focus {
+	border-color: var(--primary);
+}
+
+/* Status Badges (matching opponentmatch.jsx) */
+.status-badge-container {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.status-badge {
+	display: inline-block;
+	font-family: var(--font-body);
+	font-size: 11px;
+	font-weight: 700;
+	padding: 4px 10px;
+	border-radius: 12px;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	line-height: 1.2;
+}
+
+.status-badge.powerhouse {
+	background-color: #e6f4ea;
+	color: #137333;
+	border: 1px solid #ceead6;
+}
+
+.status-badge.stable {
+	background-color: #fef7e0;
+	color: #b06000;
+	border: 1px solid #feefc3;
+}
+
+.status-badge.wip {
+	background-color: #fce8e6;
+	color: #c5221f;
+	border: 1px solid #fad2cf;
+}
+
+/* Weight Matrix Section & Cards Grid (matching opponentmatch.jsx) */
+.weight-matrix-section {
+	margin: 20px 0px;
+}
+
+.matrix-section-title {
+	font-family: var(--font-headers);
+	font-size: 18px;
+	font-weight: 600;
+	color: var(--on-surface);
+	text-transform: uppercase;
+	margin-top: 0;
+	margin-bottom: 16px;
+	border-bottom: 1px solid var(--outline);
+	padding-bottom: 8px;
+}
+
+.weight-class-cards-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+	gap: 20px;
+}
+
+.weight-class-card {
+	background: var(--surface);
+	border: 1px solid var(--outline);
+	border-radius: var(--rounded-md);
+	padding: 16px;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.wc-card-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	border-bottom: 1px solid var(--outline);
+	padding-bottom: 10px;
+	margin-bottom: 12px;
+}
+
+.wc-title {
+	font-family: var(--font-headers);
+	font-size: 18px;
+	color: var(--on-surface);
+}
+
+.wc-wrestler-row {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 10px 12px;
+	background: #f8f9fa;
+	border-radius: 6px;
+	border: 1px solid #e9ecef;
+	margin-bottom: 10px;
+	transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.wc-wrestler-row:last-child {
+	margin-bottom: 0;
+}
+
+.wc-wrestler-row.locked {
+	border-left: 4px solid var(--secondary-accent);
+	background: #fffaf5;
+}
+
+.wc-wrestler-row.vacated {
+	border-left: 4px solid #c5221f;
+	background: #fce8e6;
+}
+
+.opponentplan-row-controls {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+}
+
+.opponentplan-lock-btn {
+	background: var(--surface);
+	border: 1px solid var(--outline);
+	border-radius: var(--rounded-sm);
+	width: 32px;
+	height: 32px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 14px;
+	padding: 0;
+	flex-shrink: 0;
+	cursor: pointer;
+}
+
+.opponentplan-lock-btn.locked {
+	background: #fef7e0;
+	border-color: var(--secondary-accent);
+}
+
+.opponentplan-wrestler-dropdown {
+	font-family: var(--font-body);
+	font-size: 14px;
+	font-weight: 700;
+	color: var(--on-surface);
+	background: var(--surface);
+	border: 1px solid var(--outline);
+	border-radius: var(--rounded-sm);
+	padding: 6px 8px;
+	flex: 1;
+	min-width: 0;
+	outline: none;
+}
+
+.opponentplan-wrestler-dropdown:focus {
+	border-color: var(--primary);
+}
+
+.opponentplan-score-box {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	flex-shrink: 0;
+}
+
+.opponentplan-score-label {
+	font-family: var(--font-body);
+	font-size: 11px;
+	font-weight: 700;
+	color: var(--on-surface-variant);
+}
+
+.opponentplan-score-dropdown {
+	font-family: var(--font-headers);
+	font-size: 13px;
+	color: var(--on-surface);
+	background: var(--surface);
+	border: 1px solid var(--outline);
+	border-radius: var(--rounded-sm);
+	padding: 4px 6px;
+	outline: none;
+	cursor: pointer;
+}
+
+.opponentplan-score-dropdown.win {
+	background-color: #e6f4ea;
+	color: #137333;
+	border-color: #137333;
+}
+
+.opponentplan-row-submeta {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding-left: 40px;
+	font-size: 12px;
+	color: var(--on-surface-variant);
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.opponentplan-team-tag {
+	font-weight: 700;
+	color: var(--primary);
+}
+
+.opponentplan-team-tag.opponent {
+	color: var(--on-surface-variant);
+}
+
+.coachingNotes {
+	font-size: 0.9em;
+	color: var(--on-surface);
+}
+
+.opponentplan-error-box {
+	background-color: #fce8e6;
+	color: #c5221f;
+	border: 1px solid #fad2cf;
+	border-radius: var(--rounded-md);
+	padding: 12px 16px;
+	margin-bottom: 16px;
+	font-family: var(--font-body);
+	font-size: 14px;
+	font-weight: 600;
+	text-align: center;
+}

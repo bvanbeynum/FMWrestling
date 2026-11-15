@@ -57,6 +57,21 @@ export default {
 					opponentWrestlerId: String,
 					opponentScore: Number
 				}]
+			}],
+			planSave: [{
+				name: String,
+				opponentId: String,
+				updatedAt: Date,
+				slots: [{
+					weightClass: String,
+					homeWrestlerId: String,
+					isHomeLocked: Boolean,
+					homeScore: Number,
+					opponentWrestlerId: String,
+					isOpponentLocked: Boolean,
+					opponentScore: Number,
+					coachingNote: String
+				}]
 			}]
 		}
 	}),
