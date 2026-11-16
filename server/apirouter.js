@@ -303,50 +303,6 @@ router.get("/api/opponentreportselect", authAPI, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : results.data);
 });
 
-router.get("/api/opponentmatchload", authAPI, async (request, response) => {
-	const results = await api.opponentMatchLoad(request.serverPath);
-	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
-});
-
-router.get("/api/opponentmatchselect", authAPI, async (request, response) => {
-	const results = await api.opponentMatchSelect(request.query.opponent, request.query.season, request.serverPath);
-	response.status(results.status).json(results.error ? { error: results.error } : results.data);
-});
-
-router.post("/api/opponentmatchgenerate", authAPI, async (request, response) => {
-	const jobId = crypto.randomUUID();
-	jobs[jobId] = { status: "processing" };
-
-	api.opponentMatchGenerate(request.query.schoolid, request.query.season, request.body.weightClasses, request.serverPath)
-		.then(results => {
-			if (results.error) {
-				jobs[jobId] = { status: "error", statusCode: results.status || 580, error: results.error };
-			} else {
-				jobs[jobId] = { status: "completed", insights: results.insights };
-			}
-		})
-		.catch(error => {
-			jobs[jobId] = { status: "error", statusCode: 580, error: error.message };
-		});
-
-	response.status(202).json({ jobId });
-});
-
-router.get("/api/opponentmatchgenerate/:jobId", authAPI, (request, response) => {
-	const jobId = request.params.jobId;
-	const job = jobs[jobId];
-
-	if (!job) {
-		return response.status(404).json({ status: "not_found" });
-	}
-
-	if (job.status === "completed" || job.status === "error") {
-		delete jobs[jobId];
-	}
-
-	response.status(200).json(job);
-});
-
 router.get("/api/opponentplanload", authAPI, async (request, response) => {
 	const results = await api.opponentPlanLoad(request.serverPath);
 	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
