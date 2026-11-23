@@ -3,239 +3,15 @@ import ReactDOM from "react-dom/client";
 import Nav from "./nav.jsx";
 import "./include/index.css";
 import "./include/dualreport.css";
-
-// ============================================================================
-// TOP-OF-PAGE PURE LOGIC & DATA PROCESSING FUNCTIONS
-// ============================================================================
-
-const parseEventDate = (dateInput) => {
-	if (!dateInput) return null;
-	if (dateInput instanceof Date) return dateInput;
-
-	const dateString = dateInput.toString().trim();
-	const isoMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2}))?)?/);
-	if (isoMatch) {
-		const yearValue = parseInt(isoMatch[1], 10);
-		const monthValue = parseInt(isoMatch[2], 10) - 1;
-		const dayValue = parseInt(isoMatch[3], 10);
-		const hoursValue = isoMatch[4] ? parseInt(isoMatch[4], 10) : 0;
-		const minutesValue = isoMatch[5] ? parseInt(isoMatch[5], 10) : 0;
-		const secondsValue = isoMatch[6] ? parseInt(isoMatch[6], 10) : 0;
-
-		return new Date(yearValue, monthValue, dayValue, hoursValue, minutesValue, secondsValue);
-	}
-
-	return new Date(dateInput);
-};
-
-const getSeasonOptions = (dateObject) => {
-	const currentYear = dateObject.getFullYear();
-	const currentMonth = dateObject.getMonth();
-	let startYear;
-	if (currentMonth >= 8) {
-		startYear = currentYear;
-	} else {
-		startYear = currentYear - 1;
-	}
-
-	const formatSeason = (yearValue) => {
-		const yearShortText = yearValue.toString().slice(-2);
-		const nextYearShortText = (yearValue + 1).toString().slice(-2);
-		return {
-			name: `${yearShortText}-${nextYearShortText}`
-		};
-	};
-
-	return [
-		formatSeason(startYear + 1),
-		formatSeason(startYear),
-		formatSeason(startYear - 1)
-	];
-};
-
-const getSeasonStartYear = (seasonNameValue) => {
-	if (seasonNameValue && /^\d{2}-\d{2}$/.test(seasonNameValue)) {
-		const startYearShortValue = parseInt(seasonNameValue.split("-")[0], 10);
-		return 2000 + startYearShortValue;
-	}
-	const currentTodayDate = new Date();
-	return currentTodayDate.getMonth() >= 8 ? currentTodayDate.getFullYear() : currentTodayDate.getFullYear() - 1;
-};
-
-const processLeaderboardData = (seasonWrestlers, selectedDivisionSetting, seasonNameValue) => {
-	const startYearNumber = getSeasonStartYear(seasonNameValue);
-	const inSeasonStartDate = new Date(startYearNumber, 10, 1, 0, 0, 0);
-	const inSeasonEndDate = new Date(startYearNumber + 1, 2, 1, 23, 59, 59);
-
-	const processedLeaderboardRecords = [];
-
-	(seasonWrestlers || []).forEach((wrestlerItem) => {
-		const wrestlerNameKey = (wrestlerItem.name || "").trim();
-		if (!wrestlerNameKey) return;
-
-		const wrestlerRecord = {
-			id: wrestlerItem.id || wrestlerItem.sqlId,
-			name: wrestlerNameKey,
-			totalMatches: 0,
-			wins: 0,
-			losses: 0,
-			careerWins: 0,
-			careerLosses: 0,
-			points: 0,
-			pins: 0,
-			techfalls: 0,
-			majorDecisions: 0,
-			decisions: 0,
-			forfeits: 0,
-			takedowns: 0,
-			nearfalls: 0,
-			reversals: 0,
-			escapes: 0,
-			wrestledDivisions: new Set()
-		};
-		
-		(wrestlerItem.events || []).forEach((eventItem) => {
-			const rawEventDate = parseEventDate(eventItem.date);
-			if (!rawEventDate) return;
-
-			const eventMonth = rawEventDate.getMonth();
-			const isCareerInSeasonWindow = eventMonth >= 10 || eventMonth < 2;
-
-			if (isCareerInSeasonWindow) {
-				(eventItem.matches || []).forEach((matchItem) => {
-					const matchDivision = matchItem.divisionConvert || eventItem.divisionConvert || matchItem.division || "Varsity";
-					if (selectedDivisionSetting !== "All Divisions" && matchDivision !== selectedDivisionSetting) {
-						return;
-					}
-					if (matchItem.isWinner) {
-						wrestlerRecord.careerWins += 1;
-					} 
-					else if (!/for/i.test(matchItem.winType)) {
-						wrestlerRecord.careerLosses += 1;
-					}
-				});
-			}
-
-			if (rawEventDate < inSeasonStartDate || rawEventDate > inSeasonEndDate) {
-				return;
-			}
-
-			(eventItem.matches || []).forEach((matchItem) => {
-				const matchDivision = matchItem.divisionConvert || eventItem.divisionConvert || matchItem.division || "Varsity";
-				if (selectedDivisionSetting !== "All Divisions" && matchDivision !== selectedDivisionSetting) {
-					return;
-				}
-				wrestlerRecord.wrestledDivisions.add(matchDivision);
-				wrestlerRecord.totalMatches += 1;
-
-				if (matchItem.isWinner) {
-					wrestlerRecord.wins += 1;
-
-					const winTypeNormalized = (matchItem.winType || "").toUpperCase();
-					let matchPointsValue = 3;
-
-					if (winTypeNormalized === "DEC") {
-						matchPointsValue = 3;
-						wrestlerRecord.decisions += 1;
-					} else if (winTypeNormalized === "MD") {
-						matchPointsValue = 4;
-						wrestlerRecord.majorDecisions += 1;
-					} else if (winTypeNormalized === "TF") {
-						matchPointsValue = 5;
-						wrestlerRecord.techfalls += 1;
-					} else if (["F", "FALL", "PIN"].includes(winTypeNormalized)) {
-						matchPointsValue = 6;
-						wrestlerRecord.pins += 1;
-					} else if (["FF", "FOR", "FORFEIT", "DQ", "DEF", "DEFAULT"].includes(winTypeNormalized)) {
-						matchPointsValue = 6;
-						wrestlerRecord.forfeits += 1;
-					} else {
-						matchPointsValue = 3;
-						wrestlerRecord.decisions += 1;
-					}
-
-					wrestlerRecord.points += matchPointsValue;
-				} 
-				else if (!/for/i.test(matchItem.winType)) {
-					wrestlerRecord.losses += 1;
-				}
-
-				const takedownCount = Number(matchItem.takedowns || matchItem.takedown || matchItem.scores?.takedowns || 0);
-				const nearfallCount = Number(matchItem.nearfalls || matchItem.nearfall || matchItem.scores?.nearfalls || 0);
-				const reversalCount = Number(matchItem.reversals || matchItem.reversal || matchItem.reverses || matchItem.reverse || matchItem.scores?.reversals || 0);
-				const escapeCount = Number(matchItem.escapes || matchItem.escape || matchItem.scores?.escapes || 0);
-
-				wrestlerRecord.takedowns += takedownCount;
-				wrestlerRecord.nearfalls += nearfallCount;
-				wrestlerRecord.reversals += reversalCount;
-				wrestlerRecord.escapes += escapeCount;
-			});
-		});
-
-		if (wrestlerRecord.totalMatches > 0) {
-			processedLeaderboardRecords.push(wrestlerRecord);
-		}
-	});
-
-	if (selectedDivisionSetting === "All Divisions") {
-		return processedLeaderboardRecords;
-	}
-
-	return processedLeaderboardRecords.filter(recordItem => recordItem.wrestledDivisions.has(selectedDivisionSetting));
-};
-
-const formatLeaderboardMetric = (wrestlerRecord, metricKey, viewModeSetting) => {
-	if (metricKey === "careerWins") {
-		return `${wrestlerRecord.careerWins || 0}W ${wrestlerRecord.careerLosses || 0}L`;
-	}
-	if (metricKey === "wins") {
-		return `${wrestlerRecord.wins || 0}W ${wrestlerRecord.losses || 0}L`;
-	}
-	const rawValue = wrestlerRecord[metricKey] || 0;
-	if (viewModeSetting === "per_match") {
-		if (!wrestlerRecord.totalMatches || wrestlerRecord.totalMatches === 0) {
-			return "0.00";
-		}
-		return (rawValue / wrestlerRecord.totalMatches).toFixed(2);
-	}
-	return rawValue;
-};
-
-const getMetricDisplayName = (targetMetricKey) => {
-	const metricLabels = {
-		points: "Points",
-		careerWins: "Career Record",
-		wins: "Season Record",
-		pins: "Pins",
-		techfalls: "Tech Falls",
-		majorDecisions: "Major Decisions",
-		decisions: "Decisions",
-		forfeits: "Forfeits",
-		takedowns: "Takedowns",
-		nearfalls: "Nearfalls",
-		reversals: "Reversals",
-		escapes: "Escapes",
-		totalMatches: "Matches"
-	};
-	return metricLabels[targetMetricKey] || "Points";
-};
-
-const getTopLeaderboardRecords = (wrestlerRecords, metricKey, viewModeSetting, count = 3) => {
-	if (wrestlerRecords.length === 0) return [];
-	const usePerMatchCalculation = viewModeSetting === "per_match" && metricKey !== "careerWins" && metricKey !== "wins";
-	return [...wrestlerRecords].sort((firstEntry, secondEntry) => {
-		const valueOne = usePerMatchCalculation
-			? (firstEntry.totalMatches > 0 ? firstEntry[metricKey] / firstEntry.totalMatches : 0)
-			: (firstEntry[metricKey] || 0);
-		const valueTwo = usePerMatchCalculation
-			? (secondEntry.totalMatches > 0 ? secondEntry[metricKey] / secondEntry.totalMatches : 0)
-			: (secondEntry[metricKey] || 0);
-		if (valueOne !== valueTwo) {
-			return valueTwo - valueOne;
-		}
-		return secondEntry.points - firstEntry.points;
-	}).slice(0, count);
-};
+import {
+	getSeasonOptions,
+	processLeaderboardData,
+	formatLeaderboardMetric,
+	getMetricDisplayName,
+	getTopLeaderboardRecords,
+	PRINT_DIVISION_GROUPS,
+	buildDivisionPrintDatasets
+} from "../../server/leaderboardData.js";
 
 // ============================================================================
 // PRESENTATION JSX COMPONENT
@@ -254,6 +30,16 @@ const TeamLeaderboard = () => {
 	const [viewModeSetting, setViewModeSetting] = useState("overall");
 	const [sortMetricKey, setSortMetricKey] = useState("careerWins");
 	const [sortDirectionDescending, setSortDirectionDescending] = useState(true);
+
+	const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+	const [selectedPrintDivisions, setSelectedPrintDivisions] = useState({
+		varsity: true,
+		jv: false,
+		ms: false
+	});
+	const [includeFullRosterTables, setIncludeFullRosterTables] = useState(true);
+	const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+	const [pdfErrorMessage, setPdfErrorMessage] = useState("");
 
 	useEffect(() => {
 		setIsLoading(true);
@@ -311,6 +97,112 @@ const TeamLeaderboard = () => {
 
 	const topThreeLeaders = getTopLeaderboardRecords(wrestlerRecords, sortMetricKey, viewModeSetting, 3);
 	const activeMetricLabel = getMetricDisplayName(sortMetricKey);
+
+	const getDefaultPrintDivisions = () => {
+		if (selectedDivisionSetting === "Varsity") {
+			return { varsity: true, jv: false, ms: false };
+		}
+		if (selectedDivisionSetting === "JV" || selectedDivisionSetting === "Girls") {
+			return { varsity: false, jv: true, ms: false };
+		}
+		if (selectedDivisionSetting === "Middle School") {
+			return { varsity: false, jv: false, ms: true };
+		}
+		return { varsity: true, jv: true, ms: true };
+	};
+
+	const openPrintModal = () => {
+		setSelectedPrintDivisions(getDefaultPrintDivisions());
+		setIncludeFullRosterTables(true);
+		setPdfErrorMessage("");
+		setIsPrintModalOpen(true);
+	};
+
+	const activeSeasonForPdf = seasonName || selectedSeason;
+	const allDivisionPrintDatasets = buildDivisionPrintDatasets(
+		wrestlers,
+		activeSeasonForPdf,
+		PRINT_DIVISION_GROUPS.map((group) => ({ key: group.key, includeTable: includeFullRosterTables }))
+	);
+	const datasetByDivisionKey = {};
+	allDivisionPrintDatasets.forEach((dataset) => {
+		datasetByDivisionKey[dataset.key] = dataset;
+	});
+
+	const selectedPrintKeys = PRINT_DIVISION_GROUPS
+		.filter((group) => selectedPrintDivisions[group.key])
+		.map((group) => group.key);
+
+	const estimatedPdfPages = selectedPrintKeys.reduce((totalPages, divKey) => {
+		const dataset = datasetByDivisionKey[divKey];
+		if (!dataset) return totalPages;
+		if (!includeFullRosterTables) return totalPages + 1;
+		const tablePages = dataset.records.length > 40 ? Math.ceil(dataset.records.length / 35) : 1;
+		return totalPages + 1 + tablePages;
+	}, 0);
+
+	const handleLeaderboardPdfAction = async (actionMode) => {
+		if (selectedPrintKeys.length === 0) {
+			setPdfErrorMessage("Please select at least one division.");
+			return;
+		}
+		if (estimatedPdfPages === 0) {
+			setPdfErrorMessage("No wrestler match records found for the selected division(s) this season.");
+			return;
+		}
+
+		const previewWindow = actionMode === "preview" ? window.open("", "_blank") : null;
+		setIsGeneratingPdf(true);
+		setPdfErrorMessage("");
+
+		try {
+			const queryParams = new URLSearchParams({
+				season: activeSeasonForPdf,
+				divisions: selectedPrintKeys.join(","),
+				tables: includeFullRosterTables ? selectedPrintKeys.join(",") : "none",
+				download: actionMode === "download" ? "1" : "0"
+			});
+
+			const apiResponse = await fetch(`/api/teamleaderboardpdf?${queryParams.toString()}`);
+			if (!apiResponse.ok) {
+				const errorPayload = await apiResponse.json().catch(() => ({}));
+				throw new Error(errorPayload.error || apiResponse.statusText || `PDF request failed (${apiResponse.status})`);
+			}
+
+			const pdfBlob = await apiResponse.blob();
+			const pdfFilename = apiResponse.headers.get("X-PDF-Filename") || `FM-Wrestling-Leaderboard-${activeSeasonForPdf}.pdf`;
+			const blobUrl = URL.createObjectURL(pdfBlob);
+
+			if (actionMode === "preview") {
+				if (previewWindow) {
+					previewWindow.location.href = blobUrl;
+				} else {
+					const fallbackLink = document.createElement("a");
+					fallbackLink.href = blobUrl;
+					fallbackLink.target = "_blank";
+					document.body.appendChild(fallbackLink);
+					fallbackLink.click();
+					fallbackLink.remove();
+				}
+				setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+			} else {
+				const downloadLink = document.createElement("a");
+				downloadLink.href = blobUrl;
+				downloadLink.download = pdfFilename;
+				document.body.appendChild(downloadLink);
+				downloadLink.click();
+				downloadLink.remove();
+				setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+			}
+		} catch (pdfError) {
+			if (previewWindow && !previewWindow.closed) {
+				previewWindow.close();
+			}
+			setPdfErrorMessage(pdfError.message || "Failed to generate leaderboard PDF.");
+		} finally {
+			setIsGeneratingPdf(false);
+		}
+	};
 
 	return (
 		<div className="page">
@@ -380,6 +272,14 @@ const TeamLeaderboard = () => {
 											Per Match
 										</button>
 									</div>
+
+									<button
+										type="button"
+										className="leaderboard-print-btn"
+										onClick={openPrintModal}
+									>
+										🖨️ Print / Wall PDF
+									</button>
 								</div>
 							</div>
 
@@ -635,6 +535,145 @@ const TeamLeaderboard = () => {
 					</div>
 				)}
 			</div>
+
+			{isPrintModalOpen && (
+				<div className="modal-overlay" onClick={() => !isGeneratingPdf && setIsPrintModalOpen(false)}>
+					<div className="modal-card" onClick={(clickEvent) => clickEvent.stopPropagation()}>
+						<header className="modal-header">
+							<h3 className="modal-title">Print Wall Leaderboard PDF</h3>
+							<button
+								type="button"
+								className="modal-close"
+								onClick={() => setIsPrintModalOpen(false)}
+								disabled={isGeneratingPdf}
+								aria-label="Close"
+							>
+								&times;
+							</button>
+						</header>
+
+						<div className="modal-body">
+							<p className="modal-subtitle">
+								Generates US Letter Landscape wall sheets for the <strong>{activeSeasonForPdf}</strong> season:
+								a 12-Stat Top 4 Leaders Board{includeFullRosterTables ? " + Full Roster Reference Table" : ""} for each selected division.
+							</p>
+
+							<div className="form-group">
+								<div className="pdf-preset-row">
+									<label className="form-label" style={{ marginBottom: 0 }}>Select Divisions</label>
+									<div className="pdf-preset-actions">
+										<button
+											type="button"
+											className="btn-secondary btn-sm"
+											onClick={() => setSelectedPrintDivisions(getDefaultPrintDivisions())}
+										>
+											Current Only
+										</button>
+										<button
+											type="button"
+											className="btn-secondary btn-sm"
+											onClick={() => setSelectedPrintDivisions({ varsity: true, jv: true, ms: true })}
+										>
+											Select All
+										</button>
+									</div>
+								</div>
+
+								<div className="modal-section-box pdf-divisions-list">
+									{PRINT_DIVISION_GROUPS.map((group) => {
+										const isChecked = Boolean(selectedPrintDivisions[group.key]);
+										const dataset = datasetByDivisionKey[group.key];
+										const wrestlerCount = dataset ? dataset.records.length : 0;
+
+										return (
+											<label
+												key={group.key}
+												className={`pdf-division-option ${isChecked ? "checked" : ""}`}
+											>
+												<span className="checkbox-label">
+													<input
+														type="checkbox"
+														checked={isChecked}
+														onChange={() => {
+															setSelectedPrintDivisions((prev) => ({
+																...prev,
+																[group.key]: !prev[group.key]
+															}));
+															setPdfErrorMessage("");
+														}}
+													/>
+													<span>{group.label}</span>
+												</span>
+												<span className={`pdf-division-option-count ${wrestlerCount === 0 ? "empty" : ""}`}>
+													{wrestlerCount > 0 ? `${wrestlerCount} active wrestlers` : "0 wrestlers (no data)"}
+												</span>
+											</label>
+										);
+									})}
+								</div>
+							</div>
+
+							<div className="form-group">
+								<label className="form-label">Sheet Options</label>
+								<div className="modal-section-box">
+									<label className="checkbox-label pdf-table-toggle-label">
+										<input
+											type="checkbox"
+											checked={includeFullRosterTables}
+											onChange={(changeEvent) => setIncludeFullRosterTables(changeEvent.target.checked)}
+										/>
+										<span>
+											<strong>Include Full Roster Table(s)</strong> (adds Page 2 per division with Top-3 highlights)
+										</span>
+									</label>
+								</div>
+							</div>
+
+							<div className={`pdf-page-summary ${estimatedPdfPages > 5 ? "over-cap" : ""}`}>
+								<span>
+									{estimatedPdfPages > 5
+										? "Over 5 pages — uncheck a division or Full Roster Table to trim."
+										: "Formatted for B&W or color wall printing"}
+								</span>
+								<span className="pdf-page-badge">
+									Estimated: {estimatedPdfPages} {estimatedPdfPages === 1 ? "page" : "pages"}
+								</span>
+							</div>
+
+							{pdfErrorMessage && (
+								<div className="pdf-error-banner">{pdfErrorMessage}</div>
+							)}
+						</div>
+
+						<footer className="modal-footer">
+							<button
+								type="button"
+								className="btn-secondary"
+								onClick={() => setIsPrintModalOpen(false)}
+								disabled={isGeneratingPdf}
+							>
+								Cancel
+							</button>
+							<button
+								type="button"
+								className="btn-secondary"
+								disabled={isGeneratingPdf || estimatedPdfPages === 0}
+								onClick={() => handleLeaderboardPdfAction("download")}
+							>
+								{isGeneratingPdf ? "Generating..." : "⬇️ Download PDF"}
+							</button>
+							<button
+								type="button"
+								className="btn-primary"
+								disabled={isGeneratingPdf || estimatedPdfPages === 0}
+								onClick={() => handleLeaderboardPdfAction("preview")}
+							>
+								{isGeneratingPdf ? "Generating..." : "🖨️ Preview / Print PDF"}
+							</button>
+						</footer>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 };

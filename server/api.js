@@ -6,11 +6,56 @@ import { google } from "googleapis";
 import fs, { stat } from "fs";
 import path from "path";
 import { getDualWrestlers, isGeminiQuotaError, isGeminiOverloadedError, extractOpponentTeam, extractEventDivision, extractEmailBody, extractEmailAttachments, getGoogleOAuthClient, calculatePercentile, buildHtmlTable, computeFortMillWeeklyHighlights } from "./middleware.js";
+import { buildDivisionPrintDatasets, PRINT_DIVISION_GROUPS } from "./leaderboardData.js";
+import { generateLeaderboardPdfBuffer, buildLeaderboardEmailHtml } from "./leaderboardPdf.js";
 import * as marked from './marked.cjs';
 const markedParse = marked.marked;
 
+const parseDivisionConfigs = (options = {}) => {
+	if (options.includeAll) {
+		return PRINT_DIVISION_GROUPS.map((group) => ({ key: group.key, includeTable: true }));
+	}
 
-export default {
+	let selectedDivisionKeys;
+	if (options.divisions !== undefined && options.divisions !== null) {
+		const rawList = Array.isArray(options.divisions)
+			? options.divisions
+			: String(options.divisions).split(",");
+		selectedDivisionKeys = rawList.map((item) => String(item).trim().toLowerCase()).filter(Boolean);
+	} else {
+		selectedDivisionKeys = PRINT_DIVISION_GROUPS.map((group) => group.key);
+	}
+
+	let tableKeySet = null;
+	if (options.tables !== undefined && options.tables !== null) {
+		if (options.tables === false || options.tables === "none" || options.tables === "") {
+			tableKeySet = new Set();
+		} else {
+			const rawTables = Array.isArray(options.tables)
+				? options.tables
+				: String(options.tables).split(",");
+			tableKeySet = new Set(rawTables.map((item) => String(item).trim().toLowerCase()).filter(Boolean));
+		}
+	}
+
+	return PRINT_DIVISION_GROUPS
+		.filter((group) => selectedDivisionKeys.includes(group.key))
+		.map((group) => ({
+			key: group.key,
+			includeTable: tableKeySet === null
+				? true
+				: (tableKeySet.has("all") || tableKeySet.has(group.key))
+		}));
+};
+
+const formatTodaySlashDate = (dateObject = new Date()) => {
+	const monthText = String(dateObject.getMonth() + 1).padStart(2, "0");
+	const dayText = String(dateObject.getDate()).padStart(2, "0");
+	const yearText = String(dateObject.getFullYear());
+	return `${monthText}/${dayText}/${yearText}`;
+};
+
+const api = {
 
 	setRequestVars: (protocol, host) => {
 		return {
@@ -3256,6 +3301,81 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 		return output;
 	},
 
+	teamLeaderboardPdf: async (seasonName, options = {}, serverPath) => {
+		const loadResult = await api.teamLeaderboardLoad(seasonName, serverPath);
+		if (loadResult.error) {
+			return { status: loadResult.status || 562, error: loadResult.error };
+		}
+
+		const divisionConfigs = parseDivisionConfigs(options);
+		if (divisionConfigs.length === 0) {
+			return { status: 400, error: "Please select at least one division to generate the PDF." };
+		}
+
+		const activeSeason = loadResult.data.seasonName;
+		const divisionDatasets = buildDivisionPrintDatasets(
+			loadResult.data.wrestlers || [],
+			activeSeason,
+			divisionConfigs
+		);
+
+		if (divisionDatasets.length === 0) {
+			return { status: 404, error: "No leaderboard stats found for the selected season and division(s)." };
+		}
+
+		const generatedDateText = formatTodaySlashDate(new Date());
+		const pdfResult = await generateLeaderboardPdfBuffer({
+			seasonName: activeSeason,
+			generatedDateText,
+			divisionDatasets
+		});
+
+		return {
+			status: 200,
+			buffer: pdfResult.buffer,
+			filename: pdfResult.filename,
+			pageCount: pdfResult.pageCount,
+			seasonName: activeSeason,
+			generatedDateText,
+			divisionDatasets
+		};
+	},
+
+	weeklyLeaderboardEmailPreview: async (seasonName, customNote, serverPath) => {
+		const pdfResult = await api.teamLeaderboardPdf(seasonName, { includeAll: true }, serverPath);
+		if (pdfResult.error) {
+			return { status: pdfResult.status || 500, error: pdfResult.error };
+		}
+
+		const html = buildLeaderboardEmailHtml({
+			seasonName: pdfResult.seasonName,
+			generatedDateText: pdfResult.generatedDateText,
+			divisionDatasets: pdfResult.divisionDatasets,
+			pageCount: pdfResult.pageCount,
+			filename: pdfResult.filename,
+			customNote
+		});
+
+		const divisionSummary = pdfResult.divisionDatasets.map((division) => ({
+			key: division.key,
+			label: division.label,
+			wrestlerCount: division.records.length,
+			pages: division.includeTable ? (division.records.length > 40 ? 1 + Math.ceil(division.records.length / 35) : 2) : 1
+		}));
+
+		return {
+			status: 200,
+			data: {
+				subject: `FM Wrestling Wall Leaderboard - ${pdfResult.generatedDateText}`,
+				html,
+				filename: pdfResult.filename,
+				pageCount: pdfResult.pageCount,
+				seasonName: pdfResult.seasonName,
+				divisionSummary
+			}
+		};
+	},
+
 	parentEmailLoad: async (serverPath, statusFilter) => {
 		const output = { data: { parentEmails: [] } };
 
@@ -5648,7 +5768,7 @@ ${buildHtmlTable(upcomingEvents.varsity || [], scheduleColumns)}
 		}
 	},
 
-	weeklyEmailSend: async (serverPath, recipientEmails, subject, bodyHtml) => {
+	weeklyEmailSend: async (serverPath, recipientEmails, subject, bodyHtml, attachments = []) => {
 		try {
 			if (!recipientEmails || recipientEmails.length === 0) {
 				return { error: "Please select at least one recipient email", status: 400 };
@@ -5688,6 +5808,27 @@ ${buildHtmlTable(upcomingEvents.varsity || [], scheduleColumns)}
 
 			const base64HtmlBody = Buffer.from(completeHtmlDocument, "utf-8").toString("base64");
 
+			const attachmentLines = [];
+			if (Array.isArray(attachments) && attachments.length > 0) {
+				for (const attachmentItem of attachments) {
+					if (!attachmentItem || !attachmentItem.contentBuffer) continue;
+					const rawBase64 = Buffer.isBuffer(attachmentItem.contentBuffer)
+						? attachmentItem.contentBuffer.toString("base64")
+						: Buffer.from(attachmentItem.contentBuffer).toString("base64");
+					const wrappedBase64 = rawBase64.replace(/.{1,76}/g, "$&\r\n").trim();
+					const safeFilename = String(attachmentItem.filename || "attachment.pdf").replace(/["\r\n]/g, "");
+					const safeMimeType = String(attachmentItem.mimeType || "application/pdf").replace(/[\r\n]/g, "");
+
+					attachmentLines.push(`--${mimeBoundary}`);
+					attachmentLines.push(`Content-Type: ${safeMimeType}; name="${safeFilename}"`);
+					attachmentLines.push(`Content-Disposition: attachment; filename="${safeFilename}"`);
+					attachmentLines.push("Content-Transfer-Encoding: base64");
+					attachmentLines.push("");
+					attachmentLines.push(wrappedBase64);
+					attachmentLines.push("");
+				}
+			}
+
 			const emailLines = [
 				`Subject: ${sanitizedSubject || "Fort Mill Wrestling Weekly Email"}`,
 				`Bcc: ${recipientEmails.join(",")}`,
@@ -5700,6 +5841,7 @@ ${buildHtmlTable(upcomingEvents.varsity || [], scheduleColumns)}
 				"",
 				base64HtmlBody,
 				"",
+				...attachmentLines,
 				`--${mimeBoundary}--`
 			];
 
@@ -5720,3 +5862,5 @@ ${buildHtmlTable(upcomingEvents.varsity || [], scheduleColumns)}
 	}
 
 };
+
+export default api;

@@ -7,6 +7,16 @@ import browser from "express-useragent";
 const router = express.Router();
 const jobs = {};
 
+const hasAnyPrivilege = (user, allowedTokens) => {
+	if (!user || !Array.isArray(user.privileges)) return false;
+	return user.privileges.some((privilegeItem) => {
+		const tokenValue = typeof privilegeItem === "string"
+			? privilegeItem
+			: (privilegeItem && (privilegeItem.token || privilegeItem.name));
+		return allowedTokens.includes(tokenValue);
+	});
+};
+
 const authAPI = async (request, response, next) => {
 	const results = await api.authAPI(request.serverPath, request.headers["referer"], request.cookies.wm);
 
@@ -377,6 +387,34 @@ router.get("/api/teamleaderboardload", authAPI, async (request, response) => {
 	response.status(results.status).json(results.error ? { error: results.error } : { loggedInUser: request.user, ...results.data });
 });
 
+router.get("/api/teamleaderboardpdf", authAPI, async (request, response) => {
+	if (!hasAnyPrivilege(request.user, ["scheduleView", "teamManage", "myteam", "parentManage", "parentmanage"])) {
+		return response.status(401).json({ error: "Unauthorized access" });
+	}
+
+	const results = await api.teamLeaderboardPdf(
+		request.query.season,
+		{
+			divisions: request.query.divisions,
+			tables: request.query.tables
+		},
+		request.serverPath
+	);
+
+	if (results.error) {
+		return response.status(results.status || 500).json({ error: results.error });
+	}
+
+	const safeFilename = String(results.filename || "FM-Wrestling-Leaderboard.pdf").replace(/["\r\n]/g, "");
+	const disposition = request.query.download === "1" ? "attachment" : "inline";
+
+	response.setHeader("Content-Type", "application/pdf");
+	response.setHeader("Content-Disposition", `${disposition}; filename="${safeFilename}"`);
+	response.setHeader("X-Page-Count", String(results.pageCount));
+	response.setHeader("X-PDF-Filename", safeFilename);
+	response.status(200).send(results.buffer);
+});
+
 router.get("/api/dualload", authAPI, async (request, response) => {
 	const results = await api.dualLoad(request.query.id, request.serverPath);
 
@@ -729,13 +767,41 @@ router.get("/api/weeklyemailgenerate", authAPI, (request, response) => {
 	response.status(200).json(job);
 });
 
+router.post("/api/weeklyleaderboardpreview", authAPI, async (request, response) => {
+	if (!hasAnyPrivilege(request.user, ["parentManage", "parentmanage"])) {
+		return response.status(401).json({ error: "Unauthorized access" });
+	}
+
+	const { season, customNote } = request.body || {};
+	const results = await api.weeklyLeaderboardEmailPreview(season, customNote, request.serverPath);
+	response.status(results.status || 200).json(results.error ? { error: results.error } : results.data);
+});
+
 router.post("/api/weeklyemailsend", authAPI, async (request, response) => {
 	if (!request.user || !request.user.privileges || (!request.user.privileges.includes("parentManage") && !request.user.privileges.includes("parentmanage"))) {
 		return response.status(401).json({ error: "Unauthorized access" });
 	}
 
-	const { recipients, subject, body } = request.body;
-	const results = await api.weeklyEmailSend(request.serverPath, recipients, subject, body);
+	const { recipients, subject, body, leaderboardPdfOptions } = request.body;
+	let attachments = [];
+
+	if (leaderboardPdfOptions) {
+		const pdfResults = await api.teamLeaderboardPdf(
+			leaderboardPdfOptions.season,
+			{ includeAll: true },
+			request.serverPath
+		);
+		if (pdfResults.error) {
+			return response.status(pdfResults.status || 500).json({ error: pdfResults.error });
+		}
+		attachments = [{
+			filename: pdfResults.filename,
+			mimeType: "application/pdf",
+			contentBuffer: pdfResults.buffer
+		}];
+	}
+
+	const results = await api.weeklyEmailSend(request.serverPath, recipients, subject, body, attachments);
 	response.status(results.status || 200).json(results.error ? { error: results.error } : results);
 });
 

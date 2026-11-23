@@ -1,5 +1,16 @@
 import data from "./schema.js";
 import mongoose from "mongoose";
+import { computeDivisionConvert } from "./leaderboardData.js";
+
+const extractEventSearchTeams = (matches) => {
+	if (!Array.isArray(matches)) return [];
+	return [...new Set(
+		matches
+			.filter(match => Array.isArray(match?.wrestlers))
+			.flatMap(match => match.wrestlers.map(wrestler => (wrestler?.team || "").trim().toLowerCase()))
+			.filter(Boolean)
+	)];
+};
 
 const dataFunctionsObject = {
 
@@ -1091,35 +1102,11 @@ const dataFunctionsObject = {
 		}
 
 		if (saveObject.matches) {
-			saveObject.searchTeams = [...new Set(saveObject.matches
-					.filter(match => match.wrestlers)
-					.flatMap(match => match.wrestlers.map(wrestler => wrestler.team?.toLowerCase()))
-				)];
-			
+			saveObject.searchTeams = extractEventSearchTeams(saveObject.matches);
+
 			saveObject.matches = saveObject.matches.map(match => ({
 				...match,
-				divisionConvert:
-					/^jv/i.test(match.division) ? "JV" :
-					/girl/i.test(match.division) ? "Girls" :
-					/women/i.test(match.division) ? "Girls" :
-					/woman/i.test(match.division) ? "Girls" :
-					/ms/i.test(match.division) ? "Middle School" :
-					/middle/i.test(match.division) ? "Middle School" :
-					/10U/i.test(match.division) ? "Middle School" :
-					/8U/i.test(match.division) ? "Middle School" :
-					/12U/i.test(match.division) ? "Middle School" :
-					/14U/i.test(match.division) ? "Middle School" :
-					/7[ &]*8/i.test(match.division) ? "Middle School" :
-					/9[ &]*10/i.test(match.division) ? "JV" :
-					/11[ &]*12/i.test(match.division) ? "Middle School" :
-					/jv/i.test(saveObject.name) ? "JV" :
-					/^hs/i.test(match.division) ? "Varsity" :
-					/high/i.test(match.division) ? "Varsity" :
-					/state tournament/i.test(match.division) ? "Varsity" :
-					/varsity/i.test(match.division) ? "Varsity" :
-					/hs/i.test(match.division) ? "Varsity" :
-         			/\da/i.test(div) ? "Varsity" :
-					"Other"
+				divisionConvert: computeDivisionConvert(match.division, saveObject.name)
 			}));
 		}
 
@@ -1193,6 +1180,14 @@ const dataFunctionsObject = {
 
 			// Clean payload to prevent schema validation/immutability errors
 			const { id, _id, created, modified, ...updateFields } = event;
+
+			if (Array.isArray(updateFields.matches)) {
+				updateFields.searchTeams = extractEventSearchTeams(updateFields.matches);
+				updateFields.matches = updateFields.matches.map(match => ({
+					...match,
+					divisionConvert: computeDivisionConvert(match.division, updateFields.name)
+				}));
+			}
 
 			let filter = null;
 			if (id && mongoose.Types.ObjectId.isValid(id)) {
@@ -2319,28 +2314,7 @@ const dataFunctionsObject = {
 		if (saveObject.matches) {
 			saveObject.matches = saveObject.matches.map(match => ({
 				...match,
-				divisionConvert:
-					/^jv/i.test(match.division) ? "JV" :
-					/girl/i.test(match.division) ? "Girls" :
-					/women/i.test(match.division) ? "Girls" :
-					/woman/i.test(match.division) ? "Girls" :
-					/ms/i.test(match.division) ? "Middle School" :
-					/middle/i.test(match.division) ? "Middle School" :
-					/10U/i.test(match.division) ? "Middle School" :
-					/8U/i.test(match.division) ? "Middle School" :
-					/12U/i.test(match.division) ? "Middle School" :
-					/14U/i.test(match.division) ? "Middle School" :
-					/7[ &]*8/i.test(match.division) ? "Middle School" :
-					/9[ &]*10/i.test(match.division) ? "JV" :
-					/11[ &]*12/i.test(match.division) ? "Middle School" :
-					/jv/i.test(saveObject.name) ? "JV" :
-					/^hs/i.test(match.division) ? "Varsity" :
-					/high/i.test(match.division) ? "Varsity" :
-					/state tournament/i.test(match.division) ? "Varsity" :
-					/varsity/i.test(match.division) ? "Varsity" :
-					/hs/i.test(match.division) ? "Varsity" :
-         			/\da/i.test(div) ? "Varsity" :
-					"Other"
+				divisionConvert: computeDivisionConvert(match.division, saveObject.name)
 			}));
 		}
 
@@ -2461,31 +2435,12 @@ const dataFunctionsObject = {
 				updateFields.searchTeam = updateFields.team.toLowerCase();
 			}
 
-			updateFields.matches = updateFields.matches.map(match => ({
-				...match,
-				divisionConvert:
-					/^jv/i.test(match.division) ? "JV" :
-					/girl/i.test(match.division) ? "Girls" :
-					/women/i.test(match.division) ? "Girls" :
-					/woman/i.test(match.division) ? "Girls" :
-					/ms/i.test(match.division) ? "Middle School" :
-					/middle/i.test(match.division) ? "Middle School" :
-					/10U/i.test(match.division) ? "Middle School" :
-					/8U/i.test(match.division) ? "Middle School" :
-					/12U/i.test(match.division) ? "Middle School" :
-					/14U/i.test(match.division) ? "Middle School" :
-					/7[ &]*8/i.test(match.division) ? "Middle School" :
-					/9[ &]*10/i.test(match.division) ? "JV" :
-					/11[ &]*12/i.test(match.division) ? "Middle School" :
-					/jv/i.test(saveObject.name) ? "JV" :
-					/^hs/i.test(match.division) ? "Varsity" :
-					/high/i.test(match.division) ? "Varsity" :
-					/state tournament/i.test(match.division) ? "Varsity" :
-					/varsity/i.test(match.division) ? "Varsity" :
-					/hs/i.test(match.division) ? "Varsity" :
-         			/\da/i.test(div) ? "Varsity" :
-					"Other"
-			}));
+			if (Array.isArray(updateFields.matches)) {
+				updateFields.matches = updateFields.matches.map(match => ({
+					...match,
+					divisionConvert: computeDivisionConvert(match.division, updateFields.name)
+				}));
+			}
 
 			let filter = null;
 			if (id && mongoose.Types.ObjectId.isValid(id)) {

@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import Nav from "./nav.jsx";
 import "./include/index.css";
 import "./include/weeklyemail.css";
+import { getSeasonOptions } from "../../server/leaderboardData.js";
 
 const WeeklyEmailPage = () => {
 	const [ isLoading, setIsLoading ] = useState(true);
@@ -74,12 +75,28 @@ const WeeklyEmailPage = () => {
 	const [ emailHtmlContent, setEmailHtmlContent ] = useState("");
 	const [ emailTemplateCss, setEmailTemplateCss ] = useState("");
 	const [ isSendingEmail, setIsSendingEmail ] = useState(false);
+
+	// Wall Leaderboard Email & PDF Attachment State
+	const leaderboardSeasonOptions = getSeasonOptions(new Date());
+	const [ leaderboardSeason, setLeaderboardSeason ] = useState(leaderboardSeasonOptions[1].name);
+	const [ leaderboardNote, setLeaderboardNote ] = useState("");
+	const [ leaderboardPdfInfo, setLeaderboardPdfInfo ] = useState({
+		filename: "",
+		pageCount: 0,
+		divisionSummary: []
+	});
+	const [ isLoadingLeaderboardPreview, setIsLoadingLeaderboardPreview ] = useState(false);
+	const [ isPreviewingLeaderboardPdf, setIsPreviewingLeaderboardPdf ] = useState(false);
+	const [ leaderboardErrorMessage, setLeaderboardErrorMessage ] = useState("");
+
 	const editorContainerRef = useRef(null);
 	const pollIntervalRef = useRef(null);
 	const activeGenerationRequestRef = useRef(0);
+	const leaderboardPreviewRequestRef = useRef(0);
 
 	const stopEmailGenerationPolling = () => {
 		activeGenerationRequestRef.current += 1;
+		leaderboardPreviewRequestRef.current += 1;
 		if (pollIntervalRef.current) {
 			clearInterval(pollIntervalRef.current);
 			pollIntervalRef.current = null;
@@ -218,6 +235,107 @@ const WeeklyEmailPage = () => {
 		loggedInUser.privileges.some(privilegeItem => (privilegeItem.token === "parentManage" || privilegeItem.name === "parentManage"))
 	);
 
+	// Load deterministic Leaderboard Email summary & PDF metadata
+	const loadLeaderboardEmailPreview = (targetSeason, noteText) => {
+		leaderboardPreviewRequestRef.current += 1;
+		const requestToken = leaderboardPreviewRequestRef.current;
+
+		setIsLoadingLeaderboardPreview(true);
+		setLeaderboardErrorMessage("");
+
+		fetch("/api/weeklyleaderboardpreview", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				season: targetSeason,
+				customNote: noteText
+			})
+		})
+			.then(async apiResponse => {
+				if (apiResponse.ok) {
+					return apiResponse.json();
+				}
+				const errorData = await apiResponse.json().catch(() => ({}));
+				throw new Error(errorData.error || apiResponse.statusText || `Request failed (${apiResponse.status})`);
+			})
+			.then(previewData => {
+				if (leaderboardPreviewRequestRef.current !== requestToken) {
+					return;
+				}
+				setIsLoadingLeaderboardPreview(false);
+				setEmailSubject(previewData.subject || `FM Wrestling Wall Leaderboard - ${loadDateFormatted}`);
+				setEmailTemplateCss("");
+				setEmailHtmlContent(previewData.html || "");
+				setLeaderboardPdfInfo({
+					filename: previewData.filename || "",
+					pageCount: previewData.pageCount || 0,
+					divisionSummary: previewData.divisionSummary || []
+				});
+				setHasGeneratedEmail(true);
+			})
+			.catch(previewError => {
+				if (leaderboardPreviewRequestRef.current !== requestToken) {
+					return;
+				}
+				setIsLoadingLeaderboardPreview(false);
+				setLeaderboardErrorMessage(previewError.message || "Failed to load leaderboard preview.");
+			});
+	};
+
+	const handleWeeklyLeaderboardPdfAction = async (actionMode) => {
+		const previewWindow = actionMode === "preview" ? window.open("", "_blank") : null;
+		setIsPreviewingLeaderboardPdf(true);
+		setLeaderboardErrorMessage("");
+
+		try {
+			const queryParams = new URLSearchParams({
+				season: leaderboardSeason,
+				divisions: "varsity,jv,ms",
+				tables: "varsity,jv,ms",
+				download: actionMode === "download" ? "1" : "0"
+			});
+
+			const apiResponse = await fetch(`/api/teamleaderboardpdf?${queryParams.toString()}`);
+			if (!apiResponse.ok) {
+				const errorData = await apiResponse.json().catch(() => ({}));
+				throw new Error(errorData.error || apiResponse.statusText || `PDF request failed (${apiResponse.status})`);
+			}
+
+			const pdfBlob = await apiResponse.blob();
+			const pdfFilename = apiResponse.headers.get("X-PDF-Filename") || leaderboardPdfInfo.filename || `FM-Wrestling-Leaderboard-${leaderboardSeason}.pdf`;
+			const blobUrl = URL.createObjectURL(pdfBlob);
+
+			if (actionMode === "preview") {
+				if (previewWindow) {
+					previewWindow.location.href = blobUrl;
+				} else {
+					const fallbackLink = document.createElement("a");
+					fallbackLink.href = blobUrl;
+					fallbackLink.target = "_blank";
+					document.body.appendChild(fallbackLink);
+					fallbackLink.click();
+					fallbackLink.remove();
+				}
+				setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+			} else {
+				const downloadLink = document.createElement("a");
+				downloadLink.href = blobUrl;
+				downloadLink.download = pdfFilename;
+				document.body.appendChild(downloadLink);
+				downloadLink.click();
+				downloadLink.remove();
+				setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+			}
+		} catch (pdfError) {
+			if (previewWindow && !previewWindow.closed) {
+				previewWindow.close();
+			}
+			setLeaderboardErrorMessage(pdfError.message || "Failed to load leaderboard PDF.");
+		} finally {
+			setIsPreviewingLeaderboardPdf(false);
+		}
+	};
+
 	// Shared de-duplicated helper to open the email management view for either audience
 	const openAudienceEmailView = (audienceChoice) => {
 		stopEmailGenerationPolling();
@@ -226,7 +344,7 @@ const WeeklyEmailPage = () => {
 		setActiveFilterTab("active");
 		setSelectedGrades([]);
 		setIsGradeFilterDropdownOpen(false);
-		setSelectedFlagFilter("All");
+		setSelectedFlagFilter(audienceChoice === "leaderboard" ? "coach" : "All");
 		setSearchQuery("");
 		setAdditionalInputs([ { title: "", content: "" } ]);
 		setHasGeneratedEmail(false);
@@ -234,11 +352,22 @@ const WeeklyEmailPage = () => {
 		setPollingStepCount(1);
 		setEmailHtmlContent("");
 		setEmailTemplateCss("");
-		setEmailSubject(
-			audienceChoice === "coach"
-				? `Weekly Email Analysis - ${loadDateFormatted}`
-				: `FM Wrestling Weekly Email - ${loadDateFormatted}`
-		);
+		setLeaderboardErrorMessage("");
+
+		if (audienceChoice === "leaderboard") {
+			const defaultSeason = leaderboardSeasonOptions[1].name;
+			setLeaderboardSeason(defaultSeason);
+			setLeaderboardNote("");
+			setLeaderboardPdfInfo({ filename: "", pageCount: 0, divisionSummary: [] });
+			setEmailSubject(`FM Wrestling Wall Leaderboard - ${loadDateFormatted}`);
+			loadLeaderboardEmailPreview(defaultSeason, "");
+		} else {
+			setEmailSubject(
+				audienceChoice === "coach"
+					? `Weekly Email Analysis - ${loadDateFormatted}`
+					: `FM Wrestling Weekly Email - ${loadDateFormatted}`
+			);
+		}
 	};
 
 	// Shared de-duplicated CSS inliner using native DOMParser + querySelectorAll
@@ -596,6 +725,8 @@ const WeeklyEmailPage = () => {
 										? "Weekly Email — Parent Email"
 										: activeEmailAudience === "coach"
 										? "Weekly Email — Coach Email"
+										: activeEmailAudience === "leaderboard"
+										? "Weekly Email — Wall Leaderboard"
 										: "Weekly Email Coordinator"}
 								</h1>
 								<div className="weeklyemail-header-subtitle">
@@ -618,6 +749,13 @@ const WeeklyEmailPage = () => {
 										onClick={() => openAudienceEmailView("coach")}
 									>
 										📋 Coach Email
+									</button>
+									<button
+										type="button"
+										className="btn-audience-leaderboard"
+										onClick={() => openAudienceEmailView("leaderboard")}
+									>
+										🏆 Leaderboard Email
 									</button>
 								</div>
 							)}
@@ -1165,82 +1303,180 @@ const WeeklyEmailPage = () => {
 									</div>
 								</div>
 
-								{/* 2. Additional Inputs Section */}
-								<div className="email-section-card">
-									<div className="email-section-header">
-										<h2>2. Additional Inputs for AI Prompt</h2>
-										<button
-											type="button"
-											className="btn-add-input"
-											onClick={() => setAdditionalInputs(previousInputs => [
-												...previousInputs,
-												{ title: "", content: "" }
-											])}
-										>
-											+ Add Section
-										</button>
-									</div>
+								{/* 2. Additional Inputs or Wall Leaderboard PDF Section */}
+								{activeEmailAudience === "leaderboard" ? (
+									<div className="email-section-card">
+										<div className="email-section-header">
+											<h2>2. Attached Wall Leaderboard PDF (All Divisions)</h2>
+											<span className="recipients-summary-count">
+												{leaderboardPdfInfo.pageCount > 0
+													? `${leaderboardPdfInfo.pageCount} pages • Ready to Print`
+													: "All Divisions • 2 Sheets Each"}
+											</span>
+										</div>
 
-									<div className="additional-inputs-container">
-										{additionalInputs.map((inputEntry, inputIndex) => (
-											<div key={inputIndex} className="additional-input-item">
-												<div className="additional-input-row-header">
-													<input
-														type="text"
-														className="additional-input-title"
-														placeholder="Section Title (e.g. Coach's Corner, Announcements, Volunteer Needs)"
-														value={inputEntry.title}
+										<div className="leaderboard-pdf-config">
+											<div className="leaderboard-pdf-top-row">
+												<div className="leaderboard-season-group">
+													<label htmlFor="weekly-leaderboard-season-select">Season:</label>
+													<select
+														id="weekly-leaderboard-season-select"
+														className="leaderboard-season-select"
+														value={leaderboardSeason}
+														disabled={isLoadingLeaderboardPreview}
 														onChange={(changeEvent) => {
-															const updatedTitle = changeEvent.target.value;
+															const nextSeason = changeEvent.target.value;
+															setLeaderboardSeason(nextSeason);
+															loadLeaderboardEmailPreview(nextSeason, leaderboardNote);
+														}}
+													>
+														{leaderboardSeasonOptions.map((seasonOption) => (
+															<option key={seasonOption.name} value={seasonOption.name}>
+																{seasonOption.name}
+															</option>
+														))}
+													</select>
+												</div>
+
+												<div className="leaderboard-pdf-actions-group">
+													<button
+														type="button"
+														className="btn-pdf-action primary"
+														disabled={isPreviewingLeaderboardPdf || isLoadingLeaderboardPreview || !hasGeneratedEmail}
+														onClick={() => handleWeeklyLeaderboardPdfAction("preview")}
+													>
+														{isPreviewingLeaderboardPdf ? "Loading PDF..." : "👁️ Preview Attached PDF"}
+													</button>
+													<button
+														type="button"
+														className="btn-pdf-action"
+														disabled={isPreviewingLeaderboardPdf || isLoadingLeaderboardPreview || !hasGeneratedEmail}
+														onClick={() => handleWeeklyLeaderboardPdfAction("download")}
+													>
+														⬇️ Download PDF
+													</button>
+												</div>
+											</div>
+
+											<div className="leaderboard-division-chips">
+												{leaderboardPdfInfo.divisionSummary && leaderboardPdfInfo.divisionSummary.length > 0 ? (
+													leaderboardPdfInfo.divisionSummary.map((divItem) => (
+														<span key={divItem.key} className="leaderboard-division-chip">
+															{divItem.label}: {divItem.wrestlerCount} wrestlers ({divItem.pages} {divItem.pages === 1 ? "sheet" : "sheets"})
+														</span>
+													))
+												) : (
+													<span className="leaderboard-division-chip">
+														Includes Varsity, JV &amp; Girls, and Middle School (Leaders Board + Full Roster Table per division)
+													</span>
+												)}
+											</div>
+
+											<div className="leaderboard-note-row">
+												<label htmlFor="weekly-leaderboard-note">Coach Note (optional)</label>
+												<textarea
+													id="weekly-leaderboard-note"
+													className="additional-input-textarea"
+													placeholder="Optional note to include above the leaderboard summary (e.g., Please print and hang on the wrestling room board before practice)..."
+													value={leaderboardNote}
+													onChange={(changeEvent) => setLeaderboardNote(changeEvent.target.value)}
+												/>
+												<div>
+													<button
+														type="button"
+														className="btn-add-input"
+														disabled={isLoadingLeaderboardPreview}
+														onClick={() => loadLeaderboardEmailPreview(leaderboardSeason, leaderboardNote)}
+													>
+														{isLoadingLeaderboardPreview ? "Refreshing Preview..." : "↻ Refresh Email Preview"}
+													</button>
+												</div>
+											</div>
+
+											{leaderboardErrorMessage && (
+												<div style={{ color: "#ba1a1a", backgroundColor: "#fee2e2", padding: "10px 14px", borderRadius: "6px", fontSize: "13px", fontWeight: 600 }}>
+													{leaderboardErrorMessage}
+												</div>
+											)}
+										</div>
+									</div>
+								) : (
+									<div className="email-section-card">
+										<div className="email-section-header">
+											<h2>2. Additional Inputs for AI Prompt</h2>
+											<button
+												type="button"
+												className="btn-add-input"
+												onClick={() => setAdditionalInputs(previousInputs => [
+													...previousInputs,
+													{ title: "", content: "" }
+												])}
+											>
+												+ Add Section
+											</button>
+										</div>
+
+										<div className="additional-inputs-container">
+											{additionalInputs.map((inputEntry, inputIndex) => (
+												<div key={inputIndex} className="additional-input-item">
+													<div className="additional-input-row-header">
+														<input
+															type="text"
+															className="additional-input-title"
+															placeholder="Section Title (e.g. Coach's Corner, Announcements, Volunteer Needs)"
+															value={inputEntry.title}
+															onChange={(changeEvent) => {
+																const updatedTitle = changeEvent.target.value;
+																setAdditionalInputs(previousInputs =>
+																	previousInputs.map((existingEntry, existingIndex) =>
+																		existingIndex === inputIndex
+																			? { ...existingEntry, title: updatedTitle }
+																			: existingEntry
+																	)
+																);
+															}}
+														/>
+														{additionalInputs.length > 1 && (
+															<button
+																type="button"
+																className="btn-remove-input"
+																onClick={() => {
+																	setAdditionalInputs(previousInputs =>
+																		previousInputs.filter((_, existingIndex) => existingIndex !== inputIndex)
+																	);
+																}}
+															>
+																Remove
+															</button>
+														)}
+													</div>
+
+													<textarea
+														className="additional-input-textarea"
+														placeholder="Enter details or announcements to include in the AI generated email..."
+														value={inputEntry.content}
+														onChange={(changeEvent) => {
+															const updatedContent = changeEvent.target.value;
 															setAdditionalInputs(previousInputs =>
 																previousInputs.map((existingEntry, existingIndex) =>
 																	existingIndex === inputIndex
-																		? { ...existingEntry, title: updatedTitle }
+																		? { ...existingEntry, content: updatedContent }
 																		: existingEntry
 																)
 															);
 														}}
 													/>
-													{additionalInputs.length > 1 && (
-														<button
-															type="button"
-															className="btn-remove-input"
-															onClick={() => {
-																setAdditionalInputs(previousInputs =>
-																	previousInputs.filter((_, existingIndex) => existingIndex !== inputIndex)
-																);
-															}}
-														>
-															Remove
-														</button>
-													)}
 												</div>
-
-												<textarea
-													className="additional-input-textarea"
-													placeholder="Enter details or announcements to include in the AI generated email..."
-													value={inputEntry.content}
-													onChange={(changeEvent) => {
-														const updatedContent = changeEvent.target.value;
-														setAdditionalInputs(previousInputs =>
-															previousInputs.map((existingEntry, existingIndex) =>
-																existingIndex === inputIndex
-																	? { ...existingEntry, content: updatedContent }
-																	: existingEntry
-															)
-														);
-													}}
-												/>
-											</div>
-										))}
+											))}
+										</div>
 									</div>
-								</div>
+								)}
 
 								{/* 3. View / Edit Email Section */}
 								<div className="email-section-card">
 									<div className="email-section-header">
 										<h2>3. View / Edit Email</h2>
-										{hasGeneratedEmail && (
+										{hasGeneratedEmail && activeEmailAudience !== "leaderboard" && (
 											<button
 												type="button"
 												className="btn-generate-email"
@@ -1253,9 +1489,30 @@ const WeeklyEmailPage = () => {
 										)}
 									</div>
 
-									{!hasGeneratedEmail ? (
+									{activeEmailAudience === "leaderboard" && isLoadingLeaderboardPreview && !hasGeneratedEmail ? (
 										<div className="generate-initial-box">
-											{isGeneratingEmail ? (
+											<div className="email-generating-status">
+												<div className="email-generating-title">Building Wall Leaderboard Summary &amp; PDF Attachment</div>
+												<img src="/media/wrestlingloading.gif" alt="Loading Leaderboard..." className="email-generating-gif" />
+											</div>
+										</div>
+									) : !hasGeneratedEmail ? (
+										<div className="generate-initial-box">
+											{activeEmailAudience === "leaderboard" ? (
+												<>
+													<p>
+														{leaderboardErrorMessage || "Click below to load the Wall Leaderboard summary and PDF attachment."}
+													</p>
+													<button
+														type="button"
+														className="btn-generate-email"
+														disabled={isLoadingLeaderboardPreview}
+														onClick={() => loadLeaderboardEmailPreview(leaderboardSeason, leaderboardNote)}
+													>
+														↻ Load Leaderboard Summary
+													</button>
+												</>
+											) : isGeneratingEmail ? (
 												<div className="email-generating-status">
 													<div className="email-generating-title">Generating Email with Gemini AI</div>
 													<div className="email-generating-dots">{"•".repeat(pollingStepCount)}</div>
@@ -1287,6 +1544,12 @@ const WeeklyEmailPage = () => {
 												</div>
 											)}
 
+											{activeEmailAudience === "leaderboard" && leaderboardPdfInfo.filename && (
+												<div className="leaderboard-attachment-pill">
+													📎 Attachment: {leaderboardPdfInfo.filename} ({leaderboardPdfInfo.pageCount} {leaderboardPdfInfo.pageCount === 1 ? "page" : "pages"})
+												</div>
+											)}
+
 											<label>Subject Line</label>
 											<input
 												type="text"
@@ -1313,7 +1576,7 @@ const WeeklyEmailPage = () => {
 
 											<div
 												ref={editorContainerRef}
-												contentEditable={!isGeneratingEmail}
+												contentEditable={!isGeneratingEmail && !isLoadingLeaderboardPreview}
 												className="response-editor-contenteditable"
 												onInput={(inputEvent) => setEmailHtmlContent(inputEvent.currentTarget.innerHTML)}
 												onBlur={(blurEvent) => setEmailHtmlContent(blurEvent.currentTarget.innerHTML)}
@@ -1335,6 +1598,7 @@ const WeeklyEmailPage = () => {
 											onClick={() => {
 												stopEmailGenerationPolling();
 												setIsGeneratingEmail(false);
+												setIsLoadingLeaderboardPreview(false);
 												setPollingStepCount(1);
 												setActiveEmailAudience(null);
 											}}
@@ -1346,7 +1610,7 @@ const WeeklyEmailPage = () => {
 										<button
 											type="button"
 											className="btn-primary"
-											disabled={isSendingEmail || isGeneratingEmail || !hasGeneratedEmail || selectedRecipientEmails.length === 0}
+											disabled={isSendingEmail || isGeneratingEmail || isLoadingLeaderboardPreview || !hasGeneratedEmail || selectedRecipientEmails.length === 0}
 											onClick={() => {
 												if (selectedRecipientEmails.length === 0) {
 													alert("Please select at least one recipient.");
@@ -1360,16 +1624,22 @@ const WeeklyEmailPage = () => {
 													return;
 												}
 												const styledBodyHtml = applyInlineStylesToEmailHtml(rawCurrentBodyHtml, emailTemplateCss);
+												const requestPayload = {
+													recipients: selectedRecipientEmails,
+													subject: emailSubject,
+													body: styledBodyHtml
+												};
+												if (activeEmailAudience === "leaderboard") {
+													requestPayload.leaderboardPdfOptions = {
+														season: leaderboardSeason
+													};
+												}
 
 												setIsSendingEmail(true);
 												fetch("/api/weeklyemailsend", {
 													method: "POST",
 													headers: { "Content-Type": "application/json" },
-													body: JSON.stringify({
-														recipients: selectedRecipientEmails,
-														subject: emailSubject,
-														body: styledBodyHtml
-													})
+													body: JSON.stringify(requestPayload)
 												})
 													.then(response => response.json())
 													.then(responseData => {
@@ -1377,8 +1647,13 @@ const WeeklyEmailPage = () => {
 														if (responseData.error) {
 															alert(`Send error: ${responseData.error}`);
 														} else {
+															const audienceLabel = activeEmailAudience === "coach"
+																? "Coach"
+																: activeEmailAudience === "leaderboard"
+																? "Wall Leaderboard (with PDF attached)"
+																: "Parent";
 															setStatusBannerMessage(
-																`Weekly ${activeEmailAudience === "coach" ? "Coach" : "Parent"} email sent to ${selectedRecipientEmails.length} recipient(s)!`
+																`Weekly ${audienceLabel} email sent to ${selectedRecipientEmails.length} recipient(s)!`
 															);
 															setActiveEmailAudience(null);
 															setTimeout(() => setStatusBannerMessage(""), 6000);
