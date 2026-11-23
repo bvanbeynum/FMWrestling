@@ -685,8 +685,48 @@ router.post("/api/weeklyemailgenerate", authAPI, async (request, response) => {
 	}
 
 	const { audienceType, stats, additionalInputs } = request.body;
-	const results = await api.weeklyEmailGenerate(audienceType, stats, additionalInputs);
-	response.status(results.status || 200).json(results.error ? { error: results.error } : results);
+	const jobId = crypto.randomUUID();
+	jobs[jobId] = { status: "processing" };
+
+	api.weeklyEmailGenerate(audienceType, stats, additionalInputs)
+		.then(results => {
+			if (results.error) {
+				jobs[jobId] = { status: "error", statusCode: results.status || 580, error: results.error };
+			} else {
+				jobs[jobId] = {
+					status: "completed",
+					html: results.html,
+					subject: results.subject,
+					css: results.css
+				};
+			}
+		})
+		.catch(generateError => {
+			jobs[jobId] = { status: "error", statusCode: 580, error: generateError.message };
+		});
+
+	response.status(202).json({ jobId });
+});
+
+router.get("/api/weeklyemailgenerate", authAPI, (request, response) => {
+	if (!request.user || !request.user.privileges || (!request.user.privileges.includes("parentManage") && !request.user.privileges.includes("parentmanage"))) {
+		return response.status(401).json({ error: "Unauthorized access" });
+	}
+
+	response.set("Cache-Control", "no-store");
+
+	const jobId = request.query.jobid;
+	const job = jobs[jobId];
+
+	if (!job) {
+		return response.status(404).json({ status: "not_found" });
+	}
+
+	if (job.status === "completed" || job.status === "error") {
+		delete jobs[jobId];
+	}
+
+	response.status(200).json(job);
 });
 
 router.post("/api/weeklyemailsend", authAPI, async (request, response) => {

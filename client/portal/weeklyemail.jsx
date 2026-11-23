@@ -68,12 +68,23 @@ const WeeklyEmailPage = () => {
 
 	// AI Email Generation & Editor State
 	const [ isGeneratingEmail, setIsGeneratingEmail ] = useState(false);
+	const [ pollingStepCount, setPollingStepCount ] = useState(1);
 	const [ hasGeneratedEmail, setHasGeneratedEmail ] = useState(false);
 	const [ emailSubject, setEmailSubject ] = useState("");
 	const [ emailHtmlContent, setEmailHtmlContent ] = useState("");
 	const [ emailTemplateCss, setEmailTemplateCss ] = useState("");
 	const [ isSendingEmail, setIsSendingEmail ] = useState(false);
 	const editorContainerRef = useRef(null);
+	const pollIntervalRef = useRef(null);
+	const activeGenerationRequestRef = useRef(0);
+
+	const stopEmailGenerationPolling = () => {
+		activeGenerationRequestRef.current += 1;
+		if (pollIntervalRef.current) {
+			clearInterval(pollIntervalRef.current);
+			pollIntervalRef.current = null;
+		}
+	};
 
 	// Build selectable week options up to 1 year (52 weeks) previous
 	const currentTodayDate = new Date();
@@ -191,6 +202,7 @@ const WeeklyEmailPage = () => {
 		window.addEventListener("message", handleAuthWindowMessage);
 		return () => {
 			window.removeEventListener("message", handleAuthWindowMessage);
+			stopEmailGenerationPolling();
 		};
 	}, []);
 
@@ -208,6 +220,7 @@ const WeeklyEmailPage = () => {
 
 	// Shared de-duplicated helper to open the email management view for either audience
 	const openAudienceEmailView = (audienceChoice) => {
+		stopEmailGenerationPolling();
 		setActiveEmailAudience(audienceChoice);
 		setSelectedRecipientEmails([]);
 		setActiveFilterTab("active");
@@ -218,6 +231,7 @@ const WeeklyEmailPage = () => {
 		setAdditionalInputs([ { title: "", content: "" } ]);
 		setHasGeneratedEmail(false);
 		setIsGeneratingEmail(false);
+		setPollingStepCount(1);
 		setEmailHtmlContent("");
 		setEmailTemplateCss("");
 		setEmailSubject(
@@ -353,7 +367,12 @@ const WeeklyEmailPage = () => {
 
 	// Shared de-duplicated handler to generate or regenerate the email via Gemini AI
 	const triggerEmailGeneration = () => {
+		stopEmailGenerationPolling();
+		const currentRequestToken = activeGenerationRequestRef.current;
+
 		setIsGeneratingEmail(true);
+		setPollingStepCount(1);
+
 		fetch("/api/weeklyemailgenerate", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
@@ -368,25 +387,98 @@ const WeeklyEmailPage = () => {
 				additionalInputs: additionalInputs
 			})
 		})
-			.then(response => response.json())
-			.then(responseData => {
-				setIsGeneratingEmail(false);
-				if (responseData.error) {
-					alert(`AI Generation error: ${responseData.error}`);
-				} else {
-					const activeCss = responseData.css || "";
-					setEmailTemplateCss(activeCss);
-					const inlinedHtml = applyInlineStylesToEmailHtml(responseData.html || "", activeCss);
-					setEmailHtmlContent(inlinedHtml);
-					if (responseData.subject) {
-						setEmailSubject(responseData.subject);
-					}
-					setHasGeneratedEmail(true);
+			.then(async apiResponse => {
+				if (apiResponse.ok) {
+					return apiResponse.json();
 				}
+				const errorData = await apiResponse.json().catch(() => ({}));
+				throw new Error(errorData.error || apiResponse.statusText || `Request failed (${apiResponse.status})`);
 			})
-			.catch(error => {
+			.then(startData => {
+				if (activeGenerationRequestRef.current !== currentRequestToken) {
+					return;
+				}
+
+				if (startData.error || !startData.jobId) {
+					setIsGeneratingEmail(false);
+					alert(`AI Generation error: ${startData.error || "Email generation job failed to start."}`);
+					return;
+				}
+
+				const activeJobId = startData.jobId;
+				let isPollInFlight = false;
+
+				pollIntervalRef.current = setInterval(() => {
+					if (activeGenerationRequestRef.current !== currentRequestToken) {
+						clearInterval(pollIntervalRef.current);
+						pollIntervalRef.current = null;
+						return;
+					}
+
+					if (isPollInFlight) {
+						return;
+					}
+
+					isPollInFlight = true;
+					fetch(`/api/weeklyemailgenerate?jobid=${encodeURIComponent(activeJobId)}`, { cache: "no-store" })
+						.then(async pollResponse => {
+							if (pollResponse.ok) {
+								return pollResponse.json();
+							}
+							const errorData = await pollResponse.json().catch(() => ({}));
+							throw new Error(errorData.error || pollResponse.statusText || `Polling failed (${pollResponse.status})`);
+						})
+						.then(jobStatusData => {
+							isPollInFlight = false;
+							if (activeGenerationRequestRef.current !== currentRequestToken) {
+								return;
+							}
+
+							if (jobStatusData.status === "processing") {
+								setPollingStepCount(previousCount => previousCount + 1);
+								return;
+							}
+
+							if (pollIntervalRef.current) {
+								clearInterval(pollIntervalRef.current);
+								pollIntervalRef.current = null;
+							}
+							setIsGeneratingEmail(false);
+
+							if (jobStatusData.status === "completed") {
+								const activeCss = jobStatusData.css || "";
+								setEmailTemplateCss(activeCss);
+								const inlinedHtml = applyInlineStylesToEmailHtml(jobStatusData.html || "", activeCss);
+								setEmailHtmlContent(inlinedHtml);
+								if (jobStatusData.subject) {
+									setEmailSubject(jobStatusData.subject);
+								}
+								setHasGeneratedEmail(true);
+							} else {
+								alert(`AI Generation error: ${jobStatusData.error || "Failed to generate email."}`);
+							}
+						})
+						.catch(pollError => {
+							isPollInFlight = false;
+							if (activeGenerationRequestRef.current !== currentRequestToken) {
+								return;
+							}
+
+							if (pollIntervalRef.current) {
+								clearInterval(pollIntervalRef.current);
+								pollIntervalRef.current = null;
+							}
+							setIsGeneratingEmail(false);
+							alert(`AI Generation failed: ${pollError.message}`);
+						});
+				}, 2000);
+			})
+			.catch(requestError => {
+				if (activeGenerationRequestRef.current !== currentRequestToken) {
+					return;
+				}
 				setIsGeneratingEmail(false);
-				alert(`AI Generation failed: ${error.message}`);
+				alert(`AI Generation failed: ${requestError.message}`);
 			});
 	};
 
@@ -1163,21 +1255,38 @@ const WeeklyEmailPage = () => {
 
 									{!hasGeneratedEmail ? (
 										<div className="generate-initial-box">
-											<p>
-												Click below to send the previous week&apos;s {activeEmailAudience === "coach" ? "Coach" : "Parent"} stats
-												and your additional inputs to Gemini AI to generate the formatted HTML email.
-											</p>
-											<button
-												type="button"
-												className="btn-generate-email"
-												disabled={isGeneratingEmail}
-												onClick={triggerEmailGeneration}
-											>
-												{isGeneratingEmail ? "⏳ Generating Email with Gemini AI..." : "⚡ Generate Email"}
-											</button>
+											{isGeneratingEmail ? (
+												<div className="email-generating-status">
+													<div className="email-generating-title">Generating Email with Gemini AI</div>
+													<div className="email-generating-dots">{"•".repeat(pollingStepCount)}</div>
+													<img src="/media/wrestlingloading.gif" alt="Generating Email..." className="email-generating-gif" />
+												</div>
+											) : (
+												<>
+													<p>
+														Click below to send the previous week&apos;s {activeEmailAudience === "coach" ? "Coach" : "Parent"} stats
+														and your additional inputs to Gemini AI to generate the formatted HTML email.
+													</p>
+													<button
+														type="button"
+														className="btn-generate-email"
+														disabled={isGeneratingEmail}
+														onClick={triggerEmailGeneration}
+													>
+														⚡ Generate Email
+													</button>
+												</>
+											)}
 										</div>
 									) : (
 										<div className="response-editor-group">
+											{isGeneratingEmail && (
+												<div className="email-regenerating-banner">
+													<div className="email-generating-title">Regenerating Email with Gemini AI</div>
+													<div className="email-generating-dots">{"•".repeat(pollingStepCount)}</div>
+												</div>
+											)}
+
 											<label>Subject Line</label>
 											<input
 												type="text"
@@ -1223,7 +1332,12 @@ const WeeklyEmailPage = () => {
 										<button
 											type="button"
 											className="btn-secondary"
-											onClick={() => setActiveEmailAudience(null)}
+											onClick={() => {
+												stopEmailGenerationPolling();
+												setIsGeneratingEmail(false);
+												setPollingStepCount(1);
+												setActiveEmailAudience(null);
+											}}
 											disabled={isSendingEmail}
 										>
 											Cancel

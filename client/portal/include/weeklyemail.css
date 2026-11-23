@@ -668,6 +668,47 @@
 	cursor: not-allowed;
 }
 
+.email-generating-status {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+}
+
+.email-generating-title {
+	font-family: 'Russo One', sans-serif;
+	font-size: 18px;
+	color: #3c5c93;
+}
+
+.email-generating-dots {
+	color: #904d00;
+	font-size: 18px;
+	letter-spacing: 2px;
+	max-width: 100%;
+	overflow-wrap: anywhere;
+}
+
+.email-generating-gif {
+	max-width: 160px;
+	height: auto;
+	margin-top: 6px;
+}
+
+.email-regenerating-banner {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+	padding: 14px 16px;
+	margin-bottom: 10px;
+	background-color: #f8f9fa;
+	border: 1px dashed #c5c5d8;
+	border-radius: 6px;
+	text-align: center;
+}
+
 .response-editor-group {
 	display: flex;
 	flex-direction: column;
