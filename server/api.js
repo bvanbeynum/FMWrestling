@@ -4695,11 +4695,11 @@ Instructions for response:
 				entryItem => entryItem.division === "Varsity" || entryItem.division === "HS" || entryItem.division === "JV"
 			);
 
-			// 10. Coach Stat: Rivalry Watch (5A Region < 5)
+			// 10. Coach Stat: Rivalry Watch (5A Region < 4)
 			const rivalrySchoolEvents = {};
 			for (const entryItem of coachEventRatingEntries) {
 				const regionNumber = parseInt(entryItem.region, 10);
-				if (isNaN(regionNumber) || regionNumber >= 5) continue;
+				if (isNaN(regionNumber) || regionNumber >= 4) continue;
 
 				const schoolKey = String(entryItem.schoolId);
 				if (!rivalrySchoolEvents[schoolKey]) {
