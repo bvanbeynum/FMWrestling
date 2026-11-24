@@ -6,7 +6,7 @@ import { google } from "googleapis";
 import fs, { stat } from "fs";
 import path from "path";
 import { getDualWrestlers, isGeminiQuotaError, isGeminiOverloadedError, extractOpponentTeam, extractEventDivision, extractEmailBody, extractEmailAttachments, getGoogleOAuthClient, calculatePercentile, buildHtmlTable, computeFortMillWeeklyHighlights } from "./middleware.js";
-import { buildDivisionPrintDatasets, PRINT_DIVISION_GROUPS } from "./leaderboardData.js";
+import { buildDivisionPrintDatasets, PRINT_DIVISION_GROUPS, isFortMillEvent } from "./leaderboardData.js";
 import { generateLeaderboardPdfBuffer, buildLeaderboardEmailHtml } from "./leaderboardPdf.js";
 import * as marked from './marked.cjs';
 const markedParse = marked.marked;
@@ -3262,7 +3262,7 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 			}
 
 			const wrestlerEventsResponse = await client.get(`${ serverPath }/data/wrestlerevent?wrestlerids=${ encodeURIComponent(JSON.stringify(wrestlerIdentifiers)) }`);
-			const rawWrestlerEvents = wrestlerEventsResponse.body.wrestlerEvents || [];
+			const rawWrestlerEvents = (wrestlerEventsResponse.body.wrestlerEvents || []).filter(isFortMillEvent);
 
 			const eventsByWrestlerId = {};
 			rawWrestlerEvents.forEach(event => {

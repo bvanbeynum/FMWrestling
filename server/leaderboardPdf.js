@@ -28,9 +28,9 @@ const COLORS = {
 
 const ROSTER_TABLE_COLUMNS = [
 	{ key: "rank", label: "#", w: 24, align: "center" },
-	{ key: "name", label: "Wrestler", w: 144, align: "left" },
+	{ key: "name", label: "Wrestler", w: 140, align: "left" },
 	{ key: "totalMatches", label: "M", w: 28, align: "center" },
-	{ key: "points", label: "Pts", w: 42, align: "center" },
+	{ key: "points", label: "Dual Pts", w: 46, align: "center" },
 	{ key: "careerWins", label: "Career", w: 56, align: "center" },
 	{ key: "wins", label: "Season", w: 52, align: "center" },
 	{ key: "pins", label: "Pins", w: 40, align: "center" },
@@ -43,6 +43,26 @@ const ROSTER_TABLE_COLUMNS = [
 	{ key: "reversals", label: "Rev", w: 50, align: "center" },
 	{ key: "escapes", label: "Esc", w: 50, align: "center" }
 ];
+
+const ROSTER_TABLE_COLUMNS_NO_CAREER = [
+	{ key: "rank", label: "#", w: 24, align: "center" },
+	{ key: "name", label: "Wrestler", w: 164, align: "left" },
+	{ key: "totalMatches", label: "M", w: 28, align: "center" },
+	{ key: "points", label: "Dual Pts", w: 50, align: "center" },
+	{ key: "wins", label: "Season", w: 60, align: "center" },
+	{ key: "pins", label: "Pins", w: 42, align: "center" },
+	{ key: "techfalls", label: "TF", w: 40, align: "center" },
+	{ key: "majorDecisions", label: "MD", w: 40, align: "center" },
+	{ key: "decisions", label: "Dec", w: 42, align: "center" },
+	{ key: "forfeits", label: "Forf", w: 42, align: "center" },
+	{ key: "takedowns", label: "TD", w: 50, align: "center" },
+	{ key: "nearfalls", label: "NF", w: 50, align: "center" },
+	{ key: "reversals", label: "Rev", w: 52, align: "center" },
+	{ key: "escapes", label: "Esc", w: 52, align: "center" }
+];
+
+const getRosterTableColumns = (includeCareerRecord = true) =>
+	includeCareerRecord ? ROSTER_TABLE_COLUMNS : ROSTER_TABLE_COLUMNS_NO_CAREER;
 
 const drawHeaderBanner = (doc, { title, subtitle, rightMeta, height = 42 }) => {
 	doc.save();
@@ -87,7 +107,7 @@ const drawLeadersBoardPage = (doc, division, seasonName, generatedDateText) => {
 	const { totals, leaderCards } = division;
 	drawHeaderBanner(doc, {
 		title: `FORT MILL WRESTLING  |  ${division.label.toUpperCase()} STAT LEADERS`,
-		subtitle: `${totals.wrestlerCount} Wrestlers  •  ${totals.totalWins} Wins  •  ${totals.totalPins} Pins  •  ${totals.totalTakedowns} Takedowns  •  ${totals.totalPoints} Pts`,
+		subtitle: `${totals.wrestlerCount} Wrestlers  •  ${totals.totalWins} Wins  •  ${totals.totalPins} Pins  •  ${totals.totalTakedowns} Takedowns  •  ${totals.totalPoints} Dual Pts`,
 		rightMeta: `${seasonName} Season  •  ${generatedDateText}`,
 		height: 42
 	});
@@ -214,7 +234,7 @@ const drawRosterTableHeaderAndLegend = (doc, division, seasonName, generatedDate
 	const titleSuffix = isContinuation ? " (Cont.)" : "";
 	drawHeaderBanner(doc, {
 		title: `FORT MILL WRESTLING  |  ${division.label.toUpperCase()} FULL ROSTER STATS${titleSuffix}`,
-		subtitle: `Sorted by Points  •  ${division.totals.wrestlerCount} Active Wrestlers`,
+		subtitle: `Sorted by Dual Points  •  ${division.totals.wrestlerCount} Active Wrestlers`,
 		rightMeta: `${seasonName} Season  •  ${generatedDateText}`,
 		height: 36
 	});
@@ -231,11 +251,18 @@ const drawRosterTableHeaderAndLegend = (doc, division, seasonName, generatedDate
 		.text("= Top 3 (#2–#3)", MARGIN_X + 129, legendY + 1, { lineBreak: false });
 
 	doc.fillColor(COLORS.lightText).font("Helvetica-Oblique").fontSize(7.5)
-		.text("All values reflect season totals (Career = multi-season Nov 1 – Mar 1 window)", MARGIN_X + 260, legendY + 1, {
-			width: USABLE_WIDTH - 260,
-			align: "right",
-			lineBreak: false
-		});
+		.text(
+			division.includeCareerRecord !== false
+				? "Season totals (Dual Pts = dual meets only; Career = multi-season Nov 1 – Mar 1)"
+				: "Season totals (Dual Pts = dual meets only; Nov 1 – Mar 1 window)",
+			MARGIN_X + 260,
+			legendY + 1,
+			{
+				width: USABLE_WIDTH - 260,
+				align: "right",
+				lineBreak: false
+			}
+		);
 	doc.restore();
 };
 
@@ -267,6 +294,7 @@ const drawFullRosterPages = (doc, division, seasonName, generatedDateText) => {
 	PRIORITY_STAT_CATEGORIES.forEach((cat) => {
 		statCategoryByKey[cat.key] = cat;
 	});
+	const tableColumns = getRosterTableColumns(division.includeCareerRecord !== false);
 
 	let globalRowIndex = 0;
 
@@ -279,7 +307,7 @@ const drawFullRosterPages = (doc, division, seasonName, generatedDateText) => {
 		doc.rect(MARGIN_X, tableStartY, USABLE_WIDTH, headerH).fill(COLORS.tableHeaderBg);
 
 		let colX = MARGIN_X;
-		ROSTER_TABLE_COLUMNS.forEach((col, colIdx) => {
+		tableColumns.forEach((col, colIdx) => {
 			if (colIdx > 0) {
 				doc.moveTo(colX, tableStartY)
 					.lineTo(colX, tableStartY + headerH)
@@ -313,7 +341,7 @@ const drawFullRosterPages = (doc, division, seasonName, generatedDateText) => {
 			}
 
 			let cellX = MARGIN_X;
-			ROSTER_TABLE_COLUMNS.forEach((col, colIdx) => {
+			tableColumns.forEach((col, colIdx) => {
 				const statCategory = statCategoryByKey[col.key];
 				const statRank = statCategory ? (division.categoryRankMap[col.key]?.[record.name] || 0) : 0;
 
@@ -421,7 +449,7 @@ export const generateLeaderboardPdfBuffer = async ({ seasonName, generatedDateTe
 		doc.fillColor(COLORS.lightText)
 			.font("Helvetica")
 			.fontSize(7.5)
-			.text("Fort Mill Wrestling  •  Season Totals (Nov 1 – Mar 1)", MARGIN_X, 590, {
+			.text("Fort Mill Wrestling  •  Season Totals (Nov 1 – Mar 1)  •  Dual Pts = Dual Meets Only", MARGIN_X, 590, {
 				lineBreak: false
 			});
 
@@ -473,7 +501,11 @@ export const buildLeaderboardEmailHtml = ({ seasonName, generatedDateText, divis
 			leaderByKey[card.statCategory.key] = card;
 		});
 
-		const rowsHtml = summaryCategories.map((cat, idx) => {
+		const divisionSummaryCategories = summaryCategories.filter(
+			(cat) => division.includeCareerRecord !== false || cat.key !== "careerWins"
+		);
+
+		const rowsHtml = divisionSummaryCategories.map((cat, idx) => {
 			const card = leaderByKey[cat.key];
 			const topEntry = card && card.entries && card.entries.length > 0 ? card.entries[0] : null;
 			const tiedLeaders = topEntry && card.entries
@@ -529,11 +561,11 @@ export const buildLeaderboardEmailHtml = ({ seasonName, generatedDateText, divis
 			<div style="background-color: #eef2ff; border-left: 4px solid #3246e5; padding: 12px 16px; margin-bottom: 20px; border-radius: 4px; color: #1e293b; font-size: 14px; line-height: 1.5;">
 				<strong style="color: #1b365d; display: block; margin-bottom: 4px;">Ready-to-Print Wall Sheet PDF Attached</strong>
 				Attached PDF: <strong>${escapeHtml(filename)}</strong> (${pageCount} page${pageCount === 1 ? "" : "s"}, US Letter Landscape).<br>
-				Open the PDF attachment and print directly — formatted for black-and-white or color wrestling room wall posting (12-Stat Top 4 Leaders Board + Full Roster Table per division).
+				Open the PDF attachment and print directly — formatted for black-and-white or color wrestling room wall posting (Top 4 Stat Leaders Board + Full Roster Table per division).
 			</div>
 			${divisionSectionsHtml}
 			<div style="font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 12px; margin-top: 8px;">
-				Generated by The Wrestling Mill Portal &bull; Season totals reflect matches within the Nov 1 – Mar 1 window.
+				Generated by The Wrestling Mill Portal &bull; Season totals reflect matches within the Nov 1 – Mar 1 window (Dual Points include dual meets only).
 			</div>
 		</div>
 	</div>

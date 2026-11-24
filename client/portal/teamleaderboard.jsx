@@ -7,8 +7,10 @@ import {
 	getSeasonOptions,
 	processLeaderboardData,
 	formatLeaderboardMetric,
+	getMetricPerMatchDenominator,
 	getMetricDisplayName,
 	getTopLeaderboardRecords,
+	shouldExcludeCareerRecord,
 	PRINT_DIVISION_GROUPS,
 	buildDivisionPrintDatasets
 } from "../../server/leaderboardData.js";
@@ -69,16 +71,20 @@ const TeamLeaderboard = () => {
 	}, [selectedSeason]);
 
 	const wrestlerRecords = processLeaderboardData(wrestlers, selectedDivisionSetting, seasonName);
+	const excludeCareerRecord = shouldExcludeCareerRecord(selectedDivisionSetting);
+	const effectiveSortMetricKey = excludeCareerRecord && sortMetricKey === "careerWins" ? "wins" : sortMetricKey;
 
-	const usePerMatchSort = viewModeSetting === "per_match" && sortMetricKey !== "careerWins" && sortMetricKey !== "wins";
+	const usePerMatchSort = viewModeSetting === "per_match" && effectiveSortMetricKey !== "careerWins" && effectiveSortMetricKey !== "wins";
 
 	const sortedWrestlerRecords = [...wrestlerRecords].sort((firstRecord, secondRecord) => {
+		const firstDenom = getMetricPerMatchDenominator(firstRecord, effectiveSortMetricKey);
+		const secondDenom = getMetricPerMatchDenominator(secondRecord, effectiveSortMetricKey);
 		const firstValue = usePerMatchSort 
-			? (firstRecord.totalMatches > 0 ? firstRecord[sortMetricKey] / firstRecord.totalMatches : 0)
-			: (firstRecord[sortMetricKey] || 0);
+			? (firstDenom > 0 ? firstRecord[effectiveSortMetricKey] / firstDenom : 0)
+			: (firstRecord[effectiveSortMetricKey] || 0);
 		const secondValue = usePerMatchSort
-			? (secondRecord.totalMatches > 0 ? secondRecord[sortMetricKey] / secondRecord.totalMatches : 0)
-			: (secondRecord[sortMetricKey] || 0);
+			? (secondDenom > 0 ? secondRecord[effectiveSortMetricKey] / secondDenom : 0)
+			: (secondRecord[effectiveSortMetricKey] || 0);
 
 		if (firstValue !== secondValue) {
 			return sortDirectionDescending ? secondValue - firstValue : firstValue - secondValue;
@@ -87,7 +93,7 @@ const TeamLeaderboard = () => {
 	});
 
 	const handleColumnHeaderClick = (targetMetricKey) => {
-		if (sortMetricKey === targetMetricKey) {
+		if (effectiveSortMetricKey === targetMetricKey) {
 			setSortDirectionDescending(!sortDirectionDescending);
 		} else {
 			setSortMetricKey(targetMetricKey);
@@ -95,8 +101,8 @@ const TeamLeaderboard = () => {
 		}
 	};
 
-	const topThreeLeaders = getTopLeaderboardRecords(wrestlerRecords, sortMetricKey, viewModeSetting, 3);
-	const activeMetricLabel = getMetricDisplayName(sortMetricKey);
+	const topThreeLeaders = getTopLeaderboardRecords(wrestlerRecords, effectiveSortMetricKey, viewModeSetting, 3);
+	const activeMetricLabel = getMetricDisplayName(effectiveSortMetricKey);
 
 	const getDefaultPrintDivisions = () => {
 		if (selectedDivisionSetting === "Varsity") {
@@ -247,7 +253,14 @@ const TeamLeaderboard = () => {
 										<select
 											id="division-select-dropdown"
 											value={selectedDivisionSetting}
-											onChange={(changeEvent) => setSelectedDivisionSetting(changeEvent.target.value)}
+											onChange={(changeEvent) => {
+												const nextDivision = changeEvent.target.value;
+												setSelectedDivisionSetting(nextDivision);
+												if (shouldExcludeCareerRecord(nextDivision) && sortMetricKey === "careerWins") {
+													setSortMetricKey("wins");
+													setSortDirectionDescending(true);
+												}
+											}}
 											className="season-dropdown-select division-dropdown-select"
 										>
 											<option value="Varsity">Varsity</option>
@@ -295,7 +308,7 @@ const TeamLeaderboard = () => {
 											<span className="kpi-value-text Russo">{leaderRecord ? leaderRecord.name : "-"}</span>
 											<span className="kpi-sub-text">
 												{leaderRecord 
-													? `${formatLeaderboardMetric(leaderRecord, sortMetricKey, viewModeSetting)} ${usePerMatchSort ? `${activeMetricLabel} / Match` : activeMetricLabel}` 
+													? `${formatLeaderboardMetric(leaderRecord, effectiveSortMetricKey, viewModeSetting)} ${usePerMatchSort ? `${activeMetricLabel} / ${effectiveSortMetricKey === "points" ? "Dual" : "Match"}` : activeMetricLabel}` 
 													: "No data"}
 											</span>
 										</div>
@@ -310,9 +323,9 @@ const TeamLeaderboard = () => {
 											<tr>
 												<th className="rank-header">#</th>
 												<th className="wrestler-header">Wrestler</th>
-												<th className="record-group-header" colSpan={2}>Record</th>
+												<th className="record-group-header" colSpan={excludeCareerRecord ? 1 : 2}>Record</th>
 												<th className="matches-header" onClick={() => handleColumnHeaderClick("totalMatches")}>
-													Matches {sortMetricKey === "totalMatches" ? (sortDirectionDescending ? "↓" : "↑") : ""}
+													Matches {effectiveSortMetricKey === "totalMatches" ? (sortDirectionDescending ? "↓" : "↑") : ""}
 												</th>
 
 												<th className="win-type-group-header" colSpan={6}>Win Type</th>
@@ -322,51 +335,53 @@ const TeamLeaderboard = () => {
 											<tr className="sub-header-row">
 												<th></th>
 												<th></th>
-												<th onClick={() => handleColumnHeaderClick("careerWins")} className={sortMetricKey === "careerWins" ? "active-sort" : ""}>
-													Career {sortMetricKey === "careerWins" ? (sortDirectionDescending ? "↓" : "↑") : ""}
-												</th>
-												<th onClick={() => handleColumnHeaderClick("wins")} className={sortMetricKey === "wins" ? "active-sort" : ""}>
-													Season {sortMetricKey === "wins" ? (sortDirectionDescending ? "↓" : "↑") : ""}
+												{!excludeCareerRecord && (
+													<th onClick={() => handleColumnHeaderClick("careerWins")} className={effectiveSortMetricKey === "careerWins" ? "active-sort" : ""}>
+														Career {effectiveSortMetricKey === "careerWins" ? (sortDirectionDescending ? "↓" : "↑") : ""}
+													</th>
+												)}
+												<th onClick={() => handleColumnHeaderClick("wins")} className={effectiveSortMetricKey === "wins" ? "active-sort" : ""}>
+													Season {effectiveSortMetricKey === "wins" ? (sortDirectionDescending ? "↓" : "↑") : ""}
 												</th>
 												<th></th>
 
-												<th onClick={() => handleColumnHeaderClick("points")} className={sortMetricKey === "points" ? "active-sort" : ""}>
-													Pts {sortMetricKey === "points" ? (sortDirectionDescending ? "↓" : "↑") : ""}
+												<th onClick={() => handleColumnHeaderClick("points")} className={effectiveSortMetricKey === "points" ? "active-sort" : ""}>
+													Dual Pts {effectiveSortMetricKey === "points" ? (sortDirectionDescending ? "↓" : "↑") : ""}
 												</th>
-												<th onClick={() => handleColumnHeaderClick("pins")} className={sortMetricKey === "pins" ? "active-sort" : ""}>
-													Pins {sortMetricKey === "pins" ? (sortDirectionDescending ? "↓" : "↑") : ""}
+												<th onClick={() => handleColumnHeaderClick("pins")} className={effectiveSortMetricKey === "pins" ? "active-sort" : ""}>
+													Pins {effectiveSortMetricKey === "pins" ? (sortDirectionDescending ? "↓" : "↑") : ""}
 												</th>
-												<th onClick={() => handleColumnHeaderClick("techfalls")} className={sortMetricKey === "techfalls" ? "active-sort" : ""}>
-													TF {sortMetricKey === "techfalls" ? (sortDirectionDescending ? "↓" : "↑") : ""}
+												<th onClick={() => handleColumnHeaderClick("techfalls")} className={effectiveSortMetricKey === "techfalls" ? "active-sort" : ""}>
+													TF {effectiveSortMetricKey === "techfalls" ? (sortDirectionDescending ? "↓" : "↑") : ""}
 												</th>
-												<th onClick={() => handleColumnHeaderClick("majorDecisions")} className={sortMetricKey === "majorDecisions" ? "active-sort" : ""}>
-													MD {sortMetricKey === "majorDecisions" ? (sortDirectionDescending ? "↓" : "↑") : ""}
+												<th onClick={() => handleColumnHeaderClick("majorDecisions")} className={effectiveSortMetricKey === "majorDecisions" ? "active-sort" : ""}>
+													MD {effectiveSortMetricKey === "majorDecisions" ? (sortDirectionDescending ? "↓" : "↑") : ""}
 												</th>
-												<th onClick={() => handleColumnHeaderClick("decisions")} className={sortMetricKey === "decisions" ? "active-sort" : ""}>
-													Dec {sortMetricKey === "decisions" ? (sortDirectionDescending ? "↓" : "↑") : ""}
+												<th onClick={() => handleColumnHeaderClick("decisions")} className={effectiveSortMetricKey === "decisions" ? "active-sort" : ""}>
+													Dec {effectiveSortMetricKey === "decisions" ? (sortDirectionDescending ? "↓" : "↑") : ""}
 												</th>
-												<th onClick={() => handleColumnHeaderClick("forfeits")} className={sortMetricKey === "forfeits" ? "active-sort" : ""}>
-													Forf {sortMetricKey === "forfeits" ? (sortDirectionDescending ? "↓" : "↑") : ""}
+												<th onClick={() => handleColumnHeaderClick("forfeits")} className={effectiveSortMetricKey === "forfeits" ? "active-sort" : ""}>
+													Forf {effectiveSortMetricKey === "forfeits" ? (sortDirectionDescending ? "↓" : "↑") : ""}
 												</th>
 
-												<th onClick={() => handleColumnHeaderClick("takedowns")} className={sortMetricKey === "takedowns" ? "active-sort" : ""}>
-													TD {sortMetricKey === "takedowns" ? (sortDirectionDescending ? "↓" : "↑") : ""}
+												<th onClick={() => handleColumnHeaderClick("takedowns")} className={effectiveSortMetricKey === "takedowns" ? "active-sort" : ""}>
+													TD {effectiveSortMetricKey === "takedowns" ? (sortDirectionDescending ? "↓" : "↑") : ""}
 												</th>
-												<th onClick={() => handleColumnHeaderClick("nearfalls")} className={sortMetricKey === "nearfalls" ? "active-sort" : ""}>
-													NF {sortMetricKey === "nearfalls" ? (sortDirectionDescending ? "↓" : "↑") : ""}
+												<th onClick={() => handleColumnHeaderClick("nearfalls")} className={effectiveSortMetricKey === "nearfalls" ? "active-sort" : ""}>
+													NF {effectiveSortMetricKey === "nearfalls" ? (sortDirectionDescending ? "↓" : "↑") : ""}
 												</th>
-												<th onClick={() => handleColumnHeaderClick("reversals")} className={sortMetricKey === "reversals" ? "active-sort" : ""}>
-													Rev {sortMetricKey === "reversals" ? (sortDirectionDescending ? "↓" : "↑") : ""}
+												<th onClick={() => handleColumnHeaderClick("reversals")} className={effectiveSortMetricKey === "reversals" ? "active-sort" : ""}>
+													Rev {effectiveSortMetricKey === "reversals" ? (sortDirectionDescending ? "↓" : "↑") : ""}
 												</th>
-												<th onClick={() => handleColumnHeaderClick("escapes")} className={sortMetricKey === "escapes" ? "active-sort" : ""}>
-													Esc {sortMetricKey === "escapes" ? (sortDirectionDescending ? "↓" : "↑") : ""}
+												<th onClick={() => handleColumnHeaderClick("escapes")} className={effectiveSortMetricKey === "escapes" ? "active-sort" : ""}>
+													Esc {effectiveSortMetricKey === "escapes" ? (sortDirectionDescending ? "↓" : "↑") : ""}
 												</th>
 											</tr>
 										</thead>
 										<tbody>
 											{sortedWrestlerRecords.length === 0 ? (
 												<tr>
-													<td colSpan={15} className="no-leaderboard-data">No wrestler performance records found for this season.</td>
+													<td colSpan={excludeCareerRecord ? 14 : 15} className="no-leaderboard-data">No wrestler performance records found for this season.</td>
 												</tr>
 											) : (
 												sortedWrestlerRecords.map((wrestlerItem, indexValue) => {
@@ -392,21 +407,23 @@ const TeamLeaderboard = () => {
 																	<span>{wrestlerItem.name}</span>
 																)}
 															</td>
-															<td className={`metric-cell ${sortMetricKey === "careerWins" ? "highlight-col" : ""}`}>{formatLeaderboardMetric(wrestlerItem, "careerWins", viewModeSetting)}</td>
-															<td className={`metric-cell ${sortMetricKey === "wins" ? "highlight-col" : ""}`}>{formatLeaderboardMetric(wrestlerItem, "wins", viewModeSetting)}</td>
+															{!excludeCareerRecord && (
+																<td className={`metric-cell ${effectiveSortMetricKey === "careerWins" ? "highlight-col" : ""}`}>{formatLeaderboardMetric(wrestlerItem, "careerWins", viewModeSetting)}</td>
+															)}
+															<td className={`metric-cell ${effectiveSortMetricKey === "wins" ? "highlight-col" : ""}`}>{formatLeaderboardMetric(wrestlerItem, "wins", viewModeSetting)}</td>
 															<td className="metric-cell matches-cell">{wrestlerItem.totalMatches}</td>
 
-															<td className={`metric-cell ${sortMetricKey === "points" ? "highlight-col" : ""}`}>{formatLeaderboardMetric(wrestlerItem, "points", viewModeSetting)}</td>
-															<td className={`metric-cell ${sortMetricKey === "pins" ? "highlight-col" : ""}`}>{formatLeaderboardMetric(wrestlerItem, "pins", viewModeSetting)}</td>
-															<td className={`metric-cell ${sortMetricKey === "techfalls" ? "highlight-col" : ""}`}>{formatLeaderboardMetric(wrestlerItem, "techfalls", viewModeSetting)}</td>
-															<td className={`metric-cell ${sortMetricKey === "majorDecisions" ? "highlight-col" : ""}`}>{formatLeaderboardMetric(wrestlerItem, "majorDecisions", viewModeSetting)}</td>
-															<td className={`metric-cell ${sortMetricKey === "decisions" ? "highlight-col" : ""}`}>{formatLeaderboardMetric(wrestlerItem, "decisions", viewModeSetting)}</td>
-															<td className={`metric-cell ${sortMetricKey === "forfeits" ? "highlight-col" : ""}`}>{formatLeaderboardMetric(wrestlerItem, "forfeits", viewModeSetting)}</td>
+															<td className={`metric-cell ${effectiveSortMetricKey === "points" ? "highlight-col" : ""}`}>{formatLeaderboardMetric(wrestlerItem, "points", viewModeSetting)}</td>
+															<td className={`metric-cell ${effectiveSortMetricKey === "pins" ? "highlight-col" : ""}`}>{formatLeaderboardMetric(wrestlerItem, "pins", viewModeSetting)}</td>
+															<td className={`metric-cell ${effectiveSortMetricKey === "techfalls" ? "highlight-col" : ""}`}>{formatLeaderboardMetric(wrestlerItem, "techfalls", viewModeSetting)}</td>
+															<td className={`metric-cell ${effectiveSortMetricKey === "majorDecisions" ? "highlight-col" : ""}`}>{formatLeaderboardMetric(wrestlerItem, "majorDecisions", viewModeSetting)}</td>
+															<td className={`metric-cell ${effectiveSortMetricKey === "decisions" ? "highlight-col" : ""}`}>{formatLeaderboardMetric(wrestlerItem, "decisions", viewModeSetting)}</td>
+															<td className={`metric-cell ${effectiveSortMetricKey === "forfeits" ? "highlight-col" : ""}`}>{formatLeaderboardMetric(wrestlerItem, "forfeits", viewModeSetting)}</td>
 
-															<td className={`metric-cell ${sortMetricKey === "takedowns" ? "highlight-col" : ""}`}>{formatLeaderboardMetric(wrestlerItem, "takedowns", viewModeSetting)}</td>
-															<td className={`metric-cell ${sortMetricKey === "nearfalls" ? "highlight-col" : ""}`}>{formatLeaderboardMetric(wrestlerItem, "nearfalls", viewModeSetting)}</td>
-															<td className={`metric-cell ${sortMetricKey === "reversals" ? "highlight-col" : ""}`}>{formatLeaderboardMetric(wrestlerItem, "reversals", viewModeSetting)}</td>
-															<td className={`metric-cell ${sortMetricKey === "escapes" ? "highlight-col" : ""}`}>{formatLeaderboardMetric(wrestlerItem, "escapes", viewModeSetting)}</td>
+															<td className={`metric-cell ${effectiveSortMetricKey === "takedowns" ? "highlight-col" : ""}`}>{formatLeaderboardMetric(wrestlerItem, "takedowns", viewModeSetting)}</td>
+															<td className={`metric-cell ${effectiveSortMetricKey === "nearfalls" ? "highlight-col" : ""}`}>{formatLeaderboardMetric(wrestlerItem, "nearfalls", viewModeSetting)}</td>
+															<td className={`metric-cell ${effectiveSortMetricKey === "reversals" ? "highlight-col" : ""}`}>{formatLeaderboardMetric(wrestlerItem, "reversals", viewModeSetting)}</td>
+															<td className={`metric-cell ${effectiveSortMetricKey === "escapes" ? "highlight-col" : ""}`}>{formatLeaderboardMetric(wrestlerItem, "escapes", viewModeSetting)}</td>
 														</tr>
 													);
 												})
@@ -421,13 +438,13 @@ const TeamLeaderboard = () => {
 									<label htmlFor="mobile-sort-select-dropdown" className="control-label" style={{ margin: 0 }}>Sort By:</label>
 									<select
 										id="mobile-sort-select-dropdown"
-										value={sortMetricKey}
+										value={effectiveSortMetricKey}
 										onChange={(changeEvent) => handleColumnHeaderClick(changeEvent.target.value)}
 										className="season-dropdown-select division-dropdown-select"
 									>
-										<option value="careerWins">Career Record</option>
+										{!excludeCareerRecord && <option value="careerWins">Career Record</option>}
 										<option value="wins">Season Record</option>
-										<option value="points">Points</option>
+										<option value="points">Dual Points</option>
 										<option value="pins">Pins</option>
 										<option value="techfalls">Tech Falls</option>
 										<option value="majorDecisions">Major Decisions</option>
@@ -475,10 +492,12 @@ const TeamLeaderboard = () => {
 													<div className="mobile-metric-section">
 														<span className="mobile-section-title">Record:</span>
 														<div className="mobile-inline-stats">
-															<span className={`stat-inline-item ${sortMetricKey === "careerWins" ? "highlight" : ""}`}>
-																<strong className="stat-label">Career:</strong> {formatLeaderboardMetric(wrestlerItem, "careerWins", viewModeSetting)}
-															</span>
-															<span className={`stat-inline-item ${sortMetricKey === "wins" ? "highlight" : ""}`}>
+															{!excludeCareerRecord && (
+																<span className={`stat-inline-item ${effectiveSortMetricKey === "careerWins" ? "highlight" : ""}`}>
+																	<strong className="stat-label">Career:</strong> {formatLeaderboardMetric(wrestlerItem, "careerWins", viewModeSetting)}
+																</span>
+															)}
+															<span className={`stat-inline-item ${effectiveSortMetricKey === "wins" ? "highlight" : ""}`}>
 																<strong className="stat-label">Season:</strong> {formatLeaderboardMetric(wrestlerItem, "wins", viewModeSetting)}
 															</span>
 														</div>
@@ -487,22 +506,22 @@ const TeamLeaderboard = () => {
 													<div className="mobile-metric-section">
 														<span className="mobile-section-title">Win Type:</span>
 														<div className="mobile-inline-stats">
-															<span className={`stat-inline-item ${sortMetricKey === "points" ? "highlight" : ""}`}>
-																<strong className="stat-label">Pts:</strong> {formatLeaderboardMetric(wrestlerItem, "points", viewModeSetting)}
+															<span className={`stat-inline-item ${effectiveSortMetricKey === "points" ? "highlight" : ""}`}>
+																<strong className="stat-label">Dual Pts:</strong> {formatLeaderboardMetric(wrestlerItem, "points", viewModeSetting)}
 															</span>
-															<span className={`stat-inline-item ${sortMetricKey === "pins" ? "highlight" : ""}`}>
+															<span className={`stat-inline-item ${effectiveSortMetricKey === "pins" ? "highlight" : ""}`}>
 																<strong className="stat-label">Pins:</strong> {formatLeaderboardMetric(wrestlerItem, "pins", viewModeSetting)}
 															</span>
-															<span className={`stat-inline-item ${sortMetricKey === "techfalls" ? "highlight" : ""}`}>
+															<span className={`stat-inline-item ${effectiveSortMetricKey === "techfalls" ? "highlight" : ""}`}>
 																<strong className="stat-label">TF:</strong> {formatLeaderboardMetric(wrestlerItem, "techfalls", viewModeSetting)}
 															</span>
-															<span className={`stat-inline-item ${sortMetricKey === "majorDecisions" ? "highlight" : ""}`}>
+															<span className={`stat-inline-item ${effectiveSortMetricKey === "majorDecisions" ? "highlight" : ""}`}>
 																<strong className="stat-label">MD:</strong> {formatLeaderboardMetric(wrestlerItem, "majorDecisions", viewModeSetting)}
 															</span>
-															<span className={`stat-inline-item ${sortMetricKey === "decisions" ? "highlight" : ""}`}>
+															<span className={`stat-inline-item ${effectiveSortMetricKey === "decisions" ? "highlight" : ""}`}>
 																<strong className="stat-label">Dec:</strong> {formatLeaderboardMetric(wrestlerItem, "decisions", viewModeSetting)}
 															</span>
-															<span className={`stat-inline-item ${sortMetricKey === "forfeits" ? "highlight" : ""}`}>
+															<span className={`stat-inline-item ${effectiveSortMetricKey === "forfeits" ? "highlight" : ""}`}>
 																<strong className="stat-label">Forf:</strong> {formatLeaderboardMetric(wrestlerItem, "forfeits", viewModeSetting)}
 															</span>
 														</div>
@@ -511,16 +530,16 @@ const TeamLeaderboard = () => {
 													<div className="mobile-metric-section">
 														<span className="mobile-section-title">Scoring:</span>
 														<div className="mobile-inline-stats">
-															<span className={`stat-inline-item ${sortMetricKey === "takedowns" ? "highlight" : ""}`}>
+															<span className={`stat-inline-item ${effectiveSortMetricKey === "takedowns" ? "highlight" : ""}`}>
 																<strong className="stat-label">TD:</strong> {formatLeaderboardMetric(wrestlerItem, "takedowns", viewModeSetting)}
 															</span>
-															<span className={`stat-inline-item ${sortMetricKey === "nearfalls" ? "highlight" : ""}`}>
+															<span className={`stat-inline-item ${effectiveSortMetricKey === "nearfalls" ? "highlight" : ""}`}>
 																<strong className="stat-label">NF:</strong> {formatLeaderboardMetric(wrestlerItem, "nearfalls", viewModeSetting)}
 															</span>
-															<span className={`stat-inline-item ${sortMetricKey === "reversals" ? "highlight" : ""}`}>
+															<span className={`stat-inline-item ${effectiveSortMetricKey === "reversals" ? "highlight" : ""}`}>
 																<strong className="stat-label">Rev:</strong> {formatLeaderboardMetric(wrestlerItem, "reversals", viewModeSetting)}
 															</span>
-															<span className={`stat-inline-item ${sortMetricKey === "escapes" ? "highlight" : ""}`}>
+															<span className={`stat-inline-item ${effectiveSortMetricKey === "escapes" ? "highlight" : ""}`}>
 																<strong className="stat-label">Esc:</strong> {formatLeaderboardMetric(wrestlerItem, "escapes", viewModeSetting)}
 															</span>
 														</div>
@@ -555,7 +574,7 @@ const TeamLeaderboard = () => {
 						<div className="modal-body">
 							<p className="modal-subtitle">
 								Generates US Letter Landscape wall sheets for the <strong>{activeSeasonForPdf}</strong> season:
-								a 12-Stat Top 4 Leaders Board{includeFullRosterTables ? " + Full Roster Reference Table" : ""} for each selected division.
+								a Top 4 Stat Leaders Board{includeFullRosterTables ? " + Full Roster Reference Table" : ""} for each selected division.
 							</p>
 
 							<div className="form-group">

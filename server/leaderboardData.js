@@ -10,7 +10,7 @@ export const PRINT_DIVISION_GROUPS = [
 ];
 
 export const PRIORITY_STAT_CATEGORIES = [
-	{ key: "points", label: "Points", shortLabel: "Pts", type: "count" },
+	{ key: "points", label: "Dual Points", shortLabel: "Dual Pts", type: "count" },
 	{ key: "careerWins", label: "Career Record", shortLabel: "Career", type: "record", lossesKey: "careerLosses" },
 	{ key: "wins", label: "Season Record", shortLabel: "Season", type: "record", lossesKey: "losses" },
 	{ key: "pins", label: "Pins", shortLabel: "Pins", type: "count" },
@@ -23,6 +23,18 @@ export const PRIORITY_STAT_CATEGORIES = [
 	{ key: "reversals", label: "Reversals", shortLabel: "Rev", type: "count" },
 	{ key: "escapes", label: "Escapes", shortLabel: "Esc", type: "count" }
 ];
+
+export const shouldExcludeCareerRecord = (divisionOrKey) => {
+	const normalized = String(divisionOrKey || "").trim().toLowerCase();
+	return normalized === "jv" || normalized === "middle school" || normalized === "ms";
+};
+
+export const getStatCategoriesForDivision = (divisionOrKey) => {
+	if (shouldExcludeCareerRecord(divisionOrKey)) {
+		return PRIORITY_STAT_CATEGORIES.filter((cat) => cat.key !== "careerWins");
+	}
+	return PRIORITY_STAT_CATEGORIES;
+};
 
 export const parseEventDate = (dateInput) => {
 	if (!dateInput) return null;
@@ -151,6 +163,17 @@ const matchesDivision = (eventDivision, divisionFilter) => {
 	return normalizedEventDiv === String(divisionFilter).trim().toLowerCase();
 };
 
+export const isDualEvent = (eventItem) => {
+	if (!eventItem) return false;
+	return String(eventItem.eventSystem || "").trim().toLowerCase() === "wrestlingportal";
+};
+
+export const isFortMillEvent = (eventItem) => {
+	if (!eventItem) return false;
+	const searchTeamText = String(eventItem.searchTeam || eventItem.team || "").trim().toLowerCase();
+	return searchTeamText.includes("fort mill");
+};
+
 export const processLeaderboardData = (seasonWrestlers, divisionFilter, seasonNameValue) => {
 	const startYearNumber = getSeasonStartYear(seasonNameValue);
 	const inSeasonStartDate = new Date(startYearNumber, 10, 1, 0, 0, 0);
@@ -166,6 +189,7 @@ export const processLeaderboardData = (seasonWrestlers, divisionFilter, seasonNa
 			id: wrestlerItem.id || wrestlerItem.sqlId,
 			name: wrestlerNameKey,
 			totalMatches: 0,
+			dualMatches: 0,
 			wins: 0,
 			losses: 0,
 			careerWins: 0,
@@ -184,6 +208,7 @@ export const processLeaderboardData = (seasonWrestlers, divisionFilter, seasonNa
 		};
 
 		(wrestlerItem.events || []).forEach((eventItem) => {
+			if (!isFortMillEvent(eventItem)) return;
 			const rawEventDate = parseEventDate(eventItem.date);
 			if (!rawEventDate || isNaN(rawEventDate.getTime())) return;
 
@@ -209,10 +234,14 @@ export const processLeaderboardData = (seasonWrestlers, divisionFilter, seasonNa
 				return;
 			}
 
+			const eventIsDual = isDualEvent(eventItem);
 			wrestlerRecord.wrestledDivisions.add(eventDivision);
 
 			(eventItem.matches || []).forEach((matchItem) => {
 				wrestlerRecord.totalMatches += 1;
+				if (eventIsDual) {
+					wrestlerRecord.dualMatches += 1;
+				}
 
 				if (matchItem.isWinner) {
 					wrestlerRecord.wins += 1;
@@ -240,7 +269,9 @@ export const processLeaderboardData = (seasonWrestlers, divisionFilter, seasonNa
 						wrestlerRecord.decisions += 1;
 					}
 
-					wrestlerRecord.points += matchPointsValue;
+					if (eventIsDual) {
+						wrestlerRecord.points += matchPointsValue;
+					}
 				} else if (!/for/i.test(matchItem.winType)) {
 					wrestlerRecord.losses += 1;
 				}
@@ -271,6 +302,14 @@ export const processLeaderboardData = (seasonWrestlers, divisionFilter, seasonNa
 	);
 };
 
+export const getMetricPerMatchDenominator = (wrestlerRecord, metricKey) => {
+	if (!wrestlerRecord) return 0;
+	if (metricKey === "points") {
+		return wrestlerRecord.dualMatches || 0;
+	}
+	return wrestlerRecord.totalMatches || 0;
+};
+
 export const formatLeaderboardMetric = (wrestlerRecord, metricKey, viewModeSetting) => {
 	if (metricKey === "careerWins") {
 		return `${wrestlerRecord.careerWins || 0}W ${wrestlerRecord.careerLosses || 0}L`;
@@ -280,17 +319,18 @@ export const formatLeaderboardMetric = (wrestlerRecord, metricKey, viewModeSetti
 	}
 	const rawValue = wrestlerRecord[metricKey] || 0;
 	if (viewModeSetting === "per_match") {
-		if (!wrestlerRecord.totalMatches || wrestlerRecord.totalMatches === 0) {
+		const denominator = getMetricPerMatchDenominator(wrestlerRecord, metricKey);
+		if (!denominator || denominator === 0) {
 			return "0.00";
 		}
-		return (rawValue / wrestlerRecord.totalMatches).toFixed(2);
+		return (rawValue / denominator).toFixed(2);
 	}
 	return rawValue;
 };
 
 export const getMetricDisplayName = (targetMetricKey) => {
 	const metricLabels = {
-		points: "Points",
+		points: "Dual Points",
 		careerWins: "Career Record",
 		wins: "Season Record",
 		pins: "Pins",
@@ -304,18 +344,20 @@ export const getMetricDisplayName = (targetMetricKey) => {
 		escapes: "Escapes",
 		totalMatches: "Matches"
 	};
-	return metricLabels[targetMetricKey] || "Points";
+	return metricLabels[targetMetricKey] || "Dual Points";
 };
 
 export const getTopLeaderboardRecords = (wrestlerRecords, metricKey, viewModeSetting, count = 3) => {
 	if (wrestlerRecords.length === 0) return [];
 	const usePerMatchCalculation = viewModeSetting === "per_match" && metricKey !== "careerWins" && metricKey !== "wins";
 	return [...wrestlerRecords].sort((firstEntry, secondEntry) => {
+		const firstDenom = getMetricPerMatchDenominator(firstEntry, metricKey);
+		const secondDenom = getMetricPerMatchDenominator(secondEntry, metricKey);
 		const valueOne = usePerMatchCalculation
-			? (firstEntry.totalMatches > 0 ? firstEntry[metricKey] / firstEntry.totalMatches : 0)
+			? (firstDenom > 0 ? firstEntry[metricKey] / firstDenom : 0)
 			: (firstEntry[metricKey] || 0);
 		const valueTwo = usePerMatchCalculation
-			? (secondEntry.totalMatches > 0 ? secondEntry[metricKey] / secondEntry.totalMatches : 0)
+			? (secondDenom > 0 ? secondEntry[metricKey] / secondDenom : 0)
 			: (secondEntry[metricKey] || 0);
 		if (valueOne !== valueTwo) {
 			return valueTwo - valueOne;
@@ -436,9 +478,9 @@ export const getTopStatLeaders = (records, statCategory, limit = 4) => {
 	};
 };
 
-export const computeCategoryRankMap = (records) => {
+export const computeCategoryRankMap = (records, statCategories = PRIORITY_STAT_CATEGORIES) => {
 	const rankMap = {};
-	PRIORITY_STAT_CATEGORIES.forEach((statCategory) => {
+	(statCategories || PRIORITY_STAT_CATEGORIES).forEach((statCategory) => {
 		const statKey = statCategory.key;
 		rankMap[statKey] = {};
 
@@ -473,11 +515,13 @@ export const buildDivisionPrintDatasets = (wrestlers, seasonName, divisionConfig
 		const records = processLeaderboardData(wrestlers, groupDef.matchDivisions, seasonName);
 		if (records.length === 0) return;
 
+		const includeCareerRecord = !shouldExcludeCareerRecord(groupDef.key);
+		const statCategories = getStatCategoriesForDivision(groupDef.key);
 		const sortedRecords = sortLeaderboardByPoints(records);
-		const leaderCards = PRIORITY_STAT_CATEGORIES.map((statCategory) =>
+		const leaderCards = statCategories.map((statCategory) =>
 			getTopStatLeaders(sortedRecords, statCategory, 4)
 		);
-		const categoryRankMap = computeCategoryRankMap(sortedRecords);
+		const categoryRankMap = computeCategoryRankMap(sortedRecords, statCategories);
 
 		const totals = sortedRecords.reduce(
 			(acc, rec) => ({
@@ -493,6 +537,7 @@ export const buildDivisionPrintDatasets = (wrestlers, seasonName, divisionConfig
 		datasets.push({
 			key: groupDef.key,
 			label: groupDef.label,
+			includeCareerRecord,
 			includeTable: configItem.includeTable !== false,
 			records: sortedRecords,
 			leaderCards,
