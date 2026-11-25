@@ -105,10 +105,6 @@ const Nav = props => {
 				<span>Team</span>
 			</li>
 
-			<li role="button" onClick={ () => window.location = "/portal/teamschedule.html" } className={`button sub ${ subExpanded === "team" ? "active" : "" }`} aria-label="Team Schedule">
-				<span>Schedule</span>
-			</li>
-			
 			<li role="button" onClick={ () => window.location = "/portal/dualreport.html" } className={`button sub ${ subExpanded === "team" ? "active" : "" }`} aria-label="Duals Overview">
 				<span>Duals</span>
 			</li>
