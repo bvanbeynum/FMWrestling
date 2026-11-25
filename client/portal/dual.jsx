@@ -443,6 +443,7 @@ const Dual = () => {
 	};
 
 	const handleSave = () => {
+		setIsLoading(true);
 		const combinedDateTime = buildUnshiftedIsoDateTime(dualDate, dualTime);
 
 		const cleanedMatches = matches.map(matchItem => ({
@@ -489,6 +490,7 @@ const Dual = () => {
 
 	const handleDeleteDual = () => {
 		if (confirm("Are you sure you want to delete this dual meet?")) {
+			setIsLoading(true);
 			fetch("/api/dualdelete", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
