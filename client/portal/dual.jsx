@@ -59,6 +59,20 @@ const formatDate = (dateStr) => {
 	return (date.getMonth() + 1) + "/" + date.getDate() + "/" + date.getFullYear();
 };
 
+const formatLocalDateInput = (dateObject) => {
+	if (!dateObject || isNaN(dateObject.getTime())) return "";
+	const year = dateObject.getFullYear();
+	const month = String(dateObject.getMonth() + 1).padStart(2, "0");
+	const day = String(dateObject.getDate()).padStart(2, "0");
+	return `${year}-${month}-${day}`;
+};
+
+const buildUnshiftedIsoDateTime = (dateStr, timeStr) => {
+	if (!dateStr) return null;
+	const timePart = timeStr || "00:00";
+	return `${dateStr}T${timePart}:00.000Z`;
+};
+
 const Dual = () => {
 
 	const [ pageActive, setPageActive ] = useState(false);
@@ -153,7 +167,7 @@ const Dual = () => {
 
 		const targetDate = parseEventDate(eventRecord.date || eventRecord.dualDate);
 		if (targetDate && !isNaN(targetDate.getTime())) {
-			setDualDate(targetDate.toISOString().split("T")[0]);
+			setDualDate(formatLocalDateInput(targetDate));
 			setDualTime(extractTime(targetDate));
 		}
 
@@ -204,13 +218,11 @@ const Dual = () => {
 						setSelectedFile(null);
 						setIsStarted(true);
 
-						let combinedDateTime = dualDate;
-						if (dualDate && dualTime) {
-							combinedDateTime = new Date(`${dualDate}T${dualTime}`).toISOString();
-						}
+						const combinedDateTime = buildUnshiftedIsoDateTime(dualDate, dualTime);
 
 						const cleanedMatches = parsedMatches.map(match => ({
 							...match,
+							division: match.division || division || "Varsity",
 							wrestlers: (match.wrestlers || []).map(wrestler => ({
 								...wrestler,
 								team: wrestler.team.toLowerCase() === "fort mill" ? "Fort Mill" : (opponent || "Visitor")
@@ -219,10 +231,12 @@ const Dual = () => {
 
 						const dualData = {
 							id: dualId,
-							opponent: opponent,
+							sqlId: dual?.sqlId ?? null,
+							eventType: "Dual",
+							eventSystem: "WrestlingPortal",
+							name: `Fort Mill vs ${opponent}`,
 							imagePath: fileName || null,
-							dualDate: combinedDateTime,
-							division: division,
+							date: combinedDateTime,
 							matches: cleanedMatches
 						};
 
@@ -429,10 +443,7 @@ const Dual = () => {
 	};
 
 	const handleSave = () => {
-		let combinedDateTime = dualDate;
-		if (dualDate && dualTime) {
-			combinedDateTime = new Date(`${dualDate}T${dualTime}`).toISOString();
-		}
+		const combinedDateTime = buildUnshiftedIsoDateTime(dualDate, dualTime);
 
 		const cleanedMatches = matches.map(matchItem => ({
 			...matchItem,
@@ -442,6 +453,7 @@ const Dual = () => {
 
 		const eventRecordPayload = {
 			id: dualId,
+			sqlId: dual?.sqlId ?? null,
 			eventType: "Dual",
 			eventSystem: "WrestlingPortal",
 			name: `Fort Mill vs ${opponent}`,

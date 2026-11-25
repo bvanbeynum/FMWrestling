@@ -55,6 +55,19 @@ const formatTodaySlashDate = (dateObject = new Date()) => {
 	return `${monthText}/${dayText}/${yearText}`;
 };
 
+const formatStartTimeFromIso = (dateValue) => {
+	if (!dateValue) return null;
+	const isoString = dateValue instanceof Date ? dateValue.toISOString() : String(dateValue).trim();
+	const timeMatch = isoString.match(/^\d{4}-\d{2}-\d{2}T(\d{2}):(\d{2})/);
+	if (!timeMatch) return null;
+
+	const hour24 = parseInt(timeMatch[1], 10);
+	const minuteText = timeMatch[2];
+	const period = hour24 >= 12 ? "PM" : "AM";
+	const hour12 = hour24 % 12 === 0 ? 12 : hour24 % 12;
+	return `${String(hour12).padStart(2, "0")}:${minuteText} ${period}`;
+};
+
 const api = {
 
 	setRequestVars: (protocol, host) => {
@@ -2741,6 +2754,16 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 
 			// Synchronize corresponding records in the wrestlerevents collection
 			if (dualId) {
+				let storedEvent = null;
+				if (!eventRecord || eventRecord.sqlId === undefined || eventRecord.sqlId === null || !eventRecord.date || !eventRecord.name || !eventRecord.state) {
+					const storedEventResponse = await client.get(`${ serverPath }/data/event?id=${ dualId }`);
+					storedEvent = (storedEventResponse && storedEventResponse.body && storedEventResponse.body.events && storedEventResponse.body.events[0]) || null;
+				}
+
+				const resolvedEventSqlId = (eventRecord && eventRecord.sqlId !== undefined && eventRecord.sqlId !== null)
+					? eventRecord.sqlId
+					: (storedEvent && storedEvent.sqlId !== undefined && storedEvent.sqlId !== null ? storedEvent.sqlId : null);
+
 				// Fetch existing wrestlerevent records linked to this dual via systemId
 				const existingEventsResponse = await client.get(`${ serverPath }/data/wrestlerevent?systemid=${ dualId }`);
 				const existingWrestlerEvents = (existingEventsResponse && existingEventsResponse.body && existingEventsResponse.body.wrestlerEvents)
@@ -2748,8 +2771,8 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 					: [];
 
 				// Also merge any existing wrestlerevent records linked via sqlId if present
-				if (eventRecord && eventRecord.sqlId) {
-					const existingBySqlResponse = await client.get(`${ serverPath }/data/wrestlerevent?sqlid=${ eventRecord.sqlId }`);
+				if (resolvedEventSqlId !== null) {
+					const existingBySqlResponse = await client.get(`${ serverPath }/data/wrestlerevent?sqlid=${ resolvedEventSqlId }`);
 					const sqlWrestlerEvents = (existingBySqlResponse && existingBySqlResponse.body && existingBySqlResponse.body.wrestlerEvents) || [];
 					const seenIds = new Set(existingWrestlerEvents.map(record => String(record.id || record._id)));
 					for (const sqlRecord of sqlWrestlerEvents) {
@@ -2761,15 +2784,15 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 					}
 				}
 
-				// Resolve event-level metadata, falling back to existing wrestlerevent values when not in the payload
+				// Resolve event-level metadata, falling back to stored event or existing wrestlerevent values when not in the payload
 				const fallbackExisting = existingWrestlerEvents.length > 0 ? existingWrestlerEvents[0] : null;
-				const eventSqlId = (eventRecord && eventRecord.sqlId !== undefined && eventRecord.sqlId !== null)
-					? eventRecord.sqlId
+				const eventSqlId = resolvedEventSqlId !== null
+					? resolvedEventSqlId
 					: (fallbackExisting && fallbackExisting.sqlId !== undefined ? fallbackExisting.sqlId : null);
-				const eventState = (eventRecord && eventRecord.state) || (fallbackExisting && fallbackExisting.locationState) || "SC";
-				const eventSystem = (eventRecord && eventRecord.eventSystem) || (fallbackExisting && fallbackExisting.eventSystem) || "WrestlingPortal";
-				const eventDate = (eventRecord && eventRecord.date) || (fallbackExisting && fallbackExisting.date) || null;
-				const eventName = (eventRecord && eventRecord.name) || (fallbackExisting && fallbackExisting.name) || null;
+				const eventState = (eventRecord && eventRecord.state) || (storedEvent && storedEvent.state) || (fallbackExisting && fallbackExisting.locationState) || "SC";
+				const eventSystem = (eventRecord && eventRecord.eventSystem) || (storedEvent && storedEvent.eventSystem) || (fallbackExisting && fallbackExisting.eventSystem) || "WrestlingPortal";
+				const eventDate = (eventRecord && eventRecord.date) || (storedEvent && storedEvent.date) || (fallbackExisting && fallbackExisting.date) || null;
+				const eventName = (eventRecord && eventRecord.name) || (storedEvent && storedEvent.name) || (fallbackExisting && fallbackExisting.name) || null;
 
 				// Build the target wrestlerevent payloads keyed by wrestlerId
 				const desiredByWrestlerId = new Map();
@@ -2874,6 +2897,31 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 					if (deleteId) {
 						await client.delete(`${ serverPath }/data/wrestlerevent?id=${ deleteId }`).then();
 					}
+				}
+
+				// Sync linked teamevents date, startTime, and name
+				try {
+					const teamEventResponse = await client.get(`${ serverPath }/data/teamevent?eventid=${ dualId }`);
+					const linkedTeamEvents = (teamEventResponse && teamEventResponse.body && teamEventResponse.body.teamEvents) || [];
+					for (const linkedTeamEvent of linkedTeamEvents) {
+						const teamEventUpdate = { id: linkedTeamEvent.id || linkedTeamEvent._id };
+						if (eventDate) {
+							teamEventUpdate.date = eventDate;
+							const formattedStartTime = formatStartTimeFromIso(eventDate);
+							if (formattedStartTime) {
+								teamEventUpdate.startTime = formattedStartTime;
+							}
+						}
+						if (eventName) {
+							teamEventUpdate.name = eventName;
+						}
+						if (Object.keys(teamEventUpdate).length > 1) {
+							await client.post(`${ serverPath }/data/teamevent`).send({ teamEvent: teamEventUpdate }).then();
+						}
+					}
+				}
+				catch (teamEventSyncError) {
+					console.warn("Error syncing teamEvent in dualSave:", teamEventSyncError.message);
 				}
 			}
 			
@@ -3069,6 +3117,38 @@ Return the matches as an array, [{ lookup: String, matchId: String }] where the 
 			const saveResponse = await client.post(`${ serverPath }/data/teamevent`).send({ teamEvent: teamEvent });
 			output.status = saveResponse.status;
 			output.data = saveResponse.body;
+
+			if (teamEvent.eventType === "Dual" && teamEvent.id && teamEvent.eventId) {
+				try {
+					const linkedEventResponse = await client.get(`${ serverPath }/data/event?id=${ teamEvent.eventId }`);
+					const linkedEvent = (linkedEventResponse && linkedEventResponse.body && linkedEventResponse.body.events && linkedEventResponse.body.events[0]) || null;
+
+					if (linkedEvent && linkedEvent.eventSystem === "WrestlingPortal") {
+						const eventUpdate = {
+							id: linkedEvent.id || teamEvent.eventId,
+							date: combinedDateTime || teamEvent.date || linkedEvent.date,
+							name: teamEvent.name || linkedEvent.name,
+							location: teamEvent.location !== undefined ? teamEvent.location : linkedEvent.location
+						};
+						await client.post(`${ serverPath }/data/event`).send({ event: eventUpdate });
+
+						const linkedWrestlerEventsResponse = await client.get(`${ serverPath }/data/wrestlerevent?systemid=${ teamEvent.eventId }`);
+						const linkedWrestlerEvents = (linkedWrestlerEventsResponse && linkedWrestlerEventsResponse.body && linkedWrestlerEventsResponse.body.wrestlerEvents) || [];
+						for (const linkedWrestlerEvent of linkedWrestlerEvents) {
+							await client.post(`${ serverPath }/data/wrestlerevent`).send({
+								wrestlerEvent: {
+									id: linkedWrestlerEvent.id || linkedWrestlerEvent._id,
+									date: eventUpdate.date,
+									name: eventUpdate.name
+								}
+							});
+						}
+					}
+				}
+				catch (linkedSyncError) {
+					console.warn("Error syncing linked event/wrestlerevents in teamscheduleSave:", linkedSyncError.message);
+				}
+			}
 		} catch (error) {
 			output.status = 562;
 			output.error = error.message;

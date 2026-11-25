@@ -1136,6 +1136,22 @@ const dataFunctionsObject = {
 				record.modified = new Date();
 
 				record = await record.save();
+
+				if (record.eventSystem === "WrestlingPortal" && record.sqlId !== undefined && record.sqlId !== null) {
+					await data.wrestlerEvent.updateMany(
+						{
+							systemId: record._id.toString(),
+							eventSystem: "WrestlingPortal",
+							$or: [{ sqlId: null }, { sqlId: { $exists: false } }]
+						},
+						{
+							$set: {
+								sqlId: record.sqlId,
+								modified: new Date()
+							}
+						}
+					).exec();
+				}
 			}
 			catch (error) {
 				output.status = 562;
